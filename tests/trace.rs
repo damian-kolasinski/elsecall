@@ -239,7 +239,12 @@ fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
         workload::trace::Trace,
     };
     use std::time::Duration;
-    let alpha = TestMember::start("alpha");
+    // Twelve scripted cores: overlapping runs record up to 6 cores in use.
+    let load_dir = tempfile::tempdir().unwrap();
+    let load = load_dir.path().join("load.json");
+    std::fs::write(&load, r#"{"performance_cores":12}"#).unwrap();
+    let script = format!("file:{}", load.display());
+    let alpha = TestMember::start_with("alpha", "", &[("ELSECALL_MACHINE_LOAD", &script)]);
     assert!(
         alpha
             .run(&[

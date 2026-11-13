@@ -779,9 +779,19 @@ fn placed_work_gets_the_allowlist_the_members_identity_and_its_own_variables() {
 #[test]
 fn only_the_master_places_and_a_member_refuses_while_its_own_requests_wait() {
     let alpha = TestMember::start("alpha");
-    // Capacity 2 on this machine's 12 weighted cores, whatever its load.
-    let bravo = TestMember::start_with("bravo", "[capacity]\nreserved_cores = 10\n", &[]);
+    // Four scripted performance cores and a reserve of two: capacity 2 on any host.
+    let load_dir = tempfile::tempdir().unwrap();
+    let load = load_dir.path().join("load.json");
+    std::fs::write(&load, r#"{"performance_cores":4}"#).unwrap();
+    let script = format!("file:{}", load.display());
+    let bravo = TestMember::start_with(
+        "bravo",
+        "[capacity]\nreserved_cores = 2\n",
+        &[("ELSECALL_MACHINE_LOAD", &script)],
+    );
     enrol(&alpha, &bravo);
+    let capacity = bravo.ok(&["runs"])["member"]["capacity"].clone();
+    assert_eq!(capacity["capacity"], 2.0, "{capacity}");
     let repo = repository();
 
     // A non-master member runs placeable work itself and records why.

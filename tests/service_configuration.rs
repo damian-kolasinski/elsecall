@@ -82,6 +82,15 @@ fn current(member: &TestMember, name: &str) {
         sleep(Duration::from_millis(100));
     }
 }
+/// A member whose core count stays above the fleet reserve on a small host.
+fn scripted_member(name: &'static str, configuration: &str) -> (TestMember, tempfile::TempDir) {
+    let directory = tempfile::tempdir().unwrap();
+    let load = directory.path().join("load.json");
+    std::fs::write(&load, r#"{"performance_cores":8}"#).unwrap();
+    let script = format!("file:{}", load.display());
+    let member = TestMember::start_with(name, configuration, &[("ELSECALL_MACHINE_LOAD", &script)]);
+    (member, directory)
+}
 fn enable(member: &TestMember) -> Value {
     let plan = member.ok(&["sync", "service"]);
     assert_eq!(plan["changed"], false);
@@ -174,7 +183,7 @@ fn pinned_size(member: &TestMember, label: &str, script: &str, size: &str) -> st
 #[test]
 fn migration_validates_plans_reloads_between_work_and_preserves_decision_parameters() {
     let alpha = TestMember::start("alpha");
-    let beta = TestMember::start_with("beta", "[capacity]\nreserved_cores=2\n", &[]);
+    let (beta, _load) = scripted_member("beta", "[capacity]\nreserved_cores=2\n");
     enrol(&alpha, &beta);
     source(&alpha, CONFIG);
     let plan = alpha.ok(&["sync", "service"]);
@@ -508,7 +517,7 @@ fn a_future_workspace_root_overlapping_a_mirrored_path_is_rejected_in_the_plan()
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn automatic_application_waits_for_an_incoming_sync_exchange_to_commit() {
     let alpha = TestMember::start("alpha");
-    let beta = TestMember::start("beta");
+    let (beta, _load) = scripted_member("beta", "");
     enrol(&alpha, &beta);
     source(&alpha, CONFIG);
     enable(&alpha);

@@ -1,5 +1,6 @@
 [tools]
 rust = "1.99.0"
+"github:jdx/packslip" = "1.11.1"
 
 [tasks.check]
 run = "./scripts/check.sh"
@@ -9,3 +10,9 @@ run = "./scripts/build.sh"
 
 [tasks.perf]
 run = "./scripts/perf.sh"
+
+[tasks."dist:check"]
+run = "python3 -m unittest discover -s distribution -p 'test_*.py'"
+
+[tasks."dist:build"]
+run = "python3 distribution/package.py --build"

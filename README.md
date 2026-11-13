@@ -16,6 +16,22 @@ service use Rust, Clap, Tokio, Axum and SQLite.
 reports. `elsecall install` does not install it. See
 [crates/elsecall-ui/README.md](crates/elsecall-ui/README.md).
 
+## Install a release
+
+A version tag publishes a signed archive. mise installs it through packslip, which
+checks the signature before putting `elsecall` on `PATH`. `elsecall install` copies
+that executable into this account's service. The archive does not include the
+desktop window.
+
+```sh
+mise use -g packslip:github.com/damian-kolasinski/elsecall@0.1.0
+elsecall install
+elsecall status
+```
+
+Replace `0.1.0` with the release you want. On a fleet, do this on the master, then
+run `elsecall fleet upgrade` there. See "Upgrading the fleet".
+
 ## Build and install
 
 Requires macOS, Xcode command-line tools, and Rust 1.99.0. A desktop login is not
@@ -1764,12 +1780,19 @@ reads `member.key`; the CLI asks the service to sign on its behalf.
 
 ## Upgrading the fleet
 
-Build and `install` on the master, then distribute that build from it:
+Install the signed release on the master and register it, then distribute that
+build. Or build from source on the master instead:
 
 ```sh
-mise run build && ./target/release/elsecall install   # on the master
-elsecall fleet upgrade                               # every other member
-elsecall fleet upgrade --member macbook-pro         # one member
+mise use -g packslip:github.com/damian-kolasinski/elsecall@0.1.0   # on the master
+elsecall install
+elsecall fleet upgrade                                              # every other member
+elsecall fleet upgrade --member macbook-pro                        # one member
+```
+
+```sh
+mise run build && ./target/release/elsecall install   # on the master, from source
+elsecall fleet upgrade
 elsecall fleet upgrade --member macbook-pro --executable ./target/release/elsecall
 ```
 
