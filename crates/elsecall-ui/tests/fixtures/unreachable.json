@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "data": {
+    "enrolled": true,
+    "members": [
+      {
+        "name": "alpha",
+        "role": "master",
+        "key": "CBgWM2FbNLCkYrBLtHkYE-xHaj7-Z7vdX4JyeoTNV1Q",
+        "endpoints": ["192.0.2.10:47821", "[2001:db8::10]:47821"],
+        "reachability": "reachable",
+        "blocked": null,
+        "status": {
+          "machine": {
+            "hostname": "alpha.example",
+            "cpu_utilization": 0.42,
+            "memory": {
+              "used_bytes": 38654705664,
+              "total_bytes": 68719476736
+            },
+            "load_average": {
+              "one_minute": 1.2,
+              "five_minutes": 1.1,
+              "fifteen_minutes": 0.9
+            }
+          }
+        }
+      },
+      {
+        "name": "beta",
+        "role": "member",
+        "key": "QlR-MneB0qSpx8eBeEICIyqQI1lxw8hCb1-MebrdiKg",
+        "endpoints": ["192.0.2.11:47821", "[2001:db8::11]:47821"],
+        "reachability": "unreachable",
+        "blocked": null,
+        "error": {
+          "code": "member_unavailable",
+          "message": "beta did not answer.",
+          "hint": "Run elsecall doctor on beta."
+        }
+      },
+      {
+        "name": "gamma",
+        "role": "member",
+        "key": "43zUGLb2UWGdEBueLwE1H882jlC_3N8GH89JACLY5pQ",
+        "endpoints": ["192.0.2.12:47821", "[2001:db8::12]:47821"],
+        "reachability": "reachable",
+        "blocked": null,
+        "status": {
+          "machine": {
+            "hostname": "gamma.example",
+            "cpu_utilization": 0.07,
+            "memory": {
+              "used_bytes": 8589934592,
+              "total_bytes": 68719476736
+            },
+            "load_average": {
+              "one_minute": 2.5,
+              "five_minutes": 2.1,
+              "fifteen_minutes": 1.8
+            }
+          }
+        }
+      }
+    ]
+  }
+}

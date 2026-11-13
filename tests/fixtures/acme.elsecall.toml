@@ -1,0 +1,46 @@
+[admission]
+when_unavailable = "run"
+
+[outputs]
+paths = ["DerivedData/Logs/test", "DerivedData/Logs/build"]
+
+[environment]
+names = ["XCODEBUILD_JOBS", "SKIP_CACHE_CHECK"]
+prefixes = ["TEST_", "BUILD_"]
+
+[consistency]
+configuration = ["~/.config/acme-ios"]
+[consistency.toolchains]
+xcode = ["xcodebuild", "-version"]
+
+# xcodebuild -jobs 4; an incremental build measured 1.9 mean / 5 p90 cores.
+[[labels]]
+match = "acme build *"
+size = 4
+placement = "placeable"
+
+# A test measured 0.87 mean / 2 p90 / 5 max cores, plus about 0.4-0.7 for the simulator host.
+[[labels]]
+match = "acme test *"
+size = 3
+placement = "placeable"
+
+# Generation measured 1.2 mean / 2.2 p90 cores.
+[[labels]]
+match = "acme generate*"
+size = 2
+
+# As large as a build; someone waits on it, and its long runs need more than the 30 s default hold limit.
+[[labels]]
+match = "acme warm manual"
+size = 4
+hold_limit = "10m"
+
+# As large as a build; a 30-minute deadline with start keeps main's cache fresh
+# (median warm lag after merge is 8 min on the mini and 19 on the devbox).
+[[labels]]
+match = "acme warm *"
+size = 4
+urgency = "deferrable"
+deadline = "30m"
+at_deadline = "start"

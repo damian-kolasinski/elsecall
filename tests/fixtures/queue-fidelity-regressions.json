@@ -1,0 +1,97 @@
+{
+  "run5": {
+    "source": "run5-rehearsal.json.fidelity.queues[0]",
+    "timeline": [
+      {
+        "at": "2026-11-05T07:08:00.000Z",
+        "recorded": 1,
+        "simulated": 0
+      },
+      {
+        "at": "2026-11-05T07:09:00.000Z",
+        "recorded": 7,
+        "simulated": 3
+      },
+      {
+        "at": "2026-11-05T07:10:00.000Z",
+        "recorded": 12,
+        "simulated": 4
+      },
+      {
+        "at": "2026-11-05T07:11:00.000Z",
+        "recorded": 14,
+        "simulated": 2
+      },
+      {
+        "at": "2026-11-05T07:12:00.000Z",
+        "recorded": 16,
+        "simulated": 3
+      },
+      {
+        "at": "2026-11-05T07:13:00.000Z",
+        "recorded": 15,
+        "simulated": 2
+      },
+      {
+        "at": "2026-11-05T07:14:00.000Z",
+        "recorded": 12,
+        "simulated": 0
+      },
+      {
+        "at": "2026-11-05T07:15:00.000Z",
+        "recorded": 8,
+        "simulated": 0
+      },
+      {
+        "at": "2026-11-05T07:16:00.000Z",
+        "recorded": 5,
+        "simulated": 0
+      },
+      {
+        "at": "2026-11-05T07:17:00.000Z",
+        "recorded": 1,
+        "simulated": 0
+      },
+      {
+        "at": "2026-11-05T07:18:00.000Z",
+        "recorded": 0,
+        "simulated": 0
+      }
+    ]
+  },
+  "run8": {
+    "source": "run8/failing-fidelity.json.fidelity.queues[0]",
+    "timeline": [
+      {
+        "at": "2026-11-05T22:52:00.000Z",
+        "recorded": 1,
+        "simulated": 0
+      },
+      {
+        "at": "2026-11-05T22:53:00.000Z",
+        "recorded": 5,
+        "simulated": 5
+      },
+      {
+        "at": "2026-11-05T22:54:00.000Z",
+        "recorded": 6,
+        "simulated": 5
+      },
+      {
+        "at": "2026-11-05T22:55:00.000Z",
+        "recorded": 5,
+        "simulated": 5
+      },
+      {
+        "at": "2026-11-05T22:56:00.000Z",
+        "recorded": 6,
+        "simulated": 6
+      },
+      {
+        "at": "2026-11-05T22:57:00.000Z",
+        "recorded": 2,
+        "simulated": 2
+      }
+    ]
+  }
+}

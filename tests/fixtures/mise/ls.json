@@ -1,0 +1,626 @@
+{
+  "actionlint": [
+    {
+      "version": "1.7.12",
+      "install_path": "/Users/me/.local/share/mise/installs/actionlint/1.7.12",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "aqua:asciinema/agg": [
+    {
+      "version": "1.9.0",
+      "install_path": "/Users/me/.local/share/mise/installs/aqua-asciinema-agg/1.9.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "bun": [
+    {
+      "version": "1.2.13",
+      "install_path": "/Users/me/.local/share/mise/installs/bun/1.2.13",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "1.3.5",
+      "install_path": "/Users/me/.local/share/mise/installs/bun/1.3.5",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "1.3.14",
+      "install_path": "/Users/me/.local/share/mise/installs/bun/1.3.14",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "elixir": [
+    {
+      "version": "1.10.1",
+      "install_path": "/Users/me/.local/share/mise/installs/elixir/1.10.1",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "1.20.1-otp-29",
+      "install_path": "/Users/me/.local/share/mise/installs/elixir/1.20.1-otp-29",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "erlang": [
+    {
+      "version": "22.3.2",
+      "install_path": "/Users/me/.local/share/mise/installs/erlang/22.3.2",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "29.0.2",
+      "install_path": "/Users/me/.local/share/mise/installs/erlang/29.0.2",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "github:gitleaks/gitleaks": [
+    {
+      "version": "8.30.1",
+      "install_path": "/Users/me/.local/share/mise/installs/github-gitleaks-gitleaks/8.30.1",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "github:jdx/packslip": [
+    {
+      "version": "1.11.1",
+      "install_path": "/Users/me/.local/share/mise/installs/github-jdx-packslip/1.11.1",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "github:rhysd/actionlint": [
+    {
+      "version": "1.7.12",
+      "install_path": "/Users/me/.local/share/mise/installs/github-rhysd-actionlint/1.7.12",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "go": [
+    {
+      "version": "1.27.3",
+      "install_path": "/Users/me/.local/share/mise/installs/go/1.27.3",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "java": [
+    {
+      "version": "openjdk-20",
+      "install_path": "/Users/me/.local/share/mise/installs/java/openjdk-20",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "zulu-17.54.21",
+      "requested_version": "zulu-17",
+      "install_path": "/Users/me/.local/share/mise/installs/java/zulu-17.54.21",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/me/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "node": [
+    {
+      "version": "16.20.2",
+      "install_path": "/Users/me/.local/share/mise/installs/node/16.20.2",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "18.20.4",
+      "install_path": "/Users/me/.local/share/mise/installs/node/18.20.4",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "18.20.6",
+      "install_path": "/Users/me/.local/share/mise/installs/node/18.20.6",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "20.11.1",
+      "install_path": "/Users/me/.local/share/mise/installs/node/20.11.1",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "20.17.0",
+      "install_path": "/Users/me/.local/share/mise/installs/node/20.17.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "20.19.5",
+      "install_path": "/Users/me/.local/share/mise/installs/node/20.19.5",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "22.15.1",
+      "install_path": "/Users/me/.local/share/mise/installs/node/22.15.1",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "22.16.0",
+      "install_path": "/Users/me/.local/share/mise/installs/node/22.16.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "22.19.0",
+      "requested_version": "22",
+      "install_path": "/Users/me/.local/share/mise/installs/node/22.19.0",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/me/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    },
+    {
+      "version": "23.1.0",
+      "install_path": "/Users/me/.local/share/mise/installs/node/23.1.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "23.10.0",
+      "install_path": "/Users/me/.local/share/mise/installs/node/23.10.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "24.0.1",
+      "install_path": "/Users/me/.local/share/mise/installs/node/24.0.1",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "24.11.0",
+      "install_path": "/Users/me/.local/share/mise/installs/node/24.11.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "24.18.0",
+      "install_path": "/Users/me/.local/share/mise/installs/node/24.18.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "24.21.0",
+      "install_path": "/Users/me/.local/share/mise/installs/node/24.21.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "npm:@mermaid-js/mermaid-cli": [
+    {
+      "version": "11.9.0",
+      "install_path": "/Users/me/.local/share/mise/installs/npm-mermaid-js-mermaid-cli/11.9.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "npm:agent-device": [
+    {
+      "version": "0.17.2",
+      "install_path": "/Users/me/.local/share/mise/installs/npm-agent-device/0.17.2",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "packslip:example/acme-cli": [
+    {
+      "version": "0.1.0",
+      "install_path": "/Users/me/.local/share/mise/installs/packslip-example-acme-cli/0.1.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "0.2.0",
+      "install_path": "/Users/me/.local/share/mise/installs/packslip-example-acme-cli/0.2.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "packslip:example/acme": [
+    {
+      "version": "0.10.0",
+      "install_path": "/Users/me/.local/share/mise/installs/packslip-example-acme/0.10.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "0.11.0",
+      "install_path": "/Users/me/.local/share/mise/installs/packslip-example-acme/0.11.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "0.12.0",
+      "requested_version": "0.12.0",
+      "install_path": "/Users/me/.local/share/mise/installs/packslip-example-acme/0.12.0",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/me/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "packslip:github.com/example/acme-ios": [
+    {
+      "version": "0.1.0",
+      "install_path": "/Users/me/.local/share/mise/installs/packslip-github-com-example-acme-ios/0.1.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "0.2.0",
+      "requested_version": "0.2.0",
+      "install_path": "/Users/me/.local/share/mise/installs/packslip-github-com-example-acme-ios/0.2.0",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/me/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "periphery": [
+    {
+      "version": "2.21.0",
+      "install_path": "/Users/me/.local/share/mise/installs/periphery/2.21.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "pnpm": [
+    {
+      "version": "10.12.4",
+      "install_path": "/Users/me/.local/share/mise/installs/pnpm/10.12.4",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "protoc": [
+    {
+      "version": "27.2",
+      "install_path": "/Users/me/.local/share/mise/installs/protoc/27.2",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "33.2",
+      "install_path": "/Users/me/.local/share/mise/installs/protoc/33.2",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "python": [
+    {
+      "version": "2.7.15",
+      "install_path": "/Users/me/.local/share/mise/installs/python/2.7.15",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "3.6.15",
+      "install_path": "/Users/me/.local/share/mise/installs/python/3.6.15",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "3.10.4",
+      "install_path": "/Users/me/.local/share/mise/installs/python/3.10.4",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "3.14.3",
+      "install_path": "/Users/me/.local/share/mise/installs/python/3.14.3",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "ripgrep": [
+    {
+      "version": "15.1.0",
+      "install_path": "/Users/me/.local/share/mise/installs/ripgrep/15.1.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "ruby": [
+    {
+      "version": "3.2.0",
+      "requested_version": "3.2.0",
+      "install_path": "/Users/me/.local/share/mise/installs/ruby/3.2.0",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/me/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    },
+    {
+      "version": "3.3.4",
+      "install_path": "/Users/me/.local/share/mise/installs/ruby/3.3.4",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "3.4.7",
+      "install_path": "/Users/me/.local/share/mise/installs/ruby/3.4.7",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "ruff": [
+    {
+      "version": "0.17.3",
+      "install_path": "/Users/me/.local/share/mise/installs/ruff/0.17.3",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "rust": [
+    {
+      "version": "1.99.0",
+      "install_path": "/Users/me/.local/share/mise/installs/rust/1.99.0",
+      "symlinked_to": "/Users/me/.local/share/mise/installs/rust/1.99.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "sentry": [
+    {
+      "version": "2.43.0",
+      "install_path": "/Users/me/.local/share/mise/installs/sentry/2.43.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "sentry-cli": [
+    {
+      "version": "3.1.0",
+      "install_path": "/Users/me/.local/share/mise/installs/sentry-cli/3.1.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "3.7.0",
+      "install_path": "/Users/me/.local/share/mise/installs/sentry-cli/3.7.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "3.8.0",
+      "install_path": "/Users/me/.local/share/mise/installs/sentry-cli/3.8.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "sourcery": [
+    {
+      "version": "2.1.2",
+      "install_path": "/Users/me/.local/share/mise/installs/sourcery/2.1.2",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "2.2.2",
+      "install_path": "/Users/me/.local/share/mise/installs/sourcery/2.2.2",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "swiftformat": [
+    {
+      "version": "0.54.6",
+      "install_path": "/Users/me/.local/share/mise/installs/swiftformat/0.54.6",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "swiftgen": [
+    {
+      "version": "6.6.2",
+      "install_path": "/Users/me/.local/share/mise/installs/swiftgen/6.6.2",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "6.6.3",
+      "install_path": "/Users/me/.local/share/mise/installs/swiftgen/6.6.3",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "swiftlint": [
+    {
+      "version": "0.53.0",
+      "install_path": "/Users/me/.local/share/mise/installs/swiftlint/0.53.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "0.54.0",
+      "install_path": "/Users/me/.local/share/mise/installs/swiftlint/0.54.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "terraform": [
+    {
+      "version": "1.7.4",
+      "install_path": "/Users/me/.local/share/mise/installs/terraform/1.7.4",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "tuist": [
+    {
+      "version": "3.42.2",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/3.42.2",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.3.0",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.3.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.6.0",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.6.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.9.0",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.9.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.10.2",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.10.2",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.19.0",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.19.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.20.0",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.20.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.28.1",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.28.1",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.36.0",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.36.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.40.0",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.40.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.49.1",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.49.1",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.55.6",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.55.6",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.89.0",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.89.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.104.6",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.104.6",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.182.0",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.182.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.203.1",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.203.1",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.205.0",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.205.0",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.206.0",
+      "install_path": "/Users/me/.local/share/mise/installs/tuist/4.206.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "usage": [
+    {
+      "version": "2.0.4",
+      "install_path": "/Users/me/.local/share/mise/installs/usage/2.0.4",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "xcbeautify": [
+    {
+      "version": "2.14.1",
+      "install_path": "/Users/me/.local/share/mise/installs/xcbeautify/2.14.1",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "2.23.0",
+      "install_path": "/Users/me/.local/share/mise/installs/xcbeautify/2.23.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "yarn": [
+    {
+      "version": "1.22.22",
+      "install_path": "/Users/me/.local/share/mise/installs/yarn/1.22.22",
+      "installed": true,
+      "active": false
+    },
+    {
+      "version": "4.6.0",
+      "install_path": "/Users/me/.local/share/mise/installs/yarn/4.6.0",
+      "installed": true,
+      "active": false
+    }
+  ]
+}

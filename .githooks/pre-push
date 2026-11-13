@@ -1,0 +1,6 @@
+#!/bin/sh
+# Refuse to push private details: ref names, tag messages, and every commit not
+# yet on any remote, however it was made. See AGENTS.md, "Public material".
+set -- --reveal push
+[ "$(git config --bool privacyscan.requireterms)" != true ] || set -- --require-terms "$@"
+exec python3 "$(dirname "$0")/privacy_scan.py" "$@"

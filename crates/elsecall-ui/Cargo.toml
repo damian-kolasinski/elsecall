@@ -1,0 +1,22 @@
+[package]
+name = "elsecall-ui"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+description = "Native window listing Elsecall fleet members"
+license = "MIT"
+publish = false
+
+[dependencies]
+elsecall = { path = "../.." }
+libc = "0.2"
+# rune dev ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c (2026-11-12).
+# Bump: change this rev and the four patch revs in the workspace Cargo.toml.
+rune = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }
+rune-kit = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+tokio = { version = "1", features = ["io-util", "net", "rt", "sync", "time"] }
+
+[dev-dependencies]
+png = "0.18"

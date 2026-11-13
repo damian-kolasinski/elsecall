@@ -1,0 +1,98 @@
+{
+  "source": "run7/preflight-result.json.calibration; measured shapes unchanged",
+  "target": {
+    "admitted_capacity_share": 0.8515282825458954,
+    "cpu_mean": 0.6234289845994992,
+    "member_admitted_capacity_share": {
+      "mac-mini": 0.8515282825458954,
+      "macbook-pro": 0.3516300886880077
+    },
+    "observed_seconds": 21462.0,
+    "queue_max": 7.0,
+    "queue_p50": 1.0,
+    "queue_p90": 4.0,
+    "wait_p90_ms": 268952.0
+  },
+  "trials": [
+    {
+      "load_factor": 1.25,
+      "shape": {
+        "admitted_capacity_share": 0.7318728656323582,
+        "cpu_mean": 0.6193530809576444,
+        "member_admitted_capacity_share": {
+          "mac-mini": 0.7318728656323582,
+          "macbook-pro": 0.0
+        },
+        "observed_seconds": 427.2,
+        "queue_max": 1.0,
+        "queue_p50": 1.0,
+        "queue_p90": 1.0,
+        "wait_p90_ms": 13638.0
+      }
+    },
+    {
+      "load_factor": 1.75,
+      "shape": {
+        "admitted_capacity_share": 0.9381002498334241,
+        "cpu_mean": 0.7020936925332307,
+        "member_admitted_capacity_share": {
+          "mac-mini": 0.9381002498334241,
+          "macbook-pro": 0.0
+        },
+        "observed_seconds": 330.77299999999997,
+        "queue_max": 4.0,
+        "queue_p50": 2.0,
+        "queue_p90": 3.0,
+        "wait_p90_ms": 91314.0
+      }
+    },
+    {
+      "load_factor": 1.9,
+      "shape": {
+        "admitted_capacity_share": 0.9480425823140732,
+        "cpu_mean": 0.6674346336379385,
+        "member_admitted_capacity_share": {
+          "mac-mini": 0.9480425823140732,
+          "macbook-pro": 0.0
+        },
+        "observed_seconds": 326.99100000000004,
+        "queue_max": 5.0,
+        "queue_p50": 3.0,
+        "queue_p90": 5.0,
+        "wait_p90_ms": 191190.0
+      }
+    },
+    {
+      "load_factor": 2.0,
+      "shape": {
+        "admitted_capacity_share": 0.9518541765410148,
+        "cpu_mean": 0.708587558765918,
+        "member_admitted_capacity_share": {
+          "mac-mini": 0.9518541765410148,
+          "macbook-pro": 0.0
+        },
+        "observed_seconds": 326.13100000000003,
+        "queue_max": 6.0,
+        "queue_p50": 4.0,
+        "queue_p90": 5.0,
+        "wait_p90_ms": 254898.0
+      }
+    },
+    {
+      "load_factor": 2.25,
+      "shape": {
+        "admitted_capacity_share": 0.9581029282765634,
+        "cpu_mean": 0.6497790003054369,
+        "member_admitted_capacity_share": {
+          "mac-mini": 0.9581029282765634,
+          "macbook-pro": 0.0
+        },
+        "observed_seconds": 322.99399999999997,
+        "queue_max": 9.0,
+        "queue_p50": 6.0,
+        "queue_p90": 8.0,
+        "wait_p90_ms": 384150.0
+      }
+    }
+  ]
+}

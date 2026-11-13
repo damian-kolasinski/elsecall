@@ -1,0 +1,11 @@
+[tools]
+rust = "1.99.0"
+
+[tasks.check]
+run = "./scripts/check.sh"
+
+[tasks.build]
+run = "./scripts/build.sh"
+
+[tasks.perf]
+run = "./scripts/perf.sh"

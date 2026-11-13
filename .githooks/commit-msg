@@ -1,0 +1,5 @@
+#!/bin/sh
+# Refuse commit messages with private details. See AGENTS.md, "Public material".
+set -- --reveal message "$1"
+[ "$(git config --bool privacyscan.requireterms)" != true ] || set -- --require-terms "$@"
+exec python3 "$(dirname "$0")/privacy_scan.py" "$@"

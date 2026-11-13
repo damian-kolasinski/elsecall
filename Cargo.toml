@@ -1,0 +1,62 @@
+[workspace]
+resolver = "3"
+members = [".", "crates/elsecall-ui"]
+# `mise run build` stays the service binary. The desktop crate is built by
+# `--workspace` checks and `cargo run -p elsecall-ui`.
+default-members = ["."]
+
+[package]
+name = "elsecall"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+description = "Inspect and maintain your development machines"
+license = "MIT"
+
+[dependencies]
+axum = "0.8.9"
+base64 = "0.22"
+chacha20poly1305 = "0.10"
+clap = { version = "4.6", features = ["derive"] }
+ed25519-dalek = "2"
+futures-util = { version = "0.3", default-features = false, features = ["alloc"] }
+getrandom = "0.3"
+hkdf = "0.12"
+http-body-util = "0.1"
+humantime = "2.1"
+hyper = { version = "1", features = ["client", "http1", "server"] }
+hyper-util = { version = "0.1", features = ["tokio", "server", "service"] }
+libc = "0.2"
+plist = "1.10"
+rusqlite = { version = "0.40", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+# Replay re-scores recorded decisions, so floats must read back exactly.
+serde_json = { version = "1", features = ["float_roundtrip", "raw_value"] }
+sha2 = "0.10"
+sysinfo = { version = "0.37", default-features = false, features = ["system"] }
+tokio = { version = "1", features = ["io-util", "macros", "process", "rt-multi-thread", "net", "signal", "sync", "time", "test-util"] }
+tempfile = "3"
+toml = "1.1"
+toml_edit = "0.25.19"
+tower = { version = "0.5", features = ["util"] }
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+zeroize = "1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["process", "test-util"] }
+
+[profile.release]
+lto = "thin"
+strip = true
+
+# Digests dominate sync time; keep them fast in test builds too.
+[profile.dev.package.sha2]
+opt-level = 3
+
+# rune ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c (2026-11-12).
+# Bump this rev together with the rune and rune-kit revs in crates/elsecall-ui.
+[patch.crates-io]
+winit = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }
+wgpu-hal = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }
+parley_engine = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }
+accesskit_windows = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }

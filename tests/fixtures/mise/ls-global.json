@@ -1,0 +1,67 @@
+{
+  "java": [
+    {
+      "version": "zulu-17.54.21",
+      "requested_version": "zulu-17",
+      "install_path": "/Users/me/.local/share/mise/installs/java/zulu-17.54.21",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/me/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "node": [
+    {
+      "version": "22.19.0",
+      "requested_version": "22",
+      "install_path": "/Users/me/.local/share/mise/installs/node/22.19.0",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/me/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "packslip:example/acme": [
+    {
+      "version": "0.12.0",
+      "requested_version": "0.12.0",
+      "install_path": "/Users/me/.local/share/mise/installs/packslip-example-acme/0.12.0",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/me/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "packslip:github.com/example/acme-ios": [
+    {
+      "version": "0.2.0",
+      "requested_version": "0.2.0",
+      "install_path": "/Users/me/.local/share/mise/installs/packslip-github-com-example-acme-ios/0.2.0",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/me/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "ruby": [
+    {
+      "version": "3.2.0",
+      "requested_version": "3.2.0",
+      "install_path": "/Users/me/.local/share/mise/installs/ruby/3.2.0",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/me/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ]
+}

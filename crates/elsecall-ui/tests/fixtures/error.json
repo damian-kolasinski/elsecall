@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "error": {
+    "code": "service_unavailable",
+    "message": "The local service could not be reached.",
+    "hint": "Run elsecall doctor; use elsecall install if absent, or elsecall service restart if installed."
+  }
+}

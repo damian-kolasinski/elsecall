@@ -1,0 +1,13 @@
+[admission]
+when_unavailable = "run"
+
+# Measured on the 14-core development Mac; see docs/test-reliability-slice.md.
+[[labels]]
+match = "elsecall check"
+size = 2.0
+hold_limit = "15m"
+
+[[labels]]
+match = "elsecall build"
+size = 4.5
+hold_limit = "15m"

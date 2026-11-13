@@ -1,0 +1,68 @@
+# A backstop. The hooks from scripts/install-hooks.sh and scripts/mg_guard.py
+# stop private details before they leave the machine; this catches what got
+# past them (a clone without the hooks, a fork, an edit on GitHub) so it can be
+# dealt with at once. See AGENTS.md, "Public material".
+name: Privacy
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    env:
+      # Pushes and pull requests from this repository must have the private
+      # terms; pull requests from forks get no secrets.
+      REQUIRE_TERMS: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && '--require-terms' || '' }}
+      BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # Guards against a change that breaks the scanner by mistake. A same-repo
+      # branch can still edit this workflow; only the hub pushes branches here.
+      - name: Take the scanner from the base branch
+        run: |
+          scanner="$RUNNER_TEMP/privacy_scan.py"
+          if git show "$BASE:scripts/privacy_scan.py" > "$scanner.base" 2>/dev/null \
+            && python3 "$scanner.base" commits --help | grep -q revisions; then
+            mv "$scanner.base" "$scanner"
+          else
+            # No base (a first push), or one from before these modes: the change brings its own.
+            cp scripts/privacy_scan.py "$scanner"
+          fi
+          python3 "$scanner" commits --help | grep -q revisions
+      - name: Tracked files and paths
+        env:
+          PRIVACY_SCAN_TERMS: ${{ secrets.PRIVACY_SCAN_TERMS }}
+        run: python3 "$RUNNER_TEMP/privacy_scan.py" $REQUIRE_TERMS tree
+      - name: Commits, their authors, paths and added lines
+        env:
+          PRIVACY_SCAN_TERMS: ${{ secrets.PRIVACY_SCAN_TERMS }}
+        run: |
+          # Without a usable base (a first push, or a force push to main), scan everything reachable.
+          if git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            revisions="$BASE..$HEAD_SHA"
+          else
+            revisions="$HEAD_SHA"
+          fi
+          python3 "$RUNNER_TEMP/privacy_scan.py" $REQUIRE_TERMS commits "$revisions"
+      - name: Pull request title and description
+        if: github.event_name == 'pull_request'
+        env:
+          PRIVACY_SCAN_TERMS: ${{ secrets.PRIVACY_SCAN_TERMS }}
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s\n\n%s\n' "$TITLE" "$BODY" | python3 "$RUNNER_TEMP/privacy_scan.py" $REQUIRE_TERMS files --name "pull request" -
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s scripts -p "test_*.py"
