@@ -88,11 +88,7 @@ fn scripted_member(name: &'static str, configuration: &str) -> (TestMember, temp
     let load = directory.path().join("load.json");
     std::fs::write(&load, r#"{"performance_cores":8}"#).unwrap();
     let script = format!("file:{}", load.display());
-    let member = TestMember::start_with(
-        name,
-        configuration,
-        &[("ELSECALL_MACHINE_LOAD", &script)],
-    );
+    let member = TestMember::start_with(name, configuration, &[("ELSECALL_MACHINE_LOAD", &script)]);
     (member, directory)
 }
 fn enable(member: &TestMember) -> Value {
