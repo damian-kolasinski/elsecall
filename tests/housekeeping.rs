@@ -890,12 +890,17 @@ fn a_store_another_copy_may_still_read_is_kept() {
 fn queued_deferrable_work_does_not_keep_placed_runs_out() {
     let w = workspaces();
     let clock = w.file("clock");
-    // Capacity 2 on this machine's 12 weighted cores.
+    // Four scripted performance cores and a reserve of two: capacity 2 on any host.
+    let load = w.file("load.json");
+    std::fs::write(&load, r#"{"performance_cores":4}"#).unwrap();
+    let script = format!("file:{}", load.display());
     let (alpha, bravo) = fleet(
         &clock,
-        &format!("{QUIET}[capacity]\nreserved_cores = 10\n"),
-        &[],
+        &format!("{QUIET}[capacity]\nreserved_cores = 2\n"),
+        &[("ELSECALL_MACHINE_LOAD", &script)],
     );
+    let capacity = bravo.ok(&["runs"])["member"]["capacity"].clone();
+    assert_eq!(capacity["capacity"], 2.0, "{capacity}");
     let app = w.repository("app");
     let hold = |options: &str| {
         crate::processes::command("/bin/sh")
