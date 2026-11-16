@@ -53,6 +53,11 @@ enum Command {
         #[arg(long)]
         id: String,
     },
+    /// Import repository workload rules into personal global configuration
+    Config {
+        #[command(subcommand)]
+        command: ConfigCommand,
+    },
     /// Check whether the local API is ready
     Status,
     /// Read basic machine facts, memory and load averages
@@ -130,6 +135,15 @@ enum Command {
     /// Search scheduling settings offline and print proposals only
     Tune(elsecall::tune_cli::TuneArgs),
 }
+#[derive(Subcommand)]
+enum ConfigCommand {
+    /// Import legacy .elsecall.toml files, retaining sources and backing up existing global settings
+    Migrate {
+        #[arg(required = true, value_name = "PATH")]
+        sources: Vec<std::path::PathBuf>,
+    },
+}
+
 #[derive(Clone, Copy, clap::ValueEnum)]
 enum SessionArg {
     /// Start at desktop login, stop at logout
@@ -317,6 +331,11 @@ async fn run(cli: Cli) -> Result<bool> {
     };
     let manager = &*manager;
     match cli.command {
+        Command::Config {
+            command: ConfigCommand::Migrate { sources },
+        } => {
+            output(elsecall::workload_migration::migrate(&paths, &sources)?);
+        }
         Command::Install { session } => {
             let source =
                 std::env::current_exe().map_err(|e| Failure::io("Find current executable", e))?;

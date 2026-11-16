@@ -77,12 +77,21 @@ fn install_update_restart_and_clean_uninstall_using_real_files_and_fake_lifecycl
         fs::read_to_string(&paths.agent).unwrap(),
         "test registration"
     );
+    let workload = paths.data.join("workloads.toml");
+    let personal = b"# Personal policy survives updates\n[[labels]]\nmatch = 'test *'\nsize = 2\n";
+    fs::write(&workload, personal).unwrap();
+    fs::write(paths.configuration(), "[capacity]\nreserved_cores = 3\n").unwrap();
     fs::write(&source, "binary two").unwrap();
     fs::write(source.with_file_name("elsecall-ui"), b"window two").unwrap();
     installation::install(&paths, &source, &manager, None).unwrap();
     assert_eq!(fs::read_to_string(&paths.bin).unwrap(), "binary two");
     assert_eq!(fs::read(paths.window_executable()).unwrap(), b"window two");
     installation::restart(&paths, &manager).unwrap();
+    assert_eq!(fs::read(&workload).unwrap(), personal);
+    assert_eq!(
+        fs::read_to_string(paths.configuration()).unwrap(),
+        "[capacity]\nreserved_cores = 3\n"
+    );
     installation::uninstall(&paths, &manager, false).unwrap();
     assert!(!paths.data.exists());
     assert!(!paths.bin.is_symlink());

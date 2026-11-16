@@ -344,6 +344,8 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
         "elsecall-ui",
         "agent.plist",
         "config.toml",
+        "workloads.toml",
+        "workloads.lock",
         "records.sqlite",
         "records.sqlite-wal",
         "records.sqlite-shm",
