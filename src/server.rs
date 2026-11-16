@@ -257,6 +257,22 @@ pub async fn serve(
         .map(Arc::new),
         Err(error) => Err(error.clone()),
     };
+    let updates = crate::release_update::service::UpdateService::open(
+        paths.clone(),
+        crate::release_update::ReleaseVersion::running(),
+        build.build.clone(),
+        Arc::new(crate::release_update::catalog::GithubReleases),
+        Arc::new(crate::release_update::service::DetachedHelper),
+        scheduler.clone(),
+    );
+    let _update_monitor = updates
+        .as_ref()
+        .ok()
+        .map(|updates| AbortOnDrop(updates.monitor().abort_handle()));
+    let update_routes = match updates {
+        Ok(updates) => crate::release_update_api::routes(updates),
+        Err(error) => crate::release_update_api::unavailable(error),
+    };
     let catalog = Arc::new(Catalog::open(
         &paths.data.join("copies.sqlite"),
         housekeeping::clock::from_environment(),
@@ -405,6 +421,7 @@ pub async fn serve(
         .merge(tools_routes)
         .merge(desired_routes)
         .merge(crate::ui_app::routes(paths.clone()))
+        .merge(update_routes)
         .merge(crate::trace_api::routes(reporter.clone()))
         .merge(crate::report_api::routes(reporter))
         .merge(relay)

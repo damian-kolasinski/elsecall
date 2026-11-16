@@ -29,6 +29,7 @@ hyper-util = { version = "0.1", features = ["tokio", "server", "service"] }
 libc = "0.2"
 plist = "1.10"
 rusqlite = { version = "0.40", features = ["bundled"] }
+semver = "1"
 serde = { version = "1", features = ["derive"] }
 # Replay re-scores recorded decisions, so floats must read back exactly.
 serde_json = { version = "1", features = ["float_roundtrip", "raw_value"] }

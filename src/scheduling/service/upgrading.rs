@@ -34,6 +34,7 @@ impl Scheduler {
     pub fn stop_if_idle(&self) -> bool {
         let mut book = self.book();
         if book.stopping
+            || book.update_held > 0
             || book.hosting_held > 0
             || !book.entries.is_empty()
             || !book.lingering.is_empty()
@@ -81,5 +82,33 @@ impl Scheduler {
     pub fn hold_hosting(&self) -> HostingHold {
         self.book().hosting_held += 1;
         HostingHold(self.this.clone())
+    }
+}
+
+/// Closes new admission at an idle boundary until the installer finishes.
+pub struct UpdateHold(Weak<Scheduler>);
+impl Drop for UpdateHold {
+    fn drop(&mut self) {
+        if let Some(scheduler) = self.0.upgrade() {
+            let mut book = scheduler.book();
+            book.update_held -= 1;
+            scheduler.pump(&mut book);
+        }
+    }
+}
+impl Scheduler {
+    pub fn hold_update_if_idle(&self) -> Option<UpdateHold> {
+        let mut book = self.book();
+        if book.stopping
+            || book.update_held > 0
+            || !book.lingering.is_empty()
+            || book.entries.values().any(|entry| {
+                !(entry.record.internal && !matches!(entry.phase, Phase::Active { .. }))
+            })
+        {
+            return None;
+        }
+        book.update_held += 1;
+        Some(UpdateHold(self.this.clone()))
     }
 }

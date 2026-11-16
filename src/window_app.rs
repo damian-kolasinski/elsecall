@@ -42,15 +42,15 @@ const INFO_PLIST: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 
 /// Sign before publication; restore the previous bundle if opening fails.
 pub fn publish(paths: &Paths, launcher: &dyn WindowLauncher) -> Result<()> {
-    private_files::check_directory(&paths.data)?;
-    let _lock =
-        private_files::try_lock(&paths.data.join("installation.lock"))?.ok_or_else(|| {
-            Failure::new(
-                "operation_in_progress",
-                "Another Elsecall installation or window update is running.",
-                "Wait for it to finish, then retry.",
-            )
-        })?;
+    let transaction = crate::installation::Transaction::begin(paths)?;
+    publish_locked(&transaction, launcher)
+}
+
+pub fn publish_locked(
+    transaction: &crate::installation::Transaction,
+    launcher: &dyn WindowLauncher,
+) -> Result<()> {
+    let paths = transaction.paths();
     let bytes = match fs::read(paths.window_executable()) {
         Ok(bytes) => bytes,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {

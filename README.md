@@ -37,6 +37,42 @@ elsecall status
 Replace `0.1.0` with the release you want. On a fleet, do this on the master, then
 run `elsecall fleet upgrade` there. See "Upgrading the fleet".
 
+## Update a release
+
+After installing a version with the updater, use the local service to check and
+install newer stable releases:
+
+```sh
+elsecall update check
+elsecall update install
+elsecall update install --reopen
+elsecall update status
+```
+
+Checking never installs anything. Installation verifies the CLI and its companion
+window through mise's packslip backend, waits up to five minutes for running and
+queued work to finish, then restarts the service. `--wait 15m` changes that wait
+(up to one hour). Work is never killed to make room for an update; a busy machine
+returns `update_deferred`. `--no-wait` returns a durable job immediately.
+
+The helper survives the restart and records download, waiting, install, selection,
+reopen and rollback progress in `update status`. It restores the previous CLI,
+service and staged window on failure. `--reopen` also opens the matching native
+window and requires its readiness acknowledgment. A failed rollback preserves the
+backup and reports recovery guidance. An interrupted helper reports an error;
+`doctor` and the preserved update state remain available for recovery. If the
+helper is killed while the service is unloaded, run the preserved
+`"$HOME/Library/Application Support/Elsecall/release-update/previous/elsecall" install` manually to
+restore the service, then run `elsecall doctor`.
+
+The updater requires mise with packslip support. It changes only an existing
+Elsecall request in the user's global mise configuration and preserves other
+tools and project pins. That global request becomes the exact installed version,
+including when it previously tracked `latest` or a version range. Verified trees
+referenced by mise remain cached; unreferenced attempts are removed. Local development builds are compared by their package version,
+so a published release with the same version is not offered as an upgrade.
+
+
 ## Build and install
 
 Requires macOS, Xcode command-line tools, and Rust 1.99.0. A desktop login is not
