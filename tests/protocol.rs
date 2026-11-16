@@ -125,3 +125,91 @@ async fn client_rejects_incompatible_malformed_oversized_and_stalled_responses()
     task.abort();
     let _ = task.await;
 }
+
+#[tokio::test]
+async fn fleet_reads_accept_large_diagnostics_with_size_schema_and_timeout_bounds() {
+    use serde_json::{Value, json};
+    use std::time::Duration;
+    let (_home, paths) = fixture();
+    let listener = tokio::net::UnixListener::bind(paths.socket()).unwrap();
+    let fleet = json!({
+        "enrolled":true,
+        "members":[{
+            "name":"mac-mini", "role":"master", "reachability":"reachable",
+            "status":{"processes":(1..=4096).map(|pid| json!({"pid":pid,"name":"compiler","cpu_seconds":1.5})).collect::<Vec<_>>()}
+        }]
+    });
+    assert!(serde_json::to_vec(&fleet).unwrap().len() > 64 * 1024);
+    let served_fleet = fleet.clone();
+    let app = Router::new()
+        .route(
+            "/v1/fleet",
+            get(move || {
+                let fleet = served_fleet.clone();
+                async move { Json(elsecall::api::Response::new(fleet)) }
+            }),
+        )
+        .route(
+            "/oversized",
+            get(|| async {
+                Json(elsecall::api::Response::new(
+                    "x".repeat(client::LARGE_RESPONSE),
+                ))
+            }),
+        )
+        .route(
+            "/version",
+            get(|| async { Json(json!({"schema_version":9000,"data":{}})) }),
+        )
+        .route("/malformed", get(|| async { "not json" }))
+        .route(
+            "/stalled",
+            get(|| async { std::future::pending::<String>().await }),
+        );
+    let task = tokio::spawn(axum::serve(listener, app).into_future());
+    let snapshot: Value =
+        client::get_large_within(&paths.socket(), "/v1/fleet", Duration::from_secs(5))
+            .await
+            .unwrap();
+    assert_eq!(snapshot, fleet);
+    assert_eq!(
+        client::get_within::<Value>(&paths.socket(), "/v1/fleet", Duration::from_secs(5))
+            .await
+            .unwrap_err()
+            .code,
+        "protocol_error"
+    );
+    let output = tokio::process::Command::new(env!("CARGO_BIN_EXE_elsecall"))
+        .env("HOME", &paths.home)
+        .arg("fleet")
+        .output()
+        .await
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "fleet command must accept a large snapshot"
+    );
+    assert_eq!(
+        serde_json::from_slice::<Value>(&output.stdout).unwrap()["data"],
+        fleet
+    );
+    for route in ["/oversized", "/version", "/malformed"] {
+        assert_eq!(
+            client::get_large_within::<Value>(&paths.socket(), route, Duration::from_secs(5))
+                .await
+                .unwrap_err()
+                .code,
+            "protocol_error",
+            "{route}"
+        );
+    }
+    assert_eq!(
+        client::get_large_within::<Value>(&paths.socket(), "/stalled", Duration::from_millis(20))
+            .await
+            .unwrap_err()
+            .code,
+        "service_timeout"
+    );
+    task.abort();
+    let _ = task.await;
+}

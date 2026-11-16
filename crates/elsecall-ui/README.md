@@ -42,7 +42,8 @@ elsecall ui
 
 The window title is Elsecall. A background thread reads `GET /v1/fleet`, then
 waits two seconds after each response before the next read. A request that uses
-the full 15 second timeout is about 17 seconds before the next attempt. If the
+the full 15 second timeout is about 17 seconds before the next attempt. Fleet
+responses accept up to 8 MiB, including member diagnostics the table does not draw. If the
 service is not running, the window says so and names `elsecall install` and
 `elsecall service restart`.
 

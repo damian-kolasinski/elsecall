@@ -95,7 +95,10 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
             wait,
             executable,
         }) => return upgrade(paths, member, wait, executable).await,
-        None => (Method::GET, "/v1/fleet", None),
+        None => {
+            let data = client::get_large_within(&socket, "/v1/fleet", TIMEOUT).await?;
+            return Ok((data, true));
+        }
         Some(FleetCommand::Identity) => (Method::GET, "/v1/fleet/identity", None),
         Some(FleetCommand::Enroll { code, force }) => (
             Method::POST,
