@@ -133,9 +133,42 @@ pub fn install(
     manager: &dyn ServiceManager,
     requested: Option<Session>,
 ) -> Result<Installed> {
-    private_files::owned_tree(&paths.home, &paths.data)?;
-    private_files::directory(&paths.data)?;
-    let _lock = installation_lock(paths)?;
+    Transaction::begin(paths)?.install(source, manager, requested)
+}
+
+/// One installation transaction may also confirm, publish a window or roll back
+/// while excluding every other lifecycle operation.
+pub struct Transaction {
+    paths: Paths,
+    _lock: fs::File,
+}
+impl Transaction {
+    pub fn begin(paths: &Paths) -> Result<Self> {
+        private_files::owned_tree(&paths.home, &paths.data)?;
+        private_files::directory(&paths.data)?;
+        Ok(Self {
+            paths: paths.clone(),
+            _lock: installation_lock(paths)?,
+        })
+    }
+    pub fn paths(&self) -> &Paths {
+        &self.paths
+    }
+    pub fn install(
+        &self,
+        source: &Path,
+        manager: &dyn ServiceManager,
+        requested: Option<Session>,
+    ) -> Result<Installed> {
+        install_locked(&self.paths, source, manager, requested)
+    }
+}
+fn install_locked(
+    paths: &Paths,
+    source: &Path,
+    manager: &dyn ServiceManager,
+    requested: Option<Session>,
+) -> Result<Installed> {
     private_files::owned_tree(&paths.home, paths.bin.parent().unwrap())?;
     private_files::owned_tree(&paths.home, paths.agent.parent().unwrap())?;
     check_link(&paths.bin, &paths.executable())?;
@@ -283,6 +316,13 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
         private_files::directory(&paths.data)?;
     }
     private_files::check_directory(&paths.data)?;
+    if crate::release_update::store::active_helper(paths)? {
+        return Err(Failure::new(
+            "operation_in_progress",
+            "An Elsecall release update is running.",
+            "Wait for it to finish before uninstalling.",
+        ));
+    }
     let _lock = installation_lock(paths)?;
     check_link(&paths.bin, &paths.executable())?;
     check_link(&paths.agent, &paths.plist())?;
@@ -331,6 +371,7 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
         }
     }
     crate::fleet_upgrade::journal::Journal::new(&paths.data).remove()?;
+    crate::release_update::store::remove(paths)?;
     match fs::remove_dir(&paths.data) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::DirectoryNotEmpty => Err(Failure::new(

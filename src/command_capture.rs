@@ -48,6 +48,13 @@ pub(crate) enum CaptureFailure {
 }
 
 pub(crate) fn run(program: Program<'_>) -> Result<Captured, CaptureFailure> {
+    run_with_env(program, &[])
+}
+
+pub(crate) fn run_with_env(
+    program: Program<'_>,
+    environment: &[(OsString, OsString)],
+) -> Result<Captured, CaptureFailure> {
     if !program.program.is_absolute() {
         return Err(CaptureFailure::Start(std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
@@ -65,6 +72,7 @@ pub(crate) fn run(program: Program<'_>) -> Result<Captured, CaptureFailure> {
     for name in program.remove_env {
         command.env_remove(name);
     }
+    command.envs(environment.iter().cloned());
     let mut child = crate::child_start::spawn(&mut command).map_err(CaptureFailure::Start)?;
     let pgid = libc::pid_t::try_from(child.id()).ok();
     let mut stdout = child.stdout.take().expect("piped stdout");

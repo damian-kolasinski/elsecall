@@ -46,6 +46,13 @@ enum Command {
     },
     /// Open the fleet window installed with this CLI release
     Ui,
+    /// Check for and install signed Elsecall releases
+    Update(elsecall::release_update_cli::UpdateArgs),
+    #[command(hide = true)]
+    UpdateHelper {
+        #[arg(long)]
+        id: String,
+    },
     /// Check whether the local API is ready
     Status,
     /// Read basic machine facts, memory and load averages
@@ -293,7 +300,10 @@ async fn run(cli: Cli) -> Result<bool> {
     }
     local_access::require_user()?;
     let paths = Paths::current()?;
-    if matches!(&cli.command, Command::Serve | Command::UpgradeHelper { .. }) {
+    if matches!(
+        &cli.command,
+        Command::Serve | Command::UpgradeHelper { .. } | Command::UpdateHelper { .. }
+    ) {
         elsecall::service_log::initialize(&paths)?;
     }
     let manager: Box<dyn ServiceManager> = if elsecall::process_service::requested()? {
@@ -334,6 +344,23 @@ async fn run(cli: Cli) -> Result<bool> {
             )
             .await?;
             output(launched);
+        }
+        Command::Update(args) => {
+            let (data, complete) = elsecall::release_update_cli::run(&paths, args).await?;
+            output(data);
+            return Ok(complete);
+        }
+        Command::UpdateHelper { id } => {
+            let id = elsecall::release_update::JobId::try_from(id)?;
+            elsecall::release_update::helper::run(
+                &paths,
+                &id,
+                &elsecall::release_update::helper::production_download(&paths),
+                &elsecall::release_update::helper::production_selection(&paths),
+                manager,
+                &elsecall::macos::window_launcher::MacWindowLauncher,
+            )
+            .await?;
         }
         Command::Status => output(client::get::<Health>(&paths.socket(), "/v1/health").await?),
         Command::Machine => output(client::get::<Machine>(&paths.socket(), "/v1/machine").await?),

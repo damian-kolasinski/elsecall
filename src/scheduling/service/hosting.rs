@@ -100,6 +100,7 @@ impl Scheduler {
         // Deferrable work, such as housekeeping, waits behind interactive work and
         // never keeps placed interactive work out.
         if book.stopping
+            || book.update_held > 0
             || book.hosting_held > 0
             || queued.interactive > 0
             || !self.gate(&book).admits()

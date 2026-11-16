@@ -148,3 +148,7 @@ mod send_inactivity;
 
 pub mod workload_metadata;
 pub mod workload_observation_cli;
+
+pub mod release_update;
+pub mod release_update_api;
+pub mod release_update_cli;

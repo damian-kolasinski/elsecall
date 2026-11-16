@@ -15,7 +15,7 @@ mod ratio_cache;
 mod running;
 mod running_estimates;
 mod upgrading;
-pub use upgrading::{HostingHold, WorkInFlight};
+pub use upgrading::{HostingHold, UpdateHold, WorkInFlight};
 
 use crate::{
     configuration::ServiceConfiguration,
@@ -178,6 +178,7 @@ struct Book {
     running: running_estimates::RunningEstimates,
     /// Set once the service is shutting down; new requests are refused.
     stopping: bool,
+    update_held: usize,
     /// While positive, runs other members would place here are refused as busy.
     hosting_held: usize,
     /// Supervised background processes left by placed commands.
@@ -361,6 +362,7 @@ impl Scheduler {
                 quotes: Quotes::default(),
                 running: Default::default(),
                 stopping: false,
+                update_held: 0,
                 hosting_held: 0,
                 lingering: HashSet::new(),
             }),
@@ -670,6 +672,13 @@ impl Scheduler {
             let mut book = self.book();
             if book.stopping {
                 return Err(stopping());
+            }
+            if book.update_held > 0 {
+                return Err(Failure::new(
+                    "update_in_progress",
+                    "The local service is installing an update.",
+                    "Wait for elsecall update status to complete, then retry.",
+                ));
             }
             if request.kind == Kind::Lease
                 && let Some(held) = Self::held_by(&book, holder)
@@ -1153,6 +1162,9 @@ impl Scheduler {
 
     /// Starts every waiting request that may start now, in order.
     fn pump(&self, book: &mut Book) {
+        if book.update_held > 0 {
+            return;
+        }
         let gate = self.gate(book);
         while let Some(id) = book.admission.ready(gate.admits()).cloned() {
             let reason = match book.entries[&id].record.urgency {

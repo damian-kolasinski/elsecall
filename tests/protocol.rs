@@ -49,6 +49,9 @@ fn fixture() -> (tempfile::TempDir, Paths) {
 #[tokio::test]
 async fn inspection_failure_crosses_real_api_without_becoming_false_health_failure() {
     let (_home, paths) = fixture();
+    let update_state = paths.data.join("release-update");
+    private_files::directory(&update_state).unwrap();
+    std::fs::write(update_state.join("job.json"), b"unreadable update journal").unwrap();
     let machine = Arc::new(UnavailableMachine);
     let (processes, exits) = MacProcesses::start().unwrap();
     let task = tokio::spawn(server::serve(
@@ -77,6 +80,13 @@ async fn inspection_failure_crosses_real_api_without_becoming_false_health_failu
         assert!(tokio::time::Instant::now() < deadline);
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     }
+    assert_eq!(
+        client::get::<serde_json::Value>(&paths.socket(), "/v1/update")
+            .await
+            .unwrap_err()
+            .code,
+        "release_update_failed"
+    );
     let error = client::get::<Machine>(&paths.socket(), "/v1/machine")
         .await
         .unwrap_err();
