@@ -356,3 +356,75 @@ async fn failed_helper_launch_and_stale_jobs_are_retryable() {
     );
     assert!(service.start(false, 3601).await.is_err());
 }
+
+struct ScheduledCatalog {
+    calls: std::sync::atomic::AtomicUsize,
+}
+impl ReleaseCatalog for ScheduledCatalog {
+    fn latest(&self) -> Result<Option<Release>> {
+        self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        Ok(Some(release("0.1.1")))
+    }
+}
+#[tokio::test(start_paused = true)]
+async fn automatic_discovery_checks_at_startup_and_hourly_and_reuses_a_fresh_persisted_check() {
+    use std::sync::atomic::Ordering;
+    let (_home, paths, scheduler) = fixture();
+    let catalog = Arc::new(ScheduledCatalog {
+        calls: std::sync::atomic::AtomicUsize::new(0),
+    });
+    let launcher = Arc::new(Launch {
+        calls: Mutex::default(),
+        fail: false,
+    });
+    let service = UpdateService::open(
+        paths.clone(),
+        release("0.1.0").version,
+        Digest::of(b"old").build_id(),
+        catalog.clone(),
+        launcher.clone(),
+        scheduler.clone(),
+    )
+    .unwrap();
+    let task = service.schedule(std::time::Duration::from_secs(3600));
+    let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while service.status().unwrap().checked_at.is_none() {
+        assert!(std::time::Instant::now() < until);
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(catalog.calls.load(Ordering::SeqCst), 1);
+    tokio::time::advance(std::time::Duration::from_secs(3599)).await;
+    assert_eq!(catalog.calls.load(Ordering::SeqCst), 1);
+    tokio::time::advance(std::time::Duration::from_secs(1)).await;
+    while catalog.calls.load(Ordering::SeqCst) < 2 {
+        assert!(std::time::Instant::now() < until);
+        tokio::task::yield_now().await;
+    }
+    task.abort();
+    let _ = task.await;
+    let restarted = UpdateService::open(
+        paths.clone(),
+        release("0.1.0").version,
+        Digest::of(b"old").build_id(),
+        catalog.clone(),
+        launcher.clone(),
+        scheduler,
+    )
+    .unwrap();
+    let task = restarted.schedule(std::time::Duration::from_secs(3600));
+    tokio::task::yield_now().await;
+    tokio::time::advance(std::time::Duration::from_secs(3599)).await;
+    assert_eq!(catalog.calls.load(Ordering::SeqCst), 2);
+    tokio::time::advance(std::time::Duration::from_secs(1)).await;
+    while catalog.calls.load(Ordering::SeqCst) < 3 {
+        assert!(std::time::Instant::now() < until);
+        tokio::task::yield_now().await;
+    }
+    assert!(launcher.calls.lock().unwrap().is_empty());
+    assert_eq!(
+        restarted.status().unwrap().available,
+        Some(release("0.1.1"))
+    );
+    task.abort();
+    let _ = task.await;
+}

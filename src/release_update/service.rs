@@ -276,3 +276,43 @@ impl UpdateService {
         })
     }
 }
+
+/// Provider wiring kept outside the update coordinator, also used by service tests.
+pub struct UpdateAdapters {
+    pub catalog: Arc<dyn ReleaseCatalog>,
+    pub launcher: Arc<dyn HelperLauncher>,
+    pub automatic: bool,
+}
+impl UpdateAdapters {
+    pub fn production(automatic: bool) -> Self {
+        Self {
+            catalog: Arc::new(super::catalog::GithubReleases),
+            launcher: Arc::new(DetachedHelper),
+            automatic,
+        }
+    }
+}
+impl UpdateService {
+    /// Poll independently of fleet reads. A fresh persisted check survives service restarts.
+    pub fn schedule(self: &Arc<Self>, interval: Duration) -> tokio::task::JoinHandle<()> {
+        let service = self.clone();
+        tokio::spawn(async move {
+            let delay = {
+                let cached = service.discovery.lock().expect("release discovery");
+                cached
+                    .checked_at
+                    .filter(|_| cached.error.is_none())
+                    .map(|at| {
+                        interval.saturating_sub(Duration::from_secs(now().saturating_sub(at)))
+                    })
+            };
+            if let Some(delay) = delay {
+                tokio::time::sleep(delay).await;
+            }
+            loop {
+                let _ = service.check().await;
+                tokio::time::sleep(interval).await;
+            }
+        })
+    }
+}

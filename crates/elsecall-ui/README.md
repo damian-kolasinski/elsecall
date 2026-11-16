@@ -8,9 +8,16 @@ It does not listen on the network. Releases include it beside the CLI;
 To open the installed window, run `elsecall ui`. This signs and publishes
 `~/Applications/Elsecall.app`, then opens a fresh instance. The service must be running.
 
-To upgrade, install the new CLI release with mise (or extract both executables
-from its archive), then run `elsecall install`. Leave the old window open: its
-next refresh offers **Upgrade and reopen** when the staged window differs.
+The local service checks for newer stable releases at startup and hourly, with
+cached results across restarts. When a release is available, the window shows
+its version beside **Upgrade and reopen**. Clicking installs the signed CLI and
+UI, waits for current work, restarts the service and opens the new window. Checks
+and progress poll separately from the fleet; an offer remains usable while fleet
+data is loading. No release installs until you click or run `elsecall update install`.
+
+You can also install a CLI release with mise (or extract both executables from
+its archive), then run `elsecall install`. Leave the old window open: its next
+refresh uses the same button when the staged window differs.
 The button shows **Upgrading…** and disables itself while the app is signed,
 replaced and reopened. The new native window acknowledges readiness before the
 old window closes.
@@ -54,7 +61,9 @@ cargo run -p elsecall-ui -- --snap /tmp/fleet.png --scene members --theme light 
 ```
 
 Scenes: `loading`, `unavailable-first`, `unavailable`, `solo`, `members`,
-`upgrade`, `upgrading`, `upgrade-failed`.
+`upgrade`, `upgrading`, `upgrade-failed`, `release-available`, `release-loading`,
+`release-downloading`, `release-waiting`, `release-installing`, `release-reopening`,
+`release-failed`, `release-offline`, `release-future`.
 `--theme` is `light` or `dark`. `unavailable-first` is the service down before
 any fleet data (banner, no table). `unavailable` keeps the last table, greyed,
 under that banner.

@@ -65,11 +65,20 @@ pub fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
         .fill(paints.page)
         .padding(theme::SPACE_8)
         .gap(theme::SPACE_6);
-    if matches!(state.phase(), crate::app::Phase::Loading) {
+    if matches!(state.phase(), crate::app::Phase::Loading) && !state.update_available() {
         return page.center().child(loading(&paints));
     }
     let shown = state.shown();
     let mut page = page.child(header(state, &paints, dark));
+    if matches!(state.phase(), crate::app::Phase::Loading) {
+        page = page.child(
+            col().w_full().grow(1.0).center().child(
+                text("Reading the local service…")
+                    .font(paints.body)
+                    .color(paints.secondary),
+            ),
+        );
+    }
     if let Some(error) = state.update_error() {
         page = page.child(text(error).font(paints.small).color(paints.secondary));
     }
@@ -118,6 +127,9 @@ fn header(state: &AppState, paints: &Paints, dark: bool) -> El {
         );
     }
     line = line.child(rune::el().grow(1.0));
+    if let Some(notice) = state.release_notice() {
+        line = line.child(text(notice).font(paints.small).color(paints.secondary));
+    }
     if state.update_available() {
         line = line.child(update_button(state, dark));
     }
@@ -132,15 +144,11 @@ fn header(state: &AppState, paints: &Paints, dark: bool) -> El {
 }
 
 fn update_button(state: &AppState, dark: bool) -> El {
-    Button::new(if state.updating() {
-        "Upgrading…"
-    } else {
-        "Upgrade and reopen"
-    })
-    .disabled(state.updating())
-    .on_press(|state: &mut AppState| state.press_update())
-    .build(&theme::kit(dark))
-    .key("upgrade-window")
+    Button::new(state.upgrade_label())
+        .disabled(state.updating())
+        .on_press(|state: &mut AppState| state.press_update())
+        .build(&theme::kit(dark))
+        .key("upgrade-window")
 }
 
 fn banner(message: &str, hint: &str, paints: &Paints) -> El {

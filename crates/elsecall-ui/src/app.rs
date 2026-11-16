@@ -9,10 +9,12 @@ use crate::fleet_source::{
     FleetSnapshot, Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Role, SourceFailure,
 };
 use crate::refresh::{self, Update};
+use crate::release_source::{self, ReleaseSnapshot};
 use crate::socket_source;
 use crate::theme;
 use crate::view;
 use crate::window_upgrade::{self, UpgradeState, WindowUpgrade};
+use elsecall::release_update::{Job, Phase as ReleasePhase, Status as ReleaseStatus};
 
 const CHROME: Chrome = Chrome {
     full_size_content: false,
@@ -31,6 +33,15 @@ const SCENES: &[(&str, Scene)] = &[
     ("upgrade", scene_upgrade),
     ("upgrading", scene_upgrading),
     ("upgrade-failed", scene_upgrade_failed),
+    ("release-available", scene_release_available),
+    ("release-loading", scene_release_loading),
+    ("release-downloading", scene_release_downloading),
+    ("release-waiting", scene_release_waiting),
+    ("release-installing", scene_release_installing),
+    ("release-reopening", scene_release_reopening),
+    ("release-failed", scene_release_failed),
+    ("release-offline", scene_release_offline),
+    ("release-future", scene_release_future),
 ];
 
 pub(crate) enum Phase {
@@ -53,6 +64,11 @@ pub struct AppState {
     upgrade: UpgradeState,
     upgrade_feed: Latest<Result<(), String>>,
     window_upgrade: Arc<dyn WindowUpgrade>,
+    release_status: Option<ReleaseStatus>,
+    release_feed: Arc<Latest<Result<ReleaseSnapshot, String>>>,
+    release_start: Latest<Result<Job, String>>,
+    opened_at_ms: u64,
+    release_disconnected: bool,
 }
 
 impl AppState {
@@ -91,10 +107,25 @@ impl AppState {
 
     pub(crate) fn update_available(&self) -> bool {
         window_upgrade::available(self.installed_window.as_deref(), self.self_build.as_deref())
+            || self.release_status.as_ref().is_some_and(|status| {
+                status.available.is_some()
+                    || status.job.as_ref().is_some_and(|job| !job.phase.terminal())
+            })
+            || self.updating()
     }
 
     pub(crate) fn updating(&self) -> bool {
-        matches!(self.upgrade, UpgradeState::Installing)
+        matches!(
+            self.upgrade,
+            UpgradeState::Installing
+                | UpgradeState::StartingRelease
+                | UpgradeState::Release(_)
+                | UpgradeState::Retiring
+        ) || self
+            .release_status
+            .as_ref()
+            .and_then(|status| status.job.as_ref())
+            .is_some_and(|job| !job.phase.terminal())
     }
 
     pub(crate) fn update_error(&self) -> Option<&str> {
@@ -108,11 +139,113 @@ impl AppState {
         if self.updating() || !self.update_available() {
             return;
         }
-        self.upgrade = UpgradeState::Installing;
-        self.upgrade_feed
-            .request(Arc::clone(&self.window_upgrade), |upgrade| {
-                upgrade.replace_and_reopen()
-            });
+        if self
+            .release_status
+            .as_ref()
+            .is_some_and(|status| status.available.is_some())
+        {
+            self.upgrade = UpgradeState::StartingRelease;
+            self.release_start
+                .request(Arc::clone(&self.window_upgrade), |upgrade| {
+                    upgrade.start_release()
+                });
+        } else {
+            self.upgrade = UpgradeState::Installing;
+            self.upgrade_feed
+                .request(Arc::clone(&self.window_upgrade), |upgrade| {
+                    upgrade.replace_and_reopen()
+                });
+        }
+    }
+
+    pub(crate) fn release_notice(&self) -> Option<String> {
+        let status = self.release_status.as_ref()?;
+        if let Some(job) = &status.job
+            && !job.phase.terminal()
+        {
+            return Some(format!("Updating to {}", job.release.version));
+        }
+        status
+            .available
+            .as_ref()
+            .map(|release| format!("Version {} available", release.version))
+    }
+    pub(crate) fn upgrade_label(&self) -> &'static str {
+        if self.release_disconnected && self.updating() {
+            return "Reconnecting…";
+        }
+        if let Some(job) = self
+            .release_status
+            .as_ref()
+            .and_then(|status| status.job.as_ref())
+            && !job.phase.terminal()
+        {
+            return match job.phase {
+                ReleasePhase::Starting | ReleasePhase::Downloading => "Downloading…",
+                ReleasePhase::WaitingForWork => "Waiting for work…",
+                ReleasePhase::Installing => "Installing…",
+                ReleasePhase::SelectingCli => "Finishing update…",
+                ReleasePhase::Reopening => "Reopening…",
+                ReleasePhase::Restoring => "Restoring previous version…",
+                ReleasePhase::Unknown => "Updating…",
+                _ => unreachable!("active update phase"),
+            };
+        }
+        if self.updating() {
+            "Upgrading…"
+        } else {
+            "Upgrade and reopen"
+        }
+    }
+    fn apply_release(&mut self, snapshot: Result<ReleaseSnapshot, String>) {
+        let Ok(snapshot) = snapshot else {
+            self.release_disconnected = true;
+            return;
+        };
+        self.release_disconnected = false;
+        self.installed_window = snapshot.installed_window;
+        let mut incoming = snapshot.release;
+        if let Some(previous) = self
+            .release_status
+            .as_ref()
+            .and_then(|status| status.job.as_ref())
+            && let Some(status) = &mut incoming
+            && status
+                .job
+                .as_ref()
+                .is_some_and(|job| job.started_at_ms < previous.started_at_ms)
+        {
+            status.job = Some(previous.clone());
+        }
+        self.release_status = incoming;
+        if matches!(self.upgrade, UpgradeState::Retiring) {
+            return;
+        }
+        if let Some(job) = self
+            .release_status
+            .as_ref()
+            .and_then(|status| status.job.as_ref())
+        {
+            if !job.phase.terminal() && matches!(self.upgrade, UpgradeState::Failed(_)) {
+                self.upgrade = UpgradeState::Idle;
+            }
+            let initiated = matches!(&self.upgrade,UpgradeState::Release(id) if id==&job.id);
+            let in_this_window =
+                initiated || (job.started_at_ms > 0 && job.started_at_ms >= self.opened_at_ms);
+            match &job.phase {
+                ReleasePhase::Succeeded if in_this_window && job.reopen => {
+                    self.upgrade = UpgradeState::Retiring;
+                    self.window_upgrade.close_old_window();
+                }
+                ReleasePhase::Succeeded if initiated => self.upgrade = UpgradeState::Idle,
+                ReleasePhase::Failed { error, .. }
+                    if in_this_window && !matches!(self.upgrade, UpgradeState::StartingRelease) =>
+                {
+                    self.upgrade = UpgradeState::Failed(format!("{} {}", error.message, error.hint))
+                }
+                _ => (),
+            }
+        }
     }
 
     pub(crate) fn table(state: &Self) -> &TableState {
@@ -124,7 +257,6 @@ impl AppState {
     }
 
     fn apply_refresh(&mut self, update: Update) {
-        self.installed_window = update.installed_window;
         match update.result {
             Ok(snapshot) => {
                 self.refreshed = Some(update.refreshed_at);
@@ -200,6 +332,11 @@ fn init() -> AppState {
         upgrade: UpgradeState::Idle,
         upgrade_feed: Latest::default(),
         window_upgrade: Arc::new(socket_source::SocketWindowUpgrade),
+        release_status: None,
+        release_feed: Arc::new(Latest::default()),
+        release_start: Latest::default(),
+        opened_at_ms: elsecall::release_update::now_millis(),
+        release_disconnected: false,
     }
 }
 
@@ -212,9 +349,15 @@ fn own_build() -> Option<String> {
 
 fn setup(state: &mut AppState, waker: Waker) {
     state.feed.set_waker(waker.clone());
-    state.upgrade_feed.set_waker(waker);
+    state.upgrade_feed.set_waker(waker.clone());
+    state.release_feed.set_waker(waker.clone());
+    state.release_start.set_waker(waker);
     if state.follow_service {
         refresh::start(Arc::clone(&state.feed), socket_source::shared());
+        release_source::start(
+            Arc::clone(&state.release_feed),
+            release_source::production(),
+        );
     }
 }
 
@@ -222,6 +365,33 @@ fn poll(state: &mut AppState, _: f64, tx: &mut Tx) -> bool {
     let mut changed = false;
     if let Some(update) = state.feed.take() {
         state.apply_refresh(update);
+        changed = true;
+    }
+    if let Some(release) = state.release_feed.take() {
+        state.apply_release(release);
+        changed = true;
+    }
+    if let Some(result) = state.release_start.take() {
+        if !matches!(state.upgrade, UpgradeState::Retiring) {
+            match result {
+                Ok(job) => {
+                    state.upgrade = UpgradeState::Release(job.id.clone());
+                    if let Some(status) = &mut state.release_status
+                        && status
+                            .job
+                            .as_ref()
+                            .is_none_or(|existing| existing.id != job.id)
+                    {
+                        status.job = Some(job);
+                    }
+                    state.apply_release(Ok(ReleaseSnapshot {
+                        installed_window: state.installed_window.clone(),
+                        release: state.release_status.clone(),
+                    }));
+                }
+                Err(message) => state.upgrade = UpgradeState::Failed(message),
+            }
+        }
         changed = true;
     }
     if let Some(result) = state.upgrade_feed.take() {
@@ -296,6 +466,88 @@ fn scene_upgrade_failed(state: &mut AppState) {
     state.upgrade = UpgradeState::Failed(
         "The fleet window could not be opened. Retry from a macOS desktop session.".into(),
     );
+}
+
+fn release_fixture(phase: Option<ReleasePhase>) -> ReleaseSnapshot {
+    use elsecall::release_update::{JobId, Release, ReleaseVersion};
+    let release = Release {
+        version: ReleaseVersion::try_from("0.1.1".to_owned()).expect("fixture version"),
+    };
+    let job = phase.map(|phase| Job {
+        id: JobId::try_from("a".repeat(32)).expect("fixture job"),
+        release: release.clone(),
+        from_build: "1111111111111111".parse().expect("fixture build"),
+        started_at_ms: 20,
+        reopen: true,
+        wait_seconds: 300,
+        phase,
+        updated_at: 1700000000,
+    });
+    ReleaseSnapshot {
+        installed_window: Some("1111111111111111".into()),
+        release: Some(ReleaseStatus {
+            current_version: ReleaseVersion::try_from("0.1.0".to_owned()).expect("fixture current"),
+            available: Some(release),
+            checked_at: Some(1700000000),
+            check_error: None,
+            job,
+        }),
+    }
+}
+fn scene_release_available(state: &mut AppState) {
+    scene_members(state);
+    state.self_build = Some("1111111111111111".into());
+    state.opened_at_ms = 1;
+    state.apply_release(Ok(release_fixture(None)));
+}
+fn scene_release_phase(state: &mut AppState, phase: ReleasePhase) {
+    scene_release_available(state);
+    state.apply_release(Ok(release_fixture(Some(phase))));
+}
+fn scene_release_loading(state: &mut AppState) {
+    scene_release_available(state);
+    state.phase = Phase::Loading;
+    state.refreshed = None;
+}
+fn scene_release_downloading(state: &mut AppState) {
+    scene_release_phase(state, ReleasePhase::Downloading);
+}
+fn scene_release_waiting(state: &mut AppState) {
+    scene_release_phase(state, ReleasePhase::WaitingForWork);
+}
+fn scene_release_installing(state: &mut AppState) {
+    scene_release_phase(state, ReleasePhase::Installing);
+}
+fn scene_release_reopening(state: &mut AppState) {
+    scene_release_phase(state, ReleasePhase::Reopening);
+}
+fn scene_release_future(state: &mut AppState) {
+    scene_release_phase(state, ReleasePhase::Unknown);
+}
+fn scene_release_failed(state: &mut AppState) {
+    scene_release_phase(
+        state,
+        ReleasePhase::Failed {
+            error: elsecall::failure::Failure::new(
+                "release_tool_failed",
+                "The release could not be verified.",
+                "Check connectivity and retry the update.",
+            ),
+            rolled_back: false,
+        },
+    );
+}
+fn scene_release_offline(state: &mut AppState) {
+    scene_release_available(state);
+    state
+        .release_status
+        .as_mut()
+        .expect("release scene")
+        .check_error = Some(elsecall::failure::Failure::new(
+        "release_tool_failed",
+        "The release server could not be reached.",
+        "The cached offer remains available.",
+    ));
 }
 
 fn solo_snapshot() -> FleetSnapshot {
@@ -399,6 +651,9 @@ mod tests {
         closed: std::sync::atomic::AtomicBool,
     }
     impl WindowUpgrade for Desktop {
+        fn start_release(&self) -> Result<Job, String> {
+            Err("No remote release in this staged-window test.".into())
+        }
         fn replace_and_reopen(&self) -> Result<(), String> {
             self.requests
                 .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
@@ -441,10 +696,10 @@ mod tests {
         );
         rt.frame(0.0);
         assert!(rt.presented("upgrade-window").is_none());
+        rt.state.installed_window = Some("2222222222222222".into());
         rt.state.apply_refresh(Update {
             result: Ok(members_snapshot()),
             refreshed_at: "14:32:07".into(),
-            installed_window: Some("2222222222222222".into()),
         });
         rt.invalidate();
         rt.frame(0.0);
@@ -465,10 +720,10 @@ mod tests {
             .recv_timeout(std::time::Duration::from_secs(5))
             .unwrap();
         // A fleet refresh arriving at the same time must not erase the error.
+        rt.state.installed_window = Some("2222222222222222".into());
         rt.state.apply_refresh(Update {
             result: Ok(members_snapshot()),
             refreshed_at: "14:32:09".into(),
-            installed_window: Some("2222222222222222".into()),
         });
         poll(&mut rt.state, 0.0, &mut Tx::default());
         assert!(!rt.state.updating());
@@ -495,13 +750,155 @@ mod tests {
         );
     }
 
+    struct ReleaseDesktop {
+        reply: std::sync::Mutex<std::sync::mpsc::Receiver<Result<Job, String>>>,
+        starts: std::sync::atomic::AtomicUsize,
+        closes: std::sync::atomic::AtomicUsize,
+    }
+    impl WindowUpgrade for ReleaseDesktop {
+        fn replace_and_reopen(&self) -> Result<(), String> {
+            panic!("a remote offer must install the full release")
+        }
+        fn start_release(&self) -> Result<Job, String> {
+            self.starts
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            self.reply.lock().unwrap().recv().unwrap()
+        }
+        fn close_old_window(&self) {
+            self.closes
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+    #[test]
+    fn a_release_offer_is_visible_while_the_fleet_is_loading() {
+        let _guard = theme::serial_render();
+        let mut state = init();
+        scene_release_loading(&mut state);
+        let mut rt = rune::Runtime::new(
+            state,
+            view::fleet,
+            (1120.0, 560.0),
+            rune::Env::new(false, 1.0),
+        );
+        rt.frame(0.0);
+        assert!(rt.presented("upgrade-window").is_some());
+        assert!(
+            rt.elements()
+                .iter()
+                .any(|element| element.label.as_deref() == Some("Upgrade and reopen"))
+        );
+        assert!(matches!(rt.state.phase, Phase::Loading));
+    }
+    #[test]
+    fn release_button_installs_once_shows_progress_keeps_errors_and_retires_only_after_success() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let _guard = theme::serial_render();
+        let (reply, receiver) = std::sync::mpsc::channel();
+        let desktop = Arc::new(ReleaseDesktop {
+            reply: std::sync::Mutex::new(receiver),
+            starts: AtomicUsize::new(0),
+            closes: AtomicUsize::new(0),
+        });
+        let mut state = init();
+        scene_release_available(&mut state);
+        state.window_upgrade = desktop.clone();
+        let (wake, ready) = std::sync::mpsc::channel();
+        state.release_start.set_waker(Arc::new(move || {
+            wake.send(()).unwrap();
+        }));
+        let mut rt = rune::Runtime::new(
+            state,
+            view::fleet,
+            (1120.0, 560.0),
+            rune::Env::new(false, 1.0),
+        );
+        rt.frame(0.0);
+        click_upgrade(&mut rt);
+        click_upgrade(&mut rt);
+        assert!(rt.state.updating());
+        let first = release_fixture(Some(ReleasePhase::Starting))
+            .release
+            .unwrap()
+            .job
+            .unwrap();
+        reply.send(Ok(first.clone())).unwrap();
+        ready
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .unwrap();
+        poll(&mut rt.state, 0.0, &mut Tx::default());
+        assert_eq!(desktop.starts.load(Ordering::SeqCst), 1);
+        rt.state
+            .apply_release(Ok(release_fixture(Some(ReleasePhase::Downloading))));
+        assert_eq!(rt.state.upgrade_label(), "Downloading…");
+        rt.state
+            .apply_release(Ok(release_fixture(Some(ReleasePhase::Unknown))));
+        assert_eq!(rt.state.upgrade_label(), "Updating…");
+        assert_eq!(desktop.closes.load(Ordering::SeqCst), 0);
+        rt.state
+            .apply_release(Err("The service is restarting.".into()));
+        assert_eq!(rt.state.upgrade_label(), "Reconnecting…");
+        assert_eq!(rt.state.rows().len(), 3);
+        rt.state
+            .apply_release(Ok(release_fixture(Some(ReleasePhase::Failed {
+                error: elsecall::release_update::invalid("The release could not be verified."),
+                rolled_back: false,
+            }))));
+        assert!(!rt.state.updating());
+        assert!(
+            rt.state
+                .update_error()
+                .unwrap()
+                .contains("could not be verified")
+        );
+        assert_eq!(desktop.closes.load(Ordering::SeqCst), 0);
+        rt.invalidate();
+        rt.frame(0.0);
+        click_upgrade(&mut rt);
+        let mut second = first.clone();
+        second.id = elsecall::release_update::JobId::try_from("b".repeat(32)).unwrap();
+        second.started_at_ms = 30;
+        reply.send(Ok(second.clone())).unwrap();
+        ready
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .unwrap();
+        poll(&mut rt.state, 0.0, &mut Tx::default());
+        assert_eq!(desktop.starts.load(Ordering::SeqCst), 2);
+        // An old poll arriving after the new request cannot put the previous failure back.
+        rt.state
+            .apply_release(Ok(release_fixture(Some(ReleasePhase::Failed {
+                error: elsecall::release_update::invalid("old failure"),
+                rolled_back: false,
+            }))));
+        assert!(rt.state.updating());
+        assert!(rt.state.update_error().is_none());
+        let mut snapshot = release_fixture(None);
+        second.phase = ReleasePhase::Reopening;
+        snapshot.release.as_mut().unwrap().job = Some(second.clone());
+        rt.state.apply_release(Ok(snapshot));
+        assert_eq!(rt.state.upgrade_label(), "Reopening…");
+        assert_eq!(desktop.closes.load(Ordering::SeqCst), 0);
+        let mut snapshot = release_fixture(None);
+        second.phase = ReleasePhase::Succeeded;
+        snapshot.release.as_mut().unwrap().job = Some(second.clone());
+        snapshot.release.as_mut().unwrap().available = None;
+        rt.state.apply_release(Ok(snapshot));
+        assert_eq!(desktop.closes.load(Ordering::SeqCst), 1);
+        assert!(matches!(rt.state.upgrade, UpgradeState::Retiring));
+        // The fresh window and a window opened after an old completed job stay open.
+        let mut fresh = init();
+        fresh.window_upgrade = desktop.clone();
+        fresh.opened_at_ms = 40;
+        let mut snapshot = release_fixture(None);
+        snapshot.release.as_mut().unwrap().job = Some(second);
+        fresh.apply_release(Ok(snapshot));
+        assert_eq!(desktop.closes.load(Ordering::SeqCst), 1);
+    }
     #[test]
     fn an_error_keeps_the_last_snapshot_and_its_refresh_time() {
         let mut state = init();
         state.apply_refresh(Update {
             result: Ok(solo_snapshot()),
             refreshed_at: "14:32:05".into(),
-            installed_window: None,
         });
         state.apply_refresh(Update {
             result: Err(SourceFailure::ServiceUnavailable {
@@ -510,7 +907,6 @@ mod tests {
                     .into(),
             }),
             refreshed_at: "14:32:07".into(),
-            installed_window: None,
         });
         assert!(state.stale());
         assert_eq!(state.rows().len(), 1);
@@ -530,7 +926,6 @@ mod tests {
                 hint: "Reinstall matching CLI and service versions with elsecall install.".into(),
             }),
             refreshed_at: "14:32:05".into(),
-            installed_window: None,
         });
         assert!(state.shown().is_none());
         assert!(!state.stale());

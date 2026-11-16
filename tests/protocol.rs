@@ -54,7 +54,7 @@ async fn inspection_failure_crosses_real_api_without_becoming_false_health_failu
     std::fs::write(update_state.join("job.json"), b"unreadable update journal").unwrap();
     let machine = Arc::new(UnavailableMachine);
     let (processes, exits) = MacProcesses::start().unwrap();
-    let task = tokio::spawn(server::serve(
+    let task = tokio::spawn(server::serve_with_updates(
         paths.clone(),
         Arc::new(Inspection::new(machine.clone())),
         Adapters {
@@ -68,6 +68,7 @@ async fn inspection_failure_crosses_real_api_without_becoming_false_health_failu
             tailnet: Arc::new(NoTailnet),
             port: 1,
         },
+        elsecall::release_update::service::UpdateAdapters::production(false),
     ));
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(120);
     loop {

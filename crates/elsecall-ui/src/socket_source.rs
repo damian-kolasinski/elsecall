@@ -58,20 +58,6 @@ impl FleetSource for SocketSource {
     fn fleet(&self) -> Result<FleetSnapshot, SourceFailure> {
         self.fetch()
     }
-
-    fn installed_window(&self) -> Option<String> {
-        let socket = self.socket.as_ref().ok()?;
-        let offer = self
-            .runtime
-            .block_on(elsecall::client::get::<WindowOffer>(socket, "/v1/ui"))
-            .ok()?;
-        offer.build.map(|build| build.to_string())
-    }
-}
-
-#[derive(Deserialize)]
-struct WindowOffer {
-    build: Option<elsecall::build_identity::BuildId>,
 }
 
 pub struct SocketWindowUpgrade;
@@ -82,9 +68,28 @@ impl crate::window_upgrade::WindowUpgrade for SocketWindowUpgrade {
         replace_window_at(&paths.socket())
     }
 
+    fn start_release(&self) -> Result<elsecall::release_update::Job, String> {
+        let paths = elsecall::paths::Paths::current().map_err(|error| error.message)?;
+        start_release_at(&paths.socket())
+    }
     fn close_old_window(&self) {
         std::process::exit(0);
     }
+}
+
+fn start_release_at(socket: &std::path::Path) -> Result<elsecall::release_update::Job, String> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|error| error.to_string())?;
+    runtime
+        .block_on(elsecall::client::post_within(
+            socket,
+            "/v1/update/install",
+            serde_json::json!({"reopen":true,"wait_seconds":300}),
+            Duration::from_secs(30),
+        ))
+        .map_err(|error| format!("{} {}", error.message, error.hint))
 }
 
 fn replace_window_at(socket: &std::path::Path) -> Result<(), String> {
@@ -125,12 +130,6 @@ struct LazySocket {
 impl FleetSource for LazySocket {
     fn fleet(&self) -> Result<FleetSnapshot, SourceFailure> {
         self.source.get_or_init(SocketSource::open).fleet()
-    }
-
-    fn installed_window(&self) -> Option<String> {
-        self.source
-            .get_or_init(SocketSource::open)
-            .installed_window()
     }
 }
 
@@ -292,6 +291,54 @@ struct WireProcess {
 mod tests {
     use super::*;
 
+    #[test]
+    fn the_release_button_requests_installation_and_reopening_over_the_socket() {
+        use std::{
+            io::{Read, Write},
+            os::unix::{fs::PermissionsExt, net::UnixListener},
+        };
+        let root = tempfile::Builder::new()
+            .prefix("ec-release-ui-")
+            .permissions(std::fs::Permissions::from_mode(0o700))
+            .tempdir_in("/tmp")
+            .unwrap();
+        let socket = root.path().join("service.sock");
+        let listener = UnixListener::bind(&socket).unwrap();
+        let service = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(5)))
+                .unwrap();
+            let mut header = Vec::new();
+            while !header.ends_with(b"\r\n\r\n") {
+                let mut byte = [0];
+                stream.read_exact(&mut byte).unwrap();
+                header.push(byte[0]);
+            }
+            let header = String::from_utf8(header).unwrap();
+            assert!(header.starts_with("POST /v1/update/install HTTP/1.1\r\n"));
+            let length = header
+                .lines()
+                .find_map(|line| {
+                    line.to_ascii_lowercase()
+                        .strip_prefix("content-length: ")
+                        .map(|length| length.parse::<usize>().unwrap())
+                })
+                .unwrap();
+            let mut body = vec![0; length];
+            stream.read_exact(&mut body).unwrap();
+            assert_eq!(
+                serde_json::from_slice::<Value>(&body).unwrap(),
+                serde_json::json!({"reopen":true,"wait_seconds":300})
+            );
+            let response=serde_json::json!({"schema_version":1,"data":{"id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","release":{"version":"0.1.1"},"from_build":"1111111111111111","started_at_ms":20,"reopen":true,"wait_seconds":300,"state":"starting","updated_at":1700000000}}).to_string();
+            write!(stream,"HTTP/1.1 202 Accepted\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",response.len(),response).unwrap();
+        });
+        let job = start_release_at(&socket).unwrap();
+        assert!(job.reopen);
+        assert_eq!(job.release.version.to_string(), "0.1.1");
+        service.join().unwrap();
+    }
     #[test]
     fn reads_a_large_fleet_response_over_the_real_socket() {
         use std::{

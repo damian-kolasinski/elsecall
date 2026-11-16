@@ -94,10 +94,4 @@ impl fmt::Display for SourceFailure {
 /// Where the window reads the fleet. The UI thread never calls this.
 pub trait FleetSource: Send + Sync {
     fn fleet(&self) -> Result<FleetSnapshot, SourceFailure>;
-
-    /// Build id of the window installed with the local service.
-    /// Absent when this service does not report one.
-    fn installed_window(&self) -> Option<String> {
-        None
-    }
 }
