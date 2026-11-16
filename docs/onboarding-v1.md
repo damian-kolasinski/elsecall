@@ -152,3 +152,8 @@ They do not install on another Mac. Native Add Mac/AirDrop presentation and its
 actual-window demo belong to the separate native UI slice. There is no installer
 window to demonstrate in this slice. No authorized clean Mac target is configured;
 real end-to-end onboarding remains unverified.
+
+The subsequent [file ownership slice](onboarding-file-ownership.md) implements
+durable per-user filesystem provisioning and reversal with private receipts. It
+does not change these production routes, enable transfer, or establish a complete
+installer/detach lifecycle.

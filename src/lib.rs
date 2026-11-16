@@ -67,6 +67,8 @@ pub mod placement_config_sync;
 pub mod placement_host;
 pub mod private_files;
 pub mod process_service;
+#[cfg(target_os = "macos")]
+pub mod provisioning_files;
 pub mod remote_run;
 pub mod replay_api;
 pub mod replay_cli;
