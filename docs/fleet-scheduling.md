@@ -432,10 +432,11 @@ locations and toolchains still warn. Warnings appear in the run's record, in `el
 file, never in the command's output. Enforcement comes later, once Elsecall can
 align tools and configuration across the fleet.
 
-## Consumer configuration
+## Workload configuration
 
-A consumer repository holds a configuration file at its root, `.elsecall.toml`. It
-declares:
+The caller's personal `~/Library/Application Support/Elsecall/workloads.toml`
+declares global defaults and optional complete directory policies (see README).
+Repositories never provide configuration. The selected policy declares:
 - output paths to bring back;
 - environment variables to forward;
 - toolchains and configuration locations to fingerprint;
@@ -446,8 +447,8 @@ declares:
   Rules apply to runs and leases; a lease stays pinned. The caller's flags
   override them.
 
-Invalid label rules fail every request in that working tree with
-`invalid_request`, naming the rule and the change that fixes it.
+Invalid rules fail new work with `invalid_request`; diagnostics omit configuration
+values. Releasing an existing grant does not depend on later policy edits.
 
 The file is the only place consumer-specific knowledge enters Elsecall. It is
 validated as untrusted input. Without a file, defaults apply: pinned commands work,

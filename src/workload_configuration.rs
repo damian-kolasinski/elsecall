@@ -1,8 +1,9 @@
 //! Personal workload policy, independent of repositories and service generations.
 use crate::{
-    consumer_configuration::ConsumerConfiguration,
+    build_identity::Digest,
     failure::{Failure, Result},
     paths::Paths,
+    workload_settings::WorkloadSettings,
 };
 use std::{
     collections::BTreeMap,
@@ -14,10 +15,16 @@ pub const FILE_NAME: &str = "workloads.toml";
 pub const LIMIT: u64 = 1024 * 1024;
 const MAXIMUM_DIRECTORIES: usize = 128;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
+struct Policy {
+    settings: WorkloadSettings,
+    digest: Digest,
+}
+
+#[derive(Debug)]
 pub struct Configuration {
-    defaults: ConsumerConfiguration,
-    directories: BTreeMap<PathBuf, ConsumerConfiguration>,
+    defaults: Policy,
+    directories: BTreeMap<PathBuf, Policy>,
 }
 
 pub fn invalid() -> Failure {
@@ -45,13 +52,10 @@ pub fn read(path: &Path) -> Result<Option<String>> {
     Ok(Some(text))
 }
 
-pub fn load(paths: &Paths, directory: &Path) -> Result<ConsumerConfiguration> {
+pub fn load(paths: &Paths, directory: &Path) -> Result<WorkloadSettings> {
     let text = read(&paths.data.join(FILE_NAME))?.unwrap_or_default();
     let configuration = Configuration::parse(&text)?;
-    let directory = directory
-        .canonicalize()
-        .map_err(|e| Failure::io("Resolve workload directory", e))?;
-    Ok(configuration.for_directory(&directory).clone())
+    Ok(configuration.resolve(directory)?.clone())
 }
 
 impl Configuration {
@@ -68,9 +72,13 @@ impl Configuration {
         if directories.len() > MAXIMUM_DIRECTORIES {
             return Err(invalid());
         }
-        let parse = |table: toml::Table| {
-            ConsumerConfiguration::parse(&toml::to_string(&table).expect("TOML table serializes"))
-                .map_err(|_| invalid())
+        let parse = |table: toml::Table| -> Result<Policy> {
+            let text = toml::to_string(&table).expect("TOML table serializes");
+            let settings = WorkloadSettings::parse(&text).map_err(|_| invalid())?;
+            Ok(Policy {
+                settings,
+                digest: Digest::of(text.as_bytes()),
+            })
         };
         let defaults = parse(table)?;
         let mut scoped = BTreeMap::new();
@@ -89,7 +97,9 @@ impl Configuration {
             let toml::Value::Table(table) = settings else {
                 return Err(invalid());
             };
-            scoped.insert(path, parse(table)?);
+            if scoped.insert(path, parse(table)?).is_some() {
+                return Err(invalid());
+            }
         }
         Ok(Self {
             defaults,
@@ -97,12 +107,39 @@ impl Configuration {
         })
     }
 
-    /// The most specific directory policy replaces defaults in full: importing a
-    /// policy cannot accidentally add forwarded variables or returned outputs.
-    pub fn for_directory(&self, directory: &Path) -> &ConsumerConfiguration {
+    /// Resolves filesystem aliases and prevents a directory policy from crossing
+    /// a nested Git root. Repository contents never supply configuration.
+    pub fn resolve(&self, directory: &Path) -> Result<&WorkloadSettings> {
+        Ok(&self.resolved_policy(directory)?.settings)
+    }
+
+    /// Identifies the selected policy without exposing its directory or values.
+    pub fn digest(&self, directory: &Path) -> Result<Digest> {
+        Ok(self.resolved_policy(directory)?.digest)
+    }
+
+    fn resolved_policy(&self, directory: &Path) -> Result<&Policy> {
+        let directory = directory
+            .canonicalize()
+            .map_err(|e| Failure::io("Resolve workload directory", e))?;
+        let boundary = directory
+            .ancestors()
+            .find(|parent| std::fs::symlink_metadata(parent.join(".git")).is_ok());
+        Ok(self.select(&directory, boundary))
+    }
+
+    /// The most specific policy replaces defaults in full: importing a policy
+    /// cannot add forwarded variables or returned outputs from global defaults.
+    pub fn for_directory(&self, directory: &Path) -> &WorkloadSettings {
+        &self.select(directory, None).settings
+    }
+
+    fn select(&self, directory: &Path, boundary: Option<&Path>) -> &Policy {
         self.directories
             .iter()
-            .filter(|(path, _)| directory.starts_with(path))
+            .filter(|(path, _)| {
+                directory.starts_with(path) && boundary.is_none_or(|root| path.starts_with(root))
+            })
             .max_by_key(|(path, _)| path.components().count())
             .map(|(_, settings)| settings)
             .unwrap_or(&self.defaults)

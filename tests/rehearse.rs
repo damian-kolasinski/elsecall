@@ -350,6 +350,14 @@ fn stops_new_submissions_when_production_arrives_and_finishes_in_flight() {
 #[test]
 fn synthetic_runs_preserve_production_size_time_and_speed_learning() {
     let (alpha, _bravo) = fleet();
+    // Personal toolchain probes must never execute during synthetic rehearsals.
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        None,
+        r#"[consistency.toolchains]
+probe = ["/bin/sh", "-c", "touch \"$HOME/personal-policy-probe\"; printf stable"]
+"#,
+    );
     let temp = tempfile::tempdir().unwrap();
     for _ in 0..3 {
         let run = alpha.run(&[
@@ -377,6 +385,7 @@ fn synthetic_runs_preserve_production_size_time_and_speed_learning() {
     let output = temp.path().join("observed.json");
     let result = rehearse(&alpha, &input, &output, &[]);
     assert!(result.status.success(), "{result:?}");
+    assert!(!alpha.home.path().join("personal-policy-probe").exists());
     assert_eq!(
         records
             .labelled_since(Timestamp::from_millis(0), 2000)

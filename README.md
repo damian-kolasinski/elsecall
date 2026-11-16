@@ -163,6 +163,7 @@ its executable, so two machines with the same build ID run byte-identical builds
 
 | Command | Result |
 | --- | --- |
+| `elsecall config migrate PATH...` | Import legacy repository policies into personal global settings, retaining sources and backing up the existing global file |
 | `elsecall status` | API readiness, service version, PID and process uptime |
 | `elsecall machine` | Hostname, OS/version, architecture, logical CPUs and cores by type, 1/5/15-minute load averages, CPU utilization, memory total/used/available in bytes, memory pressure, thermal state, machine uptime in seconds |
 | `elsecall tools inventory` | This machine's tool managers, the tools installed through them and which version is the default (see [Fleet tool management](docs/fleet-tools.md)) |
@@ -217,8 +218,8 @@ has an overall eight-second deadline after launchd accepts the registration.
 Every run and lease is a **work request** admitted by this machine's service. A
 request has a **size** in weighted cores (`--size`) and a **label** (`--label`, free
 text such as `test FeatureModule`, used for history and diagnostics). The first label
-rule in the working tree's `.elsecall.toml` that matches the label supplies whatever
-the flags leave out (see "Consumer configuration" and "Precedence"). Without a
+rule in the personal `workloads.toml` that matches the label supplies whatever
+the flags leave out (see "Workload configuration" and "Precedence"). Without a
 declared size, from `--size` or the rule, a run's size is **learned** from its
 label's recent runs, else 1 (see "Learned sizes").
 Admission never overcommits: work starts only if its size fits the free capacity,
@@ -289,7 +290,7 @@ clock, so they pass on time after the machine sleeps.
 
 **Learned sizes.** Elsecall measures each run's CPU time, including every process
 the command waited for, as the command exits. A run that declares no size (neither
-`--size` nor a label default in `.elsecall.toml`) gets the upper quartile of its
+`--size` nor a label default in `workloads.toml`) gets the upper quartile of its
 label's recent average busy cores (CPU time over run time), rounded up to half a
 core. Only completed runs of at least a second from the last 14 days count, at most
 the latest 20, and at least 3 are needed; until then the size is 1. A learned size
@@ -387,7 +388,7 @@ A candidate's expected completion is **wait + sync + run**:
      estimated from single-module runs. It needs three such runs in at least
      two sizes. Only the label's runs of the same plan size count as its own;
   4. **family**: for a label with too few runs anywhere, the runs of other labels
-     that matched the same `.elsecall.toml` rule (its family, such as every
+     that matched the same `workloads.toml` rule (its family, such as every
      `acme test *`) on that member, else on every member, converted. Runs under
      a second are left out of a family: a no-op says nothing about its family's
      work. The label's few runs count for themselves, and the family's median
@@ -750,7 +751,7 @@ local run.
   - the upstream of HEAD, such as `origin/feature`;
   - each remote's default branch: `origin/HEAD` and the branch it points to, such
     as `origin/main`, as `git remote set-head` or a clone set them;
-  - refs `.elsecall.toml` declares under `[workspace] refs`, such as release
+  - refs `workloads.toml` declares under `[workspace] refs`, such as release
     branches or tags.
 
   So `git merge-base HEAD origin/main`, `rev-parse origin/HEAD`,
@@ -765,14 +766,14 @@ local run.
   the calling member and the caller's path; `same-path` puts them at the caller's
   own path, for members whose account can own it. A same-path location that holds
   anything but this workspace's copy is refused, untouched.
-- **Environment.** The command gets the variables `.elsecall.toml` forwards, the
+- **Environment.** The command gets the variables `workloads.toml` forwards, the
   member's own identity variables (`HOME`, `USER`, `LOGNAME`, `PATH`, `TMPDIR`,
   `SHELL`, `PWD` and the like, even when forwarded), and `ELSECALL_RUN_ID`,
   `ELSECALL_MEMBER`, `ELSECALL_ADMISSION` (`granted`), `ELSECALL_CALLER_MEMBER`,
   `ELSECALL_CALLER_WORKSPACE` and `ELSECALL_WORKSPACE_COPY`. Callers' `ELSECALL_*`
   variables are never forwarded. Absolute paths it prints name the copy; use the last two
   to translate. Values are never logged or stored.
-- **Outputs.** Paths declared in `.elsecall.toml` come back after any exit code, and
+- **Outputs.** Paths declared in `workloads.toml` come back after any exit code, and
   only if the run changed them: each changed output replaces yours whole, a removed
   one is removed. Links are neither followed nor returned on either side.
   - What comes back is a snapshot taken the moment the command exits (APFS clones,
@@ -827,7 +828,7 @@ local run.
   before. Runs on the calling member sync nothing. A slow sync to one member never
   holds up syncs to, or runs placed on, another.
 - **Consistency warnings.** Toolchains and configuration locations that
-  `.elsecall.toml` declares are fingerprinted on both members under a salt chosen for
+  `workloads.toml` declares are fingerprinted on both members under a salt chosen for
   the run; the member returns its fingerprints and the caller compares. A mismatch is
   a warning, the run proceeds. Warnings appear in the status file (`data.warnings`),
   in both members' records and in `elsecall fleet` (`latest_placed_run`), never in the
@@ -851,14 +852,35 @@ local run.
 Signals go to the command's process group on the member, as a terminal's Ctrl-C
 does; the command sees pipes, not a terminal.
 
-## Consumer configuration
+## Workload configuration
 
-A repository may hold `.elsecall.toml` at the root of its working tree. It is the only
-place consumer-specific knowledge enters Elsecall, and it is validated as untrusted
-input: unknown keys and invalid values make every run and lease there fail with
-`invalid_request`, whose message names the line or the rule and whose hint says
-what to change. Without it, defaults apply. The file is found from the caller's
-working directory: the nearest directory upwards with a `.git` entry.
+Personal workload settings live at
+`~/Library/Application Support/Elsecall/workloads.toml`. Every repository and
+non-repository command uses this file; repository configuration files are never
+read. A missing file uses built-in defaults, including learned sizes. The caller
+selects the policy, including when work runs on another fleet member. Service
+settings and fleet membership remain in their existing files; managed service
+configuration does not replace this personal file.
+
+The top-level settings below apply everywhere. Optional directory entries replace
+these defaults **in full**, including environment forwarding, returned outputs
+and labels. The most specific entry wins. Entries apply to subdirectories but do
+not cross into nested Git working trees. Use canonical absolute directory paths:
+
+```toml
+[directories."/Users/me/Developer/acme".outputs]
+paths = ["build/reports"]
+[directories."/Users/me/Developer/acme".environment]
+names = ["CI"]
+```
+
+Unknown keys or invalid values in any entry fail new runs and lease acquisitions with
+`invalid_request`; diagnostics omit configuration values. Edits apply to the next
+command without restarting the service. The file is limited to 1 MiB and 128 directory
+entries. Each run retains its selected settings
+through admission, remote execution and output return.
+
+A complete default policy:
 
 ```toml
 [outputs]
@@ -932,14 +954,43 @@ Keep secret files ignored by git: ignored files are never copied. Do not forward
 secrets you do not want on the member, and do not pass machine-local identifiers
 such as simulator IDs to placed work unless you mean to bind it to that member.
 
+### Migrating existing project settings safely
+
+Before installing the new version, use its executable to import every repository
+whose old policy you want to retain (repeat for each local working tree):
+
+```sh
+./target/release/elsecall config migrate /Users/me/Developer/acme /Users/me/Developer/other
+```
+
+Each directory's `.elsecall.toml` is copied into its own directory entry in global
+`workloads.toml`. All fields and label order are retained, together with existing
+global comments. Source files
+are left intact so older builds can still use them. Repeating the same import is
+a no-op; different settings for an existing directory fail with
+`configuration_conflict` without changing the global file. A batch validates all
+sources before replacing configuration. Existing global settings are backed up to an
+owner-only `workloads-before-migration-*.toml` file; the result names that backup.
+No configuration values appear in command output. Backups are retained for manual
+recovery even after uninstall; remove them explicitly when no longer needed.
+
+New versions ignore `.elsecall.toml`, so import all required working trees before
+switching CLI versions. Remove the legacy files only when downgrades are no longer
+needed. Directory entries are optional: move shared rules to the top level if you
+want the same policy for all work. The new file is separate from `config.toml` so
+older services can still start during rollback. Run history, learned estimates,
+fleet identity and active grants are not changed by migration. Use the existing
+fleet upgrade flow to wait for running work; a timed-out upgrade is deferred.
+
 ## Integrating a consumer
 
-An existing repository adopts Elsecall with one config file, a two-line guard, and
-one line per script or one prefix per heavy command. A complete minimal
-integration:
+An existing repository adopts Elsecall with a two-line guard and one line per
+script or one prefix per heavy command. Workload settings belong to the user,
+without any configuration file committed to the repository. An optional personal
+default policy:
 
 ```toml
-# .elsecall.toml at the repository root
+# ~/Library/Application Support/Elsecall/workloads.toml
 [admission]
 when_unavailable = "run"   # keep working, unmanaged, while the service is down
 
@@ -1102,7 +1153,7 @@ elsecall: fleet_busy: No capacity within the 90 s hold limit: 0 of 12 cores are 
 ```
 
 The seconds are the envelope's `details.retry_after_seconds`. Other codes end with
-their fix, such as which rule of `.elsecall.toml` to change for `invalid_request`,
+their fix, such as correcting `workloads.toml` for `invalid_request`,
 and with `elsecall explain RUN_ID` when a record exists. For `config_sync_failed`,
 whose `details` hold the `member` and the underlying `cause` code:
 
@@ -1120,7 +1171,7 @@ without admission.`). Branch on the envelope's `code`, not on the line's wording
 
 | Variable | Values | Effect |
 | --- | --- | --- |
-| `ELSECALL` | `off`, `on` | `off`: `run` executes the command directly with exact pass-through (no notice; only `ELSECALL_ADMISSION=off` added to its environment) and `lease acquire`/`release` succeed with `state` `off`. Options and `.elsecall.toml` are still checked. |
+| `ELSECALL` | `off`, `on` | `off`: `run` executes the command directly with exact pass-through (no notice; only `ELSECALL_ADMISSION=off` added to its environment) and `lease acquire`/`release` succeed with `state` `off`. New work still validates options and `workloads.toml`. Lease release can return an existing grant even if a later configuration edit is invalid. |
 | `ELSECALL_HOLD_LIMIT` | a duration such as `90s` | The hold limit of interactive requests without `--hold-limit`. Deferrable requests ignore it. |
 | `ELSECALL_WHEN_UNAVAILABLE` | `run`, `fail` | What to do when the service cannot be reached. |
 
@@ -1129,7 +1180,7 @@ An empty value counts as unset; any other value fails with `invalid_request`.
 ### Precedence
 
 Each request property comes from the first layer that sets it: **command-line
-flags, then the environment, then the matching label rule of `.elsecall.toml`,
+flags, then the environment, then the matching label rule of the selected personal `workloads.toml` policy,
 then defaults.** `--interactive`/`--deferrable` and `--pinned`/`--placeable`/
 `--member` override a rule's urgency and placement; `--hold-limit`, `--deadline`
 and `--at-deadline` only set values, so `--hold-limit` on a label whose rule is
@@ -1331,20 +1382,22 @@ be searched offline.
 
 ```sh
 elsecall trace export --since 1h --output workload.json
-elsecall tune preflight --trace workload.json --placement current --rules /path/to/consumer/.elsecall.toml
-elsecall rehearse --trace workload.json --placement current --rules /path/to/consumer/.elsecall.toml --compress 6 --limit 15m --seed 42
-elsecall tune --trace workload.json --placement current --rules /path/to/consumer/.elsecall.toml --budget 64 --seed 42 > proposal.json
-elsecall rehearse --trace workload.json --placement current --rules /path/to/consumer/.elsecall.toml --compare proposal.json --seed 42
+elsecall tune preflight --trace workload.json --placement current --rules "$HOME/Library/Application Support/Elsecall/workloads.toml"
+elsecall rehearse --trace workload.json --placement current --rules "$HOME/Library/Application Support/Elsecall/workloads.toml" --compress 6 --limit 15m --seed 42
+elsecall tune --trace workload.json --placement current --rules "$HOME/Library/Application Support/Elsecall/workloads.toml" --budget 64 --seed 42 > proposal.json
+elsecall rehearse --trace workload.json --placement current --rules "$HOME/Library/Application Support/Elsecall/workloads.toml" --compare proposal.json --seed 42
 # The operator reviews and applies winning service/consumer settings.
 elsecall report --since 7d
 ```
 
 For tuning workloads, `--placement current --rules PATH` reads the placement
-component of the consumer's current label rules and applies it to replayed labels,
-so older pinned builds/tests can exercise remote placement. It never changes the
-consumer file, measured work, sizes or urgency. Leases and deferrable work remain
-pinned. All four commands support this mode; `historical` remains the default for
-fidelity against history. Mode, rules digest and placement counts are reported.
+component of the personal policy selected for the current directory and applies
+it to replayed labels, so older pinned builds/tests can exercise remote placement.
+It never changes the personal configuration file, measured work, sizes or urgency.
+Leases and deferrable work remain pinned. All four commands support this mode;
+`historical` remains the default for fidelity against history. Mode, the selected
+policy's digest and placement counts are reported. Selecting different directory
+policies changes the digest without exposing directory paths.
 Current-mode counterfactuals cannot certify historical fidelity.
 
 Internal drift and housekeeping work defer during rehearsals, then resume with
@@ -1358,7 +1411,9 @@ stronger evidence. Missing constraint evidence stays explicit even when the
 simulator is trusted.
 
 `tune` prints baseline/best metrics, uncertainty envelopes, alternatives,
-sensitivity and proposed service/consumer changes. It never applies them. The
+sensitivity and proposed service/workload changes. It never applies them. Workload
+rule proposals use `workload_rules_toml`; `consumer_elsecall_toml` remains an alias
+for readers of older proposal documents. The
 default budget is 64 unique simulations; `--space space.json` supplies a bounded
 custom grid. `--compare` runs the same frozen trace and seed twice, temporarily
 leases proposed scheduling settings through fleet sync for B, and restores the
@@ -2135,9 +2190,11 @@ python3 scripts/test-environment.py cargo test --workspace --locked
 ```
 
 The mise tasks use the consumer entry pattern in "Integrating a consumer".
-The root `.elsecall.toml` sizes `elsecall check` and `elsecall build` from measured
-CPU use and chooses `when_unavailable = "run"`. They run directly when Elsecall is
-missing; `ELSECALL=off mise run check` uses the usual consumer escape hatch.
+The repository contains no workload policy. Set label rules for `elsecall check`
+and `elsecall build`, and `when_unavailable = "run"` if desired, in personal
+`workloads.toml`. Without explicit sizes, Elsecall learns them from completed runs.
+Scripts run directly when Elsecall is missing; `ELSECALL=off mise run check` uses
+the usual escape hatch.
 Tests require Python 3 to remove inherited `ELSECALL_*` controls (including
 `ELSECALL_ADMISSION`) and `ELSECALL` before launching the test suite.
 `ELSECALL_UI_SKIP_GOLDENS` and `ELSECALL_UI_BLESS` are kept; they select desktop

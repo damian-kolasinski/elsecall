@@ -7,9 +7,9 @@
 //!
 //! Values are never echoed in failures.
 use crate::{
-    consumer_configuration::WhenUnavailable,
     failure::{Failure, Result},
     scheduling::request::MAXIMUM_HOLD_LIMIT,
+    workload_settings::WhenUnavailable,
 };
 use std::{ffi::OsString, time::Duration};
 

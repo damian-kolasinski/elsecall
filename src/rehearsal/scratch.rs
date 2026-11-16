@@ -19,15 +19,7 @@ pub async fn populate(root: &Path, workspaces: Vec<String>, expires: Instant) ->
         git(&directory, &["init", "-q"], expires).await?;
         fs::write(directory.join("worker.pl"), worker::SCRIPT)
             .map_err(|e| Failure::io("Write synthetic workload", e))?;
-        // Stop ancestor consumer rules and environment forwarding at this root.
-        fs::write(directory.join(".elsecall.toml"), "")
-            .map_err(|e| Failure::io("Write rehearsal configuration", e))?;
-        git(
-            &directory,
-            &["add", "--", "worker.pl", ".elsecall.toml"],
-            expires,
-        )
-        .await?;
+        git(&directory, &["add", "--", "worker.pl"], expires).await?;
         git(
             &directory,
             &[

@@ -18,7 +18,7 @@
 //!    are mostly of other sizes, so their median says little about a plan many
 //!    times as long.
 //! 4. **Family:** a label with too few runs for either takes its family's: the
-//!    runs of the other labels that matched the same `.elsecall.toml` rule, on
+//!    runs of the other labels that matched the same `workloads.toml` rule, on
 //!    this member, from `minimum_family_runs`. Runs shorter than `short_run` are
 //!    left out, since a no-op says nothing about the work its family does.
 //! 5. **Converted family:** the family's runs on every member, converted.

@@ -1,7 +1,7 @@
 [admission]
 when_unavailable = "run"
 
-# Measured on the 14-core development Mac; see docs/test-reliability-slice.md.
+# Example personal label rules used by the development-script integration tests.
 [[labels]]
 match = "elsecall check"
 size = 2.0

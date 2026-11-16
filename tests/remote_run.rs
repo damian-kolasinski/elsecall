@@ -305,11 +305,11 @@ fn a_slow_fragmented_result_frame_preserves_output_exit_and_phase_records() {
     let repo = repository();
     let payload: Vec<u8> = (0..524288).map(|n| n as u8).collect();
     std::fs::write(repo.root.join("payload.bin"), &payload).unwrap();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[outputs]\npaths = [\"build/result.bin\"]\n",
-    )
-    .unwrap();
+    );
     let status_file = repo.root.parent().unwrap().join("status.json");
     let output = run(
         &alpha,
@@ -710,11 +710,11 @@ fn placed_work_gets_the_allowlist_the_members_identity_and_its_own_variables() {
     enrol(&alpha, &bravo);
     enrol(&alpha, &charlie);
     let repo = repository();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[environment]\nnames = [\"CI\", \"HOME\"]\nprefixes = [\"APP_\"]\n",
-    )
-    .unwrap();
+    );
     let caller_env = [
         ("CI", "1"),
         ("APP_TOKEN", "t"),
@@ -1523,11 +1523,11 @@ fn perf_a_silent_member_is_a_lost_connection_after_the_grace_period() {
 fn both_members_record_the_placed_run_and_work_nests_inside_it() {
     let (alpha, bravo) = fleet();
     let repo = repository();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[environment]\nnames = [\"EC\"]\n",
-    )
-    .unwrap();
+    );
     let script = "\"$EC\" lease acquire --size 1 --label inner --holder $$ | tr -d '\\n'; echo; echo $ELSECALL_RUN_ID";
     let mut child = spawn(
         &alpha,
@@ -1640,11 +1640,11 @@ fn status_of(path: &Path) -> Value {
 fn declared_outputs_come_back_after_any_exit_and_only_when_changed() {
     let (alpha, _bravo) = fleet();
     let repo = repository();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[outputs]\npaths = [\"build/reports\", \"build/result.txt\", \"build/link\"]\n",
-    )
-    .unwrap();
+    );
     let status_file = repo.root.parent().unwrap().join("status.json");
     let status = status_file.to_str().unwrap();
     let produce = "mkdir -p build/reports/sub; echo pass > build/reports/a.xml; printf '\\001\\002' > build/reports/sub/b.bin; chmod +x build/reports/sub/b.bin; echo r1 > build/result.txt; ln -sf /etc build/reports/escape; ln -sfn /tmp build/link; exit 3";
@@ -1746,12 +1746,11 @@ fn declared_outputs_come_back_after_any_exit_and_only_when_changed() {
     let outside = tempfile::tempdir().unwrap();
     std::fs::remove_dir_all(build.join("reports")).unwrap();
     std::os::unix::fs::symlink(outside.path(), build.join("reports")).unwrap();
-    std::fs::remove_file(repo.root.join(".elsecall.toml")).unwrap();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[outputs]\npaths = [\"build/reports/x.txt\"]\n",
-    )
-    .unwrap();
+    );
     let output = run(
         &alpha,
         &repo.root,
@@ -1783,11 +1782,11 @@ fn declared_outputs_come_back_after_any_exit_and_only_when_changed() {
 fn outputs_of_many_files_come_back() {
     let (alpha, _bravo) = fleet();
     let repo = repository();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[outputs]\npaths = [\"build/many\"]\n",
-    )
-    .unwrap();
+    );
     // Far more than one frame can describe.
     let make = "mkdir -p build/many && cd build/many && i=0; while [ $i -lt 12000 ]; do echo $i > f$i.txt; i=$((i+1)); done";
     stdout(&run(
@@ -1808,11 +1807,11 @@ fn outputs_of_many_files_come_back() {
 fn many_skipped_links_make_one_warning_and_the_record_keeps_its_exit() {
     let (alpha, bravo) = fleet();
     let repo = repository();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[outputs]\npaths = [\"build/bin\"]\n",
-    )
-    .unwrap();
+    );
     let status_file = repo.root.parent().unwrap().join("links.json");
     let make = "mkdir -p build/bin && i=0; while [ $i -lt 70 ]; do ln -sf /bin/sh build/bin/tool$i; i=$((i+1)); done; echo $ELSECALL_RUN_ID; exit 0";
     let output = run(
@@ -1872,11 +1871,11 @@ fn warnings_of(record: &Value) -> String {
 fn outputs_come_back_as_they_were_at_exit_whatever_leftover_processes_do() {
     let (alpha, bravo) = fleet();
     let repo = repository();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[outputs]\npaths = [\"build/out/a\", \"build/out/b\"]\n",
-    )
-    .unwrap();
+    );
     let status_file = repo.root.parent().unwrap().join("leftover.json");
     // A sub-window of stdout lets the command exit, while the caller's full
     // stdout pipe delays output-return until the parent drains it below.
@@ -1909,6 +1908,8 @@ fn outputs_come_back_as_they_were_at_exit_whatever_leftover_processes_do() {
         crate::processes::WAIT,
         || std::fs::read(&snapshot).is_ok_and(|bytes| bytes == b"b\n"),
     );
+    // A later global edit cannot drop the outputs this run already promised.
+    crate::processes::workload_policy(alpha.home.path(), Some(&repo.root), "");
     release.open();
     until("the leftover to remove b", crate::processes::WAIT, || {
         !copy.join("build/out/b").exists()
@@ -1965,11 +1966,11 @@ fn outputs_come_back_as_they_were_at_exit_whatever_leftover_processes_do() {
 fn outputs_that_cannot_come_back_never_keep_the_others_and_both_records_say_why() {
     let (alpha, bravo) = fleet();
     let repo = repository();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[outputs]\npaths = [\"build/a.txt\", \"build/logs\", \"build/via/x.txt\"]\n",
-    )
-    .unwrap();
+    );
     let status_file = repo.root.parent().unwrap().join("partial.json");
     let make = "mkdir -p build/logs build/elsewhere; echo ok > build/logs/ok.txt; echo s > build/logs/locked; chmod 000 build/logs/locked; ln -sfn elsewhere build/via; echo x > build/via/x.txt; echo a > build/a.txt; echo $ELSECALL_RUN_ID; echo $ELSECALL_WORKSPACE_COPY; exit 7";
     let output = run(
@@ -2033,11 +2034,11 @@ fn a_cleanup_warning_keeps_the_measurement_when_outputs_are_usable() {
     use std::os::unix::fs::PermissionsExt;
     let (alpha, _bravo) = fleet();
     let repo = repository();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[outputs]\npaths = [\"build/out\"]\n",
-    )
-    .unwrap();
+    );
     let out = repo.root.join("build/out");
     std::fs::create_dir(&out).unwrap();
     std::fs::write(out.join("old"), "old").unwrap();
@@ -2124,11 +2125,11 @@ fn a_connection_lost_before_the_workspace_is_synced_is_attributed_to_sync() {
 fn nothing_comes_back_after_a_lost_connection() {
     let (alpha, mut bravo) = fleet();
     let repo = repository();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[outputs]\npaths = [\"build/out.txt\"]\n",
-    )
-    .unwrap();
+    );
     let mut child = spawn(
         &alpha,
         &repo.root,
@@ -2158,11 +2159,11 @@ fn consistency_warnings_go_to_records_the_fleet_view_and_the_status_file() {
         std::fs::write(member.home.path().join("toolchain-version"), version).unwrap();
         std::fs::write(member.home.path().join("shared.cfg"), "same").unwrap();
     }
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[consistency]\nconfiguration = [\"~/shared.cfg\"]\n[consistency.toolchains]\nxcode = [\"/bin/sh\", \"-c\", \"cat \\\"$HOME/toolchain-version\\\"\"]\n",
-    )
-    .unwrap();
+    );
     let status_file = repo.root.parent().unwrap().join("status.json");
     let output = run(
         &alpha,
@@ -2293,11 +2294,11 @@ const ABSENT: &str = "git rev-parse -q --verify origin/their-feature || echo not
 fn a_placed_run_compares_against_the_callers_default_branch_and_upstream() {
     let (alpha, bravo) = fleet();
     let (repo, other) = repository_with_a_remote();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[workspace]\nrefs = [\"refs/remotes/origin/release/*\"]\n",
-    )
-    .unwrap();
+    );
     let placed = |script: &str| {
         let output = run(
             &alpha,
@@ -2357,12 +2358,12 @@ fn a_placed_run_compares_against_the_callers_default_branch_and_upstream() {
     assert_eq!(placed(COMPARISONS).0, expected);
 
     // A declared ref outside refs/remotes/ and refs/tags/ is refused before the
-    // run, saying how to fix it.
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    // run, pointing to personal policy without echoing the invalid pattern.
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[workspace]\nrefs = [\"refs/heads/*\"]\n",
-    )
-    .unwrap();
+    );
     let output = run(
         &alpha,
         &repo.root,
@@ -2373,12 +2374,13 @@ fn a_placed_run_compares_against_the_callers_default_branch_and_upstream() {
     let refused = envelope(&output);
     assert_eq!(refused["error"]["code"], "invalid_request", "{refused}");
     assert!(
-        refused["error"]["message"]
+        refused["error"]["hint"]
             .as_str()
             .unwrap()
-            .contains("[workspace] refs"),
+            .contains("workloads.toml"),
         "{refused}"
     );
+    assert!(!refused.to_string().contains("refs/heads/*"), "{refused}");
 }
 
 #[test]
@@ -2594,11 +2596,11 @@ fn authenticated_record_failure_during_output_return_keeps_the_confirmed_exit_an
     proxy.enroll(&alpha, &bravo);
     let repo = repository();
     std::fs::write(repo.root.join("payload.bin"), vec![b'x'; 524288]).unwrap();
-    std::fs::write(
-        repo.root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.home.path(),
+        Some(&repo.root),
         "[outputs]\npaths = [\"build/result.bin\"]\n",
-    )
-    .unwrap();
+    );
     let plan=serde_json::json!({"kind":"sequential","planned_units":1,"stop_policy":"continue_all","estimate_key":"a".repeat(64),"variant_key":"b".repeat(64)}).to_string();
     let script = format!(
         "'{}' workload observe --observation '{{\"status\":\"all_units_observed\",\"coverage\":{{\"attempted_units\":1,\"terminal_units\":1,\"failed_units\":1}}}}' >/dev/null || exit 99; mkdir -p build; cp payload.bin build/result.bin; printf '\\000\\377out'; exit 7",

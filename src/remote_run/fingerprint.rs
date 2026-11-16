@@ -2,8 +2,8 @@
 //! hashing a configuration file or directory, under a salt. Each is bounded in
 //! time and size, so a declaration cannot hang the side that takes them.
 use crate::{
-    consumer_configuration::ConfigurationLocation,
     remote_run::consistency::{Declared, Fingerprints},
+    workload_settings::ConfigurationLocation,
     workspace::digest::{Digest, Hasher},
 };
 use std::{

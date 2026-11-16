@@ -1360,7 +1360,7 @@ async fn declared_refs_that_match_too_many_are_refused() {
     let failure = caller.unwrap_err();
     assert_eq!(failure.code, "invalid_request", "{failure:?}");
     assert!(
-        failure.message.contains("[workspace] refs") && failure.hint.contains(".elsecall.toml"),
+        failure.message.contains("[workspace] refs") && failure.hint.contains("workloads.toml"),
         "{failure:?}"
     );
     assert!(member.is_err(), "the member gives up with the caller");

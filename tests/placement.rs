@@ -673,11 +673,11 @@ fn sparse_labels_take_their_familys_runs_and_learned_speed_ratios() {
     let bravo = Machine::start("bravo", 10, 0.0, 1.0);
     enrol(&alpha.member, &bravo.member);
     let (_temp, repo) = repository();
-    std::fs::write(
-        repo.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.member.home.path(),
+        Some(&repo),
         "[[labels]]\nmatch = \"test *\"\nsize = 1\n",
-    )
-    .unwrap();
+    );
     let runs = |label: &str, args: &[&str]| -> (String, String) {
         let mut all = vec!["--label", label];
         all.extend(args);
@@ -1188,11 +1188,11 @@ fn running_work_with_a_family_estimate_is_scored_from_it() {
     let bravo = Machine::start("bravo", 2, 0.0, 1.0);
     enrol(&alpha.member, &bravo.member);
     let (_temp, repo) = repository();
-    std::fs::write(
-        repo.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.member.home.path(),
+        Some(&repo),
         "[[labels]]\nmatch = \"hold *\"\nsize = 2\n",
-    )
-    .unwrap();
+    );
     for _ in 0..3 {
         let output = run(
             &alpha.member,
@@ -1313,11 +1313,11 @@ fn a_declared_plan_is_estimated_by_its_units_from_observed_plans() {
     let bravo = Machine::start("bravo", 10, 0.0, 1.0);
     enrol(&alpha.member, &bravo.member);
     let (_temp, repo) = repository();
-    std::fs::write(
-        repo.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        alpha.member.home.path(),
+        Some(&repo),
         "[[labels]]\nmatch = \"test *\"\nsize = 1\n",
-    )
-    .unwrap();
+    );
     // A first run pays the session's start-up costs, so no plan carries them.
     let warm_up = run(
         &alpha.member,

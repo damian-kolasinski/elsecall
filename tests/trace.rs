@@ -15,11 +15,11 @@ fn exports_paginated_fleet_history_without_commands_or_environment() {
     enrol(&alpha, &bravo);
     let temp = tempfile::tempdir().unwrap();
     for member in [&alpha, &bravo] {
-        fs::write(
-            member.home.path().join(".elsecall.toml"),
+        crate::processes::workload_policy(
+            member.home.path(),
+            None,
             "[[labels]]\nmatch = 'probe *'\nsize = 0.25\n",
-        )
-        .unwrap();
+        );
         for _ in 0..12 {
             let out = crate::processes::command(env!("CARGO_BIN_EXE_elsecall"))
                 .env("HOME", member.home.path())

@@ -9,7 +9,6 @@
 //! consumer configuration's glob syntax and first matching rule wins, in argument
 //! order. Duplicate keys are errors, as with production parameter overrides.
 use crate::{
-    consumer_configuration::ConsumerConfiguration,
     failure::{Failure, Result},
     label_pattern,
     roster::MemberName,
@@ -19,6 +18,7 @@ use crate::{
         request::{MAXIMUM_HOLD_LIMIT, Urgency},
     },
     workload::trace::{Request, Trace},
+    workload_settings::WorkloadSettings,
 };
 use std::{collections::BTreeMap, time::Duration};
 
@@ -105,7 +105,7 @@ impl Settings {
                     "labels".into(),
                     toml::Value::Array(vec![toml::Value::Table(label)]),
                 )]);
-                ConsumerConfiguration::parse(
+                WorkloadSettings::parse(
                     &toml::to_string(&document).expect("candidate label serializes"),
                 )
                 .map_err(|error| invalid(error.detail))?;

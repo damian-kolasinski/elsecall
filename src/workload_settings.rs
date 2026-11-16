@@ -1,6 +1,5 @@
-//! A consumer repository's `.elsecall.toml`: the only place consumer-specific
-//! knowledge enters Elsecall. It lives at the root of the working tree and is
-//! validated as untrusted input; without one, defaults apply.
+//! Workload settings validated at the personal configuration boundary.
+//! Runtime requests use a snapshot of these settings for their entire lifetime.
 //!
 //! ```toml
 //! [outputs]
@@ -32,7 +31,6 @@
 //! at_deadline = "start"
 //! ```
 use crate::{
-    failure::{Failure, Result},
     label_pattern,
     scheduling::{
         capacity::Cores,
@@ -46,13 +44,9 @@ use crate::{
 use serde::Deserialize;
 use std::{
     collections::BTreeMap,
-    io::Read,
     path::{Path, PathBuf},
     time::Duration,
 };
-
-pub const FILE_NAME: &str = ".elsecall.toml";
-const LIMIT: u64 = 64 * 1024;
 
 const MAXIMUM_OUTPUTS: usize = 64;
 const MAXIMUM_VARIABLES: usize = 256;
@@ -63,7 +57,7 @@ pub const MAXIMUM_LOCATIONS: usize = 32;
 const MAXIMUM_LABELS: usize = 64;
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct ConsumerConfiguration {
+pub struct WorkloadSettings {
     /// Produced paths brought back to the caller after a placed run.
     pub outputs: Vec<WorkspacePath>,
     /// Refs a copy carries besides HEAD, its upstream and remotes' default
@@ -242,21 +236,6 @@ impl From<String> for Problem {
     }
 }
 
-fn invalid(path: &Path, problem: impl Into<Problem>) -> Failure {
-    let Problem { detail, fix } = problem.into();
-    let file = path.display();
-    Failure::new(
-        "invalid_request",
-        format!("{file} is invalid: {detail}"),
-        match fix {
-            Some(fix) => format!("{fix} in {file}, then rerun the same command."),
-            None => format!(
-                "Fix {file} (README, \"Consumer configuration\", lists every setting), then rerun the same command."
-            ),
-        },
-    )
-}
-
 fn variable_name(name: &str, prefix: bool) -> bool {
     let bytes = name.as_bytes();
     !bytes.is_empty()
@@ -267,38 +246,7 @@ fn variable_name(name: &str, prefix: bool) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || *b == b'_')
 }
 
-impl ConsumerConfiguration {
-    /// Reads `.elsecall.toml` at the working tree `root`; defaults without one.
-    pub fn load(root: &Path) -> Result<Self> {
-        let path = root.join(FILE_NAME);
-        let mut text = String::new();
-        match std::fs::File::open(&path) {
-            Ok(file) => file
-                .take(LIMIT + 1)
-                .read_to_string(&mut text)
-                .map_err(|e| invalid(&path, format!("it could not be read ({e})")))?,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Self::default()),
-            Err(e) => return Err(invalid(&path, format!("it could not be read ({e})"))),
-        };
-        if text.len() as u64 > LIMIT {
-            return Err(invalid(&path, "it is larger than 64 KiB.".to_owned()));
-        }
-        Self::parse(&text).map_err(|problem| invalid(&path, problem))
-    }
-
-    /// Finds the configuration for work requested in `directory`: the one at the
-    /// root of the working tree containing it, found by its `.git` entry.
-    pub fn discover(directory: &Path) -> Result<Self> {
-        let mut current = Some(directory);
-        while let Some(dir) = current {
-            if std::fs::symlink_metadata(dir.join(".git")).is_ok() {
-                return Self::load(dir);
-            }
-            current = dir.parent();
-        }
-        Ok(Self::default())
-    }
-
+impl WorkloadSettings {
     pub fn parse(text: &str) -> std::result::Result<Self, Problem> {
         let file: File = toml::from_str(text).map_err(|e| {
             let line = e
@@ -621,7 +569,7 @@ mod tests {
 
     #[test]
     fn parses_a_full_configuration() {
-        let configuration = ConsumerConfiguration::parse(
+        let configuration = WorkloadSettings::parse(
             r#"
             [outputs]
             paths = ["build/reports/", "logs/test.log"]
@@ -690,14 +638,14 @@ mod tests {
             PathBuf::from("/Users/x/.gradle/gradle.properties")
         );
         assert_eq!(
-            ConsumerConfiguration::parse("").unwrap(),
-            ConsumerConfiguration::default()
+            WorkloadSettings::parse("").unwrap(),
+            WorkloadSettings::default()
         );
     }
 
     #[test]
     fn the_first_matching_rule_wins() {
-        let configuration = ConsumerConfiguration::parse(
+        let configuration = WorkloadSettings::parse(
             "[[labels]]\nmatch = \"build App*\"\nsize = 6\n[[labels]]\nmatch = \"build *\"\nsize = 4\n",
         )
         .unwrap();
@@ -725,13 +673,13 @@ mod tests {
             "[outputs]\npath = []",
             "[workspace]\nref = []",
         ] {
-            assert!(ConsumerConfiguration::parse(bad).is_err(), "{bad}");
+            assert!(WorkloadSettings::parse(bad).is_err(), "{bad}");
         }
     }
 
     #[test]
     fn workspace_refs_are_patterns_under_remotes_or_tags() {
-        let configuration = ConsumerConfiguration::parse(
+        let configuration = WorkloadSettings::parse(
             "[workspace]\nrefs = [\"refs/remotes/origin/release/*\", \"refs/tags/v*\"]\n",
         )
         .unwrap();
@@ -748,8 +696,8 @@ mod tests {
             "refs/tags/v[0-9]*",
             "--upload-pack=x",
         ] {
-            let problem = ConsumerConfiguration::parse(&format!("[workspace]\nrefs = [{bad:?}]\n"))
-                .unwrap_err();
+            let problem =
+                WorkloadSettings::parse(&format!("[workspace]\nrefs = [{bad:?}]\n")).unwrap_err();
             assert!(
                 problem.detail.contains(bad) && problem.detail.contains("refs/remotes/"),
                 "{problem:?}"
@@ -765,7 +713,7 @@ mod tests {
             .map(|n| format!("\"refs/tags/t{n}\""))
             .collect();
         let text = format!("[workspace]\nrefs = [{}]\n", many.join(", "));
-        assert!(ConsumerConfiguration::parse(&text).is_err());
+        assert!(WorkloadSettings::parse(&text).is_err());
     }
 
     #[test]
@@ -828,7 +776,7 @@ mod tests {
             ),
         ] {
             let text = format!("[[labels]]\nmatch = \"a\"\n[[labels]]\nmatch = \"x *\"\n{rule}\n");
-            let problem = ConsumerConfiguration::parse(&text).unwrap_err();
+            let problem = WorkloadSettings::parse(&text).unwrap_err();
             assert!(
                 problem
                     .detail
@@ -842,7 +790,7 @@ mod tests {
                 "{rule}: {given}"
             );
         }
-        let unknown = ConsumerConfiguration::parse("[[labels]]\nmatch = \"x\"\nsise = 4\n")
+        let unknown = WorkloadSettings::parse("[[labels]]\nmatch = \"x\"\nsise = 4\n")
             .unwrap_err()
             .detail;
         assert!(
@@ -866,7 +814,7 @@ mod tests {
             "the reference and the integration example"
         );
         for example in examples {
-            let configuration = ConsumerConfiguration::parse(example)
+            let configuration = WorkloadSettings::parse(example)
                 .unwrap_or_else(|problem| panic!("{problem:?} in\n{example}"));
             assert_eq!(configuration.when_unavailable, Some(WhenUnavailable::Run));
             assert!(matches!(
@@ -874,23 +822,5 @@ mod tests {
                 Some(RuleUrgency::Deferrable { .. })
             ));
         }
-    }
-
-    #[test]
-    fn discovers_the_file_at_the_working_tree_root() {
-        let root = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(root.path().join(".git")).unwrap();
-        std::fs::create_dir_all(root.path().join("a/b")).unwrap();
-        std::fs::write(
-            root.path().join(FILE_NAME),
-            "[environment]\nnames = [\"CI\"]\n",
-        )
-        .unwrap();
-        let found = ConsumerConfiguration::discover(&root.path().join("a/b")).unwrap();
-        assert_eq!(found.forward_names, ["CI"]);
-        std::fs::write(root.path().join(FILE_NAME), "nonsense = 1\n").unwrap();
-        let failure = ConsumerConfiguration::discover(&root.path().join("a")).unwrap_err();
-        assert_eq!(failure.code, "invalid_request");
-        assert!(failure.hint.contains(".elsecall.toml"), "{}", failure.hint);
     }
 }
