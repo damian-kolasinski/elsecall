@@ -34,6 +34,9 @@ class PackslipArchive(unittest.TestCase):
             binary = root / "elsecall"
             binary.write_bytes(b"#!/bin/sh\necho elsecall 0.1.0\n")
             binary.chmod(binary.stat().st_mode | stat.S_IXUSR)
+            companion = root / "elsecall-ui"
+            companion.write_bytes(b"window-bytes")
+            companion.chmod(0o755)
             archive = package.archive(binary, root / "dist", "0.1.0")
             subprocess.run([tool, "keygen", "--out", str(root / "release.key")], check=True)
             subprocess.run(
@@ -48,6 +51,8 @@ class PackslipArchive(unittest.TestCase):
                     "https://github.com/example/elsecall/releases/download/v0.1.0",
                     "--bin",
                     "elsecall",
+                    "--bin",
+                    "elsecall-ui",
                     "--key",
                     str(root / "release.key"),
                     "--no-log",
@@ -65,6 +70,7 @@ class PackslipArchive(unittest.TestCase):
             self.assertIn("aarch64", shown)
             self.assertIn("darwin", shown)
             self.assertIn("elsecall", shown)
+            self.assertIn("elsecall-ui", shown)
             self.assertNotIn(str(Path.home()), shown)
 
 

@@ -58,12 +58,14 @@ def build(root=ROOT, target=TARGET):
     host = subprocess.check_output(["rustc", "-vV"], text=True).split("host: ", 1)[1].splitlines()[0]
     if host != target:
         raise ValueError("release verification requires a native target")
-    subprocess.run(
-        ["cargo", "build", "--locked", "--release", "--target", target, "-p", TOOL],
-        cwd=root,
-        env=release_env(root),
-        check=True,
-    )
+    env = release_env(root)
+    for crate, deployment in ((TOOL, "13.0"), ("elsecall-ui", "14.0")):
+        subprocess.run(
+            ["cargo", "build", "--locked", "--release", "--target", target, "-p", crate],
+            cwd=root,
+            env={**env, "MACOSX_DEPLOYMENT_TARGET": deployment},
+            check=True,
+        )
     return Path(root) / "target" / target / "release" / TOOL
 
 
@@ -75,18 +77,22 @@ def archive(binary, output, release_version, target=TARGET):
     reported = subprocess.check_output([str(binary), "--version"], text=True).strip()
     if reported != f"{TOOL} {release_version}":
         raise ValueError("release version mismatch")
+    companion = binary.with_name("elsecall-ui")
+    if companion.is_symlink() or not companion.is_file() or not os.access(companion, os.X_OK):
+        raise ValueError("release UI executable unavailable")
     executable = binary.read_bytes()
-    if str(Path.home()).encode() in executable:
+    window = companion.read_bytes()
+    if any(str(Path.home()).encode() in data for data in (executable, window)):
         raise ValueError("release executable contains a private build path")
     readme = (
         b"Elsecall\n\n"
-        b"This archive contains the elsecall executable.\n"
-        b"Install a signed release with mise's packslip backend, then run elsecall install.\n"
+        b"This archive contains the elsecall and elsecall-ui executables.\n"
+        b"Install with mise, then run elsecall install. Open the window with elsecall ui.\n"
     )
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     path = output / filename(release_version, target)
-    members = ((TOOL, executable, 0o755), ("README.txt", readme, 0o644))
+    members = ((TOOL, executable, 0o755), ("elsecall-ui", window, 0o755), ("README.txt", readme, 0o644))
     with (
         path.open("wb") as raw,
         gzip.GzipFile(fileobj=raw, mode="wb", filename="", mtime=0) as compressed,

@@ -82,7 +82,7 @@ jobs:
         uses: jdx/packslip@3a4afb16b29d3ac639fcd35cbe99124184f71859 # v1.11.1
         with:
           artifacts: dist/elsecall-*.tar.gz
-          bin: elsecall
+          bin: elsecall elsecall-ui
           tag: ${{ needs.version.outputs.tag }}
           version: ${{ needs.version.outputs.version }}
           commit: ${{ github.sha }}

@@ -44,6 +44,8 @@ enum Command {
         #[arg(long)]
         force: bool,
     },
+    /// Open the fleet window installed with this CLI release
+    Ui,
     /// Check whether the local API is ready
     Status,
     /// Read basic machine facts, memory and load averages
@@ -322,6 +324,16 @@ async fn run(cli: Cli) -> Result<bool> {
         Command::Uninstall { force } => {
             installation::uninstall(&paths, manager, force)?;
             output(serde_json::json!({"status": "uninstalled"}));
+        }
+        Command::Ui => {
+            let launched = client::post_within::<serde_json::Value>(
+                &paths.socket(),
+                "/v1/ui/update",
+                serde_json::json!({}),
+                Duration::from_secs(30),
+            )
+            .await?;
+            output(launched);
         }
         Command::Status => output(client::get::<Health>(&paths.socket(), "/v1/health").await?),
         Command::Machine => output(client::get::<Machine>(&paths.socket(), "/v1/machine").await?),

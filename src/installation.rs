@@ -173,7 +173,7 @@ pub fn install(
     let plist = manager.configuration(paths, session)?;
     private_files::write(&paths.data.join("installation"), RECEIPT, 0o600)?;
     private_files::write(&paths.executable(), &binary, 0o700)?;
-    crate::ui_app::store_companion(paths, source)?;
+    crate::window_release::store_companion(paths, source)?;
     private_files::write(&paths.plist(), &plist, 0o600)?;
     // Logs are only lifecycle events and allowlisted error fields, never request data.
     if !paths.log().exists() {
@@ -301,6 +301,7 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
     private_files::remove_file(&paths.agent)?;
     for name in [
         "elsecall",
+        "elsecall-ui",
         "agent.plist",
         "config.toml",
         "records.sqlite",
