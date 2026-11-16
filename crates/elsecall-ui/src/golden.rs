@@ -28,6 +28,13 @@ const SCENES: &[&str] = &[
     "release-failed",
     "release-offline",
     "release-future",
+    "demo-airdrop",
+    "add-mac-preparing",
+    "add-mac-picker",
+    "add-mac-blocked",
+    "add-mac-cancelled",
+    "add-mac-failed",
+    "add-mac-unconfirmed",
 ];
 const BLESS: &str =
     "ELSECALL_UI_BLESS=1 cargo test -p elsecall-ui --bin elsecall-ui fleet_scenes_match_goldens";
@@ -55,7 +62,12 @@ fn fleet_scenes_match_goldens() {
     let _guard = theme::serial_render();
     for scene in SCENES {
         for appearance in APPEARANCES {
-            compare(scene, appearance);
+            compare(scene, appearance, false);
+        }
+    }
+    for scene in ["add-mac-blocked", "add-mac-failed", "add-mac-picker"] {
+        for appearance in APPEARANCES {
+            compare(scene, appearance, true);
         }
     }
 }
@@ -96,15 +108,16 @@ fn metal_device_count() -> usize {
     }
 }
 
-fn compare(scene: &str, appearance: &str) {
+fn compare(scene: &str, appearance: &str, minimum: bool) {
+    let suffix = if minimum { "-minimum" } else { "" };
     let golden = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/golden")
-        .join(format!("{scene}-{appearance}.png"));
+        .join(format!("{scene}-{appearance}{suffix}.png"));
     let bless = std::env::var_os("ELSECALL_UI_BLESS").is_some();
     if !bless && !golden.is_file() {
         panic!("missing golden {}\nbless with: {BLESS}", golden.display());
     }
-    let fresh = snap(scene, appearance);
+    let fresh = snap(scene, appearance, minimum);
     if bless {
         std::fs::create_dir_all(golden.parent().unwrap()).unwrap();
         std::fs::copy(&fresh, &golden).unwrap();
@@ -128,7 +141,7 @@ fn compare(scene: &str, appearance: &str) {
     std::fs::remove_file(&fresh).ok();
 }
 
-fn snap(scene: &str, appearance: &str) -> PathBuf {
+fn snap(scene: &str, appearance: &str, minimum: bool) -> PathBuf {
     let path = std::env::temp_dir().join(format!(
         "elsecall-ui-{scene}-{appearance}-{}.png",
         std::process::id()
@@ -144,6 +157,12 @@ fn snap(scene: &str, appearance: &str) -> PathBuf {
         appearance.into(),
         "--scale".into(),
         "1".into(),
+        "--size".into(),
+        if minimum {
+            "1040x480".into()
+        } else {
+            "1120x560".into()
+        },
         "--at".into(),
         "0".into(),
     ])

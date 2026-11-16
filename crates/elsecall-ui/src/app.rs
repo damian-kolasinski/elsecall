@@ -42,6 +42,13 @@ const SCENES: &[(&str, Scene)] = &[
     ("release-failed", scene_release_failed),
     ("release-offline", scene_release_offline),
     ("release-future", scene_release_future),
+    ("demo-airdrop", scene_demo_airdrop),
+    ("add-mac-preparing", scene_add_mac_preparing),
+    ("add-mac-picker", scene_add_mac_picker),
+    ("add-mac-blocked", scene_add_mac_blocked),
+    ("add-mac-cancelled", scene_add_mac_cancelled),
+    ("add-mac-failed", scene_add_mac_failed),
+    ("add-mac-unconfirmed", scene_add_mac_unconfirmed),
 ];
 
 pub(crate) enum Phase {
@@ -69,6 +76,7 @@ pub struct AppState {
     release_start: Latest<Result<Job, String>>,
     opened_at_ms: u64,
     release_disconnected: bool,
+    pub(crate) onboarding: crate::onboarding::Onboarding,
 }
 
 impl AppState {
@@ -337,6 +345,10 @@ fn init() -> AppState {
         release_start: Latest::default(),
         opened_at_ms: elsecall::release_update::now_millis(),
         release_disconnected: false,
+        onboarding: crate::onboarding::Onboarding::new(
+            Arc::new(crate::onboarding_socket::SocketPreparation),
+            Box::new(crate::airdrop::AirDrop::default()),
+        ),
     }
 }
 
@@ -351,7 +363,8 @@ fn setup(state: &mut AppState, waker: Waker) {
     state.feed.set_waker(waker.clone());
     state.upgrade_feed.set_waker(waker.clone());
     state.release_feed.set_waker(waker.clone());
-    state.release_start.set_waker(waker);
+    state.release_start.set_waker(waker.clone());
+    state.onboarding.set_waker(waker);
     if state.follow_service {
         refresh::start(Arc::clone(&state.feed), socket_source::shared());
         release_source::start(
@@ -362,7 +375,10 @@ fn setup(state: &mut AppState, waker: Waker) {
 }
 
 fn poll(state: &mut AppState, _: f64, tx: &mut Tx) -> bool {
-    let mut changed = false;
+    let mut changed = state.onboarding.poll();
+    if state.onboarding.busy() {
+        tx.wake_after(std::time::Duration::from_millis(100));
+    }
     if let Some(update) = state.feed.take() {
         state.apply_refresh(update);
         changed = true;
@@ -550,6 +566,38 @@ fn scene_release_offline(state: &mut AppState) {
     ));
 }
 
+fn scene_demo_airdrop(state: &mut AppState) {
+    scene_solo(state);
+    state.onboarding = crate::onboarding_demo::flow();
+}
+
+fn scene_add_mac_preparing(state: &mut AppState) {
+    scene_members(state);
+    state.onboarding.state = crate::onboarding::State::Preparing;
+}
+fn scene_add_mac_picker(state: &mut AppState) {
+    scene_demo_airdrop(state);
+    state.onboarding.state = crate::onboarding::State::ChoosingRecipient;
+}
+fn scene_add_mac_blocked(state: &mut AppState) {
+    scene_members(state);
+    state.onboarding.state =
+        crate::onboarding::State::Failed(crate::onboarding::Problem::InstallerUnavailable);
+}
+fn scene_add_mac_cancelled(state: &mut AppState) {
+    scene_demo_airdrop(state);
+    state.onboarding.state = crate::onboarding::State::Cancelled;
+}
+fn scene_add_mac_failed(state: &mut AppState) {
+    scene_demo_airdrop(state);
+    state.onboarding.state =
+        crate::onboarding::State::Failed(crate::onboarding::Problem::TransferFailed);
+}
+fn scene_add_mac_unconfirmed(state: &mut AppState) {
+    scene_demo_airdrop(state);
+    state.onboarding.state = crate::onboarding::State::DeliveryUnconfirmed;
+}
+
 fn solo_snapshot() -> FleetSnapshot {
     FleetSnapshot {
         enrolled: false,
@@ -640,6 +688,10 @@ fn gigabytes(used: u64, total: u64) -> MemoryUse {
         total_bytes: total << 30,
     }
 }
+
+#[cfg(test)]
+#[path = "onboarding_flow_tests.rs"]
+mod onboarding_flow_tests;
 
 #[cfg(test)]
 mod tests {

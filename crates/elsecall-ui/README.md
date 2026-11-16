@@ -68,6 +68,84 @@ Scenes: `loading`, `unavailable-first`, `unavailable`, `solo`, `members`,
 any fleet data (banner, no table). `unavailable` keeps the last table, greyed,
 under that banner.
 
+## Add Mac: first slice
+
+The fleet header has **Add Mac**. It prepares onboarding asynchronously through
+`POST /v1/onboarding/prepare` on the same-user socket, prevents duplicate clicks,
+and keeps the fleet visible. This window understands the version 1 installer
+availability blocker. Older services show version-repair guidance; an unavailable
+service or timeout shows service-recovery guidance. Raw errors, paths and
+invitation contents never enter this UI.
+
+**Production onboarding is blocked:** there is no verified signed/notarized
+plain-Mac receiver installer yet. Preparation reports that prerequisite and sends
+nothing. The window refuses artifact-bearing responses until verified acquisition
+and receiver integration land. Installer launch, authenticated claim, connecting,
+joined, provisioning handoff and ready status are subsequent dependent work.
+There is no redundant claim confirmation in this slice.
+
+The agreed service contract is the normal `{schema_version:1,data:Operation}`
+envelope. `Operation` has `version:1`, a 32-character lowercase hex `id`, Unix
+`expires_at`, `stage`, nullable `artifact`, and nullable `error`. This slice accepts
+only an unexpired `blocked` operation with no artifact and
+`error.code = onboarding_installer_unavailable`. The installer workstream owns
+status/cancel persistence and future signed installer/invitation packaging.
+
+## Real native-window demo
+
+From a local macOS desktop session:
+
+```sh
+scripts/run-add-mac-demo.sh
+```
+
+This builds and ad-hoc signs a separate **Elsecall Add Mac Demo.app** under
+`target/add-mac-demo`. It runs the actual rune fleet window with the neutral
+`mac-mini` fixture, explicitly labeled as a demo. It does not contact the local
+service or read the live fleet. Click **Add Mac**: the public AppKit
+`NSSharingServiceNameSendViaAirDrop` service opens Apple's recipient picker
+directly, without a sharing-method menu, Finder or file selection. Only a harmless
+`Elsecall AirDrop Demo.txt` is supplied. This is not an installer or invitation.
+Use **Cancel** in Apple's dialog; do not select an unauthorized nearby device.
+`--build-only` builds the bundle without opening it.
+
+The real-window check exercised the picker, system Cancel, retry and a missing
+demo-file refusal. No file was transferred and no Mac was enrolled. On the tested
+macOS version, Cancel invoked `didShareItems` with the original item. Consequently
+that callback displays **AirDrop closed / Delivery is unconfirmed**, never a
+delivery or enrollment success. Explicit user-cancel errors display **AirDrop
+cancelled**; other native errors offer retry. This public API ambiguity must stay
+separate from authenticated installer/service progress.
+
+Native screenshots attached to review show the running window, actual picker,
+post-Cancel state and refusal before sharing. The picker's account avatar/name
+are masked; the fleet is synthetic. They are distinct from rendering goldens.
+The MP4 is a sequence of those captured native-window stills, not a continuous
+screen recording. A separate capture verifies the actual Add Mac button against
+the installer workstream's verified real service: a private temporary child home,
+loopback-only synthetic presence, and the expected installer-unavailable blocker.
+The live service and fleet were untouched, and the isolated service was stopped
+after verification.
+To reproduce the missing-file refusal, remove only this demo's temporary text
+payload while its window is open, then retry Add Mac. Relaunch the demo to restore
+the payload. Do not remove files from a production onboarding operation.
+
+Additional rendering scenes: `demo-airdrop`, `add-mac-preparing`,
+`add-mac-picker`, `add-mac-blocked`, `add-mac-cancelled`, `add-mac-failed`,
+`add-mac-unconfirmed`. Goldens cover both appearances, including minimum window
+size for the blocker, failure and picker progress. Pointer-driven flow tests use
+fakes only at preparation and native-transfer boundaries; Unix-socket tests use
+the real HTTP client, same-user authorization and private directory checks.
+
+```sh
+cargo test -p elsecall-ui --locked
+cargo clippy -p elsecall-ui --all-targets --locked -- -D warnings
+```
+
+Apple references: [direct AirDrop service](https://developer.apple.com/documentation/appkit/nssharingservice/name/sendviaairdrop),
+[perform with items](https://developer.apple.com/documentation/appkit/nssharingservice/perform(withitems:)),
+[delegate callbacks and presentation](https://developer.apple.com/documentation/appkit/nssharingservicedelegate).
+
 ## Golden tests
 
 `cargo test -p elsecall-ui --bin elsecall-ui fleet_scenes_match_goldens` renders each
