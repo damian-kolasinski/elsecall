@@ -39,8 +39,14 @@ run `elsecall fleet upgrade` there. See "Upgrading the fleet".
 
 ## Update a release
 
-After installing a version with the updater, use the local service to check and
-install newer stable releases:
+After installing a version with the updater, the service checks for newer stable
+releases at startup and hourly. A fresh cached check survives a service restart.
+An open window shows the available version beside **Upgrade and reopen**. Clicking
+it downloads and installs the matching CLI, service and UI, then reopens the window.
+Background checks never install anything. Network failures preserve cached offers
+and do not interrupt the fleet view.
+
+The same updater is available to scripts through the local service:
 
 ```sh
 elsecall update check

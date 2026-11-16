@@ -1,6 +1,7 @@
 mod app;
 mod fleet_source;
 mod refresh;
+mod release_source;
 mod socket_source;
 mod theme;
 mod view;

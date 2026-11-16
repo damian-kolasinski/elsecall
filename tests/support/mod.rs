@@ -106,7 +106,7 @@ impl Fixture {
 
     pub async fn serve(&mut self) {
         let (processes, exits) = MacProcesses::start().unwrap();
-        self.server = Some(tokio::spawn(server::serve(
+        self.server = Some(tokio::spawn(server::serve_with_updates(
             self.paths.clone(),
             Arc::new(Inspection::new(self.machine.clone())),
             Adapters {
@@ -120,6 +120,7 @@ impl Fixture {
                 tailnet: Arc::new(NoTailnet),
                 port: 1,
             },
+            elsecall::release_update::service::UpdateAdapters::production(false),
         )));
         let deadline = Instant::now() + crate::processes::WAIT;
         loop {

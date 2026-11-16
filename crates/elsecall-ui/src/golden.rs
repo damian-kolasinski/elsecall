@@ -19,6 +19,15 @@ const SCENES: &[&str] = &[
     "upgrade",
     "upgrading",
     "upgrade-failed",
+    "release-available",
+    "release-loading",
+    "release-downloading",
+    "release-waiting",
+    "release-installing",
+    "release-reopening",
+    "release-failed",
+    "release-offline",
+    "release-future",
 ];
 const BLESS: &str =
     "ELSECALL_UI_BLESS=1 cargo test -p elsecall-ui --bin elsecall-ui fleet_scenes_match_goldens";

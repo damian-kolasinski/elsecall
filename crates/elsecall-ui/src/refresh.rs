@@ -16,8 +16,6 @@ pub struct Update {
     pub result: Result<FleetSnapshot, SourceFailure>,
     /// Local time of day, `HH:MM:SS`, when this read finished.
     pub refreshed_at: String,
-    /// Window build installed with the service, when the service reports one.
-    pub installed_window: Option<String>,
 }
 
 pub fn start(feed: Arc<Latest<Update>>, source: Arc<dyn FleetSource>) {
@@ -30,16 +28,11 @@ pub fn start(feed: Arc<Latest<Update>>, source: Arc<dyn FleetSource>) {
 fn poll_loop(feed: Arc<Latest<Update>>, source: Arc<dyn FleetSource>) {
     loop {
         let result = source.fleet();
-        let installed_window = source.installed_window();
         let refreshed_at = local_hms();
-        feed.request(
-            (result, refreshed_at, installed_window),
-            |(result, refreshed_at, installed_window)| Update {
-                result,
-                refreshed_at,
-                installed_window,
-            },
-        );
+        feed.request((result, refreshed_at), |(result, refreshed_at)| Update {
+            result,
+            refreshed_at,
+        });
         thread::sleep(INTERVAL);
     }
 }

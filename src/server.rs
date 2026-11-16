@@ -69,6 +69,28 @@ pub async fn serve(
     process_sampler: Arc<dyn crate::outside_pressure::ProcessSampler>,
     members_listener: peer_listener::Settings,
 ) -> Result<()> {
+    let updates = crate::release_update::service::UpdateAdapters::production(
+        !crate::process_service::requested()?,
+    );
+    serve_with_updates(
+        paths,
+        inspection,
+        scheduling,
+        process_sampler,
+        members_listener,
+        updates,
+    )
+    .await
+}
+
+pub async fn serve_with_updates(
+    paths: Paths,
+    inspection: Arc<Inspection>,
+    scheduling: Adapters,
+    process_sampler: Arc<dyn crate::outside_pressure::ProcessSampler>,
+    members_listener: peer_listener::Settings,
+    updates: crate::release_update::service::UpdateAdapters,
+) -> Result<()> {
     private_files::owned_tree(&paths.home, &paths.data)?;
     private_files::directory(&paths.data)?;
     let Some(service_lock) = private_files::try_lock(&paths.data.join("service.lock"))? else {
@@ -257,18 +279,30 @@ pub async fn serve(
         .map(Arc::new),
         Err(error) => Err(error.clone()),
     };
+    let automatic_updates = updates.automatic;
     let updates = crate::release_update::service::UpdateService::open(
         paths.clone(),
         crate::release_update::ReleaseVersion::running(),
         build.build.clone(),
-        Arc::new(crate::release_update::catalog::GithubReleases),
-        Arc::new(crate::release_update::service::DetachedHelper),
+        updates.catalog,
+        updates.launcher,
         scheduler.clone(),
     );
     let _update_monitor = updates
         .as_ref()
         .ok()
         .map(|updates| AbortOnDrop(updates.monitor().abort_handle()));
+    let _release_checks = updates
+        .as_ref()
+        .ok()
+        .filter(|_| automatic_updates)
+        .map(|updates| {
+            AbortOnDrop(
+                updates
+                    .schedule(std::time::Duration::from_secs(3600))
+                    .abort_handle(),
+            )
+        });
     let update_routes = match updates {
         Ok(updates) => crate::release_update_api::routes(updates),
         Err(error) => crate::release_update_api::unavailable(error),
