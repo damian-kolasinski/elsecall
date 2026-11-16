@@ -29,6 +29,16 @@ pub async fn get_within<T: DeserializeOwned>(
     send(socket, Method::GET, route, None, timeout).await
 }
 
+/// A GET with a caller-selected timeout and an 8 MiB response bound.
+/// Fleet snapshots include member diagnostics that can exceed the small-response limit.
+pub async fn get_large_within<T: DeserializeOwned>(
+    socket: &Path,
+    route: &str,
+    timeout: Duration,
+) -> Result<T> {
+    dispatch(socket, Method::GET, route, None, timeout, LARGE_RESPONSE).await
+}
+
 /// A GET whose response may be up to 8 MiB, such as a record listing.
 pub async fn get_large<T: DeserializeOwned>(socket: &Path, route: &str) -> Result<T> {
     bounded(request(socket, Method::GET, route, None, LARGE_RESPONSE)).await

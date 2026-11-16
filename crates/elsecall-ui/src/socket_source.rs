@@ -2,7 +2,8 @@
 //!
 //! `elsecall fleet` waits 15 seconds on this route, because the service asks every
 //! member. `client::get` bounds other local routes at 3 seconds, which is too short
-//! for a fleet read, so this uses `client::get_within` with the same 15 seconds.
+//! for a fleet read, so this uses `client::get_large_within` with the same 15
+//! seconds and an 8 MiB bound for member diagnostics.
 
 use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
@@ -43,7 +44,7 @@ impl SocketSource {
         };
         let value = self
             .runtime
-            .block_on(elsecall::client::get_within::<Value>(
+            .block_on(elsecall::client::get_large_within::<Value>(
                 socket,
                 "/v1/fleet",
                 FLEET_WAIT,
@@ -290,6 +291,55 @@ struct WireProcess {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reads_a_large_fleet_response_over_the_real_socket() {
+        use std::{
+            io::{Read, Write},
+            os::unix::{fs::PermissionsExt, net::UnixListener},
+        };
+        let root = tempfile::Builder::new()
+            .prefix("ec-fleet-")
+            .permissions(std::fs::Permissions::from_mode(0o700))
+            .tempdir_in("/tmp")
+            .unwrap();
+        let socket = root.path().join("service.sock");
+        let listener = UnixListener::bind(&socket).unwrap();
+        let mut fleet: Value =
+            serde_json::from_str(include_str!("../tests/fixtures/fleet.json")).unwrap();
+        let expected = snapshot_from_value(&fleet["data"]).unwrap();
+        fleet["data"]["members"][0]["status"]["processes"] = serde_json::json!(
+            (1..=4096)
+                .map(|pid| serde_json::json!({"pid":pid,"name":"compiler","cpu_seconds":1.5}))
+                .collect::<Vec<_>>()
+        );
+        let body = serde_json::to_vec(&fleet).unwrap();
+        assert!(body.len() > 64 * 1024);
+        let service = std::thread::spawn(move || {
+            let (mut connection, _) = listener.accept().unwrap();
+            connection
+                .set_read_timeout(Some(Duration::from_secs(5)))
+                .unwrap();
+            let mut request = Vec::new();
+            while !request.ends_with(b"\r\n\r\n") {
+                let mut byte = [0];
+                connection.read_exact(&mut byte).unwrap();
+                request.push(byte[0]);
+            }
+            assert!(request.starts_with(b"GET /v1/fleet HTTP/1.1\r\n"));
+            write!(connection, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len()).unwrap();
+            connection.write_all(&body).unwrap();
+        });
+        let source = SocketSource {
+            socket: Ok(socket),
+            runtime: tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap(),
+        };
+        assert_eq!(source.fleet().unwrap(), expected);
+        service.join().unwrap();
+    }
 
     #[test]
     fn replacement_requires_a_successful_launch_confirmation_from_the_socket() {
