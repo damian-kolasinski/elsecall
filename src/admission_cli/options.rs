@@ -1,19 +1,19 @@
 //! Request properties and caller choices as callers write them on the command line.
 use crate::{
-    consumer_configuration::WhenUnavailable,
     failure::Result,
     scheduling::{
         capacity::Cores,
         request::{AtDeadline, invalid},
         timestamp::Timestamp,
     },
+    workload_settings::WhenUnavailable,
 };
 use clap::{Args, ValueEnum};
 use std::{path::PathBuf, time::Duration};
 
 /// Options shared by every work request. Values are parsed here rather than by
 /// Clap so that every mistake is reported as `invalid_request` with a reason.
-/// Each one overrides the matching label rule of `.elsecall.toml`.
+/// Each one overrides the matching label rule of `workloads.toml`.
 #[derive(Args, Debug, Clone, Default)]
 pub struct RequestOptions {
     /// Cores the work occupies, weighted by core type, e.g. 4 or 0.5 [default: the
@@ -21,7 +21,7 @@ pub struct RequestOptions {
     #[arg(long, value_name = "CORES")]
     pub size: Option<String>,
     /// What kind of work this is, e.g. "test FeatureModule"; selects the first label
-    /// rule of .elsecall.toml that matches it
+    /// rule of workloads.toml that matches it
     #[arg(long, value_name = "TEXT")]
     pub label: Option<String>,
     /// Optional bounded JSON workload descriptor, separate from the display label
@@ -54,7 +54,7 @@ pub struct RequestOptions {
 pub struct CallerOptions {
     /// When the local service cannot be reached: fail with service_unavailable,
     /// or run without admission [default: ELSECALL_WHEN_UNAVAILABLE, else
-    /// [admission] when_unavailable in .elsecall.toml, else fail]
+    /// [admission] when_unavailable in workloads.toml, else fail]
     #[arg(long, value_name = "ACTION")]
     pub when_unavailable: Option<UnavailableAction>,
     /// Write the run ID and a newline to this file once admission decides, for

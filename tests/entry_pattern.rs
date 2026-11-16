@@ -113,11 +113,6 @@ fn consumer() -> Consumer {
     let script = root.join("Scripts/build.sh");
     std::fs::write(&script, wrapper()).unwrap();
     std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
-    std::fs::write(
-        root.join(".elsecall.toml"),
-        "[admission]\nwhen_unavailable = \"run\"\n",
-    )
-    .unwrap();
     git(&root, &["init", "-q", "-b", "main"]);
     git(&root, &["add", "-A"]);
     git(&root, &["commit", "-q", "-m", "initial"]);
@@ -147,6 +142,11 @@ struct Mode<'a> {
 /// would: by a relative path, in a process whose PID is the wrapper's. Nothing of
 /// the test's own environment leaks in, even when the tests run under Elsecall.
 fn start(consumer: &Consumer, mode: &Mode, extra: &[&str]) -> Child {
+    crate::processes::workload_policy(
+        mode.home,
+        Some(&consumer.root),
+        "[admission]\nwhen_unavailable = 'run'\n",
+    );
     let path = match mode.installed {
         true => format!("{}:/usr/bin:/bin", consumer.bin.display()),
         false => "/usr/bin:/bin".to_owned(),
@@ -385,7 +385,6 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
             "scripts/test-environment.py",
             include_str!("../scripts/test-environment.py"),
         ),
-        (".elsecall.toml", include_str!("../.elsecall.toml")),
     ] {
         let path = consumer.root.join(name);
         std::fs::write(&path, content).unwrap();
@@ -397,15 +396,16 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
     let member = TestMember::start("developer");
     // The policy must fit this fixture independent of the host's core count.
     // Real host sizing is measured separately; here preserve exact label rules.
-    let mut policy: toml::Value = toml::from_str(include_str!("../.elsecall.toml")).unwrap();
+    let mut policy: toml::Value =
+        toml::from_str(include_str!("fixtures/development-workloads.toml")).unwrap();
     for rule in policy["labels"].as_array_mut().unwrap() {
         rule["size"] = toml::Value::Integer(1);
     }
-    std::fs::write(
-        consumer.root.join(".elsecall.toml"),
-        toml::to_string(&policy).unwrap(),
-    )
-    .unwrap();
+    crate::processes::workload_policy(
+        member.home.path(),
+        Some(&consumer.root),
+        &toml::to_string(&policy).unwrap(),
+    );
     let invoke = |task: &str, home: &Path, mode: Option<&str>, lint_exit: &str| {
         let mut command = crate::processes::command("/bin/sh");
         command
@@ -460,6 +460,7 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
             .contains("test --locked")
     );
     let home = empty_home();
+    crate::processes::workload_policy(home.path(), None, "[admission]\nwhen_unavailable = 'run'\n");
     for (mode, admission) in [(Some("off"), "off"), (None, "unmanaged")] {
         let output = invoke("build", home.path(), mode, "0");
         assert!(output.status.success(), "{output:?}");

@@ -3,7 +3,6 @@
 //! command's exit through, as if it ran here.
 use crate::{
     client::{self, Wait},
-    consumer_configuration::ConsumerConfiguration,
     failure::{Failure, Result},
     passthrough::executor::{
         CommandLine, Executor, Exit, Finished, ResultReturn, RunContext, RunFailure, RunResult,
@@ -22,6 +21,7 @@ use crate::{
         timestamp::Timestamp,
     },
     wire::Frame,
+    workload_settings::WorkloadSettings,
     workspace::{
         confined::Confined,
         not_returned::{self, Cause},
@@ -48,7 +48,7 @@ pub struct RemoteExecutor {
     pub workload: Option<crate::workload_metadata::Workload>,
     pub socket: PathBuf,
     pub located: Located,
-    pub configuration: ConsumerConfiguration,
+    pub configuration: WorkloadSettings,
     pub caches: CacheFiles,
     /// The hold limit, end to end: the command must start by then.
     pub start_by: Timestamp,

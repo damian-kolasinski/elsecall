@@ -54,7 +54,7 @@ pub fn failure_line(failure: &Failure) -> String {
             failure.hint
         ),
         "request_too_large" => format!(
-            "Lower --size, or the size of the label's rule in .elsecall.toml, to at most this member's capacity, then rerun the same command.{}",
+            "Lower --size, or the size of the label's rule in workloads.toml, to at most this member's capacity, then rerun the same command.{}",
             explain(failure)
         ),
         "deadline_skipped" => format!(
@@ -137,12 +137,12 @@ mod tests {
         );
         let invalid = failure_line(&Failure::new(
             "invalid_request",
-            "/repo/.elsecall.toml is invalid: line 3: bad\nthing",
+            "/repo/workloads.toml is invalid: line 3: bad\nthing",
             "Fix it, then rerun the same command.",
         ));
         assert_eq!(
             invalid,
-            "elsecall: invalid_request: /repo/.elsecall.toml is invalid: line 3: bad thing Fix it, then rerun the same command."
+            "elsecall: invalid_request: /repo/workloads.toml is invalid: line 3: bad thing Fix it, then rerun the same command."
         );
     }
 

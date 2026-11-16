@@ -12,7 +12,6 @@ pub mod config_sync_api;
 pub mod config_sync_cli;
 pub mod config_sync_local_api;
 pub mod configuration;
-pub mod consumer_configuration;
 pub mod copies_api;
 pub mod copies_cli;
 pub mod executable_format;
@@ -99,6 +98,7 @@ pub mod window_app;
 pub mod window_release;
 pub mod window_startup;
 pub mod wire;
+pub mod workload_settings;
 pub mod workspace;
 pub mod workspace_check_api;
 

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Settings {
-    /// The `.elsecall.toml` label rule that matched the label, if any.
+    /// The `workloads.toml` label rule that matched the label, if any.
     pub rule: Option<AppliedRule>,
     pub size: Source,
     pub urgency: Source,

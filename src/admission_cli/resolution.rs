@@ -1,14 +1,11 @@
 //! A request's properties from every layer that may set them, in precedence
 //! order: command-line flags, then the caller's environment, then the first label
-//! rule of `.elsecall.toml` that matches the label, then defaults. The result says
+//! rule of `workloads.toml` that matches the label, then defaults. The result says
 //! where each property came from, so `explain` can show it.
 use crate::{
     admission_cli::{
         environment::CallerEnvironment,
         options::{Declared, UrgencyChoice},
-    },
-    consumer_configuration::{
-        ConsumerConfiguration, LabelRule, RulePlacement, RuleUrgency, WhenUnavailable,
     },
     failure::Result,
     scheduling::{
@@ -16,6 +13,7 @@ use crate::{
         settings::{AppliedRule, Settings, Source},
         timestamp::Timestamp,
     },
+    workload_settings::{LabelRule, RulePlacement, RuleUrgency, WhenUnavailable, WorkloadSettings},
 };
 
 /// Everything a request's properties may come from.
@@ -28,7 +26,7 @@ pub struct Layers<'a> {
     pub placement: Option<Placement>,
     pub when_unavailable: Option<WhenUnavailable>,
     pub environment: &'a CallerEnvironment,
-    pub configuration: &'a ConsumerConfiguration,
+    pub configuration: &'a WorkloadSettings,
 }
 
 #[derive(Debug, PartialEq)]
@@ -48,7 +46,7 @@ fn first<T, const N: usize>(candidates: [(Option<T>, Source); N]) -> (Option<T>,
 
 fn named(rule: &LabelRule) -> String {
     format!(
-        "rule {} (match = {:?}) in .elsecall.toml",
+        "rule {} (match = {:?}) in workloads.toml",
         rule.number, rule.pattern
     )
 }
@@ -193,7 +191,7 @@ pub fn resolve(layers: Layers<'_>, now: Timestamp) -> Result<Resolved> {
 pub fn when_unavailable(
     flag: Option<WhenUnavailable>,
     environment: &CallerEnvironment,
-    configuration: &ConsumerConfiguration,
+    configuration: &WorkloadSettings,
 ) -> WhenUnavailable {
     flag.or(environment.when_unavailable)
         .or(configuration.when_unavailable)
@@ -210,8 +208,8 @@ mod tests {
         Timestamp::from_millis(1_000_000)
     }
 
-    fn configuration() -> ConsumerConfiguration {
-        ConsumerConfiguration::parse(
+    fn configuration() -> WorkloadSettings {
+        WorkloadSettings::parse(
             r#"
             [admission]
             when_unavailable = "run"
@@ -240,7 +238,7 @@ mod tests {
         placement: Option<Placement>,
         when_unavailable: Option<WhenUnavailable>,
         environment: CallerEnvironment,
-        configuration: ConsumerConfiguration,
+        configuration: WorkloadSettings,
     }
     impl Default for Case {
         fn default() -> Self {
@@ -339,7 +337,7 @@ mod tests {
     #[test]
     fn without_a_label_or_a_match_defaults_apply() {
         let resolved = resolve_case(Case {
-            configuration: ConsumerConfiguration::default(),
+            configuration: WorkloadSettings::default(),
             cli: label("build App"),
             ..Default::default()
         })
@@ -508,7 +506,7 @@ mod tests {
         assert_eq!(hold.code, "invalid_request");
         assert!(
             hold.message
-                .contains("rule 2 (match = \"warm *\") in .elsecall.toml")
+                .contains("rule 2 (match = \"warm *\") in workloads.toml")
                 && hold.message.contains("--interactive"),
             "{}",
             hold.message

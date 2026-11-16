@@ -7,10 +7,8 @@
 //! which names differed. The caller's fingerprints never leave it, and only the
 //! names of mismatches are kept. A mismatch is a warning; the run proceeds.
 use crate::{
-    consumer_configuration::{
-        self, ConfigurationLocation, ConsumerConfiguration, MAXIMUM_LOCATIONS,
-    },
     wire,
+    workload_settings::{self, ConfigurationLocation, MAXIMUM_LOCATIONS, WorkloadSettings},
     workspace::digest::Digest,
 };
 use serde::{Deserialize, Serialize};
@@ -21,11 +19,11 @@ use std::{collections::BTreeMap, path::Path};
 #[serde(deny_unknown_fields)]
 pub struct Declared {
     pub toolchains: BTreeMap<String, Vec<String>>,
-    /// As written in `.elsecall.toml`: absolute, or starting with `~/`.
+    /// As written in `workloads.toml`: absolute, or starting with `~/`.
     pub locations: Vec<String>,
 }
 impl Declared {
-    pub fn from(configuration: &ConsumerConfiguration) -> Self {
+    pub fn from(configuration: &WorkloadSettings) -> Self {
         Self {
             toolchains: configuration.toolchains.clone(),
             locations: configuration
@@ -48,13 +46,13 @@ impl Declared {
     }
     /// Checks an untrusted declaration with the consumer configuration's rules.
     pub fn validate(&self) -> Option<Vec<ConfigurationLocation>> {
-        consumer_configuration::check_toolchains(&self.toolchains).ok()?;
+        workload_settings::check_toolchains(&self.toolchains).ok()?;
         if self.locations.len() > MAXIMUM_LOCATIONS {
             return None;
         }
         self.locations
             .iter()
-            .map(|l| consumer_configuration::parse_location(l).ok())
+            .map(|l| workload_settings::parse_location(l).ok())
             .collect()
     }
 }

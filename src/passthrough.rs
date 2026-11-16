@@ -18,7 +18,6 @@ use crate::{
     },
     api::SCHEMA_VERSION,
     client::{self, Wait},
-    consumer_configuration::ConsumerConfiguration,
     failure::{Failure, Result},
     guidance::{self, Unmanaged},
     local_access,
@@ -31,6 +30,7 @@ use crate::{
         run_phases::{RemoteFailurePhase, RunPhases},
         timestamp::Timestamp,
     },
+    workload_settings::WorkloadSettings,
     workspace::{self, push_cache::CacheFiles},
 };
 use clap::Args;
@@ -53,6 +53,9 @@ pub const OWN_FAILURE: u8 = 125;
 pub struct RunArgs {
     #[command(flatten)]
     pub options: RequestOptions,
+    /// Synthetic rehearsals supply their own complete workload policy.
+    #[arg(long, hide = true)]
+    pub isolated_workload: bool,
     #[command(flatten)]
     pub caller: CallerOptions,
     /// Must run on this machine, even if the label rule makes it placeable
@@ -215,7 +218,12 @@ async fn run(args: RunArgs, reports: &Reports) -> Result<Exit> {
     let now = Timestamp::now();
     let directory =
         std::env::current_dir().map_err(|e| Failure::io("Read the working directory", e))?;
-    let configuration = ConsumerConfiguration::discover(&directory)?;
+    let paths = Paths::current()?;
+    let configuration = if args.isolated_workload {
+        WorkloadSettings::default()
+    } else {
+        crate::workload_configuration::load(&paths, &directory)?
+    };
     let placement = match (args.pinned, args.placeable, args.member) {
         (true, _, _) => Some(Placement::Pinned),
         (_, _, Some(member)) => Some(Placement::Member(member)),
@@ -253,7 +261,6 @@ async fn run(args: RunArgs, reports: &Reports) -> Result<Exit> {
         ));
     }
     local_access::require_user()?;
-    let paths = Paths::current()?;
     let socket = paths.socket();
     // Placeable work is placed with the working tree it was requested in.
     let located = match request.placement {
@@ -287,9 +294,9 @@ async fn run(args: RunArgs, reports: &Reports) -> Result<Exit> {
     // between the grant and the start without the run's ID.
     let caches = paths.data.join("workspaces");
     let copy_configuration = match &located {
-        Some(located) => {
+        Some(_) => {
             crate::private_files::directory(&caches)?;
-            Some(ConsumerConfiguration::load(&located.root)?)
+            Some(configuration.clone())
         }
         None => None,
     };

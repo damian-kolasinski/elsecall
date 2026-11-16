@@ -684,7 +684,7 @@ The H1–H4 operator loop is:
    restores settings. New refusals or altered external-failure populations cannot
    manufacture an improvement.
 4. The operator chooses and applies winning service settings through fleet sync,
-   and label sizes/hold options through the owning consumers' existing rules.
+   and label sizes/hold options through the selected global or directory policies' existing rules.
 5. Each member automatically checks newly completed recorded UTC days as its own
    pinned deferrable housekeeping-style work. `report.tuning_evidence` retains the
    results. Missing inputs yield `not_checkable`, never passes. A failed fidelity
@@ -1377,7 +1377,7 @@ still run on incomplete/untrusted inputs and publish exact blockers.
 
 `proposed_change` contains a scheduling-only diff for `fleet-config.toml` member
 overlays, exact changed keys with recorded before/after values and timestamps,
-rollback values, and suggested `[[labels]]` sizes for consumers' `.elsecall.toml`.
+rollback values, and suggested `[[labels]]` sizes for personal `workloads.toml` policies.
 Consumer snippets retain the complete selected label-rule set, including
 precedence guards and shadowed rules; do not remove a rule merely because its
 standalone value matches a recorded size. Explicit hold overrides are also retained.
@@ -1386,7 +1386,7 @@ not an exact patch of an installed source file. Merge only those keys into the
 fleet's synced service settings, preserving unrelated configuration. Missing
 service baselines are explicit, with unresolved overrides rather than invented
 old values. Label ownership is not inferred from a prefix: merge changes into the
-owning consumers' existing rules, retaining other fields and precedence. Hold
+selected global or directory policies' existing rules, retaining other fields and precedence. Hold
 limits are consumer/request options, shown separately with instructions to change
 only interactive rules. Restore original consumer rules for rollback. Nothing is
 applied or written automatically.

@@ -525,6 +525,9 @@ fn a_members_runs_and_leases_are_waited_for_or_the_upgrade_is_deferred() {
     let alpha = TestMember::install("alpha", Path::new(BUILD));
     let bravo = TestMember::install("bravo", &older);
     enrol(&alpha, &bravo);
+    let personal =
+        "# Workload policy must survive a fleet upgrade\n[[labels]]\nmatch = '*'\nsize = 1\n";
+    std::fs::write(bravo.data().join("workloads.toml"), personal).unwrap();
     let mut holder = hold_lease(&bravo, "nightly-build");
 
     // With a short wait the upgrade is deferred, and the lease is untouched.
@@ -564,6 +567,10 @@ fn a_members_runs_and_leases_are_waited_for_or_the_upgrade_is_deferred() {
     let report = json(&output);
     assert!(output.status.success(), "{report}");
     assert_eq!(outcome(&report, "bravo")["outcome"], "upgraded");
+    assert_eq!(
+        std::fs::read_to_string(bravo.data().join("workloads.toml")).unwrap(),
+        personal
+    );
     assert_eq!(health(&bravo)["build"], build_of(Path::new(BUILD)));
     let runs = bravo.ok(&["runs"]);
     assert_eq!(

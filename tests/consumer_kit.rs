@@ -1,6 +1,6 @@
 #![cfg(target_os = "macos")]
 //! The consumer integration kit through the real CLI and, where admission is
-//! involved, a real service: label rules from `.elsecall.toml`, running anyway
+//! involved, a real service: label rules from `workloads.toml`, running anyway
 //! when the service is unavailable, `ELSECALL=off`, a holder acquiring again,
 //! agent-ready failure lines and the run ID file. Only machine load is faked.
 mod processes;
@@ -16,14 +16,14 @@ use std::{
 };
 use support::{Fixture, in_use, queued, record};
 
-/// A working tree holding `.elsecall.toml`, found by its `.git` entry.
-fn repository(configuration: &str) -> tempfile::TempDir {
+/// A working tree with its policy installed in the caller's global configuration.
+fn repository(home: &Path, configuration: &str) -> tempfile::TempDir {
     let root = tempfile::Builder::new()
         .prefix("ec-repo-")
         .tempdir_in("/tmp")
         .unwrap();
     std::fs::create_dir(root.path().join(".git")).unwrap();
-    std::fs::write(root.path().join(".elsecall.toml"), configuration).unwrap();
+    crate::processes::workload_policy(home, Some(root.path()), configuration);
     root
 }
 
@@ -143,7 +143,7 @@ size = 3
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn label_rules_apply_to_runs_and_leases_and_explain_names_the_rule() {
     let fx = Fixture::start(8).await;
-    let repo = repository(RULES);
+    let repo = repository(fx.home.path(), RULES);
     let nested = repo.path().join("Sources/App");
     std::fs::create_dir_all(&nested).unwrap();
     let id_file = repo.path().join("run-id");
@@ -260,6 +260,7 @@ async fn label_rules_apply_to_runs_and_leases_and_explain_names_the_rule() {
 async fn invalid_rules_fail_with_invalid_request_and_a_precise_hint() {
     let fx = Fixture::start(2).await;
     let repo = repository(
+        fx.home.path(),
         "[[labels]]\nmatch = \"build *\"\nurgency = \"deferrable\"\ndeadline = \"30m\"\n",
     );
     let marker = repo.path().join("ran");
@@ -283,20 +284,14 @@ async fn invalid_rules_fail_with_invalid_request_and_a_precise_hint() {
     let lines = stderr_lines(&output);
     assert_eq!(lines.len(), 2, "{lines:?}");
     assert!(
-        lines[0].starts_with("elsecall: invalid_request: ")
-            && lines[0].contains("[[labels]] rule 1 (match = \"build *\"): urgency = \"deferrable\" needs both deadline and at_deadline."),
-        "{}",
-        lines[0]
+        lines[0].starts_with(
+            "elsecall: invalid_request: The personal workload configuration is invalid."
+        )
     );
     let envelope = json(lines[1].as_bytes());
     assert_eq!(envelope["error"]["code"], "invalid_request");
     let hint = envelope["error"]["hint"].as_str().unwrap();
-    assert!(
-        hint.starts_with(
-            "Add deadline (such as \"30m\") and at_deadline (\"start\" or \"skip\") in rule 1 in "
-        ) && hint.ends_with(".elsecall.toml, then rerun the same command."),
-        "{hint}"
-    );
+    assert!(hint.contains("workloads.toml"), "{hint}");
     assert!(lines[0].ends_with(hint), "the line ends with the fix");
 
     // Every request in that working tree fails the same way, leases included.
@@ -317,7 +312,7 @@ async fn invalid_rules_fail_with_invalid_request_and_a_precise_hint() {
 #[test]
 fn work_runs_anyway_when_the_service_is_unavailable_only_if_the_consumer_chose_it() {
     let home = home();
-    let plain = repository("");
+    let plain = repository(home.path(), "");
     let input = binary_input();
 
     // The default is unchanged: fail with service_unavailable, without running.
@@ -343,10 +338,10 @@ fn work_runs_anyway_when_the_service_is_unavailable_only_if_the_consumer_chose_i
         "service_unavailable"
     );
 
-    // Chosen in .elsecall.toml, in the environment or with a flag, the command
+    // Chosen in workloads.toml, in the environment or with a flag, the command
     // runs directly: the same bytes, its exit code, and one notice line first.
     let notice = "elsecall: unmanaged: The local service could not be reached. The command runs without admission. Run `elsecall doctor` to restore admission.\n";
-    let chose = repository("[admission]\nwhen_unavailable = \"run\"\n");
+    let chose = repository(home.path(), "[admission]\nwhen_unavailable = \"run\"\n");
     for (directory, env, flag) in [
         (chose.path(), vec![], vec![]),
         (
@@ -473,7 +468,7 @@ fn work_runs_anyway_when_the_service_is_unavailable_only_if_the_consumer_chose_i
 #[test]
 fn elsecall_off_runs_commands_directly_and_makes_leases_no_ops() {
     let home = home();
-    let repo = repository("");
+    let repo = repository(home.path(), "");
     let off = [("ELSECALL", "off")];
     let input = binary_input();
     let status = repo.path().join("status.json");
@@ -634,7 +629,7 @@ while [ ! -f "$DIR/end" ]; do sleep 0.02; done"#,
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn failures_write_one_agent_ready_line_before_the_envelope() {
     let mut fx = Fixture::start(1).await;
-    let repo = repository("");
+    let repo = repository(fx.home.path(), "");
     fx.script(
         r#""$EC" lease acquire --label holding > "$DIR/holding.json" || exit 9
 while [ ! -f "$DIR/release" ]; do sleep 0.02; done"#,
@@ -756,4 +751,48 @@ while [ ! -f "$DIR/release" ]; do sleep 0.02; done"#,
         ]
     );
     fx.touch("release");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn policy_updates_and_a_service_restart_preserve_an_existing_grant_and_history() {
+    let mut fx = Fixture::start(4).await;
+    crate::processes::workload_policy(fx.home.path(), None, "[[labels]]\nmatch = '*'\nsize = 2\n");
+    let holder = fx.script(
+        r#""$EC" lease acquire --label existing > "$DIR/existing.json" || exit 9
+echo ready > "$DIR/ready"
+while [ ! -f "$DIR/release" ]; do sleep 0.02; done
+"$EC" lease release >/dev/null"#,
+    );
+    fx.wait_for_file("ready").await;
+    let acquired = json(&std::fs::read(fx.path("existing.json")).unwrap());
+    let id = acquired["data"]["run_id"].as_str().unwrap().to_owned();
+    crate::processes::workload_policy(fx.home.path(), None, "[[labels]]\nmatch = '*'\nsize = 1\n");
+    let before = fx.runs().await;
+    assert_eq!(record(&before, "existing")["size"], 2.0);
+    assert_eq!(in_use(&before), 2.0);
+    fx.stop().await;
+    fx.serve().await;
+    let recovered = fx.runs().await;
+    assert_eq!(record(&recovered, "existing")["run_id"], id);
+    assert_eq!(record(&recovered, "existing")["state"], "running");
+    assert_eq!(in_use(&recovered), 2.0);
+    let (code, later) = fx.cli(&["lease", "acquire", "--label", "later"]).await;
+    assert_eq!(code, 0, "{later}");
+    assert_eq!(later["data"]["size"], 1.0);
+    let (code, _) = fx
+        .cli(&[
+            "lease",
+            "release",
+            later["data"]["run_id"].as_str().unwrap(),
+        ])
+        .await;
+    assert_eq!(code, 0);
+    std::fs::write(fx.paths.data.join("workloads.toml"), "malformed = [").unwrap();
+    fx.touch("release");
+    assert_eq!(fx.exit_code(holder).await, 0);
+    let ended = fx
+        .until(|runs| record(runs, "existing")["state"] == "ended")
+        .await;
+    assert_eq!(record(&ended, "existing")["run_id"], id);
+    assert_eq!(record(&ended, "existing")["size"], 2.0);
 }

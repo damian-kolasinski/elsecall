@@ -66,6 +66,7 @@ impl Caller {
         command.env("ELSECALL_WHEN_UNAVAILABLE", "fail");
         command
             .arg("run")
+            .arg("--isolated-workload")
             .arg("--label")
             .arg(&request.label)
             .arg("--size")

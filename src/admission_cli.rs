@@ -6,7 +6,6 @@ pub mod resolution;
 use crate::admission_api::MAXIMUM_LISTED;
 use crate::{
     client::{self, Wait},
-    consumer_configuration::{ConsumerConfiguration, WhenUnavailable},
     failure::{Failure, Result},
     guidance::{self, Unmanaged},
     local_access,
@@ -21,6 +20,7 @@ use crate::{
         run_id::RunId,
         timestamp::Timestamp,
     },
+    workload_settings::{WhenUnavailable, WorkloadSettings},
 };
 use clap::Subcommand;
 use environment::{CallerEnvironment, Mode};
@@ -39,7 +39,7 @@ pub enum LeaseCommand {
         The lease also ends when the holder exits, even after SIGKILL. Work started \
         inside a lease reuses it instead of queueing, and a holder that acquires \
         again (a script that re-execs itself) gets the same lease back. \
-        .elsecall.toml label rules supply what the flags leave out. ELSECALL=off \
+        workloads.toml label rules supply what the flags leave out. ELSECALL=off \
         makes acquire and release succeed without doing anything.")]
     Acquire {
         #[command(flatten)]
@@ -187,10 +187,10 @@ pub fn proceeds_unmanaged(failure: &Failure, when_unavailable: WhenUnavailable) 
     failure.code == "service_unavailable" && when_unavailable == WhenUnavailable::Run
 }
 
-fn working_configuration() -> Result<ConsumerConfiguration> {
+fn working_configuration() -> Result<WorkloadSettings> {
     let directory =
         std::env::current_dir().map_err(|e| Failure::io("Read the working directory", e))?;
-    ConsumerConfiguration::discover(&directory)
+    crate::workload_configuration::load(&Paths::current()?, &directory)
 }
 
 /// The local service's paths, for a caller allowed to use it.
@@ -300,12 +300,6 @@ async fn lease_release(
             holder_pid: Some(holder.unwrap_or_else(parent_pid)),
         },
     };
-    let configuration = working_configuration()?;
-    let when_unavailable = resolution::when_unavailable(
-        when_unavailable.map(Into::into),
-        environment,
-        &configuration,
-    );
     let nothing = |state| ReleaseOutcome {
         state,
         released: Vec::new(),
@@ -328,8 +322,23 @@ async fn lease_release(
         }),
         // An unmanaged acquire held nothing; a lease that survives the service's
         // restart still ends when its holder exits.
-        Err(failure) if proceeds_unmanaged(&failure, when_unavailable) => {
-            Ok(nothing(ReleaseState::Unmanaged))
+        Err(failure) if failure.code == "service_unavailable" => {
+            // Returning an existing grant must not depend on a later policy edit.
+            // Policy is relevant only to an unavailable service's fallback.
+            let action = match when_unavailable
+                .map(Into::into)
+                .or(environment.when_unavailable)
+            {
+                Some(action) => action,
+                None => working_configuration()?
+                    .when_unavailable
+                    .unwrap_or_default(),
+            };
+            if proceeds_unmanaged(&failure, action) {
+                Ok(nothing(ReleaseState::Unmanaged))
+            } else {
+                Err(failure)
+            }
         }
         Err(failure) => Err(failure),
     }

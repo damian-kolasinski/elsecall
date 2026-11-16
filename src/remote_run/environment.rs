@@ -2,7 +2,7 @@
 //! consumer configuration allows; machine-identity variables always come from the
 //! member, and Elsecall sets its own `ELSECALL_*` variables. Values exist only in
 //! transit and in the running command: nothing here logs or stores them.
-use crate::{consumer_configuration::ConsumerConfiguration, remote_run::protocol::Variable};
+use crate::{remote_run::protocol::Variable, workload_settings::WorkloadSettings};
 use std::{
     ffi::{OsStr, OsString},
     os::unix::ffi::{OsStrExt, OsStringExt},
@@ -35,7 +35,7 @@ fn elsecall(name: &[u8]) -> bool {
 
 /// The caller's variables its configuration forwards, in the caller's order.
 pub fn forwarded(
-    configuration: &ConsumerConfiguration,
+    configuration: &WorkloadSettings,
     variables: impl IntoIterator<Item = (OsString, OsString)>,
 ) -> Vec<Variable> {
     variables
@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn forwards_only_the_allowlist_and_keeps_the_members_identity() {
-        let configuration = ConsumerConfiguration::parse(
+        let configuration = WorkloadSettings::parse(
             "[environment]\nnames = [\"CI\", \"HOME\"]\nprefixes = [\"APP_\"]\n",
         )
         .unwrap();

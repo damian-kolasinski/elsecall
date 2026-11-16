@@ -1,10 +1,10 @@
 //! Read-only placement counterfactuals. Keep measured work, label families and
 //! urgency fixed; only the placement component of current consumer rules applies.
 use crate::{
-    consumer_configuration::{ConsumerConfiguration, RulePlacement},
     failure::{Failure, Result},
     scheduling::request::Placement,
     workload::trace::Trace,
+    workload_settings::RulePlacement,
 };
 use clap::{Args, ValueEnum};
 use serde::Serialize;
@@ -28,7 +28,7 @@ pub struct ReplayPlacement {
     /// Historical recorded placement, or current consumer label placement rules
     #[arg(long, value_enum, default_value = "historical")]
     pub placement: Mode,
-    /// Consumer .elsecall.toml to read (required with --placement current)
+    /// Personal workloads.toml to read; selects policy for the current directory (required with --placement current)
     #[arg(long, value_name = "PATH")]
     pub rules: Option<PathBuf>,
 }
@@ -46,22 +46,30 @@ impl ReplayPlacement {
             (Mode::Current, Some(path)) => {
                 let mut bytes = Vec::new();
                 std::fs::File::open(path)
-                    .and_then(|f| f.take(65537).read_to_end(&mut bytes))
+                    .and_then(|f| {
+                        f.take(crate::workload_configuration::LIMIT + 1)
+                            .read_to_end(&mut bytes)
+                    })
                     .map_err(|e| Failure::io("Read replay rules", e))?;
-                if bytes.len() > 65536 {
+                if bytes.len() as u64 > crate::workload_configuration::LIMIT {
                     return Err(invalid());
                 }
                 // Do not echo parser messages or file contents into artifacts.
                 let configuration = std::str::from_utf8(&bytes)
                     .ok()
-                    .and_then(|s| ConsumerConfiguration::parse(s).ok())
+                    .and_then(|s| crate::workload_configuration::Configuration::parse(s).ok())
                     .ok_or_else(|| {
                         Failure::new(
                             "invalid_request",
-                            "Replay rules are not a valid consumer configuration.",
-                            "Check the supplied .elsecall.toml.",
+                            "Replay rules are not a valid workload configuration.",
+                            "Check the supplied workloads.toml.",
                         )
                     })?;
+                let directory = std::env::current_dir()
+                    .and_then(|p| p.canonicalize())
+                    .map_err(|e| Failure::io("Resolve replay workload directory", e))?;
+                let digest = configuration.digest(&directory)?;
+                let configuration = configuration.resolve(&directory)?;
                 for r in &mut trace.requests {
                     if r.fact.internal
                         || crate::rehearsal::internal(r)
@@ -90,12 +98,11 @@ impl ReplayPlacement {
                         _ => crate::reporting::facts::PlacementKind::Pinned,
                     };
                 }
-                let digest = crate::build_identity::Digest::of(&bytes);
                 trace.placement_replay = Some(Provenance {
                     mode: Mode::Current,
                     rules_digest: digest,
                 });
-                trace.limits.push(format!("Replay placement uses current consumer rules (digest {digest:?}); historical work, urgency and family remain fixed. Counterfactual placement cannot certify historical fidelity."));
+                trace.limits.push(format!("Replay placement uses the selected personal workload policy (digest {digest:?}); historical work, urgency and family remain fixed. Counterfactual placement cannot certify historical fidelity."));
                 Some(digest)
             }
             _ => return Err(invalid()),
@@ -182,6 +189,15 @@ mod tests {
         }
         .apply(&mut t)
         .unwrap();
+        let policy = crate::workload_configuration::Configuration::parse(
+            std::str::from_utf8(bytes).unwrap(),
+        )
+        .unwrap();
+        let directory = std::env::current_dir().unwrap();
+        assert_eq!(
+            report["rules_digest"],
+            serde_json::json!(policy.digest(&directory).unwrap())
+        );
         assert_eq!(report["split"]["placeable"], 1);
         assert_eq!(
             crate::simulation::structural_members(&t, &t.requests[0]),

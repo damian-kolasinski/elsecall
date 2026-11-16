@@ -1,10 +1,10 @@
 //! Explicit, atomic import of legacy repository policy into personal settings.
 use crate::{
-    consumer_configuration::ConsumerConfiguration,
     failure::{Failure, Result},
     paths::Paths,
     private_files,
     workload_configuration::{self, Configuration, FILE_NAME},
+    workload_settings::WorkloadSettings,
 };
 use serde::Serialize;
 use std::{
@@ -66,7 +66,7 @@ pub fn migrate(paths: &Paths, sources: &[PathBuf]) -> Result<Migrated> {
             )
         })?;
         let settings =
-            ConsumerConfiguration::parse(&text).map_err(|_| workload_configuration::invalid())?;
+            WorkloadSettings::parse(&text).map_err(|_| workload_configuration::invalid())?;
         let key = directory
             .to_str()
             .ok_or_else(workload_configuration::invalid)?;

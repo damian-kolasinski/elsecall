@@ -84,7 +84,7 @@ pub fn render(trace: &Trace, settings: &Settings) -> Result<Value> {
     // separate so it cannot silently make deferrable rules interactive.
     let hold = settings.get("hold_limit");
     if !consumer.is_empty() {
-        crate::consumer_configuration::ConsumerConfiguration::parse(&consumer)
+        crate::workload_settings::WorkloadSettings::parse(&consumer)
             .map_err(|e| super::invalid(e.detail))?;
     }
     let rollback = changes
@@ -94,8 +94,8 @@ pub fn render(trace: &Trace, settings: &Settings) -> Result<Value> {
     Ok(
         json!({"application":"proposal_only","fleet_service_settings_diff":diff,"diff_basis":"Scheduling-only projection of the latest recorded settings per member; merge these keys into existing member overlays, preserving unrelated settings. This is not an exact patch of the current source file.","changes":changes,"unknown_service_baseline_members":unknown,
         "unresolved_service_overrides":if unknown.is_empty(){Vec::<String>::new()}else{arguments(settings).into_iter().filter(|s|!s.starts_with("label.")&&!s.starts_with("hold_limit=")).collect()},
-        "consumer_elsecall_toml":consumer,"labels":labels,"interactive_hold_limit":hold,"hold_instructions":"If proposed, set hold_limit only on the existing interactive consumer rules/CLI requests; retain deferrable urgency and existing rule precedence.",
-        "consumer_instructions":"Merge sizes into matching rules in each owning consumer's .elsecall.toml; trace labels do not identify a consumer file. Preserve rule order and other fields.",
+        "workload_rules_toml":consumer,"consumer_elsecall_toml":consumer,"labels":labels,"interactive_hold_limit":hold,"hold_instructions":"If proposed, set hold_limit only on the existing interactive consumer rules/CLI requests; retain deferrable urgency and existing rule precedence.",
+        "consumer_instructions":"Merge sizes into matching defaults or directory entries in personal workloads.toml; trace labels do not identify a directory policy. Preserve rule order and other fields.",
         "rollback":{"service_settings":rollback,"consumer":"Restore the original consumer rules and explicit hold options; heterogeneous recorded sizes are listed per pattern."}}),
     )
 }

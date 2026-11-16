@@ -3,7 +3,7 @@
 //! - the upstream of HEAD;
 //! - each remote's default branch: `refs/remotes/<remote>/HEAD` and the branch it
 //!   points to, such as `refs/remotes/origin/main`;
-//! - refs the consumer declares in `.elsecall.toml` (`[workspace] refs`).
+//! - refs the consumer declares in `workloads.toml` (`[workspace] refs`).
 //!
 //! Only names under `refs/remotes/` and `refs/tags/` are carried, as the caller has
 //! them, at the objects the caller's refs point to. A remote's URL never is: refs
@@ -400,9 +400,9 @@ fn too_many(total: usize, matched: usize) -> Failure {
     Failure::new(
         "invalid_request",
         format!(
-            "The copy would carry {total} refs, more than the {MAXIMUM_REFS} a copy carries; {matched} of them match [workspace] refs in .elsecall.toml."
+            "The copy would carry {total} refs, more than the {MAXIMUM_REFS} a copy carries; {matched} of them match [workspace] refs in workloads.toml."
         ),
-        "Narrow the patterns under [workspace] refs in .elsecall.toml, then rerun the same command.",
+        "Narrow the patterns under [workspace] refs in workloads.toml, then rerun the same command.",
     )
 }
 

@@ -39,13 +39,13 @@ fn git(dir: &Path, args: &[&str]) {
     assert!(output.status.success(), "git {args:?}: {output:?}");
 }
 
-/// A caller repository whose `.elsecall.toml` declares a synced and an unsynced
+/// A caller repository whose `workloads.toml` declares a synced and an unsynced
 /// configuration location for consistency checks.
 struct Repository {
     _temp: tempfile::TempDir,
     root: PathBuf,
 }
-fn repository() -> Repository {
+fn repository(caller: &TestMember) -> Repository {
     let temp = tempfile::Builder::new()
         .prefix("ec-repo-")
         .tempdir_in("/tmp")
@@ -53,11 +53,11 @@ fn repository() -> Repository {
     let root = temp.path().canonicalize().unwrap().join("app");
     std::fs::create_dir_all(&root).unwrap();
     git(&root, &["init", "-q", "-b", "main"]);
-    std::fs::write(
-        root.join(".elsecall.toml"),
+    crate::processes::workload_policy(
+        caller.home.path(),
+        Some(&root),
         "[consistency]\nconfiguration = [\"~/.config/demo/sub/token\", \"~/unsynced.cfg\"]\n",
-    )
-    .unwrap();
+    );
     std::fs::write(root.join("README.md"), "hello\n").unwrap();
     git(&root, &["add", "-A"]);
     git(&root, &["commit", "-q", "-m", "initial"]);
@@ -154,7 +154,7 @@ fn sync_dir(member: &TestMember) -> PathBuf {
 #[test]
 fn a_stale_member_is_synced_before_the_run_and_a_current_one_costs_a_check() {
     let (alpha, bravo) = synced_pair();
-    let repo = repository();
+    let repo = repository(&alpha);
     let status = repo.root.parent().unwrap().join("status.json");
 
     // The master's file changes; nothing moves until a placed run needs it.
@@ -295,7 +295,7 @@ fn a_stale_member_is_synced_before_the_run_and_a_current_one_costs_a_check() {
 #[test]
 fn a_failed_sync_fails_the_run_with_its_code_and_line() {
     let (alpha, bravo) = synced_pair();
-    let repo = repository();
+    let repo = repository(&alpha);
     let status = repo.root.parent().unwrap().join("status.json");
     // On bravo, ~/.config becomes a link into ~/.ssh, where sync never writes.
     let home = bravo.home.path();
@@ -352,7 +352,7 @@ Run `elsecall sync push --member bravo` to see why and retry the sync, fix what 
 #[test]
 fn an_unreachable_member_is_still_member_unavailable() {
     let (alpha, mut bravo) = synced_pair();
-    let repo = repository();
+    let repo = repository(&alpha);
     let status = repo.root.parent().unwrap().join("status.json");
     bravo.stop();
     let output = placed(&alpha, &repo, &status, "true");
@@ -375,7 +375,7 @@ fn an_unreachable_member_is_still_member_unavailable() {
 #[test]
 fn a_sync_still_running_at_the_hold_limit_fails_the_run() {
     let (alpha, bravo) = synced_pair();
-    let repo = repository();
+    let repo = repository(&alpha);
     // A stopped member service accepts the connection and never answers, so the
     // generation check outlasts the hold limit.
     let pid = bravo.service_pid() as i32;
@@ -496,7 +496,7 @@ fn perf_a_failed_sync_falls_back_to_another_member_and_then_to_the_caller() {
     // bravo is fastest, then charlie, then alpha, the caller and master.
     let fleet = synced_fleet(&[("alpha", 4, 1.0), ("bravo", 4, 4.0), ("charlie", 4, 2.0)]);
     let (alpha, bravo, charlie) = (&fleet[0].member, &fleet[1].member, &fleet[2].member);
-    let repo = repository();
+    let repo = repository(alpha);
     // Both members hold a warm copy, so placement prefers them to the caller.
     for member in ["bravo", "charlie"] {
         let output = run(alpha, &repo.root, &["--member", member, "--", "true"]);
@@ -619,7 +619,7 @@ fn release(mut lease: Child) {
 fn perf_a_fallback_stays_within_the_hold_limit() {
     let fleet = synced_fleet(&[("alpha", 2, 1.0), ("bravo", 2, 4.0)]);
     let (alpha, bravo) = (&fleet[0].member, &fleet[1].member);
-    let repo = repository();
+    let repo = repository(alpha);
     let output = run(alpha, &repo.root, &["--member", "bravo", "--", "true"]);
     assert!(output.status.success(), "{output:?}");
     break_sync(bravo);
@@ -683,7 +683,7 @@ fn a_placeable_run_no_other_member_can_take_still_fails_with_config_sync_failed(
     // Only bravo is large enough, and its sync fails.
     let fleet = synced_fleet(&[("alpha", 2, 1.0), ("bravo", 8, 1.0)]);
     let (alpha, bravo) = (&fleet[0].member, &fleet[1].member);
-    let repo = repository();
+    let repo = repository(alpha);
     break_sync(bravo);
     write(alpha, SECRET, "{\"token\":\"second\"}");
     let output = run(
@@ -724,7 +724,7 @@ fn spawn_cli(member: &TestMember, cwd: &Path, args: &[&str]) -> Child {
 fn a_slow_push_to_one_member_does_not_delay_a_run_on_another() {
     let fleet = synced_fleet(&[("alpha", 4, 1.0), ("bravo", 4, 1.0), ("charlie", 4, 1.0)]);
     let (alpha, bravo, charlie) = (&fleet[0].member, &fleet[1].member, &fleet[2].member);
-    let repo = repository();
+    let repo = repository(alpha);
 
     // `sync push` issues generation 2 and hangs pushing it to the paused bravo.
     write(alpha, SECRET, "{\"token\":\"second\"}");
@@ -777,7 +777,7 @@ fn a_slow_push_to_one_member_does_not_delay_a_run_on_another() {
 fn pushes_to_the_same_member_stay_serialized() {
     let fleet = synced_fleet(&[("alpha", 4, 1.0), ("bravo", 4, 1.0)]);
     let (alpha, bravo) = (&fleet[0].member, &fleet[1].member);
-    let repo = repository();
+    let repo = repository(alpha);
     let pushes = history_len(bravo);
 
     write(alpha, SECRET, "{\"token\":\"second\"}");
@@ -855,7 +855,7 @@ fn pushes_to_the_same_member_stay_serialized() {
 #[test]
 fn service_configuration_waits_for_placed_leftovers_to_finish_without_stopping_them() {
     let (alpha, bravo) = synced_pair();
-    let repo = repository();
+    let repo = repository(&alpha);
     let status = repo.root.parent().unwrap().join("status.json");
     let finish = file_gate::FileGate::new(bravo.home.path(), "finish-leftover");
     let output = placed(
