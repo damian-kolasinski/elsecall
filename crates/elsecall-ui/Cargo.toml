@@ -17,7 +17,10 @@ rune-kit = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 tokio = { version = "1", features = ["io-util", "net", "rt", "sync", "time"] }
+tempfile = "3"
 
 [dev-dependencies]
-tempfile = "3"
 png = "0.18"
+
+[build-dependencies]
+cc = "1"
