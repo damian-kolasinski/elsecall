@@ -63,6 +63,8 @@ enum Command {
     Doctor,
     /// Show every fleet member's reachability, role and machine state, or change membership
     Fleet(fleet_cli::FleetArgs),
+    /// Prepare, inspect or cancel a new Mac onboarding operation
+    Onboarding(elsecall::onboarding_cli::OnboardingArgs),
     /// Mirror declared configuration and secret files from the master to every
     /// member: status, plan, enable, disable, push and history
     #[command(
@@ -569,6 +571,11 @@ async fn run(cli: Cli) -> Result<bool> {
         }
         Command::Fleet(args) => {
             let (data, complete) = fleet_cli::run(&paths, args).await?;
+            output(data);
+            return Ok(complete);
+        }
+        Command::Onboarding(args) => {
+            let (data, complete) = elsecall::onboarding_cli::run(&paths, args).await?;
             output(data);
             return Ok(complete);
         }
