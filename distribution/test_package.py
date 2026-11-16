@@ -16,6 +16,9 @@ def executable(directory, version, body=b""):
     path = Path(directory) / "elsecall"
     path.write_bytes(b"#!/bin/sh\n" + body + f"echo elsecall {version}\n".encode())
     path.chmod(path.stat().st_mode | stat.S_IXUSR)
+    companion = Path(directory) / "elsecall-ui"
+    companion.write_bytes(b"window-bytes")
+    companion.chmod(0o755)
     return path
 
 
@@ -69,13 +72,27 @@ class Package(unittest.TestCase):
             second = package.archive(binary, Path(directory) / "b", "0.1.0")
             self.assertEqual(first.read_bytes(), second.read_bytes())
             files = archive_contents.read(first)
-            self.assertEqual(set(files), {"elsecall", "README.txt"})
+            self.assertEqual(set(files), {"elsecall", "elsecall-ui", "README.txt"})
             self.assertTrue(files["elsecall"].startswith(b"#!/bin/sh\n"))
             self.assertNotIn(str(Path.home()).encode(), first.read_bytes())
 
     def test_archive_rejects_a_private_build_path(self):
         with tempfile.TemporaryDirectory() as directory:
             binary = executable(directory, "0.1.0", f"# {Path.home()}\n".encode())
+            with self.assertRaisesRegex(ValueError, "private build path"):
+                package.archive(binary, directory, "0.1.0")
+
+    def test_archive_requires_the_companion(self):
+        with tempfile.TemporaryDirectory() as directory:
+            binary = executable(directory, "0.1.0")
+            binary.with_name("elsecall-ui").unlink()
+            with self.assertRaisesRegex(ValueError, "UI executable unavailable"):
+                package.archive(binary, directory, "0.1.0")
+
+    def test_archive_rejects_a_private_ui_build_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            binary = executable(directory, "0.1.0")
+            binary.with_name("elsecall-ui").write_bytes(str(Path.home()).encode())
             with self.assertRaisesRegex(ValueError, "private build path"):
                 package.archive(binary, directory, "0.1.0")
 

@@ -2,7 +2,28 @@
 
 Native window that lists the fleet the local Elsecall service already reports.
 It talks only to the same-user socket at `~/Library/Application Support/Elsecall/service.sock`.
-It does not listen on the network, and `elsecall install` does not install this binary.
+It does not listen on the network. Releases include it beside the CLI;
+`elsecall install` stages it in the user's support directory.
+
+To open the installed window, run `elsecall ui`. This signs and publishes
+`~/Applications/Elsecall.app`, then opens a fresh instance. The service must be running.
+
+To upgrade, install the new CLI release with mise (or extract both executables
+from its archive), then run `elsecall install`. Leave the old window open: its
+next refresh offers **Upgrade and reopen** when the staged window differs.
+The button shows **Upgrading…** and disables itself while the app is signed,
+replaced and reopened. The new native window acknowledges readiness before the
+old window closes.
+A startup crash or a 15-second readiness timeout restores the previous app. Signing
+or launch failures preserve the previous app, keep the old window open, and show
+an error; click the button again to retry.
+
+The app is signed in a separate directory before an atomic bundle swap, so a
+running executable is never overwritten. A release ID inside the signed bundle
+identifies the original binary, since signing changes executable bytes.
+Updates require the same user and a macOS desktop session. Installing just a CLI
+without its companion preserves the previously staged window; it offers no new UI.
+The Finder app is preserved when the service is uninstalled.
 
 ## Run
 
@@ -11,7 +32,13 @@ cargo run -p elsecall-ui
 ```
 
 `mise run build` still builds only the `elsecall` service binary. This crate is
-outside that default workspace member.
+outside that default workspace member. To install both from a checkout:
+
+```sh
+cargo build --workspace --locked --release
+./target/release/elsecall install
+elsecall ui
+```
 
 The window title is Elsecall. A background thread reads `GET /v1/fleet`, then
 waits two seconds after each response before the next read. A request that uses
@@ -25,7 +52,8 @@ Headless frames use rune's tooling, the same `--snap` path as rune's hello examp
 cargo run -p elsecall-ui -- --snap /tmp/fleet.png --scene members --theme light --scale 1
 ```
 
-Scenes: `loading`, `unavailable-first`, `unavailable`, `solo`, `members`.
+Scenes: `loading`, `unavailable-first`, `unavailable`, `solo`, `members`,
+`upgrade`, `upgrading`, `upgrade-failed`.
 `--theme` is `light` or `dark`. `unavailable-first` is the service down before
 any fleet data (banner, no table). `unavailable` keeps the last table, greyed,
 under that banner.

@@ -16,6 +16,9 @@ const SCENES: &[&str] = &[
     "unavailable",
     "solo",
     "members",
+    "upgrade",
+    "upgrading",
+    "upgrade-failed",
 ];
 const BLESS: &str =
     "ELSECALL_UI_BLESS=1 cargo test -p elsecall-ui --bin elsecall-ui fleet_scenes_match_goldens";

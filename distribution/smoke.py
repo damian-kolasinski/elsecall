@@ -12,7 +12,7 @@ import package
 
 def check(archive, release_version):
     files = archive_contents.read(archive)
-    if set(files) != {"elsecall", "README.txt"}:
+    if set(files) != {"elsecall", "elsecall-ui", "README.txt"}:
         raise ValueError("release archive has unexpected files")
     with tempfile.TemporaryDirectory(prefix="elsecall-smoke-") as directory:
         binary = Path(directory) / "elsecall"
@@ -21,7 +21,7 @@ def check(archive, release_version):
         reported = subprocess.check_output([str(binary), "--version"], text=True).strip()
         if reported != f"elsecall {release_version}":
             raise ValueError("packaged executable reports a different version")
-        if str(Path.home()).encode() in files["elsecall"]:
+        if any(str(Path.home()).encode() in files[name] for name in ("elsecall", "elsecall-ui")):
             raise ValueError("packaged executable contains a private build path")
     return {"version": release_version, "archive": Path(archive).name}
 

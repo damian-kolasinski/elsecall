@@ -18,8 +18,6 @@ pub struct Update {
     pub refreshed_at: String,
     /// Window build installed with the service, when the service reports one.
     pub installed_window: Option<String>,
-    /// Set when an update click finished. The fleet snapshot stays as it was.
-    pub update_result: Option<Result<(), String>>,
 }
 
 pub fn start(feed: Arc<Latest<Update>>, source: Arc<dyn FleetSource>) {
@@ -40,7 +38,6 @@ fn poll_loop(feed: Arc<Latest<Update>>, source: Arc<dyn FleetSource>) {
                 result,
                 refreshed_at,
                 installed_window,
-                update_result: None,
             },
         );
         thread::sleep(INTERVAL);

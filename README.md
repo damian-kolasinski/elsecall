@@ -13,15 +13,20 @@ service use Rust, Clap, Tokio, Axum and SQLite.
 ## Desktop UI
 
 `elsecall-ui` is a native window that lists the fleet the local service already
-reports. `elsecall install` does not install it. See
+reports. Releases ship the matching window alongside the CLI. Run `elsecall install`
+to stage both, then `elsecall ui` to open `~/Applications/Elsecall.app`. After installing
+a newer release and running `elsecall install`, an already open window offers
+**Upgrade and reopen**. Clicking it replaces the app and opens the new window;
+a failed upgrade keeps the old window open with a retryable error. See
 [crates/elsecall-ui/README.md](crates/elsecall-ui/README.md).
 
 ## Install a release
 
 A version tag publishes a signed archive. mise installs it through packslip, which
 checks the signature before putting `elsecall` on `PATH`. `elsecall install` copies
-that executable into this account's service. The archive does not include the
-desktop window.
+the service executable and its matching desktop window into this account's installation.
+Run `elsecall ui` to open the window, or use **Upgrade and reopen** in an already
+open window after updating.
 
 ```sh
 mise use -g packslip:github.com/damian-kolasinski/elsecall@0.1.0

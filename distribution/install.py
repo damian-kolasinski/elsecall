@@ -139,6 +139,9 @@ def verify(repository, release_version, commit):
         packaged = archive_contents.read(archive)["elsecall"]
         if hashlib.sha256(installed).digest() != hashlib.sha256(packaged).digest():
             raise RuntimeError("installed bytes differ from the verified archive")
+        companion = binary.with_name("elsecall-ui")
+        if companion.read_bytes() != archive_contents.read(archive)["elsecall-ui"]:
+            raise RuntimeError("installed UI differs from the verified archive")
         reported = command([str(binary), "--version"], env=env).strip()
         if reported != f"elsecall {release_version}":
             raise RuntimeError("installed executable reports a different version")

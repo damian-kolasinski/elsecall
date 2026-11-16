@@ -69,15 +69,19 @@ fn fixture() -> (tempfile::TempDir, Paths, std::path::PathBuf) {
 fn install_update_restart_and_clean_uninstall_using_real_files_and_fake_lifecycle() {
     let (_home, paths, source) = fixture();
     let manager = Manager::default();
+    fs::write(source.with_file_name("elsecall-ui"), b"window one").unwrap();
     installation::install(&paths, &source, &manager, None).unwrap();
+    assert_eq!(fs::read(paths.window_executable()).unwrap(), b"window one");
     assert_eq!(fs::read_to_string(&paths.bin).unwrap(), "binary one");
     assert_eq!(
         fs::read_to_string(&paths.agent).unwrap(),
         "test registration"
     );
     fs::write(&source, "binary two").unwrap();
+    fs::write(source.with_file_name("elsecall-ui"), b"window two").unwrap();
     installation::install(&paths, &source, &manager, None).unwrap();
     assert_eq!(fs::read_to_string(&paths.bin).unwrap(), "binary two");
+    assert_eq!(fs::read(paths.window_executable()).unwrap(), b"window two");
     installation::restart(&paths, &manager).unwrap();
     installation::uninstall(&paths, &manager, false).unwrap();
     assert!(!paths.data.exists());

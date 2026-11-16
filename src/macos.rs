@@ -10,4 +10,5 @@ pub mod processes;
 mod sysctl;
 pub mod tailscale;
 mod thermal;
+pub mod window_launcher;
 pub mod xcodes;

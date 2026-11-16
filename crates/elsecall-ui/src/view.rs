@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use rune::tok::TextStyle;
 use rune::{Align, Color, El, col, row, text};
-use rune_kit::{Cell, Table, TableColumn};
+use rune_kit::{Button, Cell, Table, TableColumn};
 
 use crate::app::AppState;
 use crate::fleet_source::{Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Role};
@@ -69,7 +69,7 @@ pub fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
         return page.center().child(loading(&paints));
     }
     let shown = state.shown();
-    let mut page = page.child(header(state, &paints));
+    let mut page = page.child(header(state, &paints, dark));
     if let Some(error) = state.update_error() {
         page = page.child(text(error).font(paints.small).color(paints.secondary));
     }
@@ -104,7 +104,7 @@ fn loading(paints: &Paints) -> El {
         )
 }
 
-fn header(state: &AppState, paints: &Paints) -> El {
+fn header(state: &AppState, paints: &Paints, dark: bool) -> El {
     let mut line = row()
         .w_full()
         .center_y()
@@ -119,7 +119,7 @@ fn header(state: &AppState, paints: &Paints) -> El {
     }
     line = line.child(rune::el().grow(1.0));
     if state.update_available() {
-        line = line.child(update_button(state, paints));
+        line = line.child(update_button(state, dark));
     }
     if let Some(at) = state.refreshed() {
         line = line.child(
@@ -131,20 +131,16 @@ fn header(state: &AppState, paints: &Paints) -> El {
     line
 }
 
-fn update_button(state: &AppState, paints: &Paints) -> El {
-    let label = if state.updating() {
-        "Updating…"
+fn update_button(state: &AppState, dark: bool) -> El {
+    Button::new(if state.updating() {
+        "Upgrading…"
     } else {
-        "Update"
-    };
-    row()
-        .center_y()
-        .h(PILL_HEIGHT)
-        .px(theme::SPACE_2)
-        .radius(theme::RADIUS_PILL)
-        .fill(paints.brand_fill)
-        .child(text(label).font(paints.label).color(paints.brand_ink))
-        .on_press(|state: &mut AppState| state.press_update())
+        "Upgrade and reopen"
+    })
+    .disabled(state.updating())
+    .on_press(|state: &mut AppState| state.press_update())
+    .build(&theme::kit(dark))
+    .key("upgrade-window")
 }
 
 fn banner(message: &str, hint: &str, paints: &Paints) -> El {
@@ -310,13 +306,6 @@ fn row_id(state: &AppState, index: usize) -> Cow<'_, str> {
     Cow::Borrowed(state.rows()[index].name.as_str())
 }
 
-pub(crate) fn update_available(installed: Option<&str>, running: Option<&str>) -> bool {
-    match (installed, running) {
-        (Some(installed), Some(running)) => installed != running,
-        _ => false,
-    }
-}
-
 pub(crate) fn count_label(count: usize) -> String {
     match count {
         1 => "1 member".into(),
@@ -377,14 +366,6 @@ pub(crate) fn compact_bytes(bytes: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn an_update_is_offered_only_when_the_installed_window_differs() {
-        assert!(!update_available(None, Some("aaaa")));
-        assert!(!update_available(Some("aaaa"), None));
-        assert!(!update_available(Some("aaaa"), Some("aaaa")));
-        assert!(update_available(Some("bbbb"), Some("aaaa")));
-    }
 
     #[test]
     fn labels_counts_cpu_memory_and_load() {

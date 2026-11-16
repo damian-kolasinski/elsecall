@@ -64,31 +64,50 @@ impl FleetSource for SocketSource {
             .runtime
             .block_on(elsecall::client::get::<WindowOffer>(socket, "/v1/ui"))
             .ok()?;
-        offer.build
+        offer.build.map(|build| build.to_string())
     }
 }
 
 #[derive(Deserialize)]
 struct WindowOffer {
-    build: Option<String>,
+    build: Option<elsecall::build_identity::BuildId>,
 }
 
-/// Asks the local service to replace Elsecall.app and open it.
-pub fn replace_window() -> Result<(), String> {
-    let paths = elsecall::paths::Paths::current().map_err(|error| error.message.clone())?;
+pub struct SocketWindowUpgrade;
+
+impl crate::window_upgrade::WindowUpgrade for SocketWindowUpgrade {
+    fn replace_and_reopen(&self) -> Result<(), String> {
+        let paths = elsecall::paths::Paths::current().map_err(|error| error.message.clone())?;
+        replace_window_at(&paths.socket())
+    }
+
+    fn close_old_window(&self) {
+        std::process::exit(0);
+    }
+}
+
+fn replace_window_at(socket: &std::path::Path) -> Result<(), String> {
+    #[derive(Deserialize)]
+    struct Launched {
+        launched: bool,
+    }
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .map_err(|error| error.to_string())?;
-    runtime
-        .block_on(elsecall::client::post_within::<serde_json::Value>(
-            &paths.socket(),
+    let result = runtime
+        .block_on(elsecall::client::post_within::<Launched>(
+            socket,
             "/v1/ui/update",
             serde_json::json!({}),
             Duration::from_secs(30),
         ))
-        .map(|_| ())
-        .map_err(|error| error.message)
+        .map_err(|error| format!("{} {}", error.message, error.hint))?;
+    if result.launched {
+        Ok(())
+    } else {
+        Err("The updated window did not launch. Retry the upgrade.".into())
+    }
 }
 
 /// Opens the socket on the first read, which the refresh thread performs.
@@ -271,6 +290,61 @@ struct WireProcess {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn replacement_requires_a_successful_launch_confirmation_from_the_socket() {
+        use std::{
+            io::{Read, Write},
+            os::unix::net::UnixListener,
+        };
+        for (status, body, success) in [
+            (
+                "200 OK",
+                r#"{"schema_version":1,"data":{"launched":true}}"#,
+                true,
+            ),
+            (
+                "200 OK",
+                r#"{"schema_version":1,"data":{"launched":false}}"#,
+                false,
+            ),
+            ("200 OK", r#"{"schema_version":1,"data":{}}"#, false),
+            ("200 OK", "not-json", false),
+            (
+                "500 Internal Server Error",
+                r#"{"schema_version":1,"error":{"code":"window_open_failed","message":"Could not open.","hint":"Retry the upgrade."}}"#,
+                false,
+            ),
+        ] {
+            let root = tempfile::Builder::new()
+                .prefix("ec-ui-sock-")
+                .permissions({
+                    use std::os::unix::fs::PermissionsExt;
+                    std::fs::Permissions::from_mode(0o700)
+                })
+                .tempdir_in("/tmp")
+                .unwrap();
+            let socket = root.path().join("service.sock");
+            let listener = UnixListener::bind(&socket).unwrap();
+            let service = std::thread::spawn(move || {
+                let (mut stream, _) = listener.accept().unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
+                let mut bytes = [0; 2048];
+                let count = stream.read(&mut bytes).unwrap();
+                assert!(
+                    std::str::from_utf8(&bytes[..count])
+                        .unwrap()
+                        .starts_with("POST /v1/ui/update HTTP/1.1\r\n")
+                );
+                write!(stream, "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+            });
+            let result = replace_window_at(&socket);
+            assert_eq!(result.is_ok(), success, "{body}: {result:?}");
+            service.join().unwrap();
+        }
+    }
 
     fn data(fixture: &str) -> Value {
         let document: Value = serde_json::from_str(fixture).unwrap();
