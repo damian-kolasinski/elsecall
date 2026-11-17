@@ -1552,6 +1552,8 @@ impl Scheduler {
         Second {
             at: self.clock.now(),
             cpu_utilization: latest.and_then(|l| l.cpu_utilization),
+            load_average: latest.and_then(|l| l.load_one_minute),
+            logical_cpus: latest.map(|l| l.cores.logical()),
             memory_pressure: latest.map(|l| l.memory_pressure),
             thermal_state: latest.map(|l| l.thermal_state),
             weighted_cores: self.capacity.weighted_cores,
@@ -1908,6 +1910,7 @@ mod pending_snapshot_tests {
                 cpu_utilization: Some(0.0),
                 memory_pressure: MemoryPressure::Normal,
                 thermal_state: ThermalState::Nominal,
+                load_one_minute: None,
             })
         }
     }

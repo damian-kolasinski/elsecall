@@ -60,6 +60,7 @@ fn member(
                 cpu_utilization: Some(utilization),
                 memory_pressure: MemoryPressure::Normal,
                 thermal_state: ThermalState::Nominal,
+                load_one_minute: None,
             }),
             gate: load::Gate::Open,
             speed,

@@ -44,6 +44,7 @@ impl MachineInspector for MachineBoundary {
             cpu_utilization: Some(0.0),
             memory_pressure: MemoryPressure::Normal,
             thermal_state: ThermalState::Nominal,
+            load_one_minute: None,
         })
     }
 }

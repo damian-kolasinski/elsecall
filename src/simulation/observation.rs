@@ -51,6 +51,7 @@ impl MachineInspector for Observation {
             thermal_state: b
                 .and_then(|b| b.worst_thermal_state)
                 .unwrap_or(ThermalState::Nominal),
+            load_one_minute: None,
         })
     }
 }

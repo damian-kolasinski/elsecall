@@ -11,6 +11,8 @@
 //!   what queued behind it, and `outside` the processes members named for it;
 //! - `outside_warnings` lists members' early warnings about outside processes
 //!   that spun or grew;
+//! - `overload` describes when a member was overloaded, the room elsewhere
+//!   meanwhile and the work that ran there then;
 //! - `findings` picks the notable problems out of the metrics;
 //! - `document` assembles the report from gathered facts and load;
 //! - `gathering` asks every member for its history through the
@@ -29,6 +31,7 @@ pub mod leftovers;
 pub mod load;
 pub mod outside;
 pub mod outside_warnings;
+pub mod overload;
 pub mod requests;
 pub mod run_phases;
 pub mod statistics;

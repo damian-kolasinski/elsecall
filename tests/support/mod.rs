@@ -70,6 +70,7 @@ pub fn quiet(performance_cores: u32) -> LoadSample {
         cpu_utilization: Some(0.1),
         memory_pressure: MemoryPressure::Normal,
         thermal_state: ThermalState::Nominal,
+        load_one_minute: None,
     }
 }
 

@@ -118,6 +118,8 @@ impl MachineInspector for MacMachine {
             cpu_utilization: self.cpu_utilization(),
             memory_pressure: memory_pressure(),
             thermal_state: thermal::state().unwrap_or(ThermalState::Nominal),
+            load_one_minute: Some(sysinfo::System::load_average().one)
+                .filter(|load| load.is_finite() && *load >= 0.0),
         })
     }
 }

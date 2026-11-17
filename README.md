@@ -556,8 +556,10 @@ report then names no processes for it.
 - `--bucket DURATION`: the width of each `series` point, from `1m`. Default a 24th of
   the period. Points are whole fine buckets (below).
 
-The report uses `definitions: 7`, which adds members' `outside_warnings` and their
-findings. The number changes when a metric definition changes. Version 2 judged
+The report uses `definitions: 8`, which adds the load average to members' `load`
+and `series`, members' `overload`, and the `overloaded_while_room` and `overloaded`
+findings. The number changes when a metric definition changes. Version 7 added
+members' `outside_warnings` and their findings. Version 2 judged
 `speed_conversion` against learned ratios and added `run.by_level` and `backtest`.
 Version 3 added `leftovers` and `heavy_leftovers`. Version 4 excludes synthetic
 rehearsal requests from request, leftover and accuracy metrics while retaining
@@ -615,7 +617,30 @@ machine outside the fleet as where they ran:
   `saturated_share`, of the gate closed by outside load; **work while saturated**,
   `saturated_busy_seconds` and its share of `busy_seconds`,
   `saturated_busy_share`; `memory_pressure_seconds`; `worst_memory_pressure` and
-  `worst_thermal_state`. Means weigh each sampled second alike.
+  `worst_thermal_state`. Means weigh each sampled second alike. Utilization stops
+  at a full machine, so the load average tells a busy member from an overloaded
+  one: `load_sampled_seconds`, the seconds that kept it (none from members on
+  earlier versions or minutes from before it was kept); `load_per_cpu_mean`,
+  `load_per_cpu_p95` (of the fine buckets) and `load_per_cpu_max` (the highest a
+  minute reached), threads running or waiting for each logical CPU; and
+  `overloaded_seconds` and its share of `load_sampled_seconds`,
+  `overloaded_share`: fine buckets with CPU at 90% or more and 2 or more threads
+  for each logical CPU, when work queued for CPUs and everything there ran slower.
+  macOS counts more than running threads (a member at a quarter of its CPU has
+  read above 1 thread a CPU), and the average trails by about a minute, so 2
+  leaves margin for both.
+- `overload`: null unless the member was overloaded in some fine bucket. Then
+  `seconds` overloaded; `peak_load_per_cpu`, the highest of those buckets'
+  minutes; `logical_cpus`; `load_mean`, threads running or waiting on average
+  then; `elsecall_cores_mean`, the weighted cores Elsecall's grants held then; and
+  `outside_share`, the share of the load beyond them, from work Elsecall did not
+  admit or admitted work using more than its size. `while_room` lists the other
+  members that had room in those buckets (CPU at 50% or less, no memory pressure)
+  and for how many `seconds`. `work` counts the requests of the label filter that
+  ran there during those buckets, by how they came to run there: `pinned`,
+  `leases`, `placeable` (placement chose it) and `required`, and `labels`, the 5
+  label and `how` pairs with the most `requests`. Nested requests and Elsecall's
+  own internal work are left out.
 - `speed`: the measured speed in the first and last fine buckets (`first`,
   `last`, each the midpoint of its bucket's range), its `min` and `max`, and
   `drift`, (max − min) / max.
@@ -658,6 +683,7 @@ machine outside the fleet as where they ran:
 - `waits`: as the fleet's, of requests that started there.
 - `run_phases`: as the fleet's, of runs admitted there.
 - `series`: per point, `at`, `sampled_seconds`, `cpu_mean`, `outside_mean`,
+  `load_per_cpu_mean`, `load_per_cpu_max`, `overloaded_seconds`,
   `elsecall_share`, `queued_max`, `busy_seconds`, `saturated_seconds`,
   `speed_min` and `speed_max`.
 
@@ -750,6 +776,8 @@ about, and the `metric` behind it with its `value` and `threshold`:
 | `master_saturated` | high | The master was saturated by outside load 10% or more of the time. |
 | `master_memory_pressure` | high | The master was under memory pressure at all. |
 | `fastest_idle_while_queued` | high | The fastest member idled 300 s or more while others queued. |
+| `overloaded_while_room` | medium, high from 30 min | A member was overloaded while another had room for 300 s or more of it (`members.overload.while_room`, the longest). The message gives the load, how much of it Elsecall admitted and the work that ran there, and what to do: bring outside work under `elsecall run --placeable`, make pinned labels placeable, or look at placement. |
+| `overloaded` | medium | A member was overloaded for 30 min or more with no member having room that long. |
 | `outside_pressure_blocked` | medium, high from 4 h | A member's `blocked` stretch lasted an hour or more. It names the leading outside process and what to do about it, from "Outside pressure". |
 | `queued_on_closed_gate` | medium, high from 4 h | A member has `blocked_queues`: one finding per member, about the label that waited longest, counting the others. |
 | `fleet_busy` | medium, high from 10% | 5% or more of decided interactive requests failed with `fleet_busy`. |
@@ -1816,6 +1844,9 @@ only, no processes, arguments, environment values or paths:
 
 - `cpu_mean` and `cpu_max`: whole-machine CPU utilization, 0 to 1;
 - `outside_mean`: utilization beyond the share Elsecall's grants hold (outside load);
+- `load_mean` and `load_max`: the kernel's one-minute load average, threads running
+  or waiting for a CPU, which keeps rising past a full machine, and
+  `logical_cpus`, which it compares with; absent from rows before it was kept;
 - `in_use_mean` and `in_use_max`: cores Elsecall's grants held, of `capacity` and
   `weighted_cores`;
 - `queued_max`: requests waiting in the member's own queue, and
