@@ -1,3 +1,5 @@
+<img src="assets/icon/elsecall.png" width="128" height="128" alt="Elsecall icon: a constellation of four linked nodes, the top one bright">
+
 # Elsecall
 
 Elsecall makes a personal fleet of development machines ready for work, observable,

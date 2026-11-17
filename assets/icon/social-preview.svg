@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1280" height="640" viewBox="0 0 1280 640">
+  <!--
+    GitHub social preview (Settings > General > Social preview), rendered to
+    social-preview.png by scripts/render-icon.sh. Text is DM Sans, the
+    window's typeface (crates/elsecall-ui/assets/fonts).
+  -->
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b4f82"/>
+      <stop offset="1" stop-color="#052033"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="640" fill="url(#page)"/>
+  <g fill="#66bfff" fill-opacity=".5">
+    <circle cx="1130" cy="96" r="3"/>
+    <circle cx="1196" cy="170" r="2"/>
+    <circle cx="1062" cy="540" r="2.5"/>
+    <circle cx="160" cy="560" r="2"/>
+    <circle cx="96" cy="84" r="2.5"/>
+  </g>
+  <image x="96" y="148" width="344" height="344" xlink:href="elsecall.svg"/>
+  <text x="480" y="318" font-family="DM Sans" font-weight="600" font-size="112" letter-spacing="-3.4" fill="#f7fcff">Elsecall</text>
+  <text font-family="DM Sans" font-weight="400" font-size="34" fill="#99d4ff">
+    <tspan x="484" y="384">Keep a fleet of development machines</tspan>
+    <tspan x="484" y="430">ready, observable and controllable.</tspan>
+  </text>
+</svg>

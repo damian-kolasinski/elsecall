@@ -197,3 +197,23 @@ Colours, type and spacing come from mergegate:
 The mapping onto rune's `Kit` is the table in `src/theme.rs`. UI text is DM Sans
 (`assets/fonts/DMSans.ttf`, OFL in `OFL.txt`, copied from mergegate
 `ios/Resources`). Monospace text uses the system mono face (SF Mono on macOS).
+
+## Icon
+
+The app icon is the fleet as a constellation: the bright node is the master, the
+pale ones are members. Its source is `assets/icon/elsecall.svg` at the repository
+root, drawn on Apple's macOS icon grid in colours derived from the brand tokens
+above. The service embeds `assets/icon/Elsecall.icns` and writes it into the app
+as `Contents/Resources/Elsecall.icns`, named by `CFBundleIconFile`, whenever it
+places the app (install, release update, or the window's own upgrade), so
+Finder, the Dock and Spotlight show it. A window started with `cargo run` has no bundle and
+shows the generic icon.
+
+After changing the SVG, regenerate the icon, the README image and the GitHub
+social preview, then commit them:
+
+```sh
+scripts/render-icon.sh
+```
+
+It needs macOS for `iconutil` and `rsvg-convert` (`brew install librsvg`).
