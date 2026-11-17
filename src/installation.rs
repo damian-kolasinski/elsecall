@@ -361,6 +361,7 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
     ] {
         private_files::remove_file(&paths.data.join(name))?;
     }
+    remove_service_state(&paths.data)?;
     for entry in fs::read_dir(&paths.data).map_err(|e| Failure::io("List service logs", e))? {
         let entry = entry.map_err(|e| Failure::io("Inspect service log", e))?;
         if entry
@@ -379,9 +380,78 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::DirectoryNotEmpty => Err(Failure::new(
             "files_preserved",
-            "Elsecall was uninstalled; unrecognized files remain in its state directory.",
+            "Elsecall was uninstalled; backups or unrecognized files remain in its state directory.",
             "Inspect and remove the remaining files manually if no longer needed.",
         )),
         Err(e) => Err(Failure::io("Remove state directory", e)),
+    }
+}
+
+/// Removes what the service stores beside the installation, except state a later
+/// install still needs to look after something that would otherwise be lost:
+///
+/// - `config-sync/` while `backups/` holds this member's own earlier versions of
+///   synced files; `state.json` indexes them, and without it a new service would
+///   discard the older ones as orphans.
+/// - `copies.sqlite` and `copies/` while copies of other members' workspaces are
+///   recorded; the copies live outside this directory and the catalog lets a
+///   later install's housekeeping remove them.
+/// - `rehearsal-session.json`, which exists only after an interrupted rehearsal
+///   and lets the next service clean up after it.
+///
+/// Whatever is kept makes uninstall end with `files_preserved`.
+fn remove_service_state(data: &Path) -> Result<()> {
+    for database in [
+        "load.sqlite",
+        "outside-pressure.sqlite",
+        "outside-processes.sqlite",
+        "peer-io.sqlite",
+        "tuning-evidence.sqlite",
+    ] {
+        remove_database(&data.join(database))?;
+    }
+    // Callers' caches and onboarding operations belong to the service alone.
+    remove_tree(&data.join("workspaces"))?;
+    remove_tree(&data.join("onboarding"))?;
+    if !holds_entries(&data.join("copies")) {
+        remove_database(&data.join("copies.sqlite"))?;
+        remove_tree(&data.join("copies"))?;
+    }
+    if !holds_entries(&data.join("config-sync/backups")) {
+        remove_tree(&data.join("config-sync"))?;
+    }
+    Ok(())
+}
+
+fn remove_database(path: &Path) -> Result<()> {
+    for suffix in ["", "-wal", "-shm"] {
+        let mut file = path.as_os_str().to_owned();
+        file.push(suffix);
+        private_files::remove_file(Path::new(&file))?;
+    }
+    Ok(())
+}
+
+/// Whether a directory has anything in it. Anything other than a real directory,
+/// such as a symlink in its place, counts as holding entries, so it is kept.
+fn holds_entries(directory: &Path) -> bool {
+    match fs::symlink_metadata(directory) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+        Ok(metadata) if metadata.is_dir() => {
+            fs::read_dir(directory).map_or(true, |mut entries| entries.next().is_some())
+        }
+        _ => true,
+    }
+}
+
+/// Removes a path the service owns; a symlink in its place is removed, not followed.
+fn remove_tree(path: &Path) -> Result<()> {
+    match fs::symlink_metadata(path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(Failure::io("Inspect service state", e)),
+        Ok(metadata) if metadata.is_dir() => {
+            fs::remove_dir_all(path).map_err(|e| Failure::io("Remove service state", e))
+        }
+        Ok(_) => private_files::remove_file(path),
     }
 }

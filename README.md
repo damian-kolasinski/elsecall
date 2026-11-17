@@ -2184,10 +2184,22 @@ elsecall uninstall
 
 Uninstall removes the owned CLI and LaunchAgent links, executable, configuration,
 request records, receipt, socket, locks, current and rotated logs, member key, fleet roster and upgrade
-record, and the fleet window's `~/Applications/Elsecall.app` when Elsecall published it
-(another application at that path is kept). While the
+record, the service's own state (load, outside-pressure, peer-I/O and tuning databases,
+caller caches and onboarding operations), and the fleet window's
+`~/Applications/Elsecall.app` when Elsecall published it (another application at that
+path is kept). While the
 machine is enrolled in a fleet, uninstall refuses with `fleet_member` unless given
 `--force`, because a reinstalled machine has a new key and must be enrolled again.
+
+Some state stays because a later install still needs it or because it is the
+operator's: configuration sync state while `config-sync/backups/` holds this member's
+own earlier versions of synced files (the state indexes them); the copy catalog
+(`copies.sqlite`, `copies/`) while copies of other members' workspaces are recorded,
+since the copies live outside the state directory, under `~/.elsecall/workspaces` or at
+their callers' paths, and a later install's housekeeping removes them through it;
+`rehearsal-session.json` after an interrupted rehearsal; workload migration backups;
+and a master's `fleet-config.toml`, `fleet-tools.toml` and `service-config-backups/`.
+When anything stays, uninstall completes and then reports `files_preserved`.
 Shared parent directories and unrecognized files are preserved. If an installation
 link was replaced by something else, removal
 stops with a conflict instead of deleting it. Repeating uninstall after a clean
