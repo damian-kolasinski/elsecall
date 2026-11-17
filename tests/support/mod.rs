@@ -121,7 +121,7 @@ impl Fixture {
                 tailnet: Arc::new(NoTailnet),
                 port: 1,
             },
-            elsecall::release_update::service::UpdateAdapters::production(false),
+            elsecall::release_update::service::UpdateAdapters::production(false).unwrap(),
         )));
         let deadline = Instant::now() + crate::processes::WAIT;
         loop {

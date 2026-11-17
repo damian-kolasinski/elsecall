@@ -13,6 +13,12 @@ rust-version = "1.99"
 description = "Inspect and maintain your development machines"
 license = "MIT"
 
+[features]
+# Follow a local release channel instead of the published releases, for testing
+# the update path against local builds. scripts/local-release.sh builds with it;
+# the release workflow never does. See src/release_update/channel.rs.
+local-release-channel = []
+
 [dependencies]
 axum = "0.8.9"
 base64 = "0.22"

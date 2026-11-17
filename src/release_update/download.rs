@@ -91,37 +91,47 @@ impl ReleaseDownload for MiseDownload {
         if !executable.starts_with(data) || !parent.join(".mise-packslip.json").is_file() {
             return Err(invalid("Mise did not export a verified packslip release."));
         }
-        let window = parent.join("elsecall-ui");
-        for binary in [&executable, &window] {
-            let metadata = fs::symlink_metadata(binary)
-                .map_err(|e| Failure::io("Inspect release executable", e))?;
-            if !metadata.is_file() || metadata.len() > 256 * 1024 * 1024 {
-                return Err(invalid(
-                    "The verified release is missing a bounded executable.",
-                ));
-            }
-        }
-        let version = super::tools::run(
-            &executable,
-            &["--version"],
-            directory,
-            Duration::from_secs(10),
-            &[],
-        )?;
-        if std::str::from_utf8(&version).ok().map(str::trim)
-            != Some(format!("elsecall {}", release.version).as_str())
-        {
+        verified(executable, release, directory)
+    }
+}
+/// The release's CLI and its window companion beside it, each a bounded regular
+/// file, with the CLI reporting the release's own version. Shared by every channel
+/// once its own verification has exported the files.
+pub(super) fn verified(
+    executable: PathBuf,
+    release: &Release,
+    directory: &Path,
+) -> Result<StagedRelease> {
+    let window = executable.with_file_name("elsecall-ui");
+    for binary in [&executable, &window] {
+        let metadata = fs::symlink_metadata(binary)
+            .map_err(|e| Failure::io("Inspect release executable", e))?;
+        if !metadata.is_file() || metadata.len() > 256 * 1024 * 1024 {
             return Err(invalid(
-                "The verified executable reports a different release version.",
+                "The verified release is missing a bounded executable.",
             ));
         }
-        Ok(StagedRelease {
-            digest: Digest::of_file(&executable).map_err(|e| Failure::io("Hash release", e))?,
-            window_digest: Digest::of_file(&window).map_err(|e| Failure::io("Hash window", e))?,
-            executable,
-            window,
-        })
     }
+    let version = super::tools::run(
+        &executable,
+        &["--version"],
+        directory,
+        Duration::from_secs(10),
+        &[],
+    )?;
+    if std::str::from_utf8(&version).ok().map(str::trim)
+        != Some(format!("elsecall {}", release.version).as_str())
+    {
+        return Err(invalid(
+            "The verified executable reports a different release version.",
+        ));
+    }
+    Ok(StagedRelease {
+        digest: Digest::of_file(&executable).map_err(|e| Failure::io("Hash release", e))?,
+        window_digest: Digest::of_file(&window).map_err(|e| Failure::io("Hash window", e))?,
+        executable,
+        window,
+    })
 }
 fn quoted(value: &str) -> String {
     serde_json::to_string(value).expect("TOML basic string")

@@ -396,6 +396,10 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
             "scripts/changed_paths.py",
             include_str!("../scripts/changed_paths.py"),
         ),
+        (
+            "scripts/check-local-channel.sh",
+            include_str!("../scripts/check-local-channel.sh"),
+        ),
         ("scripts/build.sh", include_str!("../scripts/build.sh")),
         ("scripts/perf.sh", include_str!("../scripts/perf.sh")),
         (
@@ -449,7 +453,7 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
     for (task, expected) in [
         (
             "check",
-            "granted:0:fmt --all -- --check\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\nclean:0:nextest run --workspace --locked\nclean:0:test --doc --workspace --locked\n",
+            "granted:0:fmt --all -- --check\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\ngranted:0:clippy -p elsecall --locked --all-targets --features local-release-channel -- -D warnings\ngranted:0:nextest run -p elsecall --locked --lib --features local-release-channel release_update::\nclean:0:nextest run --workspace --locked\nclean:0:test --doc --workspace --locked\n",
         ),
         ("build", "granted:0:build --locked --release\n"),
         (

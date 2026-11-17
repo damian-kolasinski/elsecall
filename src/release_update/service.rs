@@ -384,12 +384,20 @@ pub struct UpdateAdapters {
     pub automatic: bool,
 }
 impl UpdateAdapters {
-    pub fn production(automatic: bool) -> Self {
-        Self {
-            catalog: Arc::new(super::catalog::GithubReleases),
+    /// The channel this build follows, which only its compile-time features choose.
+    pub fn production(automatic: bool) -> Result<Self> {
+        let channel = super::channel::Channel::this_build()?;
+        if let super::channel::Channel::Local(local) = &channel {
+            crate::service_log!(
+                "{}",
+                serde_json::json!({"event": "test_seam_in_use", "detail": format!("this build follows the local release channel at {}", local.location())})
+            );
+        }
+        Ok(Self {
+            catalog: channel.catalog(),
             launcher: Arc::new(DetachedHelper),
             automatic,
-        }
+        })
     }
 }
 impl UpdateService {

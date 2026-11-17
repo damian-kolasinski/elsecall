@@ -7,6 +7,7 @@ import tarfile
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import archive_contents
 import package
@@ -109,6 +110,51 @@ class Package(unittest.TestCase):
             link.symlink_to(binary)
             with self.assertRaisesRegex(ValueError, "unavailable"):
                 package.archive(link, directory, "0.1.0")
+
+    def test_archive_refuses_a_local_channel_build_unless_asked_for_one(self):
+        with tempfile.TemporaryDirectory() as directory:
+            local = executable(directory, "0.1.0", b"# " + package.LOCAL_CHANNEL_MARKER + b"\n")
+            with self.assertRaisesRegex(ValueError, "follows the local release channel"):
+                package.archive(local, Path(directory) / "published", "0.1.0")
+            self.assertTrue(package.archive(local, Path(directory) / "local", "0.1.0", local_channel=True).is_file())
+        with tempfile.TemporaryDirectory() as directory:
+            published = executable(directory, "0.1.0")
+            with self.assertRaisesRegex(ValueError, "needs a local-release-channel build"):
+                package.archive(published, directory, "0.1.0", local_channel=True)
+
+    def test_release_builds_never_enable_the_local_channel(self):
+        commands = []
+
+        def record(command, **_):
+            commands.append(command)
+
+        with (
+            mock.patch.object(package.subprocess, "check_output", return_value="host: aarch64-apple-darwin\n"),
+            mock.patch.object(package.subprocess, "run", side_effect=record),
+            mock.patch.object(package.sys, "argv", ["package.py", "--build"]),
+            mock.patch("builtins.print"),
+            mock.patch.object(package, "archive"),
+        ):
+            package.main()
+        self.assertEqual(len(commands), 2)
+        self.assertFalse(any("--features" in command for command in commands), commands)
+        release = Path(package.ROOT, ".github/workflows/release.yml").read_text()
+        self.assertNotIn("local-release-channel", release)
+        self.assertNotIn("--features", release)
+        self.assertNotIn("--all-features", release)
+
+    def test_only_the_caller_makes_a_local_channel_build(self):
+        calls = []
+        with (
+            mock.patch.object(package.subprocess, "check_output", return_value="host: aarch64-apple-darwin\n"),
+            mock.patch.object(package.subprocess, "run", side_effect=lambda command, **kw: calls.append(kw["env"])),
+            mock.patch.dict(package.os.environ, {"ELSECALL_LOCAL_RELEASE_FAULT": "serve"}),
+        ):
+            package.build(features=("local-release-channel",), env={"ELSECALL_LOCAL_RELEASE_CHANNEL": "http://x"})
+            package.build()
+        self.assertTrue(all("ELSECALL_LOCAL_RELEASE_FAULT" not in env for env in calls))
+        self.assertEqual(calls[0]["ELSECALL_LOCAL_RELEASE_CHANNEL"], "http://x")
+        self.assertTrue(all("ELSECALL_LOCAL_RELEASE_CHANNEL" not in env for env in calls[1:]))
 
     def test_archive_reader_rejects_a_path(self):
         with tempfile.TemporaryDirectory() as directory:
