@@ -13,26 +13,44 @@ service use Rust, Clap, Tokio, Axum and SQLite.
 ## Desktop UI
 
 `elsecall-ui` is a native window that lists the fleet the local service already
-reports. Releases ship the matching window alongside the CLI. Run `elsecall install`
-to stage both, then `elsecall ui` to open `~/Applications/Elsecall.app`. After installing
-a newer release and running `elsecall install`, an already open window offers
-**Upgrade and reopen**. Clicking it replaces the app and opens the new window;
-a failed upgrade keeps the old window open with a retryable error. See
-[crates/elsecall-ui/README.md](crates/elsecall-ui/README.md).
+reports. Releases ship the matching window alongside the CLI. In a desktop session,
+`elsecall install` puts it in place as `~/Applications/Elsecall.app`, so it opens from
+Finder, Spotlight or Launchpad; `elsecall install --open` also opens it, and
+`elsecall ui` opens it later. After installing a newer release and running
+`elsecall install`, an already open window offers **Upgrade and reopen**. Clicking it
+replaces the app and opens the new window; a failed upgrade keeps the old window open
+with a retryable error. See [crates/elsecall-ui/README.md](crates/elsecall-ui/README.md).
+
+`install` reports what it did with the window as `data.window.state`:
+
+| State | Meaning |
+| --- | --- |
+| `opened` | The app is in place and its window reported that it is ready (`--open`) |
+| `placed` | The app is in place at `app`; open it from Finder or with `elsecall ui` |
+| `background_session` | The service runs without a desktop login, so no app is placed |
+| `not_included` | The installed build has no window, such as a source build of the CLI alone |
+| `failed` | The service is installed, but the app could not be placed or opened (`error`) |
+
+A window problem never fails the installation itself. With `--open`, `install` exits 1
+unless the state is `opened`, still printing the whole result. A window that is
+already open stays open beside the new one and offers **Upgrade and reopen**.
 
 ## Install a release
 
 A version tag publishes a signed archive. mise installs it through packslip, which
 checks the signature before putting `elsecall` on `PATH`. `elsecall install` copies
-the service executable and its matching desktop window into this account's installation.
-Run `elsecall ui` to open the window, or use **Upgrade and reopen** in an already
-open window after updating.
+the service executable and its matching desktop window into this account's installation
+and puts the window in place as an app. `--open` opens it; afterwards, open it from
+Finder or with `elsecall ui`, or use **Upgrade and reopen** in an already open window
+after updating.
 
 ```sh
 mise use -g packslip:github.com/damian-kolasinski/elsecall@0.1.0
-elsecall install
+mise exec -- elsecall install --open
 elsecall status
 ```
+
+`mise exec` runs the release just selected even when the shell does not activate mise.
 
 Replace `0.1.0` with the release you want. On a fleet, do this on the master, then
 run `elsecall fleet upgrade` there. See "Upgrading the fleet".
@@ -174,7 +192,7 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall tools unset TOOL [--version VERSION] [--member NAME]` | On the master, remove a desired version or a whole entry |
 | `elsecall doctor` | Installation integrity, launchd registration, API connectivity, relevant paths and recovery guidance |
 | `elsecall service restart` | Stop/start the registered service and wait for readiness |
-| `elsecall install` | Install/update and wait for readiness |
+| `elsecall install [--open]` | Install/update and wait for readiness; in a desktop session, put the fleet window in place as an app and, with `--open`, open it (see "Desktop UI") |
 | `elsecall uninstall` | Stop the service and remove its installation |
 | `elsecall run [options] -- COMMAND...` | Run a command once this machine has room, passing its I/O, signals and exit code through (see "Running commands") |
 | `elsecall lease acquire [options]` | Wait for capacity, then hold it for the calling script (see "Admission and leases") |
@@ -2166,7 +2184,8 @@ elsecall uninstall
 
 Uninstall removes the owned CLI and LaunchAgent links, executable, configuration,
 request records, receipt, socket, locks, current and rotated logs, member key, fleet roster and upgrade
-record. While the
+record, and the fleet window's `~/Applications/Elsecall.app` when Elsecall published it
+(another application at that path is kept). While the
 machine is enrolled in a fleet, uninstall refuses with `fleet_member` unless given
 `--force`, because a reinstalled machine has a new key and must be enrolled again.
 Shared parent directories and unrecognized files are preserved. If an installation

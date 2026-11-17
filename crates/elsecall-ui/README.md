@@ -3,10 +3,12 @@
 Native window that lists the fleet the local Elsecall service already reports.
 It talks only to the same-user socket at `~/Library/Application Support/Elsecall/service.sock`.
 It does not listen on the network. Releases include it beside the CLI;
-`elsecall install` stages it in the user's support directory.
+`elsecall install` stores it in the user's support directory and, in a desktop
+session, signs and publishes it as `~/Applications/Elsecall.app`.
+`elsecall install --open` also opens it and waits for its readiness acknowledgment.
 
-To open the installed window, run `elsecall ui`. This signs and publishes
-`~/Applications/Elsecall.app`, then opens a fresh instance. The service must be running.
+To open the installed window later, open Elsecall from Finder or run `elsecall ui`,
+which publishes the app again and opens a fresh instance. The service must be running.
 
 The local service checks for newer stable releases at startup and hourly, with
 cached results across restarts. When a release is available, the window shows
