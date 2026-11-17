@@ -6,8 +6,8 @@ use rune::{App, AppSpec, Chrome, Latest, Tx, Waker};
 use rune_kit::TableState;
 
 use crate::fleet_source::{
-    FleetSnapshot, Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Role, SourceFailure,
-    Standing,
+    FleetSnapshot, Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Release, Role,
+    SourceFailure, Standing,
 };
 use crate::refresh::{self, Update};
 use crate::release_source::{self, ReleaseSnapshot};
@@ -33,6 +33,7 @@ const SCENES: &[(&str, Scene)] = &[
     ("no-tailnet", scene_no_tailnet),
     ("members", scene_members),
     ("members-selected", scene_members_selected),
+    ("outdated-member", scene_outdated_member),
     ("upgrade", scene_upgrade),
     ("upgrading", scene_upgrading),
     ("upgrade-failed", scene_upgrade_failed),
@@ -481,6 +482,47 @@ fn scene_members_selected(state: &mut AppState) {
     state.table.select("builder");
 }
 
+/// A member the master's last update left behind, as `elsecall fleet upgrade`
+/// would still have to bring it forward.
+fn scene_outdated_member(state: &mut AppState) {
+    state.follow_service = false;
+    state.refreshed = Some("14:32:05".into());
+    let mut snapshot = members_snapshot();
+    snapshot.members[2].release = Release::Behind {
+        version: "0.2.1".into(),
+    };
+    let reachable = |name: &str, release: Release| {
+        let mut row = member(
+            name,
+            Role::Member,
+            Reachability::Reachable,
+            Gate::Open,
+            Some(0.12),
+            Some(gigabytes(10, 32)),
+            Some(LoadAverages {
+                one: 1.1,
+                five: 1.3,
+                fifteen: 1.2,
+            }),
+        );
+        row.release = release;
+        row
+    };
+    snapshot.members.push(reachable(
+        "mac-studio",
+        Release::Ahead {
+            version: "0.3.0-rc.1".into(),
+        },
+    ));
+    snapshot.members.push(reachable(
+        "imac",
+        Release::OtherBuild {
+            version: "0.2.2".into(),
+        },
+    ));
+    state.phase = Phase::Ready(snapshot);
+}
+
 fn scene_upgrade(state: &mut AppState) {
     scene_members(state);
     state.self_build = Some("1111111111111111".into());
@@ -699,6 +741,12 @@ fn member(
     memory: Option<MemoryUse>,
     load: Option<LoadAverages>,
 ) -> MemberRow {
+    let release = match reach {
+        Reachability::Reachable => Release::Matching {
+            version: "0.2.2".into(),
+        },
+        Reachability::Unreachable => Release::Unknown { version: None },
+    };
     MemberRow {
         name: name.into(),
         role,
@@ -707,6 +755,7 @@ fn member(
         cpu,
         memory,
         load,
+        release,
     }
 }
 
