@@ -209,11 +209,18 @@ fn map_member(member: WireMember) -> Result<MemberRow, SourceFailure> {
                 used_bytes: memory.used_bytes,
                 total_bytes: memory.total_bytes,
             }),
-            machine.load_average.map(|load| LoadAverages {
-                one: load.one_minute,
-                five: load.five_minutes,
-                fifteen: load.fifteen_minutes,
-            }),
+            machine
+                .load_average
+                .map(|load| LoadAverages {
+                    one: load.one_minute,
+                    five: load.five_minutes,
+                    fifteen: load.fifteen_minutes,
+                })
+                .filter(|load| {
+                    [load.one, load.five, load.fifteen]
+                        .iter()
+                        .all(|value| value.is_finite())
+                }),
         ),
         None => (None, None, None),
     };

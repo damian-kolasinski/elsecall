@@ -72,6 +72,7 @@ pub struct MemoryUse {
     pub total_bytes: u64,
 }
 
+/// Load averages over the last 1, 5 and 15 minutes. Always finite.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LoadAverages {
     pub one: f64,
