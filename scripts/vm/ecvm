@@ -1,0 +1,18 @@
+#!/bin/sh
+# Runs the VM tool with its pinned host dependencies; see docs/e2e-vm.md.
+set -eu
+here=$(cd "$(dirname "$0")" && pwd)
+state=${ECVM_HOME:-$HOME/Library/Caches/elsecall-vm}
+pins=$(shasum -a 256 "$here/requirements.txt" | cut -c1-12)
+venv="$state/venv-$pins"
+if [ ! -x "$venv/bin/python" ]; then
+  mkdir -p "$state"
+  partial="$venv.partial.$$"
+  python3 -m venv "$partial" >&2
+  "$partial/bin/pip" install --quiet --disable-pip-version-check -r "$here/requirements.txt" >&2
+  # rename(2) never moves a directory into an existing one, so of two first
+  # runs at once, one wins and the other drops its copy.
+  python3 -c 'import os, sys; os.rename(sys.argv[1], sys.argv[2])' "$partial" "$venv" 2>/dev/null ||
+    rm -rf "$partial"
+fi
+PYTHONSAFEPATH=1 PYTHONPATH="$here" exec "$venv/bin/python" -m elsecall_vm "$@"

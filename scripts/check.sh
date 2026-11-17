@@ -4,6 +4,7 @@ set -eu
 [ -n "${ELSECALL_ADMISSION:-}" ] || [ ! -x "$EC" ] || exec "$EC" run --label "elsecall check" -- "$0" "$@"
 cargo fmt --all -- --check
 cargo clippy --workspace --locked --all-targets -- -D warnings
+python3 -m unittest discover -s scripts/vm -p 'test_*.py'
 if [ -d distribution ]; then
   python3 -m unittest discover -s distribution -p 'test_*.py'
 fi
