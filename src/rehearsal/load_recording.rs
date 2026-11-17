@@ -79,6 +79,8 @@ mod tests {
         Second {
             at: Timestamp::from_millis(at),
             cpu_utilization: Some(0.1),
+            load_average: None,
+            logical_cpus: None,
             memory_pressure: Some(MemoryPressure::Normal),
             thermal_state: Some(ThermalState::Nominal),
             weighted_cores: Cores::ONE,

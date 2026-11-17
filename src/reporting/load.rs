@@ -21,6 +21,19 @@ pub struct LoadTotals {
     /// Nearest-rank 95th percentile of the fine buckets' mean CPU.
     pub cpu_p95: Option<f64>,
     pub outside_mean: Option<f64>,
+    /// Seconds of buckets that kept the load average; members on earlier
+    /// versions and minutes from before it was kept have none.
+    pub load_sampled_seconds: u64,
+    /// The one-minute load average per logical CPU: its mean, the nearest-rank
+    /// 95th percentile of the fine buckets' means, and the highest a minute
+    /// reached. Above 1, work waits for CPUs that utilization shows as merely full.
+    pub load_per_cpu_mean: Option<f64>,
+    pub load_per_cpu_p95: Option<f64>,
+    pub load_per_cpu_max: Option<f64>,
+    /// Seconds of fine buckets in which the member was overloaded (see
+    /// [`overloaded`]), and their share of `load_sampled_seconds`.
+    pub overloaded_seconds: u64,
+    pub overloaded_share: Option<f64>,
     /// Mean share of weighted cores Elsecall's grants held.
     pub elsecall_share: f64,
     pub queued_max: usize,
@@ -38,12 +51,53 @@ pub struct LoadTotals {
     pub worst_thermal_state: Option<ThermalState>,
 }
 
-fn weighted_mean(buckets: &[Bucket], value: impl Fn(&Bucket) -> Option<f64>) -> Option<f64> {
+/// The mean of `value` over `buckets`, each weighted by its sampled seconds.
+pub fn weighted_mean<'a>(
+    buckets: impl IntoIterator<Item = &'a Bucket>,
+    value: impl Fn(&Bucket) -> Option<f64>,
+) -> Option<f64> {
     let (sum, weight) = buckets
-        .iter()
+        .into_iter()
         .filter_map(|b| Some((value(b)? * b.seconds as f64, b.seconds as f64)))
         .fold((0.0, 0.0), |(s, w), (v, n)| (s + v, w + n));
     (weight > 0.0).then(|| sum / weight)
+}
+
+/// A member is overloaded in a bucket when its CPUs were at least this busy…
+pub const OVERLOADED_CPU: f64 = 0.9;
+/// …and at least this many threads ran or waited per logical CPU on average:
+/// work queued for CPUs, so everything on the member ran slower. macOS counts
+/// more than running threads (a member at a quarter of its CPU has read above
+/// 1), and the average trails by about a minute, so 2 leaves margin for both.
+pub const OVERLOADED_LOAD_PER_CPU: f64 = 2.0;
+/// A member has room in a bucket when its CPUs were at most this busy and it
+/// was under no memory pressure.
+pub const ROOM_CPU: f64 = 0.5;
+
+/// The bucket's mean load average per logical CPU.
+pub fn load_per_cpu(bucket: &Bucket) -> Option<f64> {
+    per_cpu(bucket.load_mean?, bucket)
+}
+
+/// The bucket's highest minute of load average per logical CPU.
+pub fn peak_load_per_cpu(bucket: &Bucket) -> Option<f64> {
+    per_cpu(bucket.load_max?, bucket)
+}
+
+fn per_cpu(load: f64, bucket: &Bucket) -> Option<f64> {
+    let cpus = bucket.logical_cpus.filter(|n| *n > 0)?;
+    Some(load / f64::from(cpus))
+}
+
+/// More threads wanted the member's CPUs than it has, while they were full.
+pub fn overloaded(bucket: &Bucket) -> bool {
+    bucket.cpu_mean.is_some_and(|cpu| cpu >= OVERLOADED_CPU)
+        && load_per_cpu(bucket).is_some_and(|load| load >= OVERLOADED_LOAD_PER_CPU)
+}
+
+/// The member could have taken more work.
+pub fn has_room(bucket: &Bucket) -> bool {
+    bucket.cpu_mean.is_some_and(|cpu| cpu <= ROOM_CPU) && bucket.memory_pressure_seconds == 0
 }
 
 fn elsecall_share(bucket: &Bucket) -> f64 {
@@ -64,6 +118,16 @@ pub fn totals(buckets: &[Bucket]) -> Option<LoadTotals> {
     let busy = sum(|b| b.busy_seconds);
     let saturated = sum(|b| b.saturated_seconds);
     let saturated_busy = sum(|b| b.saturated_busy_seconds);
+    let load_sampled: u64 = buckets
+        .iter()
+        .filter(|b| load_per_cpu(b).is_some())
+        .map(|b| b.seconds)
+        .sum();
+    let overloaded_seconds: u64 = buckets
+        .iter()
+        .filter(|b| overloaded(b))
+        .map(|b| b.seconds)
+        .sum();
     Some(LoadTotals {
         sampled_seconds: sampled,
         cpu_mean: weighted_mean(buckets, |b| b.cpu_mean),
@@ -72,6 +136,19 @@ pub fn totals(buckets: &[Bucket]) -> Option<LoadTotals> {
             0.95,
         ),
         outside_mean: weighted_mean(buckets, |b| b.outside_mean),
+        load_sampled_seconds: load_sampled,
+        load_per_cpu_mean: weighted_mean(buckets, load_per_cpu),
+        load_per_cpu_p95: nearest_rank(
+            &sorted(buckets.iter().filter_map(load_per_cpu).collect()),
+            0.95,
+        ),
+        load_per_cpu_max: buckets
+            .iter()
+            .filter_map(peak_load_per_cpu)
+            .reduce(f64::max),
+        overloaded_seconds,
+        overloaded_share: (load_sampled > 0)
+            .then(|| overloaded_seconds as f64 / load_sampled as f64),
         elsecall_share: weighted_mean(buckets, |b| Some(elsecall_share(b))).unwrap_or(0.0),
         queued_max: buckets.iter().map(|b| b.queued_max).max().unwrap_or(0),
         busy_seconds: busy,
@@ -145,6 +222,9 @@ pub struct SeriesPoint {
     pub sampled_seconds: u64,
     pub cpu_mean: Option<f64>,
     pub outside_mean: Option<f64>,
+    pub load_per_cpu_mean: Option<f64>,
+    pub load_per_cpu_max: Option<f64>,
+    pub overloaded_seconds: u64,
     pub elsecall_share: f64,
     pub queued_max: usize,
     pub busy_seconds: u64,
@@ -173,6 +253,9 @@ pub fn series(buckets: &[Bucket], width: Duration) -> Vec<SeriesPoint> {
                 sampled_seconds: totals.sampled_seconds,
                 cpu_mean: totals.cpu_mean,
                 outside_mean: totals.outside_mean,
+                load_per_cpu_mean: totals.load_per_cpu_mean,
+                load_per_cpu_max: totals.load_per_cpu_max,
+                overloaded_seconds: totals.overloaded_seconds,
                 elsecall_share: totals.elsecall_share,
                 queued_max: totals.queued_max,
                 busy_seconds: totals.busy_seconds,

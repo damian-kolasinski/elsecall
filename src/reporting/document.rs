@@ -11,6 +11,7 @@ use crate::{
         findings::{self, Finding},
         leftovers::{self, LeftoverFact, LeftoverMetrics},
         load::{self, Balance, LoadTotals, SeriesPoint, SpeedDrift},
+        overload::{self, Overload},
         requests::{self, FleetBusy, PlacementMix, Requests, Waits, Work},
         run_phases::{self, PhaseMetrics},
         window::Window,
@@ -22,7 +23,7 @@ use std::{collections::BTreeMap, time::Duration};
 
 /// The version of the metric definitions in README "Fleet reports". A change
 /// to any definition changes it, so agents tracking a metric can tell.
-pub const DEFINITIONS: u32 = 7;
+pub const DEFINITIONS: u32 = 8;
 
 /// What a report covers.
 #[derive(Clone, Debug)]
@@ -144,6 +145,9 @@ pub struct MemberMetrics {
     pub load: Option<LoadTotals>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub load_error: Option<Failure>,
+    /// When the member was overloaded, the room other members had meanwhile and
+    /// the Elsecall work that ran there then; null when it never was.
+    pub overload: Option<Overload>,
     pub speed: Option<SpeedDrift>,
     /// The longest stretch in which outside pressure kept the gate closed while
     /// Elsecall held no work there.
@@ -234,6 +238,13 @@ pub fn document(query: &Query, gathered: &Gathered) -> Document {
         .collect();
     let names: Vec<&str> = loads.iter().map(|(member, _)| *member).collect();
     let mut work = requests::work(&labelled, &names);
+    // Work that ran during an overload, whenever it was requested: a lease
+    // taken before the period can hold a member through it.
+    let ran: Vec<&Fact> = gathered
+        .facts
+        .iter()
+        .filter(|f| query.keeps_label(f))
+        .collect();
     let members = gathered
         .members
         .iter()
@@ -253,6 +264,13 @@ pub fn document(query: &Query, gathered: &Gathered) -> Document {
                 records_error: m.records.as_ref().err().cloned(),
                 load: load::totals(buckets),
                 load_error: m.load.as_ref().err().cloned(),
+                overload: overload::overload(
+                    &m.member,
+                    &loads,
+                    &ran,
+                    query.window.fine_width(),
+                    query.window.until,
+                ),
                 speed: load::speed_drift(buckets),
                 blocked: blocked::longest(buckets, query.window, episodes),
                 blocked_queues: blocked::queues(

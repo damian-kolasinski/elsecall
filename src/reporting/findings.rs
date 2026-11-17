@@ -15,6 +15,7 @@ use crate::{
         leftovers::LabelLeftovers,
         load::{BUSY_CPU, IDLE_CPU},
         outside_warnings::PeriodWarning,
+        overload::{How, Overload},
     },
     scheduling::timestamp::Timestamp,
 };
@@ -50,6 +51,17 @@ pub const BLOCKED_SECONDS: u64 = 3600;
 pub const BLOCKED_HIGH_SECONDS: u64 = 4 * 3600;
 /// An outside process spinning or growing is high once it has for a day.
 pub const OUTSIDE_WARNING_HIGH_HOURS: f64 = 24.0;
+/// A member overloaded this long while another had room was work that could
+/// have run elsewhere…
+pub const OVERLOADED_WHILE_ROOM_SECONDS: u64 = 300;
+/// …and is high from this long.
+pub const OVERLOADED_WHILE_ROOM_HIGH_SECONDS: u64 = 1800;
+/// A member overloaded this long with no room anywhere needs more capacity or
+/// less work.
+pub const OVERLOADED_SECONDS: u64 = 1800;
+/// Load beyond Elsecall's grants at this share or more came mostly from work
+/// Elsecall did not admit.
+pub const OUTSIDE_LOAD_SHARE: f64 = 0.5;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -487,7 +499,132 @@ fn outside_warning(member: &str, period: &PeriodWarning) -> Finding {
     .member(member)
 }
 
+fn duration(seconds: u64) -> String {
+    if seconds >= 3600 {
+        hours(seconds)
+    } else {
+        format!("{} min", seconds.div_ceil(60))
+    }
+}
+
+fn plural(n: usize, one: &str, many: &str) -> String {
+    format!("{n} {}", if n == 1 { one } else { many })
+}
+
+/// The labels of `how` among the overloaded member's work, as `"check" (2)`.
+fn labels_of(overload: &Overload, how: How) -> Option<String> {
+    let labels: Vec<String> = overload
+        .work
+        .labels
+        .iter()
+        .filter(|l| l.how == how)
+        .map(|l| {
+            let label = l
+                .label
+                .as_deref()
+                .map_or("unlabelled".into(), |l| format!("{l:?}"));
+            format!("{label} ({})", l.requests)
+        })
+        .collect();
+    (!labels.is_empty()).then(|| labels.join(", "))
+}
+
+/// What the work that ran on an overloaded member says to do about it.
+fn overload_remedies(overload: &Overload) -> String {
+    let mut remedies = Vec::new();
+    if overload.outside_share >= OUTSIDE_LOAD_SHARE {
+        remedies.push(
+            "most of the load was beyond Elsecall's grants: bring builds and tests that bypass Elsecall under `elsecall run --placeable`, and check that admitted labels use no more than their size".to_owned(),
+        );
+    }
+    if let Some(labels) = labels_of(overload, How::Pinned) {
+        remedies.push(format!(
+            "pinned runs stayed there, led by {labels}: make those that can run elsewhere placeable with a label rule"
+        ));
+    }
+    if let Some(labels) = labels_of(overload, How::Lease) {
+        remedies.push(format!(
+            "leases always stay on their member, led by {labels}: run what can go elsewhere through `elsecall run --placeable` instead"
+        ));
+    }
+    let placeable = overload.work.placeable;
+    if placeable > 0 {
+        remedies.push(format!(
+            "placement still chose it for {}",
+            plural(placeable, "placeable request", "placeable requests")
+        ));
+    }
+    remedies.join("; ")
+}
+
+/// A finding when `member` was overloaded, above all while another had room.
+fn overloaded(member: &str, overload: &Overload) -> Option<Finding> {
+    let peak =
+        overload
+            .peak_load_per_cpu
+            .map_or(String::new(), |peak| match overload.logical_cpus {
+                Some(cpus) => format!(", up to {peak:.1} threads for each of its {cpus} CPUs"),
+                None => format!(", up to {peak:.1} threads a CPU"),
+            });
+    let work = &overload.work;
+    let load = format!(
+        "Elsecall's grants held {:.1} cores of about {:.0} threads running or waiting ({} beyond them); Elsecall work there then: {}, {}, {} placeable, {} required",
+        overload.elsecall_cores_mean,
+        overload.load_mean,
+        percent(overload.outside_share),
+        plural(work.pinned, "pinned run", "pinned runs"),
+        plural(work.leases, "lease", "leases"),
+        work.placeable,
+        work.required
+    );
+    let remedies = overload_remedies(overload);
+    let advice = if remedies.is_empty() {
+        String::new()
+    } else {
+        format!(" To act: {remedies}.")
+    };
+    let roomiest = overload.while_room.iter().max_by_key(|r| r.seconds);
+    let found = match roomiest {
+        Some(room) if room.seconds >= OVERLOADED_WHILE_ROOM_SECONDS => Finding::new(
+            "overloaded_while_room",
+            if room.seconds >= OVERLOADED_WHILE_ROOM_HIGH_SECONDS {
+                Severity::High
+            } else {
+                Severity::Medium
+            },
+            format!(
+                "{member} was overloaded for {}{peak} while {} had room for {} of it. {load}.{advice}",
+                duration(overload.seconds),
+                room.member,
+                duration(room.seconds),
+            ),
+            "members.overload.while_room.seconds",
+            room.seconds as f64,
+            OVERLOADED_WHILE_ROOM_SECONDS as f64,
+        ),
+        _ if overload.seconds >= OVERLOADED_SECONDS => Finding::new(
+            "overloaded",
+            Severity::Medium,
+            format!(
+                "{member} was overloaded for {}{peak}, and no other member had room for long. {load}.{advice}",
+                duration(overload.seconds),
+            ),
+            "members.overload.seconds",
+            overload.seconds as f64,
+            OVERLOADED_SECONDS as f64,
+        ),
+        _ => return None,
+    };
+    Some(found.member(member))
+}
+
 fn member_findings(member: &MemberMetrics, found: &mut Vec<Finding>) {
+    found.extend(
+        member
+            .overload
+            .as_ref()
+            .and_then(|o| overloaded(&member.member, o)),
+    );
     found.extend(
         member
             .blocked
@@ -1095,6 +1232,107 @@ mod tests {
         );
         assert_eq!(devbox["outside_warnings"].as_array().unwrap().len(), 2);
         assert!(devbox.get("outside_error").is_none());
+    }
+
+    #[test]
+    fn a_member_overloaded_while_another_had_room_is_a_finding_that_says_what_ran() {
+        // A 14-CPU minute at `cpu` with `load` threads and `in_use` granted cores.
+        let loaded = |m: u64, cpu: f64, load: f64, in_use: f64| crate::load_log::buckets::Bucket {
+            load_mean: Some(load),
+            load_max: Some(load + 14.0),
+            logical_cpus: Some(14),
+            ..bucket(m, cpu, in_use, 0, 0, 1.0)
+        };
+        let gathered = |mini_minutes: u64, devbox_cpu: f64| {
+            let mut gathered = troubled();
+            // Two pinned checks and a lease ran on the mini during it.
+            let mut lease = fixtures::pinned(11, "warm", "mini", 120.0);
+            lease.kind = crate::scheduling::request::Kind::Lease;
+            gathered.facts = [
+                fixtures::pinned(9, "check", "mini", 30.0),
+                fixtures::pinned(10, "check", "mini", 30.0),
+                lease,
+            ]
+            .iter()
+            .filter_map(Fact::of)
+            .collect();
+            gathered.members[0].load =
+                Ok((0..60).map(|m| loaded(m, devbox_cpu, 13.0, 0.0)).collect());
+            gathered.members[1].load = Ok((0..60)
+                .map(|m| {
+                    if m < mini_minutes {
+                        loaded(m, 1.0, 196.0, 9.0)
+                    } else {
+                        loaded(m, 0.3, 10.0, 0.0)
+                    }
+                })
+                .collect());
+            gathered
+        };
+        let report = document(&query(), &gathered(10, 0.2));
+        let mini = report
+            .metrics
+            .members
+            .iter()
+            .find(|m| m.member == "mini")
+            .unwrap();
+        let totals = mini.load.as_ref().unwrap();
+        assert_eq!(totals.overloaded_seconds, 600);
+        assert_eq!(totals.load_sampled_seconds, 3600);
+        assert_eq!(totals.load_per_cpu_max, Some(15.0));
+        let finding = report
+            .findings
+            .iter()
+            .find(|f| f.kind == "overloaded_while_room")
+            .unwrap_or_else(|| panic!("{:#?}", report.findings));
+        assert_eq!(finding.severity, Severity::Medium);
+        assert_eq!(finding.member.as_deref(), Some("mini"));
+        assert_eq!(
+            (finding.metric, finding.value, finding.threshold),
+            ("members.overload.while_room.seconds", 600.0, 300.0)
+        );
+        assert_eq!(
+            finding.message,
+            "mini was overloaded for 10 min, up to 15.0 threads for each of its 14 CPUs while devbox had room for 10 min of it. Elsecall's grants held 9.0 cores of about 196 threads running or waiting (95% beyond them); Elsecall work there then: 2 pinned runs, 1 lease, 0 placeable, 0 required. To act: most of the load was beyond Elsecall's grants: bring builds and tests that bypass Elsecall under `elsecall run --placeable`, and check that admitted labels use no more than their size; pinned runs stayed there, led by \"check\" (2): make those that can run elsewhere placeable with a label rule; leases always stay on their member, led by \"warm\" (1): run what can go elsewhere through `elsecall run --placeable` instead."
+        );
+
+        // Room elsewhere for half an hour or more is high.
+        let long = document(&query(), &gathered(40, 0.2)).findings;
+        let finding = long
+            .iter()
+            .find(|f| f.kind == "overloaded_while_room")
+            .unwrap_or_else(|| panic!("{long:#?}"));
+        assert_eq!((finding.severity, finding.value), (Severity::High, 2400.0));
+        assert!(
+            finding
+                .message
+                .starts_with("mini was overloaded for 40 min"),
+            "{}",
+            finding.message
+        );
+
+        // Busy everywhere for long: the fleet lacks room, not balance.
+        let crowded = document(&query(), &gathered(40, 0.95)).findings;
+        let finding = crowded
+            .iter()
+            .find(|f| f.kind.starts_with("overloaded"))
+            .unwrap_or_else(|| panic!("{crowded:#?}"));
+        assert_eq!(finding.kind, "overloaded");
+        assert_eq!(finding.value, 2400.0);
+        assert!(
+            finding
+                .message
+                .contains("no other member had room for long"),
+            "{}",
+            finding.message
+        );
+
+        // A few minutes of overload is no finding.
+        let brief = document(&query(), &gathered(4, 0.2)).findings;
+        assert!(
+            brief.iter().all(|f| !f.kind.starts_with("overloaded")),
+            "{brief:#?}"
+        );
     }
 
     fn query() -> Query {

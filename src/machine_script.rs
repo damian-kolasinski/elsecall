@@ -34,6 +34,7 @@ pub fn speed() -> Option<FixedSpeed> {
 #[serde(deny_unknown_fields)]
 struct Script {
     cpu_utilization: Option<f64>,
+    load_average: Option<f64>,
     memory_pressure: Option<MemoryPressure>,
     performance_cores: Option<u32>,
     efficiency_cores: Option<u32>,
@@ -52,6 +53,7 @@ impl<M: MachineInspector> ScriptedLoad<M> {
             .and_then(|bytes| serde_json::from_slice(&bytes).ok())
             .unwrap_or_default();
         sample.cpu_utilization = Some(script.cpu_utilization.unwrap_or(0.05));
+        sample.load_one_minute = Some(script.load_average.unwrap_or(0.0));
         sample.memory_pressure = script.memory_pressure.unwrap_or(MemoryPressure::Normal);
         sample.thermal_state = ThermalState::Nominal;
         if let Some(performance) = script.performance_cores {

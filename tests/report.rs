@@ -182,7 +182,7 @@ fn report_covers_every_members_requests_load_and_estimates() {
     holder.wait().unwrap();
 
     let report = alpha.ok(&["report", "--since", "1h"]);
-    assert_eq!(report["definitions"], 7);
+    assert_eq!(report["definitions"], 8);
     // Both members answer their outside history, this one locally and the
     // other over the member route; nothing spun for six hours in this test.
     for name in ["alpha", "bravo"] {
@@ -383,4 +383,85 @@ fn report_and_fleet_include_other_members_peer_failures_after_recovery() {
     assert_eq!(peer["history"]["error"], Value::Null);
     let filtered = alpha.ok(&["report", "--since", "5m", "--member", "bravo"]);
     assert_eq!(filtered["peer_io"]["members"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn report_shows_how_far_a_member_was_overloaded_and_the_room_elsewhere() {
+    // alpha's 4 CPUs are full with 12 threads each from its first sample; its
+    // gate is told to tolerate that, so pinned work and a lease still start
+    // there. bravo idles.
+    let dir = tempfile::Builder::new()
+        .prefix("ec-load-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let load = dir.path().join("load.json");
+    std::fs::write(
+        &load,
+        json!({"performance_cores": 4, "cpu_utilization": 0.95, "load_average": 48.0}).to_string(),
+    )
+    .unwrap();
+    let alpha = TestMember::start_with(
+        "alpha",
+        "[admission]\nsaturated_utilization = 1.0\n",
+        &[
+            ("ELSECALL_MACHINE_LOAD", &format!("file:{}", load.display())),
+            ("ELSECALL_MACHINE_SPEED", "1"),
+        ],
+    );
+    let (bravo, _bravo_load) = machine("bravo", 4, 1.0);
+    enrol(&alpha, &bravo);
+    let mut holder = hold(&alpha, "1");
+    let work = tempfile::tempdir().unwrap();
+    let check = run(
+        &alpha,
+        work.path(),
+        &["--label", "check", "--", "/bin/sleep", "1"],
+    );
+    assert!(check.status.success(), "{check:?}");
+
+    let report = alpha.ok(&["report", "--since", "10m"]);
+    holder.kill().unwrap();
+    holder.wait().unwrap();
+    let alpha_view = member(&report, "alpha");
+    let totals = &alpha_view["load"];
+    assert_eq!(totals["load_per_cpu_max"], 12.0, "{totals}");
+    assert_eq!(totals["load_per_cpu_mean"], 12.0, "{totals}");
+    assert!(
+        totals["overloaded_seconds"].as_u64().unwrap() >= 1,
+        "{totals}"
+    );
+    assert_eq!(
+        totals["overloaded_seconds"], totals["load_sampled_seconds"],
+        "{totals}"
+    );
+    let overload = &alpha_view["overload"];
+    assert_eq!(overload["logical_cpus"], 4, "{overload}");
+    assert_eq!(overload["load_mean"], 48.0);
+    assert_eq!(overload["while_room"][0]["member"], "bravo", "{overload}");
+    assert!(overload["while_room"][0]["seconds"].as_u64().unwrap() >= 1);
+    assert_eq!(overload["work"]["pinned"], 1, "{overload}");
+    assert_eq!(overload["work"]["leases"], 1, "{overload}");
+    let labels: Vec<(&str, &str)> = overload["work"]["labels"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|l| (l["label"].as_str().unwrap(), l["how"].as_str().unwrap()))
+        .collect();
+    assert_eq!(labels, [("check", "pinned"), ("hold", "lease")]);
+    // bravo idled, never overloaded.
+    let bravo_view = member(&report, "bravo");
+    assert_eq!(bravo_view["overload"], Value::Null, "{bravo_view}");
+    assert_eq!(bravo_view["load"]["overloaded_seconds"], 0);
+
+    // The fleet view's load history carries it too.
+    let fleet = alpha.ok(&["fleet"]);
+    let own = fleet["members"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| m["name"] == "alpha")
+        .unwrap();
+    let last_hour = &own["status"]["load_history"]["last_hour"];
+    assert_eq!(last_hour["load_mean"], 48.0, "{last_hour}");
+    assert_eq!(last_hour["logical_cpus"], 4);
 }

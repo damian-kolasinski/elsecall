@@ -37,6 +37,18 @@ pub struct LoadSample {
     pub cpu_utilization: Option<f64>,
     pub memory_pressure: MemoryPressure,
     pub thermal_state: ThermalState,
+    /// The kernel's one-minute load average: threads running or waiting for a
+    /// CPU. Unlike utilization it keeps rising past a full machine, so it tells
+    /// a busy machine from an overloaded one. Absent from earlier members.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub load_one_minute: Option<f64>,
+}
+
+impl CoreCounts {
+    /// Logical CPUs of every type.
+    pub fn logical(self) -> u32 {
+        self.performance.saturating_add(self.efficiency)
+    }
 }
 
 /// Logical CPUs by core type. Machines without distinct core types report all of
@@ -108,5 +120,48 @@ impl Inspection {
     }
     pub fn machine(&self) -> Result<Machine> {
         self.machine.inspect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_machine_keeps_its_load_averages_beside_the_flattened_sample() {
+        let machine = Machine {
+            hostname: None,
+            os: "macos".into(),
+            os_version: None,
+            architecture: "aarch64".into(),
+            logical_cpus: 14,
+            load_average: LoadAverage {
+                one_minute: 213.0,
+                five_minutes: 202.5,
+                fifteen_minutes: 161.9,
+            },
+            memory: Memory {
+                total_bytes: 64,
+                used_bytes: 32,
+                available_bytes: 32,
+            },
+            uptime_seconds: 1,
+            load: LoadSample {
+                cores: CoreCounts {
+                    performance: 10,
+                    efficiency: 4,
+                },
+                cpu_utilization: Some(1.0),
+                memory_pressure: MemoryPressure::Normal,
+                thermal_state: ThermalState::Nominal,
+                load_one_minute: Some(213.0),
+            },
+        };
+        let json = serde_json::to_value(&machine).unwrap();
+        assert_eq!(json["load_average"]["one_minute"], 213.0, "{json}");
+        assert_eq!(json["load_one_minute"], 213.0);
+        let back: Machine = serde_json::from_value(json).unwrap();
+        assert_eq!(back.load, machine.load);
+        assert_eq!(back.load_average.fifteen_minutes, 161.9);
     }
 }

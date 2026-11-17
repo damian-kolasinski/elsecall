@@ -153,6 +153,7 @@ mod tests {
             cpu_utilization: cpu,
             memory_pressure: memory,
             thermal_state: ThermalState::Nominal,
+            load_one_minute: None,
         }
     }
 

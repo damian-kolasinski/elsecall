@@ -18,6 +18,7 @@ fn idle(mut sample: LoadSample) -> LoadSample {
     sample.cpu_utilization = Some(0.05);
     sample.memory_pressure = MemoryPressure::Normal;
     sample.thermal_state = ThermalState::Nominal;
+    sample.load_one_minute = Some(0.0);
     sample
 }
 

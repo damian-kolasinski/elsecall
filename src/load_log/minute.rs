@@ -13,6 +13,10 @@ pub struct Second {
     pub at: Timestamp,
     /// Whole-machine CPU utilization of the latest sample, 0 to 1.
     pub cpu_utilization: Option<f64>,
+    /// The latest sample's one-minute load average: threads running or waiting.
+    pub load_average: Option<f64>,
+    /// The latest sample's logical CPUs, which the load average compares with.
+    pub logical_cpus: Option<u32>,
     pub memory_pressure: Option<MemoryPressure>,
     pub thermal_state: Option<ThermalState>,
     pub weighted_cores: Cores,
@@ -38,6 +42,16 @@ pub struct Minute {
     pub cpu_max: Option<f64>,
     /// CPU utilization beyond the share Elsecall's grants hold: outside load.
     pub outside_mean: Option<f64>,
+    /// The one-minute load average, threads running or waiting for a CPU, on
+    /// average and at most. Utilization stops at a full machine; this does not.
+    /// Absent from minutes before it was kept.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub load_mean: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub load_max: Option<f64>,
+    /// The logical CPUs the load average compares with.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logical_cpus: Option<u32>,
     pub weighted_cores: Cores,
     pub capacity: Cores,
     /// Cores Elsecall's grants held, on average and at most.
@@ -102,6 +116,10 @@ struct Fold {
     cpu_count: u32,
     cpu_max: Option<f64>,
     outside_sum: f64,
+    load_sum: f64,
+    load_count: u32,
+    load_max: Option<f64>,
+    logical_cpus: Option<u32>,
     in_use_sum: f64,
     last: Second,
     in_use_max: Cores,
@@ -124,6 +142,10 @@ impl Fold {
             cpu_count: 0,
             cpu_max: None,
             outside_sum: 0.0,
+            load_sum: 0.0,
+            load_count: 0,
+            load_max: None,
+            logical_cpus: None,
             in_use_sum: 0.0,
             in_use_max: Cores::ZERO,
             queued_max: 0,
@@ -154,6 +176,12 @@ impl Fold {
             self.cpu_count += 1;
             self.cpu_max = Some(self.cpu_max.map_or(cpu, |m| m.max(cpu)));
         }
+        if let Some(load) = second.load_average {
+            self.load_sum += load;
+            self.load_count += 1;
+            self.load_max = Some(self.load_max.map_or(load, |m| m.max(load)));
+        }
+        self.logical_cpus = second.logical_cpus.or(self.logical_cpus);
         self.in_use_sum += second.in_use.as_f64();
         self.in_use_max = self.in_use_max.max(second.in_use);
         self.queued_max = self.queued_max.max(second.queued);
@@ -184,6 +212,9 @@ impl Fold {
             cpu_mean: (self.cpu_count > 0).then(|| self.cpu_sum / count),
             cpu_max: self.cpu_max,
             outside_mean: (self.cpu_count > 0).then(|| self.outside_sum / count),
+            load_mean: (self.load_count > 0).then(|| self.load_sum / f64::from(self.load_count)),
+            load_max: self.load_max,
+            logical_cpus: self.logical_cpus,
             weighted_cores: self.last.weighted_cores,
             capacity: self.last.capacity,
             in_use_mean: self.in_use_sum / f64::from(self.seconds),
@@ -234,6 +265,8 @@ mod tests {
         Second {
             at: Timestamp::from_millis(at_s * 1000),
             cpu_utilization: Some(cpu),
+            load_average: Some(cpu * 10.0),
+            logical_cpus: Some(10),
             memory_pressure: Some(MemoryPressure::Normal),
             thermal_state: Some(ThermalState::Nominal),
             weighted_cores: Cores::from_millis(10_000),
@@ -256,6 +289,8 @@ mod tests {
         assert_eq!(accumulator.add(second(120, 0.5, 0.0, Gate::Open)), None);
         assert_eq!(accumulator.add(second(121, 0.95, 0.0, saturated)), None);
         let mut busy = second(150, 1.0, 2.0, saturated);
+        // Utilization stops at a full machine; the load average goes on rising.
+        busy.load_average = Some(45.0);
         busy.queued = 3;
         busy.queued_interactive = 1;
         busy.memory_pressure = Some(MemoryPressure::Warning);
@@ -271,6 +306,9 @@ mod tests {
         assert!((done.cpu_mean.unwrap() - 2.45 / 3.0).abs() < 1e-9);
         // Outside load: the last second's 1.0 is 0.8 beyond its 2 of 10 cores.
         assert!((done.outside_mean.unwrap() - 2.25 / 3.0).abs() < 1e-9);
+        assert!((done.load_mean.unwrap() - (5.0 + 9.5 + 45.0) / 3.0).abs() < 1e-9);
+        assert_eq!(done.load_max, Some(45.0));
+        assert_eq!(done.logical_cpus, Some(10));
         assert!((done.in_use_mean - 2.0 / 3.0).abs() < 1e-9);
         assert_eq!(done.in_use_max, Cores::from_millis(2000));
         assert_eq!(done.queued_max, 3);
@@ -301,6 +339,16 @@ mod tests {
                 .unwrap()
                 .at,
             Timestamp::from_millis(180_000)
+        );
+        let mut unread = second(241, 0.1, 0.0, Gate::Open);
+        unread.load_average = None;
+        unread.logical_cpus = None;
+        accumulator.add(unread);
+        let partial = accumulator.current().unwrap();
+        assert_eq!(
+            (partial.load_mean, partial.load_max, partial.logical_cpus),
+            (Some(1.0), Some(1.0), Some(10)),
+            "a second without a load average leaves the minute's to the others"
         );
     }
 }

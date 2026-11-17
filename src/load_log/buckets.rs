@@ -18,6 +18,15 @@ pub struct Bucket {
     pub cpu_mean: Option<f64>,
     pub cpu_max: Option<f64>,
     pub outside_mean: Option<f64>,
+    /// The one-minute load average on average and at most, and the logical
+    /// CPUs it compares with. Absent where no minute kept them, such as from
+    /// members on earlier versions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub load_mean: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub load_max: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logical_cpus: Option<u32>,
     pub weighted_cores: Cores,
     pub capacity: Cores,
     pub in_use_mean: f64,
@@ -60,6 +69,9 @@ pub fn fold(at: Timestamp, minutes: &[Minute]) -> Option<Bucket> {
         cpu_mean: weighted_mean(&|m| m.cpu_mean),
         cpu_max: max(&|m| m.cpu_max),
         outside_mean: weighted_mean(&|m| m.outside_mean),
+        load_mean: weighted_mean(&|m| m.load_mean),
+        load_max: max(&|m| m.load_max),
+        logical_cpus: minutes.iter().rev().find_map(|m| m.logical_cpus),
         weighted_cores: last.weighted_cores,
         capacity: last.capacity,
         in_use_mean: weighted_mean(&|m| Some(m.in_use_mean)).unwrap_or(0.0),
@@ -142,6 +154,9 @@ mod tests {
             cpu_mean: Some(cpu),
             cpu_max: Some(cpu),
             outside_mean: Some(cpu / 2.0),
+            load_mean: None,
+            load_max: None,
+            logical_cpus: None,
             weighted_cores: Cores::from_millis(10_000),
             capacity: Cores::from_millis(9_000),
             in_use_mean: in_use,
@@ -194,5 +209,36 @@ mod tests {
         let summary = summary(&minutes, Timestamp::from_millis(65 * 60_000));
         assert_eq!(summary.last_hour.unwrap().seconds, 240);
         assert!(fold(Timestamp::from_millis(0), &[]).is_none());
+    }
+
+    #[test]
+    fn load_averages_fold_by_seconds_and_older_minutes_have_none() {
+        // A minute stored before the load average was kept.
+        let older: Minute = serde_json::from_str(
+            r#"{"at":"2026-11-17T13:46:00.000Z","seconds":60,"cpu_mean":1.0,"cpu_max":1.0,"outside_mean":0.25,"weighted_cores":12.0,"capacity":9.0,"in_use_mean":9.0,"in_use_max":9.0,"queued_max":2,"interactive_queued_max":2,"busy_seconds":60,"saturated_seconds":0,"saturated_busy_seconds":0,"memory_pressure_seconds":0,"worst_memory_pressure":"normal","worst_thermal_state":"nominal","speed":1.0}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            (older.load_mean, older.load_max, older.logical_cpus),
+            (None, None, None)
+        );
+        let with = |at_min: u64, seconds: u32, mean: f64, max: f64| Minute {
+            seconds,
+            load_mean: Some(mean),
+            load_max: Some(max),
+            logical_cpus: Some(14),
+            ..minute(at_min, 1.0, 9.0, 0)
+        };
+        let folded = fold(
+            Timestamp::from_millis(0),
+            &[with(0, 60, 200.0, 215.0), with(1, 30, 20.0, 30.0), older],
+        )
+        .unwrap();
+        // (200×60 + 20×30) / 90; the older minute has nothing to weigh.
+        assert!((folded.load_mean.unwrap() - 140.0).abs() < 1e-9);
+        assert_eq!(folded.load_max, Some(215.0));
+        assert_eq!(folded.logical_cpus, Some(14));
+        let json = serde_json::to_value(&folded).unwrap();
+        assert_eq!(json["load_mean"], 140.0, "members send it to reports");
     }
 }
