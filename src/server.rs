@@ -280,6 +280,10 @@ pub async fn serve_with_updates(
         Err(error) => Err(error.clone()),
     };
     let automatic_updates = updates.automatic;
+    // The CLI's `fleet upgrade` and a release update's fleet half share one distributor.
+    let distributor = fleet.as_ref().ok().map(|fleet| {
+        crate::fleet_upgrade::distributor::Distributor::new(fleet.clone(), paths.executable())
+    });
     let updates = crate::release_update::service::UpdateService::open(
         paths.clone(),
         crate::release_update::ReleaseVersion::running(),
@@ -288,6 +292,9 @@ pub async fn serve_with_updates(
         updates.launcher,
         scheduler.clone(),
     );
+    if let (Ok(updates), Some(distributor)) = (&updates, &distributor) {
+        updates.distribute_with(distributor.clone());
+    }
     let _update_monitor = updates
         .as_ref()
         .ok()
@@ -415,8 +422,9 @@ pub async fn serve_with_updates(
             peer_listener::start(fleet.clone(), members_listener, peer_routes).await;
             crate::rehearsal_api::routes(fleet.clone(), rehearsal)
                 .merge(crate::fleet_upgrade_local_api::routes(
-                    fleet.clone(),
-                    paths.executable(),
+                    distributor
+                        .clone()
+                        .expect("a readable fleet has a distributor"),
                 ))
                 .merge(fleet_local_api::routes(fleet, scheduler.clone()))
         }

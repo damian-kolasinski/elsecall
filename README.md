@@ -115,6 +115,18 @@ helper is killed while the service is unloaded, run the preserved
 `"$HOME/Library/Application Support/Elsecall/release-update/previous/elsecall" install` manually to
 restore the service, then run `elsecall doctor`.
 
+**On a master, an update covers the fleet.** Once an update has installed a release
+on the master of a fleet with other members, the master's restarted service gives
+them the same build within a second of the update finishing, exactly as
+`elsecall fleet upgrade` does (see "Upgrading the fleet"): each member waits for its
+own work up to the update's allowed wait (`--wait`), then installs, confirms and rolls
+back on failure. It runs once per update and starts again
+if a restart cuts it short. `elsecall update status` reports it as `fleet`
+(`distributing`, then `distributed` with each member's `outcome`, or `failed`), and the
+window says "Updating the fleet to …" meanwhile. A member it leaves behind, such as a
+busy or unreachable one, keeps its build and is marked in the window until the next
+update or `elsecall fleet upgrade` reaches it; nothing undoes the master's own update.
+
 The updater requires mise with packslip support. It changes only an existing
 Elsecall request in the user's global mise configuration and preserves other
 tools and project pins. That global request becomes the exact installed version,
@@ -2018,7 +2030,8 @@ The command waits for every member and exits 0 only if each now runs the build.
 | `unreachable` | The member could not be reached; nothing was sent |
 | `unknown` | The member did not report how it ended in time (`last_state`); check `elsecall fleet` |
 
-The master itself is not upgraded over the fleet: `install` updates it. A member's
+The master itself is not upgraded over the fleet: `install` or a release update updates
+it, and a release update then distributes its build like this (see "Update a release"). A member's
 latest upgrade is recorded in `upgrade/state.json` in its state directory, which the
 restarted service reports; logs record upgrade events, IDs, build IDs and codes.
 

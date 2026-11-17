@@ -143,7 +143,8 @@ pub fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
                 .color(paints.subtle),
         );
     }
-    if let Some(line) = shown.and_then(release_summary) {
+    if let Some(line) = shown.and_then(|snapshot| release_summary(snapshot, state.fleet_updating()))
+    {
         page = page.child(text(line).wrap().font(paints.small).color(paints.secondary));
     }
     if shown.is_some_and(|snapshot| !snapshot.members.is_empty()) {
@@ -461,7 +462,7 @@ fn release_cell(release: &Release, paints: Paints) -> Cell {
 
 /// One line naming the members on another build than the master, which placement
 /// skips until they match, and the repair.
-pub(crate) fn release_summary(snapshot: &FleetSnapshot) -> Option<String> {
+pub(crate) fn release_summary(snapshot: &FleetSnapshot, updating: bool) -> Option<String> {
     let names: Vec<&str> = snapshot
         .members
         .iter()
@@ -473,8 +474,13 @@ pub(crate) fn release_summary(snapshot: &FleetSnapshot) -> Option<String> {
         [only] => (only.to_string(), "runs", "it"),
         [rest @ .., last] => (format!("{} and {last}", rest.join(", ")), "run", "them"),
     };
+    let repair = if updating {
+        format!("The master is giving {object} its build now.")
+    } else {
+        format!("Run elsecall fleet upgrade on the master to give {object} the master's build.")
+    };
     Some(format!(
-        "{subject} {verb} another build than the master, so no work is placed on {object}. Run elsecall fleet upgrade on the master to give {object} the master's build."
+        "{subject} {verb} another build than the master, so no work is placed on {object}. {repair}"
     ))
 }
 
@@ -576,6 +582,18 @@ mod tests {
     }
 
     #[test]
+    fn while_the_master_updates_the_fleet_the_summary_says_so() {
+        let behind = Release::Behind {
+            version: "0.2.1".into(),
+        };
+        let line = release_summary(&fleet(&[("macbook-pro", behind)]), true).unwrap();
+        assert!(
+            line.ends_with("The master is giving it its build now."),
+            "{line}"
+        );
+    }
+
+    #[test]
     fn the_summary_names_members_on_another_release_and_the_repair() {
         let matching = |version: &str| Release::Matching {
             version: version.into(),
@@ -584,38 +602,47 @@ mod tests {
             version: "0.2.1".into(),
         };
         assert_eq!(
-            release_summary(&fleet(&[("mac-mini", matching("0.2.2"))])),
+            release_summary(&fleet(&[("mac-mini", matching("0.2.2"))]), false),
             None
         );
         // An unreachable member's release is unknown, not outdated.
         assert_eq!(
-            release_summary(&fleet(&[("macbook", Release::Unknown { version: None })])),
+            release_summary(
+                &fleet(&[("macbook", Release::Unknown { version: None })]),
+                false
+            ),
             None
         );
         assert_eq!(
-            release_summary(&fleet(&[
-                ("mac-mini", matching("0.2.2")),
-                ("macbook-pro", behind.clone())
-            ]))
+            release_summary(
+                &fleet(&[
+                    ("mac-mini", matching("0.2.2")),
+                    ("macbook-pro", behind.clone())
+                ]),
+                false
+            )
             .unwrap(),
             "macbook-pro runs another build than the master, so no work is placed on it. Run elsecall fleet upgrade on the master to give it the master's build."
         );
         assert!(
-            release_summary(&fleet(&[
-                ("a", behind.clone()),
-                (
-                    "b",
-                    Release::OtherBuild {
-                        version: "0.2.2".into()
-                    }
-                ),
-                (
-                    "c",
-                    Release::Ahead {
-                        version: "0.3.0".into()
-                    }
-                )
-            ]))
+            release_summary(
+                &fleet(&[
+                    ("a", behind.clone()),
+                    (
+                        "b",
+                        Release::OtherBuild {
+                            version: "0.2.2".into()
+                        }
+                    ),
+                    (
+                        "c",
+                        Release::Ahead {
+                            version: "0.3.0".into()
+                        }
+                    )
+                ]),
+                false
+            )
             .unwrap()
             .starts_with(
                 "a, b and c run another build than the master, so no work is placed on them."

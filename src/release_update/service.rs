@@ -1,7 +1,7 @@
 //! Release discovery, job admission, and the service side of an install handoff.
 use super::{
-    Discovery, Job, JobId, Phase, ReleaseCatalog, ReleaseVersion, Status, invalid, now,
-    store::Store,
+    Discovery, FleetDistribution, FleetFollowUp, FollowUpState, Job, JobId, Phase, ReleaseCatalog,
+    ReleaseVersion, Status, invalid, now, store::Store,
 };
 use crate::{
     build_identity::BuildId,
@@ -14,7 +14,10 @@ use std::{
     fs,
     os::unix::process::CommandExt,
     process::{Command, Stdio},
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex, OnceLock,
+        atomic::{AtomicBool, Ordering},
+    },
     time::{Duration, Instant},
 };
 
@@ -72,6 +75,10 @@ pub struct UpdateService {
     launcher: Arc<dyn HelperLauncher>,
     scheduler: Arc<Scheduler>,
     hold: Mutex<Option<UpdateHold>>,
+    /// Set on a member whose fleet state is readable; see [`Self::distribute_with`].
+    fleet: OnceLock<Arc<dyn FleetDistribution>>,
+    /// Whether this process is distributing the last update's build to the fleet.
+    distributing: Arc<AtomicBool>,
 }
 impl UpdateService {
     pub fn open(
@@ -100,6 +107,8 @@ impl UpdateService {
             launcher,
             scheduler,
             hold: Mutex::new(None),
+            fleet: OnceLock::new(),
+            distributing: Arc::new(AtomicBool::new(false)),
         });
         service.reconcile()?;
         Ok(service)
@@ -141,8 +150,93 @@ impl UpdateService {
         }
         Ok(())
     }
+    /// Updates on this machine bring the rest of its fleet along from now on, when it
+    /// is the master: once an update has installed this release here, the members
+    /// receive the same build through `fleet`.
+    pub fn distribute_with(&self, fleet: Arc<dyn FleetDistribution>) {
+        let _ = self.fleet.set(fleet);
+        self.follow_fleet();
+    }
+
+    /// After an update installed the release this service runs, on a master with other
+    /// members, give them the same build, once per update. A distribution a restart
+    /// cut short starts again; members already on the build are skipped. Members left
+    /// behind, such as busy or unreachable ones, keep their build and are marked in
+    /// the fleet window. Nothing here can undo this machine's own update.
+    fn follow_fleet(&self) {
+        if let Err(error) = self.try_follow_fleet() {
+            crate::service_log!(
+                "{{\"event\":\"release_fleet_follow_up_failed\",\"code\":{:?}}}",
+                error.code
+            );
+        }
+    }
+
+    fn try_follow_fleet(&self) -> Result<()> {
+        let Some(fleet) = self.fleet.get() else {
+            return Ok(());
+        };
+        let Some(job) = self.store.job()? else {
+            return Ok(());
+        };
+        if !matches!(job.phase, Phase::Succeeded) || job.release.version != self.current {
+            return Ok(());
+        }
+        match self.store.fleet_follow_up()? {
+            Some(follow_up) if follow_up.job == job.id => {
+                let interrupted = matches!(follow_up.state, FollowUpState::Distributing { .. });
+                if !interrupted || self.distributing.load(Ordering::SeqCst) {
+                    return Ok(());
+                }
+            }
+            _ => {}
+        }
+        if !fleet.leads_others() || self.distributing.swap(true, Ordering::SeqCst) {
+            return Ok(());
+        }
+        // Another caller may have started and finished this job's distribution between
+        // the read above and taking the flag.
+        let finished = self.store.fleet_follow_up()?.is_some_and(|follow_up| {
+            follow_up.job == job.id
+                && !matches!(follow_up.state, FollowUpState::Distributing { .. })
+        });
+        if finished {
+            self.distributing.store(false, Ordering::SeqCst);
+            return Ok(());
+        }
+        let started = FleetFollowUp {
+            job: job.id.clone(),
+            state: FollowUpState::Distributing { started_at: now() },
+        };
+        if let Err(error) = self.store.save_fleet_follow_up(&started) {
+            self.distributing.store(false, Ordering::SeqCst);
+            return Err(error);
+        }
+        let (store, fleet, distributing) = (
+            self.store.clone(),
+            Arc::clone(fleet),
+            Arc::clone(&self.distributing),
+        );
+        tokio::spawn(async move {
+            let state = match fleet.distribute(job.wait_seconds).await {
+                Ok(outcome) => FollowUpState::Distributed { outcome },
+                Err(error) => FollowUpState::Failed { error },
+            };
+            let ended = FleetFollowUp { job: job.id, state };
+            if let Err(error) = store.save_fleet_follow_up(&ended) {
+                crate::service_log!(
+                    "{{\"event\":\"release_fleet_follow_up_unrecorded\",\"code\":{:?}}}",
+                    error.code
+                );
+            }
+            distributing.store(false, Ordering::SeqCst);
+        });
+        Ok(())
+    }
+
     pub fn status(&self) -> Result<Status> {
         self.reconcile()?;
+        self.follow_fleet();
         let discovery = self.discovery.lock().expect("release discovery").clone();
         Ok(Status {
             current_version: self.current.clone(),
@@ -152,6 +246,9 @@ impl UpdateService {
             checked_at: discovery.checked_at,
             check_error: discovery.error,
             job: self.store.job()?,
+            // An unreadable record, such as one a newer build wrote, must not block
+            // the status every update starts from.
+            fleet: self.store.fleet_follow_up().ok().flatten(),
         })
     }
     pub async fn check(self: &Arc<Self>) -> Result<Status> {
@@ -272,6 +369,9 @@ impl UpdateService {
             loop {
                 tokio::time::sleep(Duration::from_secs(1)).await;
                 let _ = service.reconcile();
+                // The helper records a finished update after this service starts;
+                // the fleet follows without anyone asking for the status.
+                service.follow_fleet();
             }
         })
     }

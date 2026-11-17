@@ -46,6 +46,7 @@ const SCENES: &[(&str, Scene)] = &[
     ("release-failed", scene_release_failed),
     ("release-offline", scene_release_offline),
     ("release-future", scene_release_future),
+    ("release-fleet", scene_release_fleet),
     ("demo-airdrop", scene_demo_airdrop),
     ("add-mac-preparing", scene_add_mac_preparing),
     ("add-mac-picker", scene_add_mac_picker),
@@ -170,12 +171,33 @@ impl AppState {
         }
     }
 
+    /// Whether this master is giving the members the build its last update installed.
+    /// Only for the successful update to the release the service runs, so a record a
+    /// restart or a later update left behind never shows as progress.
+    pub(crate) fn fleet_updating(&self) -> bool {
+        let Some(status) = self.release_status.as_ref() else {
+            return false;
+        };
+        let (Some(job), Some(fleet)) = (status.job.as_ref(), status.fleet.as_ref()) else {
+            return false;
+        };
+        fleet.job == job.id
+            && matches!(job.phase, ReleasePhase::Succeeded)
+            && job.release.version == status.current_version
+            && matches!(
+                fleet.state,
+                elsecall::release_update::FollowUpState::Distributing { .. }
+            )
+    }
     pub(crate) fn release_notice(&self) -> Option<String> {
         let status = self.release_status.as_ref()?;
         if let Some(job) = &status.job
             && !job.phase.terminal()
         {
             return Some(format!("Updating to {}", job.release.version));
+        }
+        if self.fleet_updating() {
+            return Some(format!("Updating the fleet to {}", status.current_version));
         }
         status
             .available
@@ -564,8 +586,43 @@ fn release_fixture(phase: Option<ReleasePhase>) -> ReleaseSnapshot {
             checked_at: Some(1700000000),
             check_error: None,
             job,
+            fleet: None,
         }),
     }
+}
+
+/// The master updated itself and now gives its build to the members, which still
+/// run the previous release.
+fn scene_release_fleet(state: &mut AppState) {
+    use elsecall::release_update::{FleetFollowUp, FollowUpState, JobId, Release, ReleaseVersion};
+    scene_outdated_member(state);
+    let current = ReleaseVersion::try_from("0.2.2".to_owned()).expect("fixture current");
+    let id = JobId::try_from("a".repeat(32)).expect("fixture job");
+    state.apply_release(Ok(ReleaseSnapshot {
+        installed_window: None,
+        release: Some(ReleaseStatus {
+            current_version: current.clone(),
+            available: None,
+            checked_at: Some(1700000000),
+            check_error: None,
+            job: Some(Job {
+                id: id.clone(),
+                release: Release { version: current },
+                from_build: "1111111111111111".parse().expect("fixture build"),
+                started_at_ms: 20,
+                reopen: true,
+                wait_seconds: 300,
+                phase: ReleasePhase::Succeeded,
+                updated_at: 1700000000,
+            }),
+            fleet: Some(FleetFollowUp {
+                job: id,
+                state: FollowUpState::Distributing {
+                    started_at: 1700000000,
+                },
+            }),
+        }),
+    }));
 }
 fn scene_release_available(state: &mut AppState) {
     scene_members(state);

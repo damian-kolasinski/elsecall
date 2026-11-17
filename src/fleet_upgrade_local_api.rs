@@ -3,8 +3,7 @@
 use crate::{
     api,
     failure::Failure,
-    fleet::Fleet,
-    fleet_upgrade::master::{self, UpgradeRequest},
+    fleet_upgrade::{distributor::Distributor, master::UpgradeRequest},
 };
 use axum::{
     Json, Router,
@@ -14,25 +13,12 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
-#[derive(Clone)]
-struct Distributing {
-    fleet: Arc<Fleet>,
-    /// The master's installed executable, distributed unless another is named.
-    installed: PathBuf,
-    /// One upgrade at a time from this member.
-    running: Arc<tokio::sync::Mutex<()>>,
-}
-
-pub fn routes(fleet: Arc<Fleet>, installed: PathBuf) -> Router {
+pub fn routes(distributor: Arc<Distributor>) -> Router {
     Router::new()
         .route("/v1/fleet/upgrade", post(upgrade))
-        .with_state(Distributing {
-            fleet,
-            installed,
-            running: Arc::default(),
-        })
+        .with_state(distributor)
 }
 
 fn refuse(error: Failure) -> Response {
@@ -44,7 +30,7 @@ fn refuse(error: Failure) -> Response {
     (status, Json(api::ErrorResponse::new(error))).into_response()
 }
 
-async fn upgrade(State(distributing): State<Distributing>, body: Bytes) -> Response {
+async fn upgrade(State(distributor): State<Arc<Distributor>>, body: Bytes) -> Response {
     let Ok(request) = serde_json::from_slice::<UpgradeRequest>(&body) else {
         return refuse(Failure::new(
             "invalid_request",
@@ -63,14 +49,7 @@ async fn upgrade(State(distributing): State<Distributing>, body: Bytes) -> Respo
             "Pass the build's full path.",
         ));
     }
-    let Ok(_running) = distributing.running.try_lock() else {
-        return refuse(Failure::new(
-            "upgrade_in_progress",
-            "This master is already distributing a build.",
-            "Wait for that elsecall fleet upgrade to finish, then retry.",
-        ));
-    };
-    match master::upgrade(&distributing.fleet, distributing.installed.clone(), request).await {
+    match distributor.distribute(request).await {
         Ok(report) => Json(api::Response::new(report)).into_response(),
         Err(error) => refuse(error),
     }
