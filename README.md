@@ -2274,8 +2274,19 @@ mise run perf
 # Direct verification without consumer admission:
 cargo fmt --all -- --check
 cargo clippy --workspace --locked --all-targets -- -D warnings
-python3 scripts/test-environment.py cargo test --workspace --locked
+python3 scripts/test-environment.py cargo nextest run --workspace --locked
+python3 scripts/test-environment.py cargo test --doc --workspace --locked
 ```
+
+Tests run under [cargo-nextest](https://nexte.st), which `mise install` provides:
+each test in its own process, across all test binaries at once. A failure never
+stops the run, so one report shows every failing test, and nothing is retried.
+`.config/nextest.toml` starts the longest tests first, reports a test still running
+after a minute and stops one after ten. Per-test results and durations are written
+to `target/nextest/default/junit.xml`. A test runs alone in its process, so it
+cannot rely on another test having run first, and ports for member services are
+reserved across test processes. nextest does not run doctests, so the check runs
+them after it with `cargo test --doc`.
 
 The mise tasks use the consumer entry pattern in "Integrating a consumer".
 The repository contains no workload policy. Set label rules for `elsecall check`

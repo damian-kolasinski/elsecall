@@ -430,7 +430,7 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
     for (task, expected) in [
         (
             "check",
-            "granted:0:fmt --all -- --check\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\nclean:0:test --workspace --locked\n",
+            "granted:0:fmt --all -- --check\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\nclean:0:nextest run --workspace --locked\nclean:0:test --doc --workspace --locked\n",
         ),
         ("build", "granted:0:build --locked --release\n"),
         (
@@ -455,10 +455,10 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
     );
     let output = invoke("check", member.home.path(), None, "7");
     assert_eq!(output.status.code(), Some(7), "{output:?}");
-    assert!(
-        !String::from_utf8(output.stdout)
-            .unwrap()
-            .contains("test --locked")
+    // A failing lint stops the check before any test runs.
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap(),
+        "granted:0:fmt --all -- --check\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\n"
     );
     let home = empty_home();
     crate::processes::workload_policy(home.path(), None, "[admission]\nwhen_unavailable = 'run'\n");
