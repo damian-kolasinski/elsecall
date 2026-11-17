@@ -903,11 +903,13 @@ fn queued_deferrable_work_does_not_keep_placed_runs_out() {
     let capacity = bravo.ok(&["runs"])["member"]["capacity"].clone();
     assert_eq!(capacity["capacity"], 2.0, "{capacity}");
     let app = w.repository("app");
+    // The holder execs its sleep, so killing it ends the lease and leaves no
+    // orphan holding the test's output open.
     let hold = |options: &str| {
         crate::processes::command("/bin/sh")
             .arg("-c")
             .arg(format!(
-                "\"$EC\" lease acquire {options} --holder $$ >/dev/null; sleep 300"
+                "\"$EC\" lease acquire {options} --holder $$ >/dev/null; exec sleep 300"
             ))
             .env("HOME", bravo.home.path())
             .env("EC", env!("CARGO_BIN_EXE_elsecall"))

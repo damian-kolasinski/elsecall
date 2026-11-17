@@ -32,9 +32,9 @@ struct Manager {
 }
 impl Manager {
     fn new(paths: Paths, fail_digest: Option<Digest>) -> Self {
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-        drop(listener);
+        // Reserved for this process: the successor restarts on the same port, and
+        // the modes run concurrently with other tests.
+        let port = members::free_port();
         Self {
             paths,
             child: Mutex::new(None),
@@ -248,140 +248,183 @@ fn variant(directory: &Path) -> PathBuf {
     binary
 }
 
+/// Where the helper's update fails, if anywhere. Each mode is its own test, so
+/// they run concurrently and a failure names the mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    Success,
+    /// Installing the new executable fails.
+    Install,
+    /// Activating the new CLI selection fails.
+    Selection,
+    /// Opening the new window app fails.
+    Window,
+    /// The download's signature does not verify.
+    Signature,
+    /// The download was changed after it was signed.
+    Tamper,
+    /// The successor's update API does not come up.
+    UpdateApi,
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn helper_survives_the_service_restart_and_rolls_back_every_changed_component_on_failure() {
-    for mode in [
-        "success",
-        "install",
-        "selection",
-        "window",
-        "signature",
-        "tamper",
-        "update-api",
-    ] {
-        let home = tempfile::Builder::new()
-            .prefix("ec-up-install-")
-            .tempdir_in("/tmp")
-            .unwrap();
-        let paths = Paths::for_home(home.path()).unwrap();
-        let builds = home.path().join("builds");
-        fs::create_dir(&builds).unwrap();
-        let original = builds.join("elsecall");
-        fs::copy(env!("CARGO_BIN_EXE_elsecall"), &original).unwrap();
-        fs::write(builds.join("elsecall-ui"), b"old-ui").unwrap();
-        let candidate = variant(home.path());
-        let incoming = Digest::of_file(&candidate).unwrap();
-        let before = Digest::of_file(&original).unwrap();
-        assert_ne!(before, incoming);
-        let mut manager = Manager::new(paths.clone(), (mode == "install").then_some(incoming));
-        manager.unavailable_update_digest = (mode == "update-api").then_some(incoming);
-        installation::install(&paths, &original, &manager, None).unwrap();
-        elsecall::fleet_upgrade::helper::confirm(&paths, &before.build_id(), true)
-            .await
-            .unwrap();
-        let old_window = Window {
-            fail: false,
-            opened: AtomicUsize::new(0),
-        };
-        window_app::publish(&paths, &old_window).unwrap();
-        let store = Store::new(&paths);
-        store.prepare(&paths).unwrap();
-        let job = Job {
-            id: JobId::new().unwrap(),
-            release: Release {
-                version: ReleaseVersion::try_from(future()).unwrap(),
-            },
-            from_build: before.build_id(),
-            started_at_ms: release_update::now_millis(),
-            reopen: true,
-            wait_seconds: 1,
-            phase: Phase::Starting,
-            updated_at: release_update::now(),
-        };
-        store.save_job(&job).unwrap();
-        let selection = Selection {
-            fail: mode == "selection",
-            activated: AtomicUsize::new(0),
-            restored: AtomicUsize::new(0),
-        };
-        let window = Window {
-            fail: mode == "window",
-            opened: AtomicUsize::new(0),
-        };
-        fs::write(store.worker(&job.id), b"worker executable").unwrap();
-        // A monitor/status probe may own the lock when the helper starts.
-        let probe = store.helper_lock().unwrap().unwrap();
-        let release_probe = tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_millis(60)).await;
-            drop(probe);
-        });
-        helper::run(
-            &paths,
-            &job.id,
-            &Download {
-                source: candidate,
-                tamper: mode == "tamper",
-                fail: mode == "signature",
-            },
-            &selection,
-            &manager,
-            &window,
-        )
+async fn helper_survives_the_service_restart_and_updates_every_component() {
+    helper_survives_the_service_restart(Mode::Success).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn helper_rolls_back_every_changed_component_when_installing_fails() {
+    helper_survives_the_service_restart(Mode::Install).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn helper_rolls_back_every_changed_component_when_selection_fails() {
+    helper_survives_the_service_restart(Mode::Selection).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn helper_rolls_back_every_changed_component_when_the_window_fails() {
+    helper_survives_the_service_restart(Mode::Window).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn helper_changes_nothing_when_the_signature_fails() {
+    helper_survives_the_service_restart(Mode::Signature).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn helper_changes_nothing_when_the_download_was_tampered_with() {
+    helper_survives_the_service_restart(Mode::Tamper).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn helper_rolls_back_every_changed_component_when_the_update_api_is_unavailable() {
+    helper_survives_the_service_restart(Mode::UpdateApi).await;
+}
+
+async fn helper_survives_the_service_restart(mode: Mode) {
+    let home = tempfile::Builder::new()
+        .prefix("ec-up-install-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let paths = Paths::for_home(home.path()).unwrap();
+    let builds = home.path().join("builds");
+    fs::create_dir(&builds).unwrap();
+    let original = builds.join("elsecall");
+    fs::copy(env!("CARGO_BIN_EXE_elsecall"), &original).unwrap();
+    fs::write(builds.join("elsecall-ui"), b"old-ui").unwrap();
+    let candidate = variant(home.path());
+    let incoming = Digest::of_file(&candidate).unwrap();
+    let before = Digest::of_file(&original).unwrap();
+    assert_ne!(before, incoming);
+    let mut manager = Manager::new(paths.clone(), (mode == Mode::Install).then_some(incoming));
+    manager.unavailable_update_digest = (mode == Mode::UpdateApi).then_some(incoming);
+    installation::install(&paths, &original, &manager, None).unwrap();
+    elsecall::fleet_upgrade::helper::confirm(&paths, &before.build_id(), true)
         .await
         .unwrap();
-        release_probe.await.unwrap();
-        assert!(!store.worker(&job.id).exists());
+    let old_window = Window {
+        fail: false,
+        opened: AtomicUsize::new(0),
+    };
+    window_app::publish(&paths, &old_window).unwrap();
+    let store = Store::new(&paths);
+    store.prepare(&paths).unwrap();
+    let job = Job {
+        id: JobId::new().unwrap(),
+        release: Release {
+            version: ReleaseVersion::try_from(future()).unwrap(),
+        },
+        from_build: before.build_id(),
+        started_at_ms: release_update::now_millis(),
+        reopen: true,
+        wait_seconds: 1,
+        phase: Phase::Starting,
+        updated_at: release_update::now(),
+    };
+    store.save_job(&job).unwrap();
+    let selection = Selection {
+        fail: mode == Mode::Selection,
+        activated: AtomicUsize::new(0),
+        restored: AtomicUsize::new(0),
+    };
+    let window = Window {
+        fail: mode == Mode::Window,
+        opened: AtomicUsize::new(0),
+    };
+    fs::write(store.worker(&job.id), b"worker executable").unwrap();
+    // A monitor/status probe may own the lock when the helper starts.
+    let probe = store.helper_lock().unwrap().unwrap();
+    let release_probe = tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(60)).await;
+        drop(probe);
+    });
+    helper::run(
+        &paths,
+        &job.id,
+        &Download {
+            source: candidate,
+            tamper: mode == Mode::Tamper,
+            fail: mode == Mode::Signature,
+        },
+        &selection,
+        &manager,
+        &window,
+    )
+    .await
+    .unwrap();
+    release_probe.await.unwrap();
+    assert!(!store.worker(&job.id).exists());
+    assert!(
+        !paths
+            .home
+            .join(".local/share/elsecall/releases")
+            .join(job.id.as_str())
+            .exists(),
+        "unused cache is removed"
+    );
+    let completed = store.job().unwrap().unwrap();
+    if mode == Mode::Success {
         assert!(
-            !paths
-                .home
-                .join(".local/share/elsecall/releases")
-                .join(job.id.as_str())
-                .exists(),
-            "unused cache is removed"
+            matches!(completed.phase, Phase::Succeeded),
+            "{}",
+            serde_json::to_string(&completed).unwrap()
         );
-        let completed = store.job().unwrap().unwrap();
-        if mode == "success" {
-            assert!(
-                matches!(completed.phase, Phase::Succeeded),
-                "{}",
-                serde_json::to_string(&completed).unwrap()
-            );
-            assert_eq!(Digest::of_file(&paths.executable()).unwrap(), incoming);
-            assert_eq!(fs::read(paths.window_executable()).unwrap(), b"new-ui");
-            assert_eq!(window.opened.load(Ordering::SeqCst), 1);
-        } else {
-            assert!(
-                matches!(completed.phase,Phase::Failed{rolled_back,..} if rolled_back==!matches!(mode,"signature"|"tamper")),
-                "{mode}: {}",
-                serde_json::to_string(&completed).unwrap()
-            );
-            assert_eq!(
-                Digest::of_file(&paths.executable()).unwrap(),
-                before,
-                "{mode}"
-            );
-            assert_eq!(
-                fs::read(paths.window_executable()).unwrap(),
-                b"old-ui",
-                "{mode}"
-            );
-            assert_eq!(
-                fs::read(paths.window_app().join("Contents/MacOS/Elsecall")).unwrap(),
-                b"old-ui",
-                "{mode}"
-            );
-            assert_eq!(
-                selection.restored.load(Ordering::SeqCst),
-                usize::from(mode == "window")
-            );
-        }
-        // The successor exposes the same durable job and releases its admission hold.
-        let status: release_update::Status = elsecall::client::get(&paths.socket(), "/v1/update")
-            .await
-            .unwrap();
-        assert_eq!(status.job.unwrap().id, job.id);
-        manager.stop().unwrap();
+        assert_eq!(Digest::of_file(&paths.executable()).unwrap(), incoming);
+        assert_eq!(fs::read(paths.window_executable()).unwrap(), b"new-ui");
+        assert_eq!(window.opened.load(Ordering::SeqCst), 1);
+    } else {
+        assert!(
+            matches!(completed.phase,Phase::Failed{rolled_back,..} if rolled_back==!matches!(mode,Mode::Signature|Mode::Tamper)),
+            "{mode:?}: {}",
+            serde_json::to_string(&completed).unwrap()
+        );
+        assert_eq!(
+            Digest::of_file(&paths.executable()).unwrap(),
+            before,
+            "{mode:?}"
+        );
+        assert_eq!(
+            fs::read(paths.window_executable()).unwrap(),
+            b"old-ui",
+            "{mode:?}"
+        );
+        assert_eq!(
+            fs::read(paths.window_app().join("Contents/MacOS/Elsecall")).unwrap(),
+            b"old-ui",
+            "{mode:?}"
+        );
+        assert_eq!(
+            selection.restored.load(Ordering::SeqCst),
+            usize::from(mode == Mode::Window)
+        );
     }
+    // The successor exposes the same durable job and releases its admission hold.
+    let status: release_update::Status = elsecall::client::get(&paths.socket(), "/v1/update")
+        .await
+        .unwrap();
+    assert_eq!(status.job.unwrap().id, job.id);
+    manager.stop().unwrap();
 }
 
 mod diagnostics;

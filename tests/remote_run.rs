@@ -841,11 +841,13 @@ fn only_the_master_places_and_a_member_refuses_while_its_own_requests_wait() {
     // bravo holds one core and queues a request for two of its own: it refuses
     // placed work even though one core is free.
     // Separate holders, since a holder's own second request would nest.
+    // The holder execs its sleep, so killing it ends the lease and leaves no
+    // orphan holding the test's output open.
     let hold = |size: &str| {
         crate::processes::command("/bin/sh")
             .arg("-c")
             .arg(format!(
-                "\"$EC\" lease acquire --size {size} --holder $$ >/dev/null; sleep 60"
+                "\"$EC\" lease acquire --size {size} --holder $$ >/dev/null; exec sleep 60"
             ))
             .env("HOME", bravo.home.path())
             .env("EC", env!("CARGO_BIN_EXE_elsecall"))
