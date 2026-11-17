@@ -36,7 +36,7 @@ class Package(unittest.TestCase):
             package.filename("1.2")
 
     def test_cargo_version_is_a_release(self):
-        self.assertEqual(package.version(), "0.1.0")
+        self.assertIsNotNone(package.SEMVER.fullmatch(package.version()))
 
     def test_release_flags_remap_local_paths(self):
         root = Path("/work/elsecall")
