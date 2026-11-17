@@ -158,7 +158,7 @@ impl CliSelection for Selection {
     fn snapshot(&self) -> Result<Option<Snapshot>> {
         Ok(Some(Snapshot {
             config: PathBuf::from("/Users/me/.config/mise/config.toml"),
-            version: "0.1.0".into(),
+            version: CURRENT.into(),
             identity: None,
             issuer: None,
         }))
@@ -194,13 +194,26 @@ impl WindowLauncher for Window {
         Ok(())
     }
 }
+/// This build's version.
+const CURRENT: &str = env!("CARGO_PKG_VERSION");
+
+/// The next patch release, which a patched copy of this build claims to be.
+fn future() -> String {
+    let mut version = semver::Version::parse(CURRENT).unwrap();
+    version.patch += 1;
+    version.to_string()
+}
+
 fn variant(directory: &Path) -> PathBuf {
     let binary = directory.join("candidate");
     fs::copy(env!("CARGO_BIN_EXE_elsecall"), &binary).unwrap();
     let mut bytes = fs::read(&binary).unwrap();
-    for index in 0..bytes.len().saturating_sub(5) {
-        if &bytes[index..index + 5] == b"0.1.0" {
-            bytes[index..index + 5].copy_from_slice(b"0.1.1");
+    let (current, next) = (CURRENT.as_bytes(), future());
+    // The patch keeps every offset in the executable where it was.
+    assert_eq!(next.len(), current.len());
+    for index in 0..bytes.len().saturating_sub(current.len()) {
+        if &bytes[index..index + current.len()] == current {
+            bytes[index..index + current.len()].copy_from_slice(next.as_bytes());
         }
     }
     fs::write(&binary, bytes).unwrap();
@@ -230,7 +243,7 @@ fn variant(directory: &Path) -> PathBuf {
         )
         .unwrap()
         .trim(),
-        "elsecall 0.1.1"
+        format!("elsecall {}", future())
     );
     binary
 }
@@ -276,7 +289,7 @@ async fn helper_survives_the_service_restart_and_rolls_back_every_changed_compon
         let job = Job {
             id: JobId::new().unwrap(),
             release: Release {
-                version: ReleaseVersion::try_from("0.1.1".to_owned()).unwrap(),
+                version: ReleaseVersion::try_from(future()).unwrap(),
             },
             from_build: before.build_id(),
             started_at_ms: release_update::now_millis(),
@@ -427,7 +440,7 @@ else: sys.exit(1)
     store
         .save_discovery(&release_update::Discovery {
             latest: Some(Release {
-                version: ReleaseVersion::try_from("0.1.1".to_owned()).unwrap(),
+                version: ReleaseVersion::try_from(future()).unwrap(),
             }),
             checked_at: Some(release_update::now()),
             error: None,
@@ -455,7 +468,7 @@ else: sys.exit(1)
                 "{}",
                 serde_json::to_string(&current).unwrap()
             );
-            assert_eq!(status.current_version.to_string(), "0.1.1");
+            assert_eq!(status.current_version.to_string(), future());
             assert!(status.available.is_none());
             break;
         }
