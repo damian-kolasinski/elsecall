@@ -56,6 +56,12 @@ impl Store {
     pub fn discovery(&self) -> Result<Discovery> {
         Ok(read(&self.directory.join("discovery.json"))?.unwrap_or_default())
     }
+    pub fn fleet_follow_up(&self) -> Result<Option<super::FleetFollowUp>> {
+        read(&self.directory.join("fleet.json"))
+    }
+    pub fn save_fleet_follow_up(&self, follow_up: &super::FleetFollowUp) -> Result<()> {
+        write(&self.directory.join("fleet.json"), follow_up)
+    }
     pub fn save_discovery(&self, state: &Discovery) -> Result<()> {
         write(&self.directory.join("discovery.json"), state)
     }
@@ -147,6 +153,7 @@ pub fn remove(paths: &Paths) -> Result<()> {
     for name in [
         "job.json",
         "discovery.json",
+        "fleet.json",
         "selection.json",
         "helper.lock",
         "request.lock",

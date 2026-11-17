@@ -3,6 +3,9 @@
 //! `protocol` is the frozen wire format, `master` the distributing side, `member`
 //! the receiving side, `helper` the process that installs and restarts, and
 //! `journal` the member's record that carries the outcome across the restart.
+//! `distributor` is the master's single point of distribution, shared by the CLI and
+//! release updates.
+pub mod distributor;
 pub mod helper;
 pub mod journal;
 pub mod master;

@@ -30,6 +30,7 @@ const SCENES: &[&str] = &[
     "release-failed",
     "release-offline",
     "release-future",
+    "release-fleet",
     "demo-airdrop",
     "add-mac-preparing",
     "add-mac-picker",

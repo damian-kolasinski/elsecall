@@ -455,3 +455,233 @@ async fn automatic_discovery_checks_at_startup_and_hourly_and_reuses_a_fresh_per
     task.abort();
     let _ = task.await;
 }
+
+/// The fleet at the boundary: whether this machine leads others, and what giving them
+/// the build returns.
+struct FakeFleet {
+    leads: bool,
+    waits: Mutex<Vec<u64>>,
+    fail: bool,
+}
+impl release_update::FleetDistribution for FakeFleet {
+    fn leads_others(&self) -> bool {
+        self.leads
+    }
+    fn distribute(
+        &self,
+        wait_seconds: u64,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<release_update::FleetOutcome>> + Send + '_>,
+    > {
+        self.waits.lock().unwrap().push(wait_seconds);
+        let result = if self.fail {
+            Err(release_update::invalid("The members could not be reached."))
+        } else {
+            Ok(release_update::FleetOutcome {
+                complete: false,
+                members: vec![
+                    release_update::MemberOutcome {
+                        name: "macbook-pro".into(),
+                        outcome: "upgraded".into(),
+                    },
+                    release_update::MemberOutcome {
+                        name: "mac-studio".into(),
+                        outcome: "deferred".into(),
+                    },
+                ],
+            })
+        };
+        Box::pin(async move { result })
+    }
+}
+fn fake_fleet(leads: bool, fail: bool) -> Arc<FakeFleet> {
+    Arc::new(FakeFleet {
+        leads,
+        waits: Mutex::new(Vec::new()),
+        fail,
+    })
+}
+/// An update job, as the helper leaves it, for `version` in `phase`.
+fn finished_job(paths: &Paths, version: &str, phase: Phase) -> Job {
+    let job = Job {
+        id: JobId::new().unwrap(),
+        release: release(version),
+        from_build: Digest::of(b"older").build_id(),
+        started_at_ms: 1,
+        reopen: false,
+        wait_seconds: 120,
+        phase,
+        updated_at: release_update::now(),
+    };
+    let store = Store::new(paths);
+    store.prepare(paths).unwrap();
+    store.save_job(&job).unwrap();
+    job
+}
+fn quiet_service(paths: &Paths, scheduler: Arc<Scheduler>) -> Arc<UpdateService> {
+    service(
+        paths,
+        scheduler,
+        Arc::new(Catalog(Mutex::new(Ok(None)))),
+        Arc::new(Launch {
+            calls: Mutex::new(Vec::new()),
+            fail: false,
+        }),
+    )
+}
+/// The fleet half once it has ended, or what it still is after five seconds.
+async fn fleet_settled(service: &UpdateService) -> Option<release_update::FleetFollowUp> {
+    let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        let fleet = service.status().unwrap().fleet;
+        let distributing = matches!(
+            fleet,
+            Some(release_update::FleetFollowUp {
+                state: release_update::FollowUpState::Distributing { .. },
+                ..
+            })
+        );
+        if !distributing || std::time::Instant::now() > until {
+            return fleet;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_masters_update_brings_the_fleet_to_its_build_once() {
+    let (_home, paths, scheduler) = fixture();
+    let job = finished_job(&paths, "0.1.0", Phase::Succeeded);
+    let service = quiet_service(&paths, scheduler);
+    let fleet = fake_fleet(true, false);
+    service.distribute_with(fleet.clone());
+    let settled = fleet_settled(&service).await.unwrap();
+    assert_eq!(settled.job, job.id);
+    let release_update::FollowUpState::Distributed { outcome } = settled.state else {
+        panic!("expected a distributed fleet, got {:?}", settled.state);
+    };
+    assert!(!outcome.complete);
+    assert_eq!(outcome.members[1].outcome, "deferred");
+    // Members wait for their work as long as the master's update did.
+    assert_eq!(*fleet.waits.lock().unwrap(), vec![120]);
+    for _ in 0..3 {
+        let fleet = service.status().unwrap().fleet.unwrap();
+        assert!(matches!(
+            fleet.state,
+            release_update::FollowUpState::Distributed { .. }
+        ));
+    }
+    assert_eq!(fleet.waits.lock().unwrap().len(), 1);
+    // A member left behind stays behind; only the next update or fleet upgrade moves it.
+    let restarted = quiet_service(&paths, fixture().2);
+    let again = fake_fleet(true, false);
+    restarted.distribute_with(again.clone());
+    restarted.status().unwrap();
+    assert!(again.waits.lock().unwrap().is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn members_lone_machines_and_unfinished_or_other_updates_never_distribute() {
+    for (leads, version, phase) in [
+        (false, "0.1.0", Phase::Succeeded),
+        (true, "0.1.0", Phase::Installing),
+        (true, "0.1.1", Phase::Succeeded),
+    ] {
+        let (_home, paths, scheduler) = fixture();
+        finished_job(&paths, version, phase);
+        let service = quiet_service(&paths, scheduler);
+        let fleet = fake_fleet(leads, false);
+        service.distribute_with(fleet.clone());
+        assert!(service.status().unwrap().fleet.is_none(), "{version}");
+        assert!(fleet.waits.lock().unwrap().is_empty(), "{version}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_failed_distribution_is_reported_once_and_the_masters_update_stands() {
+    let (_home, paths, scheduler) = fixture();
+    finished_job(&paths, "0.1.0", Phase::Succeeded);
+    let service = quiet_service(&paths, scheduler);
+    let fleet = fake_fleet(true, true);
+    service.distribute_with(fleet.clone());
+    let settled = fleet_settled(&service).await.unwrap();
+    let release_update::FollowUpState::Failed { error } = settled.state else {
+        panic!("expected a failure, got {:?}", settled.state);
+    };
+    assert_eq!(error.code, "release_update_failed");
+    service.status().unwrap();
+    assert_eq!(fleet.waits.lock().unwrap().len(), 1);
+    assert!(matches!(
+        service.status().unwrap().job.unwrap().phase,
+        Phase::Succeeded
+    ));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_distribution_cut_short_by_a_restart_starts_again() {
+    let (_home, paths, scheduler) = fixture();
+    let job = finished_job(&paths, "0.1.0", Phase::Succeeded);
+    Store::new(&paths)
+        .save_fleet_follow_up(&release_update::FleetFollowUp {
+            job: job.id.clone(),
+            state: release_update::FollowUpState::Distributing { started_at: 1 },
+        })
+        .unwrap();
+    let service = quiet_service(&paths, scheduler);
+    let fleet = fake_fleet(true, false);
+    service.distribute_with(fleet.clone());
+    let settled = fleet_settled(&service).await.unwrap();
+    assert!(matches!(
+        settled.state,
+        release_update::FollowUpState::Distributed { .. }
+    ));
+    assert_eq!(fleet.waits.lock().unwrap().len(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_fleet_follows_an_update_the_helper_finishes_after_startup_unasked() {
+    let (_home, paths, scheduler) = fixture();
+    let service = quiet_service(&paths, scheduler);
+    let _monitor = service.monitor();
+    let fleet = fake_fleet(true, false);
+    // As in production: the restarted service starts before the helper records the
+    // finished update, and nothing asks for the status afterwards.
+    service.distribute_with(fleet.clone());
+    let job = finished_job(&paths, "0.1.0", Phase::Succeeded);
+    let store = Store::new(&paths);
+    let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    let recorded = loop {
+        match store.fleet_follow_up().unwrap() {
+            Some(follow_up)
+                if !matches!(
+                    follow_up.state,
+                    release_update::FollowUpState::Distributing { .. }
+                ) =>
+            {
+                break follow_up;
+            }
+            _ if std::time::Instant::now() > until => panic!("the fleet never followed"),
+            _ => tokio::time::sleep(std::time::Duration::from_millis(50)).await,
+        }
+    };
+    assert_eq!(recorded.job, job.id);
+    assert!(matches!(
+        recorded.state,
+        release_update::FollowUpState::Distributed { .. }
+    ));
+    assert_eq!(fleet.waits.lock().unwrap().len(), 1);
+}
+
+#[test]
+fn a_fleet_state_from_a_newer_build_still_reads() {
+    let follow_up: release_update::FleetFollowUp = serde_json::from_value(serde_json::json!({
+        "job": "a".repeat(32),
+        "state": "superseded",
+        "by": "something new"
+    }))
+    .unwrap();
+    assert!(matches!(
+        follow_up.state,
+        release_update::FollowUpState::Unknown
+    ));
+}
