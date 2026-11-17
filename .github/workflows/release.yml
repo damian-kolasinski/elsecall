@@ -42,6 +42,29 @@ jobs:
         if: github.ref_type == 'tag'
         run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
 
+  # Check runs the full test suite on every commit pushed to main. A release
+  # waits for that run on the tagged commit instead of running the suite again;
+  # nothing is signed or published until it passed.
+  tested:
+    needs: version
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    # Covers a Check run still queued for a macOS runner when the tag arrives.
+    timeout-minutes: 150
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check passed on main for the release commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 distribution/checked_commit.py --repository "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" --summary "$GITHUB_STEP_SUMMARY"
+
+  # Packages, smoke-tests and installs the archive. A pull request's own Check
+  # run tests it, and a tag waits for main's in the tested job.
   build:
     needs: version
     # Ship only the native target this job runs. Elsecall supports macOS.
@@ -54,7 +77,6 @@ jobs:
         with:
           version: 2026.10.11
           cache: false
-      - run: cargo test --workspace --locked
       - run: python3 -m unittest discover -s distribution -p 'test_*.py'
       - run: python3 distribution/package.py --build
       - run: python3 distribution/smoke.py dist/elsecall-*.tar.gz
@@ -71,7 +93,7 @@ jobs:
           if-no-files-found: error
 
   sign:
-    needs: [version, build]
+    needs: [version, tested, build]
     if: github.event_name == 'push' && github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     permissions:
@@ -103,7 +125,7 @@ jobs:
 
   publish:
     if: github.ref_type == 'tag'
-    needs: [version, sign]
+    needs: [version, tested, sign]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
