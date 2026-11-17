@@ -14,6 +14,9 @@ fi
 if [ -d distribution ]; then
   python3 -m unittest discover -s distribution -p 'test_*.py'
 fi
+if [ -f scripts/test_check_selection.py ]; then
+  python3 -m unittest discover -s scripts -p 'test_*.py'
+fi
 # nextest does not run doctests. Both run even if the first fails.
 status=0
 python3 scripts/test-environment.py cargo nextest run --workspace --locked || status=$?

@@ -58,6 +58,7 @@ When `mg` is installed and connected to the operator's hub, use the mergegate wo
 - Publish work through the operator's mergegate hub with `mg submit`; never `git push` or `gh pr create`, even when asked to open a PR. The hub opens the GitHub PR and squash-merges it into `main` after approval.
 - Follow the installed `mergegate` skill for submission, review feedback, and cleanup. If it is not loaded, read `~/.mergegate/skill/mergegate/SKILL.md` and its relevant references; do not vendor a copy into this repository.
 - Run `mg init --project elsecall` once in every new clone or worktree, and `scripts/install-hooks.sh` once in every new clone. Fetch `mergegate` and start work on a branch from `mergegate/main`, since the clone's local `main` may be stale.
+- Iterate with `mise run check:affected`, which runs only the tests the branch's changes can affect; `mise run check` must pass before submitting.
 - Commit scoped changes after relevant verification, then submit through `scripts/mg_guard.py` with a short review guide explaining the purpose, validation, and which files to read first.
 - Answer each review comment with `mg reply` through `scripts/mg_guard.py`, make supported changes, and submit the next revision. In Codex, leave the wake command described by the mergegate skill and end the turn instead of polling for feedback.
 - Reach the hub only through `mg`; its UI and HTTP API are reserved for the operator.

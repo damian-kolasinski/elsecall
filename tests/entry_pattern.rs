@@ -380,6 +380,22 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
             include_str!("../scripts/lib/elsecall.sh"),
         ),
         ("scripts/check.sh", include_str!("../scripts/check.sh")),
+        (
+            "scripts/check-affected.sh",
+            include_str!("../scripts/check-affected.sh"),
+        ),
+        (
+            "scripts/check_affected.py",
+            include_str!("../scripts/check_affected.py"),
+        ),
+        (
+            "scripts/check_selection.py",
+            include_str!("../scripts/check_selection.py"),
+        ),
+        (
+            "scripts/changed_paths.py",
+            include_str!("../scripts/changed_paths.py"),
+        ),
         ("scripts/build.sh", include_str!("../scripts/build.sh")),
         ("scripts/perf.sh", include_str!("../scripts/perf.sh")),
         (
@@ -407,10 +423,13 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
         Some(&consumer.root),
         &toml::to_string(&policy).unwrap(),
     );
+    // `task` is the script's name, then its arguments.
     let invoke = |task: &str, home: &Path, mode: Option<&str>, lint_exit: &str| {
+        let mut words = task.split(' ');
         let mut command = crate::processes::command("/bin/sh");
         command
-            .arg(format!("scripts/{task}.sh"))
+            .arg(format!("scripts/{}.sh", words.next().unwrap()))
+            .args(words)
             .current_dir(&consumer.root)
             .env("HOME", home)
             .env(
@@ -442,10 +461,32 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
         assert!(output.status.success(), "{output:?}");
         assert_eq!(String::from_utf8(output.stdout).unwrap(), expected);
     }
+    // The fixture's own manifest is new on its branch, so the affected check
+    // selects every test; a dry run prints that plan within one admission.
+    std::fs::write(
+        consumer.root.join("Cargo.toml"),
+        "[package]\nname = \"app\"\n",
+    )
+    .unwrap();
+    let output = invoke("check-affected --dry-run", member.home.path(), None, "0");
+    assert!(output.status.success(), "{output:?}");
+    let plan = String::from_utf8(output.stdout).unwrap();
+    assert!(
+        plan.ends_with(
+            "+ python3 scripts/test-environment.py cargo nextest run --workspace --locked\n\
+             + python3 scripts/test-environment.py cargo test --doc --workspace --locked\n"
+        ),
+        "{plan}"
+    );
     let recorded = runs(&member);
     assert_eq!(
         labelled(&recorded, "elsecall check").len(),
         2,
+        "{recorded:?}"
+    );
+    assert_eq!(
+        labelled(&recorded, "elsecall check affected").len(),
+        1,
         "{recorded:?}"
     );
     assert_eq!(
