@@ -563,3 +563,88 @@ compete with later tests and panic on a closed pipe. The report carries
 fixture material only: temporary paths, loopback ports, event names and
 rehearsal JSON. `tests/fixture_diagnostics.rs` checks the report through
 libtest's real capture by running a deliberately failing helper test.
+
+## Relaunch gaps and the abandoned controller's deadline
+
+Nine Check attempts failed in `tests/rehearse.rs` between 2026-11-16 and
+2026-11-17. Five showed `service_unavailable` from a member command, or a
+Null `effective_fingerprint` in `sync status`, right after a
+`keep_local_margin` change. Four showed an incomplete baseline recording;
+see the open items below. All measurements below run the test binary
+directly, with Elsecall controls stripped from the environment as
+`scripts/test-environment.py` does. Each iteration gets its own process group,
+which is killed afterwards, so nothing outlives an iteration.
+
+### Causes
+
+- **Relaunch gap.** A synced service-settings change, including an A/B
+  proposal lease and its restoration, reaches each member by relaunching its
+  service at idle. The successor saves its scheduler settings in
+  `Scheduler::start`, before it binds the local socket and starts the member
+  listener. `wait_margin` polled `records.sqlite` for that record and
+  returned while the member could not answer yet. The next `runs` or
+  `sync status` then hit the gap: `service_unavailable` locally, or
+  `sync: null` for a peer, which the test read as a Null fingerprint. The
+  wait now also requires both members to answer `status` once the new
+  settings are recorded. The predecessor stops listening before it executes
+  the successor, so that answer comes from the relaunched service. Two
+  service-configuration tests had the same gap. The migration test waited
+  only for beta after a default changed, then moved the master through
+  relaunching alpha; a 2026-11-13 Check failed this way. The lease test
+  retried a removal on alpha immediately after the partial removal had
+  restored alpha's own settings. Both now wait until alpha reports itself
+  current, which only its successor does.
+- **Abandoned controller's deadline.** With `--limit 3s`, which also bounds
+  preparation and placement, the member watchdogs could stop the session
+  before bravo started its run. The test then waited 120 seconds for a run
+  that could no longer start. The limit is now 30 seconds, as for the
+  comparison arms. The compressed runs last a minute, so they are still in
+  flight when the watchdogs fire, and the test now requires every rehearsal
+  run to end without a normal exit. With runs shorter than the limit, that
+  check fails (verified).
+
+No production code, deadline or assertion changed meaning, and nothing is
+retried or serialized.
+
+### Reproduction and validation
+
+GitHub's runner has 3 cores. Here, 42 `yes` processes on 14 logical cores
+reproduced the CI signatures. Running at background QoS, confined to the 4
+efficiency cores, was not useful: almost every test hit its scheduling
+allowance. With 14 hogs, 6 iterations passed.
+
+| `tests/rehearse.rs`, 42 hogs | Iterations | Failed iterations | Median s | 1-minute load |
+| --- | ---: | ---: | ---: | ---: |
+| Before (`397ee1d`) | 30 | 13 | 72.0 | 99–253 |
+| After | 30 | 0 | 73.1 | 124–304 |
+| After, with the review's stronger abandoned-controller check | 15 | 0 | 68.4 | 105–181 |
+
+Before, 16 tests failed in those 13 iterations:
+`compare_restores_after_forced_controller_loss_without_contacting_installed_services`
+8 (4 Null fingerprint, 4 `service_unavailable`),
+`compare_restores_after_signal_and_new_production_work` 5,
+`compare_restores_and_exits_unsuccessfully_after_member_io_failure` 2 and
+`abandoned_controller_is_cleaned_by_member_watchdogs` 1.
+
+`tests/service_configuration.rs` ran 40 iterations before and 40 after, side
+by side with 21 hogs each. Both had a median of 19.5 s. The before build
+failed once, in a test this change does not touch (see open items). The
+after build did not fail.
+
+### Open items
+
+- **Incomplete baseline recordings.** Four CI attempts failed because a
+  comparison's baseline recording was incomplete, so no proposal was
+  applied. Two of them also showed a bravo-required request returning
+  `fleet_busy` after its 2-second hold. A recording is complete only if
+  each member's 1-second load sampler leaves no gap over 2 seconds
+  (`src/rehearsal/load_recording.rs`). These failures have not reproduced
+  locally yet. The failure reports above will show the member logs the next
+  time one happens.
+- **A missing `service_ready`.** Once in 40 iterations, before this change,
+  `consecutive_generations_restart_both_services_without_stranding_the_service_lock`
+  found fewer than six `service_ready` records in beta's log. That build
+  had no failure reports. This failure has not appeared in CI.
+- **Library CPU budget.** Once in CI,
+  `rehearsal::worker::cpu_tests::slower_instruction_service_does_not_inflate_the_cpu_budget`
+  measured 0.300 CPU seconds against 0.25 ± 0.04.
