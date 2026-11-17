@@ -7,6 +7,10 @@ rust = "1.99.0"
 [tasks.check]
 run = "./scripts/check.sh"
 
+# The tests the branch's changes can affect; `mise run check` before submitting.
+[tasks."check:affected"]
+run = "./scripts/check-affected.sh"
+
 [tasks.build]
 run = "./scripts/build.sh"
 

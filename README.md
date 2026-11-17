@@ -2298,6 +2298,8 @@ application.
 
 ```sh
 mise run check
+# While iterating: only the tests the branch's changes can affect.
+mise run check:affected
 mise run build
 # Timing budgets, measured serially against same-run baselines:
 mise run perf
@@ -2319,9 +2321,25 @@ cannot rely on another test having run first, and ports for member services are
 reserved across test processes. nextest does not run doctests, so the check runs
 them after it with `cargo test --doc`.
 
+`mise run check:affected` compares the branch with its merge base on
+`mergegate/main` (or `--base REF`), including uncommitted and untracked files, and
+runs formatting and Clippy for the whole workspace, then only the tests those
+paths can affect. `--dry-run` prints each changed path, what it selects and the
+commands. A change to the `elsecall` library or executable, a manifest, the lock
+file, the toolchain or the test environment runs every test. A test binary runs
+for itself; a shared test module runs the binaries declaring it; another crate
+runs its own tests; `distribution/` and `scripts/` run their Python tests. Other
+files are followed through the Rust, Python and shell sources naming them, down
+to one file's unit tests when only its `#[cfg(test)]` modules include them. A
+test that reads a file must name it, as `include_str!` does; one that builds the
+path at run time is missed unless a directory it names contains the file.
+Documentation and CI files nothing names select no tests. A path no rule covers
+runs everything. It is a fast loop, not a replacement: `mise run check` must pass
+before work is submitted.
+
 The mise tasks use the consumer entry pattern in "Integrating a consumer".
-The repository contains no workload policy. Set label rules for `elsecall check`
-and `elsecall build`, and `when_unavailable = "run"` if desired, in personal
+The repository contains no workload policy. Set label rules for `elsecall check`,
+`elsecall check affected` and `elsecall build`, and `when_unavailable = "run"` if desired, in personal
 `workloads.toml`. Without explicit sizes, Elsecall learns them from completed runs.
 Scripts run directly when Elsecall is missing; `ELSECALL=off mise run check` uses
 the usual escape hatch.
