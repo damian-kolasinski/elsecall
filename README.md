@@ -427,7 +427,10 @@ behind long-running work without an estimate moves to an idle member as soon as
 its assumed wait grows past that member's completion by the margin, well before
 its hold limit. A new request waits at
 most 750 ms for members' answers and uses a slower member's previous answer; a
-member that cannot be asked is left out and named in the decision.
+member that cannot be asked is left out and named in the decision: its `reason`
+names each such member and why, as in "macbook-pro was left out: it runs another
+build and refuses work from this one (version_skew); run elsecall fleet upgrade on
+the master."
 
 Before the run starts on another member, the master brings that member's synced
 configuration up to date (see "Running on another member"). If that fails, placement
@@ -471,7 +474,10 @@ limit left and the scoring's own winner, `parameters` the values used, and
 re-scored exactly. `arrival` also holds that scoring's size and hold limit left,
 and each candidate's `state` and `inputs`, so `elsecall replay` can re-score the
 scoring that decided where the request went first. `elsecall runs` lists each run's `placement`,
-`calling_member`, `member`, `placed` (side, members, warmth, sync time) and `reason`.
+`calling_member`, `member`, `placed` (side, members, warmth, sync time) and `reason`;
+a placeable request still waiting carries the `reason` of its latest scoring, or
+"It waits on NAME." while that scoring's winner cannot yet take it from there, with
+the members left out either way.
 
 ## Fleet reports
 

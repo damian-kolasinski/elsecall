@@ -472,12 +472,18 @@ impl Scheduler {
             Some(Place::Member(member)) => Some(member),
             Some(Place::Undecided) | None => None,
         };
-        let reason = match (&moved_to, entry.auto.as_ref().and_then(|a| a.verdict.as_ref())) {
+        let verdict = entry.auto.as_ref().and_then(|a| a.verdict.as_ref());
+        let left_out = verdict.map_or_else(String::new, |(v, _)| {
+            placement::unreachable_left_out(&v.unreachable)
+        });
+        let reason = match (&moved_to, verdict) {
             (Some(member), Some((verdict, _))) if verdict.winner.as_ref() == Some(member) => {
                 verdict.reason.clone()
             }
-            (Some(member), _) => format!("{member} could start it first."),
-            (None, _) => "No remaining member could start it in time yet; it waits for one within its hold limit.".into(),
+            (Some(member), _) => format!("{member} could start it first.{left_out}"),
+            (None, _) => format!(
+                "No remaining member could start it in time yet; it waits for one within its hold limit.{left_out}"
+            ),
         };
         entry.record.fallbacks.push(Fallback {
             failed_sync,
@@ -704,13 +710,36 @@ impl Scheduler {
         }
     }
 
+    /// Why placeable request `id` still waits, from its latest scoring; `None`
+    /// once it started, or before it was first scored.
+    /// When that scoring's winner is not where the request waits (it stays put
+    /// until the winner can start it sooner by the moving margin), the reason
+    /// says where it waits instead, so it never reads as headed elsewhere.
+    pub(super) fn waiting_reason(&self, book: &Book, id: &RunId) -> Option<String> {
+        let entry = book.entries.get(id)?;
+        let place = match self.place_of(entry)? {
+            Place::Here => Some(self.name()),
+            Place::Member(member) => Some(member),
+            Place::Undecided => None,
+        };
+        let (verdict, _) = entry.auto.as_ref()?.verdict.as_ref()?;
+        Some(with_fallbacks(
+            &waiting_text(place.as_deref(), verdict),
+            &entry.record.fallbacks,
+        ))
+    }
+
     /// The reason recorded when a placeable request starts on `member`.
     pub(super) fn start_reason(entry: &Entry, member: &str) -> String {
         match entry.auto.as_ref().and_then(|a| a.verdict.as_ref()) {
             Some((verdict, _)) if verdict.winner.as_deref() == Some(member) => {
                 verdict.reason.clone()
             }
-            _ => format!("{member} could start it first."),
+            Some((verdict, _)) => format!(
+                "{member} could start it first.{}",
+                placement::unreachable_left_out(&verdict.unreachable)
+            ),
+            None => format!("{member} could start it first."),
         }
     }
 
@@ -836,13 +865,25 @@ fn sync_failed(sync: &PreRunSyncRecord) -> String {
 fn with_fallbacks(reason: &str, fallbacks: &[Fallback]) -> String {
     let mut text = reason.to_owned();
     for fallback in fallbacks {
-        text.push_str(&format!(
-            " {} was left out: {}",
-            fallback.failed_sync.member,
-            sync_failed(&fallback.failed_sync)
+        text.push_str(&placement::left_out(
+            &fallback.failed_sync.member,
+            &sync_failed(&fallback.failed_sync),
         ));
     }
     text
+}
+
+/// Why a request waiting on `place` (`None` while undecided) waits, from its
+/// latest scoring: that scoring's reason when it waits where the scoring
+/// would put it, else where it waits, with the members left out either way.
+fn waiting_text(place: Option<&str>, verdict: &placement::Verdict) -> String {
+    match place {
+        Some(place) if verdict.winner.as_deref() != Some(place) => format!(
+            "It waits on {place}.{}",
+            placement::unreachable_left_out(&verdict.unreachable)
+        ),
+        _ => verdict.reason.clone(),
+    }
 }
 
 /// What is expected of running work: what is left of its member's expected
@@ -863,6 +904,9 @@ fn unreachable_why(failure: &Failure) -> String {
         "not_master" | "member_rejected" | "member_unverified" => {
             "It does not accept this member's placement authority.".into()
         }
+        "version_skew" => {
+            "It runs another build and refuses work from this one (version_skew); run elsecall fleet upgrade on the master.".into()
+        }
         code if !code.is_empty()
             && code.len() <= 64
             && code.bytes().all(|b| b.is_ascii_lowercase() || b == b'_') =>
@@ -870,5 +914,57 @@ fn unreachable_why(failure: &Failure) -> String {
             format!("It could not give a quote ({code}).")
         }
         _ => "It could not give a quote.".into(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_member_on_another_build_is_left_out_with_the_upgrade_that_fixes_it() {
+        let skewed = crate::version_skew::skewed("0123456789abcdef", "fedcba9876543210");
+        let why = unreachable_why(&skewed);
+        assert!(
+            why.contains("(version_skew)") && why.contains("elsecall fleet upgrade"),
+            "{why}"
+        );
+        // Its own message names builds; this master's words never quote it.
+        assert!(!why.contains("0123456789abcdef"), "{why}");
+    }
+
+    fn verdict(winner: Option<&str>) -> placement::Verdict {
+        placement::Verdict {
+            candidates: Vec::new(),
+            unreachable: vec![placement::Unreachable {
+                peer_io: None,
+                member: "laptop".into(),
+                why: "It did not answer.".into(),
+            }],
+            winner: winner.map(Into::into),
+            reason: "The scoring's reason. laptop was left out: it did not answer.".into(),
+        }
+    }
+
+    #[test]
+    fn a_waiting_request_reads_as_waiting_where_it_is_not_where_scoring_would_put_it() {
+        // Waiting where the scoring puts it, or undecided: the scoring's reason.
+        for (place, winner) in [
+            (Some("mini"), Some("mini")),
+            (None, None),
+            (None, Some("mini")),
+        ] {
+            assert_eq!(
+                waiting_text(place, &verdict(winner)),
+                "The scoring's reason. laptop was left out: it did not answer."
+            );
+        }
+        // Kept on mini until devbox can start it sooner by the moving margin.
+        for winner in [Some("devbox"), None] {
+            assert_eq!(
+                waiting_text(Some("mini"), &verdict(winner)),
+                "It waits on mini. laptop was left out: it did not answer."
+            );
+        }
     }
 }
