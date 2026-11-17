@@ -37,7 +37,22 @@ already open stays open beside the new one and offers **Upgrade and reopen**.
 
 ## Install a release
 
-A version tag publishes a signed archive. mise installs it through packslip, which
+On an Apple silicon Mac, one command installs the latest release and opens its window:
+
+```sh
+curl -fsSL https://github.com/damian-kolasinski/elsecall/releases/latest/download/install.sh | sh
+```
+
+The [installer](distribution/install.sh) installs mise from <https://mise.run> when it is
+missing, selects the release in mise's global configuration (`mise use --global --pin`),
+and runs that release's `elsecall install --open`. mise's packslip backend checks the
+release's signature against its GitHub repository before anything from it runs. `ELSECALL_VERSION=0.2.0` chooses a
+release. In an account without a desktop session the service is installed and the
+window is skipped. Once Tailscale is running, this machine is the master of a fleet of
+one; see "Fleet" to add others. The installer is attached to every release and changes no shell configuration;
+it says how to put `~/.local/bin` on `PATH` when it is missing.
+
+The same steps by hand: a version tag publishes a signed archive. mise installs it through packslip, which
 checks the signature before putting `elsecall` on `PATH`. `elsecall install` copies
 the service executable and its matching desktop window into this account's installation
 and puts the window in place as an app. `--open` opens it; afterwards, open it from
