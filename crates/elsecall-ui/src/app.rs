@@ -7,6 +7,7 @@ use rune_kit::TableState;
 
 use crate::fleet_source::{
     FleetSnapshot, Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Role, SourceFailure,
+    Standing,
 };
 use crate::refresh::{self, Update};
 use crate::release_source::{self, ReleaseSnapshot};
@@ -29,6 +30,7 @@ const SCENES: &[(&str, Scene)] = &[
     ("unavailable-first", scene_unavailable_first),
     ("unavailable", scene_unavailable),
     ("solo", scene_solo),
+    ("no-tailnet", scene_no_tailnet),
     ("members", scene_members),
     ("upgrade", scene_upgrade),
     ("upgrading", scene_upgrading),
@@ -460,6 +462,12 @@ fn scene_solo(state: &mut AppState) {
     state.phase = Phase::Ready(solo_snapshot());
 }
 
+fn scene_no_tailnet(state: &mut AppState) {
+    state.follow_service = false;
+    state.refreshed = Some("14:32:05".into());
+    state.phase = Phase::Ready(no_tailnet_snapshot());
+}
+
 fn scene_members(state: &mut AppState) {
     state.follow_service = false;
     state.refreshed = Some("14:32:05".into());
@@ -614,6 +622,18 @@ fn solo_snapshot() -> FleetSnapshot {
                 fifteen: 1.5,
             }),
         )],
+        standing: Standing::Rostered,
+    }
+}
+
+/// A fresh Mac whose Tailscale is not running: no presence, so no roster.
+fn no_tailnet_snapshot() -> FleetSnapshot {
+    FleetSnapshot {
+        enrolled: false,
+        members: Vec::new(),
+        standing: Standing::OffTailnet {
+            hint: "Make sure Tailscale is running and logged in on this machine; the service retries every 30 seconds.".into(),
+        },
     }
 }
 
@@ -659,6 +679,7 @@ fn members_snapshot() -> FleetSnapshot {
                 }),
             ),
         ],
+        standing: Standing::Rostered,
     }
 }
 

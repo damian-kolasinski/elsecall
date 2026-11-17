@@ -1775,6 +1775,15 @@ is `in_sync` with this member's roster) or `unreachable` (with an `error` such a
 `member_unavailable`, `member_rejected` or `member_unverified`). Machine state is
 passed through as each member reports it, so members on newer versions may add fields.
 
+A machine that has not joined a fleet is the master of a fleet of one only while it has
+a tailnet presence. Until then `data.roster_error` says why it has no roster, with the
+repair as its `hint`: `tailnet_unavailable` until Tailscale is running and logged in, or
+`member_listener_unavailable` when it is but the member listener could not bind its port.
+`master` is then null and `members` lists at most this machine, unreachable. Whenever
+there is a roster, `roster_error` is null; an enrolled machine that loses Tailscale keeps
+its roster and shows members as unreachable. The fleet window shows the reason as a
+banner instead of an empty fleet.
+
 Each member also reports its **load history** as `status.load_history`, with
 `last_hour` and `last_day` up to the current second (`status.load_history_error`
 says why it could not be read). Every member keeps one row per minute in

@@ -329,11 +329,18 @@ impl Fleet {
 
     /// This member as it presents itself to others, from its live presence.
     pub(crate) fn own_member(&self) -> Result<Member> {
-        let (name, endpoints) = self
-            .presence()
-            .filter(|(_, endpoints)| !endpoints.is_empty())
-            .ok_or_else(|| crate::tailnet::unavailable("no tailnet address is bound yet"))?;
-        Member::new(name, self.key.public(), endpoints)
+        match self.presence() {
+            None => Err(crate::tailnet::unavailable(
+                "no tailnet address is bound yet",
+            )),
+            // Tailscale answered, but the listener could not bind any of its addresses.
+            Some((_, endpoints)) if endpoints.is_empty() => Err(Failure::new(
+                "member_listener_unavailable",
+                "Tailscale is running, but the member listener could not bind its port on any tailnet address.",
+                "Another process may hold the port; the service log names it as bind_failed. Free it, then run elsecall service restart.",
+            )),
+            Some((name, endpoints)) => Member::new(name, self.key.public(), endpoints),
+        }
     }
 
     /// The roster this member acts on. A solo member is a fleet of one; without a

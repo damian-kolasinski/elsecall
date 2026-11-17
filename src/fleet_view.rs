@@ -97,6 +97,11 @@ pub struct FleetView {
     pub members: Vec<MemberView>,
     /// Present while reachable members run different builds.
     pub version_skew: Option<VersionSkew>,
+    /// Why a machine that has not joined a fleet has no roster, so is not even the
+    /// master of its own fleet of one: `tailnet_unavailable` until Tailscale is
+    /// running and logged in, or `member_listener_unavailable` when it is but the
+    /// member listener could not bind its port. Absent whenever there is a roster.
+    pub roster_error: Option<Failure>,
 }
 
 /// Each member's build and the fleet's skew, and the members outside pressure
@@ -271,34 +276,7 @@ async fn members(fleet: &Fleet) -> FleetView {
     let roster = match fleet.roster() {
         Ok(roster) => roster,
         // Without a tailnet presence a solo member cannot even reach itself.
-        Err(error) => {
-            return FleetView {
-                enrolled,
-                epoch: 0,
-                master: None,
-                version_skew: None,
-                members: fleet
-                    .presence()
-                    .into_iter()
-                    .map(|(name, endpoints)| MemberView {
-                        name,
-                        key: fleet.public_key(),
-                        endpoints,
-                        role: Role::Master,
-                        this_member: true,
-                        reach: Reach::Unreachable {
-                            error: error.clone(),
-                        },
-                        latest_placed_run: None,
-                        config_sync: None,
-                        build: None,
-                        version_skew: None,
-                        blocked: None,
-                        outside_warnings: Vec::new(),
-                    })
-                    .collect(),
-            };
-        }
+        Err(error) => return without_roster(enrolled, fleet.presence(), fleet.public_key(), error),
     };
     let statuses = peer_client::call_each::<PeerStatus>(
         fleet.key(),
@@ -343,6 +321,43 @@ async fn members(fleet: &Fleet) -> FleetView {
         master: Some(roster.master().name.clone()),
         members,
         version_skew: None,
+        roster_error: None,
+    }
+}
+
+/// The fleet as a member without a roster sees it: only itself, if it knows its
+/// name, unreachable, and why it has no roster.
+fn without_roster(
+    enrolled: bool,
+    presence: Option<(MemberName, Vec<SocketAddr>)>,
+    key: crate::member_key::PublicKey,
+    error: Failure,
+) -> FleetView {
+    FleetView {
+        enrolled,
+        epoch: 0,
+        master: None,
+        version_skew: None,
+        members: presence
+            .into_iter()
+            .map(|(name, endpoints)| MemberView {
+                name,
+                key,
+                endpoints,
+                role: Role::Master,
+                this_member: true,
+                reach: Reach::Unreachable {
+                    error: error.clone(),
+                },
+                latest_placed_run: None,
+                config_sync: None,
+                build: None,
+                version_skew: None,
+                blocked: None,
+                outside_warnings: Vec::new(),
+            })
+            .collect(),
+        roster_error: Some(error),
     }
 }
 
@@ -390,6 +405,22 @@ mod tests {
     }
 
     #[test]
+    fn a_member_without_a_roster_says_why_and_lists_no_one() {
+        let key = crate::member_key::MemberKey::generate().unwrap().public();
+        let error = crate::tailnet::unavailable("Tailscale is not installed");
+        let rendered = serde_json::to_value(without_roster(false, None, key, error)).unwrap();
+        assert_eq!(rendered["members"], json!([]));
+        assert_eq!(rendered["master"], json!(null));
+        assert_eq!(rendered["roster_error"]["code"], "tailnet_unavailable");
+        assert!(
+            rendered["roster_error"]["hint"]
+                .as_str()
+                .unwrap()
+                .contains("Tailscale is running")
+        );
+    }
+
+    #[test]
     fn members_and_doctor_show_outside_warnings_per_member() {
         let view = FleetView {
             enrolled: true,
@@ -400,6 +431,7 @@ mod tests {
                 member("macbook-pro", vec![fseventsd()]),
             ],
             version_skew: None,
+            roster_error: None,
         };
         let rendered = serde_json::to_value(&view).unwrap();
         assert_eq!(rendered["members"][0]["outside_warnings"], json!([]));

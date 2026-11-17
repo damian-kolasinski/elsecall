@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "data": {
+    "enrolled": false,
+    "epoch": 0,
+    "master": null,
+    "members": [],
+    "version_skew": null,
+    "roster_error": {
+      "code": "tailnet_unavailable",
+      "message": "This machine's tailnet presence could not be discovered: no tailnet address is bound yet.",
+      "hint": "Make sure Tailscale is running and logged in on this machine; the service retries every 30 seconds."
+    }
+  }
+}

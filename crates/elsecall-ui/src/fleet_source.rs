@@ -11,6 +11,23 @@ pub struct FleetSnapshot {
     /// False when this machine has not enrolled in a fleet.
     pub enrolled: bool,
     pub members: Vec<MemberRow>,
+    pub standing: Standing,
+}
+
+/// Whether this machine has a roster. Without one it is not even the master of its
+/// own fleet of one, and an empty member list says nothing.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Standing {
+    Rostered,
+    /// Tailscale, where Elsecall finds and reaches members, is not running here.
+    OffTailnet {
+        hint: String,
+    },
+    /// On the tailnet, but without a roster for another reason the service names.
+    Unrostered {
+        message: String,
+        hint: String,
+    },
 }
 
 /// One member row.
