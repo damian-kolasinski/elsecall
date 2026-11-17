@@ -1,6 +1,8 @@
 [tools]
 rust = "1.99.0"
 "github:jdx/packslip" = "1.11.1"
+# The test runner `mise run check` uses; see .config/nextest.toml.
+"github:nextest-rs/nextest" = { version = "0.9.150", version_prefix = "cargo-nextest-" }
 
 [tasks.check]
 run = "./scripts/check.sh"

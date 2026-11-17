@@ -1,0 +1,33 @@
+# cargo-nextest runs every test in its own process, across all test binaries at
+# once. See README, "Development and verification".
+
+[profile.default]
+# Run every test even after a failure, so one failing binary never hides the
+# results of the binaries after it.
+fail-fast = false
+# No automatic retries: a test that fails under load is a bug to fix, and a
+# retry would report it as passing.
+retries = 0
+# Report a test still running after a minute; stop one that hangs for ten.
+# Fixture waits allow 120 seconds per step, so a passing test never gets close.
+slow-timeout = { period = "60s", terminate-after = 10 }
+
+[profile.default.junit]
+# target/nextest/default/junit.xml: per-test results and durations.
+path = "junit.xml"
+
+# Start the longest tests first, so none of them begins last and leaves the run
+# waiting on it alone. Each takes 30 seconds or more on its own (see
+# target/nextest/default/junit.xml); the order changes speed, never results.
+[[profile.default.overrides]]
+filter = """
+binary_id(elsecall::fleet_upgrade)
+| binary_id(elsecall::rehearse)
+| binary_id(elsecall::release_update_install)
+| test(=remote_run::fingerprint::tests::salted_fingerprints_match_only_equal_things_and_never_hang)
+| test(=golden::fleet_scenes_match_goldens)
+| test(/^perf_/)
+| test(=sealed_record_silence_eof_and_tampering_fail_without_payload_or_retry)
+| test(=a_slow_member_is_read_past_the_connection_bound)
+"""
+priority = 100
