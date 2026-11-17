@@ -148,6 +148,15 @@ fn a_desktop_install_places_the_signed_app_without_opening_it() {
         serde_json::to_value(&window).unwrap(),
         serde_json::json!({"state": "placed", "app": paths.window_app()})
     );
+    // Finder and the Dock show the icon the bundle names.
+    let info = plist::Value::from_file(app.join("Contents/Info.plist")).unwrap();
+    let icon = info
+        .as_dictionary()
+        .and_then(|info| info.get("CFBundleIconFile"))
+        .and_then(plist::Value::as_string)
+        .unwrap();
+    let icon = fs::read(app.join("Contents/Resources").join(format!("{icon}.icns"))).unwrap();
+    assert_eq!(&icon[..4], b"icns");
 }
 
 #[test]

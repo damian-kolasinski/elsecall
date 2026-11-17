@@ -31,6 +31,8 @@ const INFO_PLIST: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
   <string>Elsecall</string>
   <key>CFBundleDisplayName</key>
   <string>Elsecall</string>
+  <key>CFBundleIconFile</key>
+  <string>Elsecall</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
@@ -44,6 +46,10 @@ const INFO_PLIST: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 </dict>
 </plist>
 "#;
+
+/// The app's icon, `CFBundleIconFile` in `Contents/Resources`. Rendered from
+/// `assets/icon/elsecall.svg` by `scripts/render-icon.sh`.
+const ICON: &[u8] = include_bytes!("../assets/icon/Elsecall.icns");
 
 /// Sign before publication; restore the previous bundle if opening fails.
 pub fn publish(paths: &Paths, launcher: &dyn WindowLauncher) -> Result<()> {
@@ -220,6 +226,8 @@ fn write_bundle(app: &Path, binary: &[u8]) -> Result<()> {
     .map_err(|error| Failure::io("Write the Elsecall app identity", error))?;
     let resources = app.join("Contents/Resources");
     fs::create_dir(&resources).map_err(|error| Failure::io("Create app resources", error))?;
+    fs::write(resources.join("Elsecall.icns"), ICON)
+        .map_err(|error| Failure::io("Write the Elsecall app icon", error))?;
     fs::write(
         resources.join("build-id"),
         crate::build_identity::Digest::of(binary)
@@ -273,4 +281,42 @@ pub fn running_build(executable: &Path) -> Result<crate::build_identity::BuildId
     crate::build_identity::Digest::of_file(executable)
         .map(|digest| digest.build_id())
         .map_err(|error| Failure::io("Read the running window", error))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ICON;
+
+    /// The element types in an ICNS file, after its 8-byte header.
+    fn icns_types(icns: &[u8]) -> Vec<String> {
+        assert_eq!(&icns[..4], b"icns");
+        assert_eq!(
+            u32::from_be_bytes(icns[4..8].try_into().unwrap()) as usize,
+            icns.len()
+        );
+        let mut types = Vec::new();
+        let mut at = 8;
+        while at < icns.len() {
+            let length = u32::from_be_bytes(icns[at + 4..at + 8].try_into().unwrap()) as usize;
+            assert!(length >= 8, "element at {at} has length {length}");
+            types.push(String::from_utf8_lossy(&icns[at..at + 4]).into_owned());
+            at += length;
+        }
+        assert_eq!(at, icns.len());
+        types
+    }
+
+    #[test]
+    fn the_icon_has_every_size_finder_and_the_dock_ask_for() {
+        let mut types = icns_types(ICON);
+        types.retain(|kind| kind != "info");
+        types.sort();
+        // 16, 32, 128, 256 and 512 points at 1x and 2x: 16 to 1024 pixels.
+        assert_eq!(
+            types,
+            [
+                "ic04", "ic05", "ic07", "ic08", "ic09", "ic10", "ic11", "ic12", "ic13", "ic14"
+            ]
+        );
+    }
 }

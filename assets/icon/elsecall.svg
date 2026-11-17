@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!--
+    Elsecall app icon: the fleet as a constellation. The bright node is the
+    master; the pale ones are members, linked over the tailnet.
+    Source of Elsecall.icns and elsecall.png, and drawn into
+    social-preview.png; regenerate them with scripts/render-icon.sh. Laid out
+    on Apple's macOS icon grid: an 824 x 824 body, corner radius 185.4, on a
+    1024 x 1024 canvas with a drop shadow. Colours derive from the window's
+    brand tokens (src/theme.rs in elsecall-ui); #0b4f82 lightens the dark
+    brand tint for the top of the gradient.
+  -->
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b4f82"/>
+      <stop offset="1" stop-color="#052033"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="512" cy="340" r="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#66bfff" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#66bfff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".16"/>
+      <stop offset=".5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- Blurs only the shadow: filtering the body itself bands its gradient. -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+  </defs>
+  <rect x="100" y="110" width="824" height="824" rx="185.4" fill="#000" fill-opacity=".3" filter="url(#shadow)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185.4" fill="url(#body)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185.4" fill="url(#glow)"/>
+  <rect x="101" y="101" width="822" height="822" rx="184.4" fill="none" stroke="url(#sheen)" stroke-width="2"/>
+  <!-- Artwork drawn on a 100-unit grid whose 2..98 square is the body. -->
+  <g transform="translate(82.833 82.833) scale(8.5833)">
+    <g fill="none" stroke="#66bfff" stroke-width="3" stroke-opacity=".55" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M50 30L24 60M50 30L76 60M50 30L50 78M24 60L50 78L76 60"/>
+    </g>
+    <circle cx="50" cy="30" r="15" fill="none" stroke="#66bfff" stroke-opacity=".35" stroke-width="2"/>
+    <circle cx="50" cy="30" r="9" fill="#66bfff"/>
+    <circle cx="24" cy="60" r="6.5" fill="#e5f4ff"/>
+    <circle cx="76" cy="60" r="6.5" fill="#e5f4ff"/>
+    <circle cx="50" cy="78" r="6.5" fill="#e5f4ff"/>
+  </g>
+</svg>
