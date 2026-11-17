@@ -638,8 +638,10 @@ fn abandoned_controller_is_cleaned_by_member_watchdogs() {
     let temp = tempfile::tempdir().unwrap();
     let input = fixture(temp.path(), &[0, 0, 10000]);
     let mut source: Value = serde_json::from_slice(&fs::read(&input).unwrap()).unwrap();
+    // Compressed to a minute, the runs outlast the limit below: only the
+    // watchdogs can end them.
     for r in source["requests"].as_array_mut().unwrap() {
-        r["run_ms"] = json!(20000);
+        r["run_ms"] = json!(120_000);
     }
     fs::write(&input, source.to_string()).unwrap();
     let output = temp.path().join("observed.json");
@@ -653,8 +655,11 @@ fn abandoned_controller_is_cleaned_by_member_watchdogs() {
             output.to_str().unwrap(),
             "--compress",
             "2",
+            // Member watchdogs stop the session at this limit, which also covers
+            // preparation and placement: bravo must start its run before then.
+            // Cleanup is still awaited with the 120-second scheduling allowance.
             "--limit",
-            "3s",
+            "30s",
         ])
         .spawn()
         .unwrap();
@@ -689,6 +694,21 @@ fn abandoned_controller_is_cleaned_by_member_watchdogs() {
         sleep(Duration::from_millis(50));
     }
     assert_clean(&alpha, &bravo, &session);
+    for member in [&alpha, &bravo] {
+        let runs = member.ok(&["runs", "--limit", "500"]);
+        let stopped = runs["runs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|r| {
+                r["label"]
+                    .as_str()
+                    .is_some_and(|l| l.starts_with("rehearsal:"))
+            })
+            .map(|r| !(r["outcome"]["kind"] == "exited" && r["outcome"]["exit_code"] == 0))
+            .collect::<Vec<_>>();
+        assert!(!stopped.is_empty() && stopped.iter().all(|s| *s), "{runs}");
+    }
 }
 
 #[test]
@@ -1045,6 +1065,13 @@ fn latest_margin(member: &TestMember) -> Option<f64> {
         .last()
         .map(|s| s.parameters.placement.keep_local_margin)
 }
+/// Waits until both members run with `margin` and serve again.
+///
+/// A synced settings change reaches a member by relaunching its service once it
+/// is idle. The successor records its settings while it starts, before its local
+/// and member listeners open, so a recorded margin alone does not mean the member
+/// answers yet. Its first answer comes from the successor: the predecessor
+/// stopped listening before it executed it.
 fn wait_margin(alpha: &TestMember, bravo: &TestMember, margin: f64) {
     let end = Instant::now() + processes::WAIT;
     while latest_margin(alpha) != Some(margin) || latest_margin(bravo) != Some(margin) {
@@ -1057,6 +1084,16 @@ fn wait_margin(alpha: &TestMember, bravo: &TestMember, margin: f64) {
         sleep(Duration::from_millis(50));
     }
     diagnostics::note(format!("both members recorded keep_local_margin {margin}"));
+    for member in [alpha, bravo] {
+        while !member.run(&["status"]).status.success() {
+            assert!(
+                Instant::now() < end,
+                "{} did not serve after relaunching",
+                member.name
+            );
+            sleep(Duration::from_millis(20));
+        }
+    }
 }
 fn proposal_file(dir: &Path) -> std::path::PathBuf {
     let path = dir.join("proposal.json");

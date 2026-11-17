@@ -153,6 +153,9 @@ fn removing_a_lease_retries_partial_delivery_without_another_generation() {
     let restored = held(&alpha);
     assert_eq!(restored.service, Some(before));
     assert_eq!(held(&beta).service, Some(leased));
+    // Alpha now holds its original settings again and relaunches at idle; only
+    // its successor reports it current and can take the retried removal.
+    current(&alpha, "alpha");
     let retried = call(None, Default::default());
     assert_eq!(retried["round"]["complete"], true, "{retried}");
     assert_eq!(retried["generation"], restored.generation);
@@ -353,6 +356,9 @@ fn migration_validates_plans_reloads_between_work_and_preserves_decision_paramet
     std::fs::write(beta.data().join("config.toml"), "not toml").unwrap();
     source(&alpha, &CONFIG.replace("0.75", "0.8"));
     alpha.ok(&["sync", "push"]);
+    // A default changed, so both services relaunch. Alpha only reports itself
+    // current from its successor, after which it can take the move below.
+    current(&alpha, "alpha");
     current(&alpha, "beta");
     assert_eq!(beta.ok(&["runs"])["member"]["capacity"]["reserved"], 3.0);
     // Replica restoration happens at role change; subsequent edits on the new
