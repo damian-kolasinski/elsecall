@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import stamp_installer
+
 SCRIPT = Path(__file__).resolve().with_name("install.sh")
 
 # Records every call, then answers like mise would for the commands install.sh uses.
@@ -30,7 +32,7 @@ def opened():
 
 @unittest.skipUnless(platform.system() == "Darwin" and platform.machine() == "arm64", "Apple silicon only")
 class InstallScript(unittest.TestCase):
-    def run_script(self, result=opened(), status=0, **environment):
+    def run_script(self, result=opened(), status=0, script=SCRIPT, **environment):
         root = Path(self.enterContext(tempfile.TemporaryDirectory(prefix="elsecall-script-")))
         home = root / "home"
         tools = home / ".local/bin"
@@ -40,7 +42,7 @@ class InstallScript(unittest.TestCase):
         mise.chmod(0o755)
         log = root / "calls"
         completed = subprocess.run(
-            ["/bin/sh", str(SCRIPT)],
+            ["/bin/sh", str(script)],
             env={
                 "HOME": str(home),
                 "PATH": "/usr/bin:/bin",
@@ -75,6 +77,22 @@ class InstallScript(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn(
             "use --global --pin packslip:github.com/damian-kolasinski/elsecall@0.2.0",
+            calls,
+        )
+
+    def test_the_installer_attached_to_a_release_installs_that_release(self):
+        directory = Path(self.enterContext(tempfile.TemporaryDirectory(prefix="elsecall-stamped-")))
+        stamped = directory / "install.sh"
+        stamped.write_text(stamp_installer.stamp(SCRIPT.read_text(), "0.2.1"))
+        completed, calls = self.run_script(script=stamped)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn(
+            "use --global --pin packslip:github.com/damian-kolasinski/elsecall@0.2.1",
+            calls,
+        )
+        completed, calls = self.run_script(script=stamped, ELSECALL_VERSION="0.3.0")
+        self.assertIn(
+            "use --global --pin packslip:github.com/damian-kolasinski/elsecall@0.3.0",
             calls,
         )
 

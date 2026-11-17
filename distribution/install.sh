@@ -6,8 +6,8 @@
 # Selects the signed release in mise's global configuration (installing mise first
 # if needed; mise's packslip backend checks the release's signature against its
 # GitHub repository before anything from it runs), then runs that release's
-# `elsecall install --open`. Set ELSECALL_VERSION to choose a release other than
-# the latest.
+# `elsecall install --open`. The copy attached to a release installs that release;
+# ELSECALL_VERSION chooses another.
 #
 # Everything runs from main, called on the last line, so a download cut short runs
 # nothing. Commands read from /dev/null: when piped to sh, standard input is the
@@ -15,6 +15,9 @@
 set -eu
 
 tool="packslip:github.com/damian-kolasinski/elsecall"
+# The release workflow replaces this with the version the installer is attached to.
+# mise's own "latest" can lag a new release, or skip it under a minimum release age.
+release=latest
 
 say() { printf 'elsecall: %s\n' "$*" >&2; }
 fail() {
@@ -37,7 +40,7 @@ find_mise() {
 }
 
 main() {
-  version="${ELSECALL_VERSION:-latest}"
+  version="${ELSECALL_VERSION:-$release}"
   [ "$(uname -s)" = Darwin ] || fail "Elsecall runs on macOS only."
   [ "$(uname -m)" = arm64 ] || fail "Elsecall releases are built for Apple silicon Macs only."
 
