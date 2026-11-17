@@ -7,7 +7,7 @@ use rune::{Align, Color, El, col, row, text};
 use rune_kit::{Button, Cell, Table, TableColumn};
 
 use crate::app::AppState;
-use crate::fleet_source::{Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Role};
+use crate::fleet_source::{Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Role, Standing};
 use crate::theme;
 
 const DASH: &str = "—";
@@ -95,6 +95,22 @@ pub fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
     if let Some(failure) = state.failure() {
         page = page.child(banner(failure.message(), failure.hint(), &paints));
     }
+    // Enrolment and an empty member list mean nothing until the Mac has a roster.
+    match shown.map(|snapshot| &snapshot.standing) {
+        Some(Standing::OffTailnet { hint }) => {
+            return page.child(banner(
+                "This Mac is not on a tailnet yet",
+                &format!(
+                    "Elsecall finds and reaches your Macs over Tailscale; on a tailnet, this Mac is the master of its own fleet. {hint}"
+                ),
+                &paints,
+            ));
+        }
+        Some(Standing::Unrostered { message, hint }) => {
+            return page.child(banner(message, hint, &paints));
+        }
+        Some(Standing::Rostered) | None => {}
+    }
     if shown.is_some_and(|snapshot| !snapshot.enrolled) {
         page = page.child(solo_line(&paints));
     }
@@ -129,7 +145,10 @@ fn header(state: &AppState, paints: &Paints, dark: bool) -> El {
         .center_y()
         .gap(theme::SPACE_3)
         .child(text("Fleet").font(paints.h3).color(paints.text));
-    if let Some(snapshot) = state.shown() {
+    if let Some(snapshot) = state
+        .shown()
+        .filter(|snapshot| snapshot.standing == Standing::Rostered)
+    {
         line = line.child(
             text(count_label(snapshot.members.len()))
                 .font(paints.small)

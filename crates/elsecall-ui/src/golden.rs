@@ -15,6 +15,7 @@ const SCENES: &[&str] = &[
     "unavailable-first",
     "unavailable",
     "solo",
+    "no-tailnet",
     "members",
     "upgrade",
     "upgrading",

@@ -14,7 +14,7 @@ use serde_json::Value;
 
 use crate::fleet_source::{
     FleetSnapshot, FleetSource, Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Role,
-    SourceFailure,
+    SourceFailure, Standing,
 };
 
 /// How long `elsecall fleet` waits for `GET /v1/fleet`.
@@ -161,6 +161,16 @@ pub(crate) fn snapshot_from_value(data: &Value) -> Result<FleetSnapshot, SourceF
     Ok(FleetSnapshot {
         enrolled: fleet.enrolled,
         members,
+        standing: match fleet.roster_error {
+            None => Standing::Rostered,
+            Some(error) if error.code == "tailnet_unavailable" => {
+                Standing::OffTailnet { hint: error.hint }
+            }
+            Some(error) => Standing::Unrostered {
+                message: error.message,
+                hint: error.hint,
+            },
+        },
     })
 }
 
@@ -226,6 +236,16 @@ fn map_member(member: WireMember) -> Result<MemberRow, SourceFailure> {
 struct WireFleet {
     enrolled: bool,
     members: Vec<WireMember>,
+    /// Older services do not report it.
+    #[serde(default)]
+    roster_error: Option<WireRosterError>,
+}
+
+#[derive(Deserialize)]
+struct WireRosterError {
+    code: String,
+    message: String,
+    hint: String,
 }
 
 #[derive(Deserialize)]
@@ -544,6 +564,40 @@ mod tests {
     }
 
     #[test]
+    fn a_machine_off_the_tailnet_is_told_how_to_join_one() {
+        let snap =
+            snapshot_from_value(&data(include_str!("../tests/fixtures/no-tailnet.json"))).unwrap();
+        assert!(snap.members.is_empty());
+        match snap.standing {
+            Standing::OffTailnet { hint } => {
+                assert!(hint.contains("Tailscale is running"), "{hint}")
+            }
+            other => panic!("expected a machine off the tailnet, got {other:?}"),
+        }
+        // Services from before the field existed report a tailnet as present.
+        let older =
+            snapshot_from_value(&data(include_str!("../tests/fixtures/fleet.json"))).unwrap();
+        assert_eq!(older.standing, Standing::Rostered);
+    }
+
+    #[test]
+    fn a_listener_without_its_port_is_not_mistaken_for_a_missing_tailnet() {
+        let mut document = data(include_str!("../tests/fixtures/no-tailnet.json"));
+        document["roster_error"] = serde_json::json!({
+            "code": "member_listener_unavailable",
+            "message": "Tailscale is running, but the member listener could not bind its port on any tailnet address.",
+            "hint": "Another process may hold the port.",
+        });
+        match snapshot_from_value(&document).unwrap().standing {
+            Standing::Unrostered { message, hint } => {
+                assert!(message.starts_with("Tailscale is running"), "{message}");
+                assert_eq!(hint, "Another process may hold the port.");
+            }
+            other => panic!("expected a machine without a roster, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn classifies_the_service_unavailable_envelope() {
         let fixture = include_str!("../tests/fixtures/error.json");
         let response: elsecall::api::ErrorResponse = serde_json::from_str(fixture).unwrap();
@@ -572,6 +626,10 @@ mod tests {
                 include_str!("../tests/fixtures/blocked.json"),
             ),
             ("error.json", include_str!("../tests/fixtures/error.json")),
+            (
+                "no-tailnet.json",
+                include_str!("../tests/fixtures/no-tailnet.json"),
+            ),
         ] {
             for needle in ["/Users/", ".home", "100.", "fd7a:"] {
                 assert!(!fixture.contains(needle), "{name} contains {needle}");
