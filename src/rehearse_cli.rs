@@ -586,6 +586,28 @@ pub(crate) async fn single(
             .filter(|(id, _)| recorded_ids.contains(id))
         })
         .collect();
+    // The controller's own outcome; `recording_missing` adds the evidence the
+    // exported trace lacks.
+    let mut unfinished = Vec::new();
+    if stop_reason != "completed" {
+        unfinished.push(format!("the rehearsal stopped: {stop_reason}"));
+    }
+    if submitted.len() != plan.arrivals.len() {
+        unfinished.push(format!(
+            "{} of {} planned requests were submitted",
+            submitted.len(),
+            plan.arrivals.len()
+        ));
+    }
+    if rehearsal_error.is_some() {
+        unfinished.push("the rehearsal failed".to_owned());
+    }
+    if !cleanup_errors.is_empty() {
+        unfinished.push("cleanup is incomplete".to_owned());
+    }
+    if inspections.iter().any(|r| r.production_active > 0) {
+        unfinished.push("production work was active on a member".to_owned());
+    }
     trace.rehearsal = Some(crate::rehearsal::recording::Recording {
         calibration: calibration.clone(),
         ideal_ms: submitted
@@ -622,11 +644,7 @@ pub(crate) async fn single(
         load_factor: args.load_factor,
         seed: args.seed,
         planned: plan.arrivals.len(),
-        complete: stop_reason == "completed"
-            && submitted.len() == plan.arrivals.len()
-            && rehearsal_error.is_none()
-            && cleanup_errors.is_empty()
-            && inspections.iter().all(|r| r.production_active == 0),
+        complete: unfinished.is_empty(),
         demand,
         duration_ms,
         charge_floor_ms,
@@ -679,7 +697,7 @@ pub(crate) async fn single(
         )?;
     }
     Ok(
-        json!({"placement_replay":{"mode":args.replay_placement.placement,"split":crate::replay_placement::split(source)},"calibration":calibration,"measured_calibration":measured_calibration,"recording_complete":trace.rehearsal.as_ref().is_some_and(|r|r.complete_for(&trace)),"certificate":certificate,"session":session,"compress":args.compress,"load_factor":args.load_factor,"seed":seed,"limit_ms":args.limit.as_millis(),"stop_reason":stop_reason,"rehearsal_error":rehearsal_error,"submitted":submitted.len(),"planned":plan.arrivals.len(),"aggregated_nested":plan.aggregated_nested,"elapsed_ms":started.elapsed().as_millis(),"trace":output,"cleanup_complete":cleanup_errors.is_empty(),"cleanup_errors":cleanup_errors,"requests":request_mapping,"metrics":crate::simulation::observed_metrics(&trace),"simulation":simulation}),
+        json!({"placement_replay":{"mode":args.replay_placement.placement,"split":crate::replay_placement::split(source)},"calibration":calibration,"measured_calibration":measured_calibration,"recording_complete":trace.rehearsal.as_ref().is_some_and(|r|r.complete_for(&trace)),"recording_missing":unfinished.iter().cloned().chain(trace.rehearsal.as_ref().map(|r|r.missing_evidence(&trace)).unwrap_or_default()).collect::<Vec<_>>(),"certificate":certificate,"session":session,"compress":args.compress,"load_factor":args.load_factor,"seed":seed,"limit_ms":args.limit.as_millis(),"stop_reason":stop_reason,"rehearsal_error":rehearsal_error,"submitted":submitted.len(),"planned":plan.arrivals.len(),"aggregated_nested":plan.aggregated_nested,"elapsed_ms":started.elapsed().as_millis(),"trace":output,"cleanup_complete":cleanup_errors.is_empty(),"cleanup_errors":cleanup_errors,"requests":request_mapping,"metrics":crate::simulation::observed_metrics(&trace),"simulation":simulation}),
     )
 }
 fn mapping(
