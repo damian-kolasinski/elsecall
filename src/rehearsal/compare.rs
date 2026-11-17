@@ -48,6 +48,25 @@ async fn inspect(paths: &Paths, members: &[String]) -> Result<Vec<Reply>> {
 fn same(actual: &SchedulerSettings, expected: &SchedulerSettings) -> bool {
     actual.parameters == expected.parameters && actual.capacity == expected.capacity
 }
+/// Why a baseline cannot be compared, from the controller's own report: its
+/// first reason, and how many more `baseline.recording_missing` lists.
+fn baseline_incomplete(baseline: &Value) -> String {
+    let reasons = baseline["recording_missing"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .collect::<Vec<_>>();
+    match reasons.as_slice() {
+        [] => "Baseline rehearsal is incomplete; no proposal was applied.".to_owned(),
+        [only] => format!("Baseline rehearsal is incomplete: {only}; no proposal was applied."),
+        [first, rest @ ..] => format!(
+            "Baseline rehearsal is incomplete: {first}, and {} more in baseline.recording_missing; no proposal was applied.",
+            rest.len()
+        ),
+    }
+}
+
 fn fingerprints(settings: &BTreeMap<String, SchedulerSettings>) -> BTreeMap<String, String> {
     settings
         .iter()
@@ -244,9 +263,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
             .map(|e| json!(e))
             .unwrap_or_else(|| {
                 if baseline["rehearsal_error"].is_null() {
-                    json!(invalid(
-                        "Baseline rehearsal is incomplete; no proposal was applied."
-                    ))
+                    json!(invalid(baseline_incomplete(&baseline)))
                 } else {
                     baseline["rehearsal_error"].clone()
                 }
@@ -457,6 +474,23 @@ fn comparison(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn an_incomplete_baseline_says_why() {
+        assert_eq!(
+            baseline_incomplete(&json!({"recording_missing":["the rehearsal stopped: limit"]})),
+            "Baseline rehearsal is incomplete: the rehearsal stopped: limit; no proposal was applied."
+        );
+        assert_eq!(
+            baseline_incomplete(
+                &json!({"recording_missing":["bravo: no load buckets","the exported trace is incomplete","request r-1: missing demand, duration or work evidence"]})
+            ),
+            "Baseline rehearsal is incomplete: bravo: no load buckets, and 2 more in baseline.recording_missing; no proposal was applied."
+        );
+        assert_eq!(
+            baseline_incomplete(&json!({"recording_missing":[]})),
+            "Baseline rehearsal is incomplete; no proposal was applied."
+        );
+    }
     #[test]
     fn changed_or_missing_member_fingerprints_fail_restoration() {
         let before = BTreeMap::from([("alpha".into(), "original".into())]);

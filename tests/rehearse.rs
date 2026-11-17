@@ -393,6 +393,14 @@ fn stops_new_submissions_when_production_arrives_and_finishes_in_flight() {
     let result = members::json(&result)["data"].clone();
     assert_eq!(result["stop_reason"], "production_arrived", "{result}");
     assert!(result["certificate"].is_null());
+    assert_eq!(result["recording_complete"], false, "{result}");
+    assert!(
+        result["recording_missing"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("the rehearsal stopped: production_arrived")),
+        "{result}"
+    );
     assert_eq!(result["submitted"], 1, "{result}");
     assert_eq!(result["metrics"]["completed"], 1, "{result}");
     assert_clean(&alpha, &bravo, result["session"].as_str().unwrap());
@@ -1117,6 +1125,7 @@ fn compare_reports_live_metrics_uses_synthetic_sizes_and_restores_synced_setting
     );
     assert!(result.status.success(), "{result:?}");
     let data = members::json(&result)["data"].clone();
+    assert_eq!(data["baseline"]["recording_missing"], json!([]), "{data}");
     assert_eq!(data["settings_restored"], true, "{data}");
     assert_eq!(
         data["effective_fingerprints"]["before"],

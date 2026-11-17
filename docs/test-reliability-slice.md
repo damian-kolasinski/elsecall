@@ -639,12 +639,27 @@ after build did not fail.
   `fleet_busy` after its 2-second hold. A recording is complete only if
   each member's 1-second load sampler leaves no gap over 2 seconds
   (`src/rehearsal/load_recording.rs`). These failures have not reproduced
-  locally yet. The failure reports above will show the member logs the next
-  time one happens.
+  locally. A local probe timed every member's sampler tick over six rehearsal
+  runs at 42 CPU hogs plus a concurrent rehearsal run. Over 5,128 ticks the
+  longest gap was 1,055 ms. Sampling, the scheduler lock and the load-log
+  write each took at most 44 ms. So queueing inside the service does not
+  explain a gap over 2 seconds. Two other suspects were measured and ruled
+  out. Fixture polling every 20 ms accounted for about 7% of the binary's
+  instructions (12.9 G against 12.0 G at 100 ms), with no change in wall
+  time. Peak resident memory of the whole test tree was 1.5 GB, far from the
+  runner's 7 GB. What remains is host-level stalls on the shared 3-vCPU
+  runner. The rehearsal now reports `recording_missing`, the reasons a
+  recording is incomplete, and a comparison's error names them. The next CI
+  occurrence will therefore say which evidence was missing.
 - **A missing `service_ready`.** Once in 40 iterations, before this change,
   `consecutive_generations_restart_both_services_without_stranding_the_service_lock`
   found fewer than six `service_ready` records in beta's log. That build
   had no failure reports. This failure has not appeared in CI.
 - **Library CPU budget.** Once in CI,
   `rehearsal::worker::cpu_tests::slower_instruction_service_does_not_inflate_the_cpu_budget`
-  measured 0.300 CPU seconds against 0.25 ± 0.04.
+  measured 0.300 CPU seconds against 0.25 ± 0.04. A local mirror of the
+  test calibrated and ran the worker with the normal and the 4x-slower kernel
+  100 times each at 42 CPU hogs, measuring the perl parent and its worker
+  together as the test does. Every run used 0.25–0.27 CPU seconds, and the
+  parent's own startup stayed under 10 ms. The test is unchanged until a CI
+  occurrence shows where the extra 50 ms went.
