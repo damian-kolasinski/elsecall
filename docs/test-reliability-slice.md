@@ -537,3 +537,29 @@ export/fidelity and no certificate; inspect both members for ended rehearsal run
 and absent copies, stores, journals and scratch directories. Repeat under normal
 load to exercise controller/watchdog cleanup ordering, then verify that an
 abandoned controller's watchdog cleanup leaves the same resources absent.
+
+## Failure reports from fleet fixtures
+
+Between 2026-11-16 and 2026-11-17, nine Check attempts failed in
+`tests/rehearse.rs` and one in the library tests. A failed `TestMember::ok`
+printed only the JSON of the failed command. It showed neither the member's
+service log nor the rehearsal controller's output, so no CI failure explained
+itself. The release workflow now waits for main's Check, so each unexplained
+failure also delays a release until someone reruns it.
+
+`tests/diagnostics` keeps, per test thread, the logs a fixture owns and a
+journal of the member commands it ran. A panic hook prints them after the
+panic message, for any assertion in the test thread:
+
+- the latest 200 commands, with timing, outcome, error code and duration;
+  polling repeats collapse into one line with a count and duration range;
+- the time and load average;
+- the tail of each live member's `service.log` and `serve.log`, and each
+  registered rehearsal controller's output.
+
+Rehearsal controllers write to files instead of unread pipes. A test that
+fails while a controller runs kills and reaps it, rather than leaving it to
+compete with later tests and panic on a closed pipe. The report carries
+fixture material only: temporary paths, loopback ports, event names and
+rehearsal JSON. `tests/fixture_diagnostics.rs` checks the report through
+libtest's real capture by running a deliberately failing helper test.

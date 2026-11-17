@@ -1,6 +1,7 @@
 //! `elsecall uninstall` against a real installed service in a temporary home,
 //! so the files it removes are the ones the service actually creates.
 #![cfg(target_os = "macos")]
+mod diagnostics;
 mod members;
 mod processes;
 

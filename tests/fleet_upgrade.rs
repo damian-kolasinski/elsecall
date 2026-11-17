@@ -5,6 +5,7 @@
 //! another identifier (a different build ID), and `/usr/bin/false`, a build that
 //! never becomes ready.
 #![cfg(target_os = "macos")]
+mod diagnostics;
 mod members;
 mod processes;
 

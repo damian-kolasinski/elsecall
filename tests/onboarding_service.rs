@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 //! Real local service/CLI under an isolated temporary HOME; no live fleet changes.
+mod diagnostics;
 mod members;
 mod processes;
 

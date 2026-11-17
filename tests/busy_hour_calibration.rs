@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 //! Real rehearsal services in disposable homes; only machine/discovery observations are scripted.
+mod diagnostics;
 mod members;
 mod processes;
 use elsecall::{

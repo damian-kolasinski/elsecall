@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 //! Real fleet services and normal run clients, with only discovery/load scripted.
+mod diagnostics;
 mod members;
 mod processes;
 use elsecall::{scheduling::timestamp::Timestamp, workload::trace::Trace};
@@ -13,6 +14,59 @@ use std::{
     time::{Duration, Instant},
 };
 
+/// A rehearsal controller whose output goes to files that a failed test prints.
+/// A test that fails while it runs kills and reaps it, so it cannot keep
+/// contending with later tests or write into a closed pipe.
+struct Controller {
+    child: Option<Child>,
+    stdout: std::path::PathBuf,
+    stderr: std::path::PathBuf,
+    _diagnostics: diagnostics::Log,
+}
+impl Controller {
+    fn spawn(mut command: std::process::Command, directory: &Path) -> Self {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        let n = NEXT.fetch_add(1, Ordering::Relaxed);
+        let stdout = directory.join(format!("controller-{n}.stdout"));
+        let stderr = directory.join(format!("controller-{n}.stderr"));
+        let child = command
+            .stdout(fs::File::create(&stdout).unwrap())
+            .stderr(fs::File::create(&stderr).unwrap())
+            .spawn()
+            .unwrap();
+        diagnostics::note(format!("controller {n} started as {}", child.id()));
+        Self {
+            child: Some(child),
+            _diagnostics: diagnostics::register(
+                format!("controller {n} output"),
+                vec![stdout.clone(), stderr.clone()],
+            ),
+            stdout,
+            stderr,
+        }
+    }
+    fn id(&self) -> u32 {
+        self.child.as_ref().expect("running").id()
+    }
+    fn wait_with_output(mut self) -> Output {
+        let status = self.child.take().expect("running").wait().unwrap();
+        diagnostics::note(format!("controller exited: {status}"));
+        Output {
+            status,
+            stdout: fs::read(&self.stdout).unwrap(),
+            stderr: fs::read(&self.stderr).unwrap(),
+        }
+    }
+}
+impl Drop for Controller {
+    fn drop(&mut self) {
+        if let Some(mut child) = self.child.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+}
 fn fleet() -> (TestMember, TestMember) {
     let alpha = TestMember::start("alpha");
     let bravo = TestMember::start("bravo");
@@ -317,7 +371,8 @@ fn stops_new_submissions_when_production_arrives_and_finishes_in_flight() {
     let temp = tempfile::tempdir().unwrap();
     let input = fixture(temp.path(), &[0, 6000, 10000]);
     let output = temp.path().join("observed.json");
-    let replay = processes::command(env!("CARGO_BIN_EXE_elsecall"))
+    let mut command = processes::command(env!("CARGO_BIN_EXE_elsecall"));
+    command
         .env("HOME", alpha.home.path())
         .current_dir(alpha.home.path())
         .args([
@@ -330,14 +385,12 @@ fn stops_new_submissions_when_production_arrives_and_finishes_in_flight() {
             "2",
             "--limit",
             "20s",
-        ])
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .unwrap();
+        ]);
+    let replay = Controller::spawn(command, temp.path());
     wait_running(&alpha, "rehearsal:build fixture");
     let mut work = production(&bravo, "0.1");
     work.wait().unwrap();
-    let result = replay.wait_with_output().unwrap();
+    let result = replay.wait_with_output();
     assert!(result.status.success(), "{result:?}");
     let result = members::json(&result)["data"].clone();
     assert_eq!(result["stop_reason"], "production_arrived", "{result}");
@@ -796,20 +849,17 @@ fn live_cleanup_stops_a_worker_after_only_its_caller_is_killed() {
     let mut source: Value = serde_json::from_slice(&fs::read(&input).unwrap()).unwrap();
     source["requests"][0]["run_ms"] = json!(60000);
     fs::write(&input, source.to_string()).unwrap();
-    let replay = processes::command(env!("CARGO_BIN_EXE_elsecall"))
-        .env("HOME", alpha.home.path())
-        .args([
-            "rehearse",
-            "--trace",
-            input.to_str().unwrap(),
-            "--output",
-            output.to_str().unwrap(),
-            "--limit",
-            "1m",
-        ])
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .unwrap();
+    let mut command = processes::command(env!("CARGO_BIN_EXE_elsecall"));
+    command.env("HOME", alpha.home.path()).args([
+        "rehearse",
+        "--trace",
+        input.to_str().unwrap(),
+        "--output",
+        output.to_str().unwrap(),
+        "--limit",
+        "1m",
+    ]);
+    let replay = Controller::spawn(command, temp.path());
     wait_running(&alpha, "rehearsal:build fixture");
     let records = elsecall::scheduling::records::Records::open_read_only(
         &alpha.data().join("records.sqlite"),
@@ -831,7 +881,7 @@ fn live_cleanup_stops_a_worker_after_only_its_caller_is_killed() {
     unsafe {
         libc::kill(record.requested_by.pid as i32, libc::SIGKILL);
     }
-    let result = replay.wait_with_output().unwrap();
+    let result = replay.wait_with_output();
     assert!(result.status.success(), "{result:?}");
     let result = members::json(&result)["data"].clone();
     for worker in record.processes {
@@ -987,6 +1037,7 @@ fn wait_margin(alpha: &TestMember, bravo: &TestMember, margin: f64) {
         );
         sleep(Duration::from_millis(50));
     }
+    diagnostics::note(format!("both members recorded keep_local_margin {margin}"));
 }
 fn proposal_file(dir: &Path) -> std::path::PathBuf {
     let path = dir.join("proposal.json");
@@ -1165,8 +1216,9 @@ fn compare_restores_after_forced_controller_loss_without_contacting_installed_se
     let input = fixture(temp.path(), &[0, 2000]);
     let proposal = proposal_file(temp.path());
     let output = temp.path().join("killed.json");
-    let diagnostics = temp.path().join("controller.log");
-    let log = fs::File::create(&diagnostics).unwrap();
+    let controller_log = temp.path().join("controller.log");
+    let log = fs::File::create(&controller_log).unwrap();
+    let _output = diagnostics::register("controller output", vec![controller_log.clone()]);
     let mut child = Controller(
         processes::command(env!("CARGO_BIN_EXE_elsecall"))
             .env("HOME", alpha.home.path())
@@ -1196,7 +1248,7 @@ fn compare_restores_after_forced_controller_loss_without_contacting_installed_se
         assert!(
             child.0.try_wait().unwrap().is_none(),
             "controller exited before proposal activation: {}",
-            fs::read_to_string(&diagnostics).unwrap()
+            fs::read_to_string(&controller_log).unwrap()
         );
         // Stop at the first member's activation; the services continue syncing
         // independently while the controller cannot finish B and restore normally.
@@ -1206,7 +1258,7 @@ fn compare_restores_after_forced_controller_loss_without_contacting_installed_se
         assert!(
             Instant::now() < end,
             "proposal did not activate: controller={} alpha={} bravo={}",
-            fs::read_to_string(&diagnostics).unwrap(),
+            fs::read_to_string(&controller_log).unwrap(),
             alpha.log(),
             bravo.log()
         );
@@ -1233,7 +1285,7 @@ fn compare_restores_after_forced_controller_loss_without_contacting_installed_se
                 libc::CLD_STOPPED,
                 "controller exited before suspension: status={} output={}",
                 info.si_status,
-                fs::read_to_string(&diagnostics).unwrap()
+                fs::read_to_string(&controller_log).unwrap()
             );
             assert_eq!(info.si_status, libc::SIGSTOP);
             break;
@@ -1428,8 +1480,9 @@ fn spawn_comparison(
     output: &Path,
     proposal: &Path,
     limit: &str,
-) -> Child {
-    processes::command(env!("CARGO_BIN_EXE_elsecall"))
+) -> Controller {
+    let mut command = processes::command(env!("CARGO_BIN_EXE_elsecall"));
+    command
         .env("HOME", alpha.home.path())
         .current_dir(alpha.home.path())
         .args([
@@ -1444,10 +1497,8 @@ fn spawn_comparison(
             "2",
             "--limit",
             limit,
-        ])
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .unwrap()
+        ]);
+    Controller::spawn(command, output.parent().unwrap())
 }
 #[test]
 fn compare_restores_after_signal_and_new_production_work() {
@@ -1467,7 +1518,7 @@ fn compare_restores_after_signal_and_new_production_work() {
         } else {
             Some(production(&bravo, "0.5"))
         };
-        let result = child.wait_with_output().unwrap();
+        let result = child.wait_with_output();
         let data = members::json(&result)["data"].clone();
         assert_eq!(data["settings_restored"], true, "{data}");
         assert_eq!(
@@ -1571,7 +1622,7 @@ fn compare_restores_and_exits_unsuccessfully_after_member_io_failure() {
     bravo.stop();
     sleep(Duration::from_secs(1));
     bravo.restart();
-    let result = child.wait_with_output().unwrap();
+    let result = child.wait_with_output();
     let data = members::json(&result)["data"].clone();
     assert!(!result.status.success(), "{data}");
     assert_eq!(data["settings_restored"], true, "{data}");
@@ -1681,7 +1732,8 @@ fn cpu_contention_in_a_real_rehearsal_reports_overhead_slowdown_and_zero_admissi
     trace["requests"][0]["resources"]["ended_at"] = json!(at.after(Duration::from_millis(2400)));
     fs::write(&input, trace.to_string()).unwrap();
     let output = temp.path().join("contention.json");
-    let replay = processes::command(env!("CARGO_BIN_EXE_elsecall"))
+    let mut command = processes::command(env!("CARGO_BIN_EXE_elsecall"));
+    command
         .env("HOME", alpha.home.path())
         .current_dir(alpha.home.path())
         .args([
@@ -1694,10 +1746,8 @@ fn cpu_contention_in_a_real_rehearsal_reports_overhead_slowdown_and_zero_admissi
             "2",
             "--limit",
             "20s",
-        ])
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .unwrap();
+        ]);
+    let replay = Controller::spawn(command, temp.path());
     let records = elsecall::scheduling::records::Records::open_read_only(
         &alpha.data().join("records.sqlite"),
     )
@@ -1738,7 +1788,7 @@ fn cpu_contention_in_a_real_rehearsal_reports_overhead_slowdown_and_zero_admissi
     let resume = Resume(group);
     sleep(Duration::from_millis(1500));
     drop(resume);
-    let result = replay.wait_with_output().unwrap();
+    let result = replay.wait_with_output();
     assert!(result.status.success(), "{result:?}");
     let data = members::json(&result)["data"].clone();
     let m = &data["metrics"]["scheduling_objective"];

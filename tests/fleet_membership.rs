@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 //! Enrolment, removal and authentication between real member services.
+mod diagnostics;
 mod members;
 mod processes;
 use elsecall::{fleet::PeerStatus, member_key::MemberKey, peer_auth, peer_client, roster::Member};

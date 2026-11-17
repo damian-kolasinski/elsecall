@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 //! Real services and records; fake only machine observation and the tailnet.
+mod diagnostics;
 mod members;
 mod processes;
 use members::{TestMember, enrol};

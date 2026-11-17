@@ -384,6 +384,7 @@ async fn helper_survives_the_service_restart_and_rolls_back_every_changed_compon
     }
 }
 
+mod diagnostics;
 mod members;
 mod processes;
 

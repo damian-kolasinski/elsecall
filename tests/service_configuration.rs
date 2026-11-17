@@ -1,4 +1,5 @@
 //! Full service configuration lifecycle with real temporary member services.
+mod diagnostics;
 mod file_gate;
 mod members;
 mod processes;
