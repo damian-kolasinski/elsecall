@@ -46,8 +46,10 @@ curl -fsSL https://github.com/damian-kolasinski/elsecall/releases/latest/downloa
 The [installer](distribution/install.sh) installs mise from <https://mise.run> when it is
 missing, selects the release in mise's global configuration (`mise use --global --pin`),
 and runs that release's `elsecall install --open`. mise's packslip backend checks the
-release's signature against its GitHub repository before anything from it runs. `ELSECALL_VERSION=0.2.0` chooses a
-release. In an account without a desktop session the service is installed and the
+release's signature against its GitHub repository before anything from it runs. The
+installer attached to a release installs exactly that release, so `latest/download`
+installs the latest release even while mise's own `latest` has not caught up with it;
+`ELSECALL_VERSION=0.2.0` chooses another. In an account without a desktop session the service is installed and the
 window is skipped. Once Tailscale is running, this machine is the master of a fleet of
 one; see "Fleet" to add others. The installer is attached to every release and changes no shell configuration;
 it says how to put `~/.local/bin` on `PATH` when it is missing.

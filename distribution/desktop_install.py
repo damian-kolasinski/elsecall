@@ -2,7 +2,8 @@
 
 This replaces the runner's own Elsecall installation, so it refuses to run outside
 GitHub Actions. Pass an archive to install from it, or --script to run the
-published one-command installer for a release version.
+published one-command installer as a user would, with --expect-version naming
+the release it must install.
 """
 
 import argparse
@@ -49,8 +50,8 @@ def from_archive(archive):
         return installed.stdout
 
 
-def from_script(script, version):
-    environment = {**os.environ, "ELSECALL_VERSION": version}
+def from_script(script):
+    environment = {key: value for key, value in os.environ.items() if key != "ELSECALL_VERSION"}
     installed = run(["sh", str(script)], env=environment, cwd=Path.home())
     if installed.returncode != 0:
         raise RuntimeError("the installer failed")
@@ -61,17 +62,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("archive", type=Path, nargs="?")
     parser.add_argument("--script", type=Path)
-    parser.add_argument("--version")
+    parser.add_argument("--expect-version")
     args = parser.parse_args()
     require_ci()
     if args.script:
-        output = from_script(args.script, args.version or "latest")
+        output = from_script(args.script)
     elif args.archive:
         output = from_archive(args.archive)
     else:
         parser.error("name an archive or --script")
     window = opened_window(output)
     cli = Path.home() / ".local/bin/elsecall"
+    if args.expect_version:
+        reported = run([str(cli), "--version"]).stdout.strip()
+        if reported != f"elsecall {args.expect_version}":
+            raise RuntimeError(f"installed {reported!r}, not release {args.expect_version}")
     if run([str(cli), "status"]).returncode != 0:
         raise RuntimeError("the installed service is not ready")
     if run([str(cli), "uninstall"]).returncode != 0:
