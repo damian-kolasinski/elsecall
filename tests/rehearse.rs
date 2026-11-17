@@ -640,8 +640,10 @@ fn abandoned_controller_is_cleaned_by_member_watchdogs() {
     let temp = tempfile::tempdir().unwrap();
     let input = fixture(temp.path(), &[0, 0, 10000]);
     let mut source: Value = serde_json::from_slice(&fs::read(&input).unwrap()).unwrap();
+    // Compressed to a minute, the runs outlast the limit below: only the
+    // watchdogs can end them.
     for r in source["requests"].as_array_mut().unwrap() {
-        r["run_ms"] = json!(20000);
+        r["run_ms"] = json!(120_000);
     }
     fs::write(&input, source.to_string()).unwrap();
     let output = temp.path().join("observed.json");
@@ -655,8 +657,11 @@ fn abandoned_controller_is_cleaned_by_member_watchdogs() {
             output.to_str().unwrap(),
             "--compress",
             "2",
+            // Member watchdogs stop the session at this limit, which also covers
+            // preparation and placement: bravo must start its run before then.
+            // Cleanup is still awaited with the 120-second scheduling allowance.
             "--limit",
-            "3s",
+            "30s",
         ])
         .spawn()
         .unwrap();
@@ -691,6 +696,21 @@ fn abandoned_controller_is_cleaned_by_member_watchdogs() {
         sleep(Duration::from_millis(50));
     }
     assert_clean(&alpha, &bravo, &session);
+    for member in [&alpha, &bravo] {
+        let runs = member.ok(&["runs", "--limit", "500"]);
+        let stopped = runs["runs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|r| {
+                r["label"]
+                    .as_str()
+                    .is_some_and(|l| l.starts_with("rehearsal:"))
+            })
+            .map(|r| !(r["outcome"]["kind"] == "exited" && r["outcome"]["exit_code"] == 0))
+            .collect::<Vec<_>>();
+        assert!(!stopped.is_empty() && stopped.iter().all(|s| *s), "{runs}");
+    }
 }
 
 #[test]
