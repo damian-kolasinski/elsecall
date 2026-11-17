@@ -1,6 +1,7 @@
 #![cfg(target_os = "macos")]
 //! The master role between real member services: who holds placement authority, and
 //! moving the role.
+mod diagnostics;
 mod members;
 mod processes;
 use members::{TestMember, enrol};

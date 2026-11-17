@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 //! Each member's tool inventory, read through real member services.
+mod diagnostics;
 mod members;
 mod processes;
 

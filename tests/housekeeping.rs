@@ -3,6 +3,7 @@
 //! separate temporary homes, with loopback standing in for the tailnet. Only
 //! tailnet discovery, machine load, the housekeeping clock and, where disk pressure
 //! is the subject, the volume's size are replaced.
+mod diagnostics;
 mod members;
 mod processes;
 

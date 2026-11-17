@@ -2,6 +2,7 @@
 //! `elsecall report` over real member services in separate temporary homes,
 //! with loopback standing in for the tailnet: real requests make real records
 //! and load history on both members, and each member's report asks the other.
+mod diagnostics;
 mod members;
 mod processes;
 

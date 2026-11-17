@@ -3,6 +3,7 @@
 //! services in separate temporary homes on loopback: the member learns it from the
 //! copy's owner alone, over the authenticated member channel, and both sides clean
 //! up their state.
+mod diagnostics;
 mod members;
 mod processes;
 

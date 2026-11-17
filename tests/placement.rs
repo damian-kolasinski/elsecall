@@ -2,6 +2,7 @@
 //! Automatic placement between real member services in separate temporary homes,
 //! with loopback standing in for the tailnet. Only machine observation is
 //! scripted: each member's core count, load and speed come from the test.
+mod diagnostics;
 mod members;
 mod processes;
 

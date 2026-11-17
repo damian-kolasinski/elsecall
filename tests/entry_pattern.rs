@@ -4,6 +4,7 @@
 //! the real CLI, and real member services where admission is involved. Each mode
 //! must run the script's body exactly once, run its pre-admission check once, and
 //! let a signal to the script's original PID stop it.
+mod diagnostics;
 mod members;
 mod processes;
 

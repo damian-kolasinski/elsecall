@@ -25,6 +25,8 @@ pub struct TestMember {
     installed_from: Option<std::path::PathBuf>,
     /// When false, the service is not given a configured tailnet presence.
     tailnet: bool,
+    /// Prints this member's logs if the test fails.
+    _diagnostics: crate::diagnostics::Log,
 }
 
 /// The environment every installed test member's install, service and CLI share.
@@ -62,6 +64,31 @@ pub fn cli(home: &Path, args: &[&str]) -> Output {
         .args(args)
         .output()
         .unwrap()
+}
+
+/// Registers a member's service logs for the report of a failed test.
+fn diagnostics(name: &str, home: &Path) -> crate::diagnostics::Log {
+    let data = Paths::for_home(home).unwrap().data;
+    crate::diagnostics::register(
+        format!("{name} service log"),
+        vec![data.join("service.log"), home.join("serve.log")],
+    )
+}
+
+/// Notes a member command and its outcome for the report of a failed test.
+fn note(name: &str, args: &[&str], output: &Output, took: Duration) {
+    let outcome = match output.status.code() {
+        Some(0) => "ok".to_owned(),
+        Some(code) => {
+            let error = serde_json::from_slice::<Value>(&output.stdout)
+                .ok()
+                .and_then(|v| v["error"]["code"].as_str().map(str::to_owned))
+                .unwrap_or_else(|| "no error code".into());
+            format!("exit {code} {error}")
+        }
+        None => format!("{:?}", output.status),
+    };
+    crate::diagnostics::note_timed(format!("{name} {args:?} -> {outcome}"), took);
 }
 
 pub fn json(output: &Output) -> Value {
@@ -105,6 +132,7 @@ impl TestMember {
         let data = Paths::for_home(home.path()).unwrap().data;
         elsecall::private_files::directory(&data).unwrap();
         std::fs::write(data.join("config.toml"), configuration).unwrap();
+        let _diagnostics = diagnostics(name, home.path());
         let mut member = Self {
             name,
             port: free_port(),
@@ -116,6 +144,7 @@ impl TestMember {
                 .collect(),
             installed_from: None,
             tailnet,
+            _diagnostics,
         };
         // Other processes on this machine may take a port between choosing and
         // binding it; a member that has not enrolled yet can simply move.
@@ -152,6 +181,7 @@ impl TestMember {
             elsecall::private_files::directory(&data).unwrap();
             std::fs::write(data.join("config.toml"), configuration).unwrap();
         }
+        let _diagnostics = diagnostics(name, home.path());
         let mut member = Self {
             name,
             port: free_port(),
@@ -163,6 +193,7 @@ impl TestMember {
                 .collect(),
             installed_from: Some(executable.to_owned()),
             tailnet: true,
+            _diagnostics,
         };
         for _ in 0..5 {
             if member.try_restart() {
@@ -352,16 +383,20 @@ impl TestMember {
     }
 
     pub fn run(&self, args: &[&str]) -> Output {
-        if self.installed_from.is_none() {
-            return cli(self.home.path(), args);
-        }
-        crate::processes::command(env!("CARGO_BIN_EXE_elsecall"))
-            .env("HOME", self.home.path())
-            .current_dir(self.home.path())
-            .envs(installed_environment(self))
-            .args(args)
-            .output()
-            .unwrap()
+        let started = Instant::now();
+        let output = if self.installed_from.is_none() {
+            cli(self.home.path(), args)
+        } else {
+            crate::processes::command(env!("CARGO_BIN_EXE_elsecall"))
+                .env("HOME", self.home.path())
+                .current_dir(self.home.path())
+                .envs(installed_environment(self))
+                .args(args)
+                .output()
+                .unwrap()
+        };
+        note(self.name, args, &output, started.elapsed());
+        output
     }
 
     /// Runs a command that must succeed and returns its data.
