@@ -13,8 +13,8 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::fleet_source::{
-    FleetSnapshot, FleetSource, Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Role,
-    SourceFailure, Standing,
+    FleetSnapshot, FleetSource, Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Release,
+    Role, SourceFailure, Standing,
 };
 
 /// How long `elsecall fleet` waits for `GET /v1/fleet`.
@@ -153,10 +153,16 @@ pub(crate) fn snapshot_from_value(data: &Value) -> Result<FleetSnapshot, SourceF
             message: format!("The fleet response could not be read ({error})."),
             hint: "Reinstall matching CLI and service versions with elsecall install.".into(),
         })?;
+    let master = fleet
+        .members
+        .iter()
+        .find(|member| matches!(member.role, WireRole::Master))
+        .and_then(|member| member.build.as_ref())
+        .map(|build| build.version.clone());
     let members = fleet
         .members
         .into_iter()
-        .map(map_member)
+        .map(|member| map_member(member, master.as_deref()))
         .collect::<Result<Vec<_>, _>>()?;
     Ok(FleetSnapshot {
         enrolled: fleet.enrolled,
@@ -174,7 +180,7 @@ pub(crate) fn snapshot_from_value(data: &Value) -> Result<FleetSnapshot, SourceF
     })
 }
 
-fn map_member(member: WireMember) -> Result<MemberRow, SourceFailure> {
+fn map_member(member: WireMember, master: Option<&str>) -> Result<MemberRow, SourceFailure> {
     let reach = match member.reachability.as_str() {
         "reachable" => Reachability::Reachable,
         "unreachable" => Reachability::Unreachable,
@@ -228,6 +234,11 @@ fn map_member(member: WireMember) -> Result<MemberRow, SourceFailure> {
         WireRole::Master => Role::Master,
         WireRole::Member => Role::Member,
     };
+    let release = Release::compare(
+        member.build.map(|build| build.version),
+        member.version_skew,
+        master,
+    );
     Ok(MemberRow {
         name: member.name,
         role,
@@ -236,6 +247,7 @@ fn map_member(member: WireMember) -> Result<MemberRow, SourceFailure> {
         cpu,
         memory,
         load,
+        release,
     })
 }
 
@@ -264,6 +276,17 @@ struct WireMember {
     status: Option<WireStatus>,
     #[serde(default)]
     blocked: Option<WireBlocked>,
+    /// Null when unreachable or when the member predates build IDs.
+    #[serde(default)]
+    build: Option<WireBuild>,
+    /// Null when unknown; older services do not report it.
+    #[serde(default)]
+    version_skew: Option<bool>,
+}
+
+#[derive(Deserialize)]
+struct WireBuild {
+    version: String,
 }
 
 #[derive(Deserialize)]
@@ -602,6 +625,39 @@ mod tests {
             }
             other => panic!("expected a machine without a roster, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn reads_each_members_release_against_the_masters() {
+        let fleet = serde_json::json!({
+            "enrolled": true,
+            "members": [
+                {"name": "mac-mini", "role": "master", "reachability": "reachable",
+                 "build": {"version": "0.2.2", "build": "1111111111111111"}, "version_skew": false},
+                {"name": "macbook-pro", "role": "member", "reachability": "reachable",
+                 "build": {"version": "0.2.1", "build": "2222222222222222"}, "version_skew": true},
+                {"name": "mac-studio", "role": "member", "reachability": "unreachable",
+                 "build": null, "version_skew": null}
+            ]
+        });
+        let releases: Vec<_> = snapshot_from_value(&fleet)
+            .unwrap()
+            .members
+            .into_iter()
+            .map(|member| member.release)
+            .collect();
+        assert_eq!(
+            releases,
+            vec![
+                Release::Matching {
+                    version: "0.2.2".into()
+                },
+                Release::Behind {
+                    version: "0.2.1".into()
+                },
+                Release::Unknown { version: None },
+            ]
+        );
     }
 
     #[test]

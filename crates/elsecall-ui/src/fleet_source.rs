@@ -41,6 +41,55 @@ pub struct MemberRow {
     pub cpu: Option<f64>,
     pub memory: Option<MemoryUse>,
     pub load: Option<LoadAverages>,
+    pub release: Release,
+}
+
+/// How a member's release compares with the master's. Work moves between members
+/// only when they run the same build, so any other answer leaves the member out of
+/// placement until `elsecall fleet upgrade` brings it to the master's build.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Release {
+    /// The master's build.
+    Matching { version: String },
+    /// An older release than the master's.
+    Behind { version: String },
+    /// A newer release than the master's.
+    Ahead { version: String },
+    /// Another build of the master's version, such as a local one.
+    OtherBuild { version: String },
+    /// Unreachable, too old to report its build, or with no comparison from the
+    /// service, as while the master is unreachable.
+    Unknown { version: Option<String> },
+}
+impl Release {
+    /// Whether the member runs another build than the master.
+    pub fn differs(&self) -> bool {
+        matches!(
+            self,
+            Release::Behind { .. } | Release::Ahead { .. } | Release::OtherBuild { .. }
+        )
+    }
+
+    /// How a member reporting `version` with this skew flag compares with `master`.
+    pub fn compare(version: Option<String>, skew: Option<bool>, master: Option<&str>) -> Self {
+        let Some(version) = version else {
+            return Release::Unknown { version: None };
+        };
+        match skew {
+            Some(false) => Release::Matching { version },
+            None => Release::Unknown {
+                version: Some(version),
+            },
+            Some(true) => {
+                let parse = |text: &str| semver::Version::parse(text).ok();
+                match (parse(&version), master.and_then(parse)) {
+                    (Some(own), Some(master)) if own < master => Release::Behind { version },
+                    (Some(own), Some(master)) if own > master => Release::Ahead { version },
+                    _ => Release::OtherBuild { version },
+                }
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -112,4 +161,63 @@ impl fmt::Display for SourceFailure {
 /// Where the window reads the fleet. The UI thread never calls this.
 pub trait FleetSource: Send + Sync {
     fn fleet(&self) -> Result<FleetSnapshot, SourceFailure>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_member_compares_with_the_master_only_when_the_service_says_they_differ() {
+        let version = |text: &str| Some(text.to_owned());
+        assert_eq!(
+            Release::compare(version("0.2.2"), Some(false), Some("0.2.2")),
+            Release::Matching {
+                version: "0.2.2".into()
+            }
+        );
+        assert_eq!(
+            Release::compare(version("0.2.1"), Some(true), Some("0.2.2")),
+            Release::Behind {
+                version: "0.2.1".into()
+            }
+        );
+        assert_eq!(
+            Release::compare(version("0.10.0"), Some(true), Some("0.9.0")),
+            Release::Ahead {
+                version: "0.10.0".into()
+            }
+        );
+        // The same version on another build, such as a local one, or a version
+        // that is not semver.
+        assert_eq!(
+            Release::compare(version("0.2.2"), Some(true), Some("0.2.2")),
+            Release::OtherBuild {
+                version: "0.2.2".into()
+            }
+        );
+        assert_eq!(
+            Release::compare(version("local"), Some(true), Some("0.2.2")),
+            Release::OtherBuild {
+                version: "local".into()
+            }
+        );
+        // A master that reports no build differs from any member that does.
+        assert_eq!(
+            Release::compare(version("0.2.1"), Some(true), None),
+            Release::OtherBuild {
+                version: "0.2.1".into()
+            }
+        );
+        assert_eq!(
+            Release::compare(version("0.2.1"), None, None),
+            Release::Unknown {
+                version: Some("0.2.1".into())
+            }
+        );
+        assert_eq!(
+            Release::compare(None, None, Some("0.2.2")),
+            Release::Unknown { version: None }
+        );
+    }
 }

@@ -7,7 +7,9 @@ use rune::{Align, Color, El, Icon, col, icon, row, text};
 use rune_kit::{Button, Cell, Table, TableColumn};
 
 use crate::app::AppState;
-use crate::fleet_source::{Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Role, Standing};
+use crate::fleet_source::{
+    FleetSnapshot, Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Release, Role, Standing,
+};
 use crate::load_trend::LoadTrend;
 use crate::theme;
 
@@ -140,6 +142,9 @@ pub fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
                 .font(paints.small)
                 .color(paints.subtle),
         );
+    }
+    if let Some(line) = shown.and_then(release_summary) {
+        page = page.child(text(line).wrap().font(paints.small).color(paints.secondary));
     }
     if shown.is_some_and(|snapshot| !snapshot.members.is_empty()) {
         page = page.child(member_card(state, dark, paints));
@@ -283,28 +288,33 @@ fn members_table(state: &AppState, dark: bool, paints: Paints) -> El {
         .column(
             TableColumn::new("member", "Member")
                 .flex(1.0)
-                .min(160.0)
+                .min(120.0)
                 .resizable(false),
         )
         .column(
             TableColumn::new("role", "Role")
-                .width(96.0)
+                .width(84.0)
                 .resizable(false),
         )
         .column(
             TableColumn::new("status", "Status")
-                .width(210.0)
+                .width(160.0)
+                .resizable(false),
+        )
+        .column(
+            TableColumn::new("release", "Release")
+                .width(176.0)
                 .resizable(false),
         )
         .column(
             TableColumn::new("cpu", "CPU")
-                .width(72.0)
+                .width(64.0)
                 .align(Align::End)
                 .resizable(false),
         )
         .column(
             TableColumn::new("memory", "Memory")
-                .width(196.0)
+                .width(160.0)
                 .align(Align::End)
                 .resizable(false),
         )
@@ -323,6 +333,7 @@ fn cell(member: &MemberRow, column: &str, paints: Paints) -> Cell {
         "member" => Cell::text(member.name.clone()).mono(),
         "role" => role_cell(member, paints),
         "status" => status_cell(member, paints),
+        "release" => release_cell(&member.release, paints),
         "cpu" => Cell::text(cpu_label(member.cpu)).mono(),
         "memory" => Cell::text(memory_label(member.memory.as_ref())).mono(),
         "load" => load_cell(member.load.as_ref(), paints),
@@ -420,6 +431,53 @@ fn load_cell(load: Option<&LoadAverages>, paints: Paints) -> Cell {
     )
 }
 
+fn release_cell(release: &Release, paints: Paints) -> Cell {
+    let (version, mark) = match release {
+        Release::Matching { version } => (version.as_str(), None),
+        Release::Behind { version } => (version.as_str(), Some("outdated")),
+        Release::Ahead { version } => (version.as_str(), Some("newer")),
+        Release::OtherBuild { version } => (version.as_str(), Some("differs")),
+        Release::Unknown {
+            version: Some(version),
+        } => return Cell::text(version.clone()).mono().muted(),
+        Release::Unknown { version: None } => return Cell::text("—").muted(),
+    };
+    let mut line = row().center_y().gap(theme::SPACE_2).child(
+        text(version)
+            .font(theme::scale().mono)
+            .color(paints.text)
+            .truncate(),
+    );
+    if let Some(mark) = mark {
+        line = line.child(pill(
+            mark,
+            paints.blocked_fill,
+            paints.blocked_ink,
+            paints.label,
+        ));
+    }
+    Cell::el(line)
+}
+
+/// One line naming the members on another build than the master, which placement
+/// skips until they match, and the repair.
+pub(crate) fn release_summary(snapshot: &FleetSnapshot) -> Option<String> {
+    let names: Vec<&str> = snapshot
+        .members
+        .iter()
+        .filter(|member| member.release.differs())
+        .map(|member| member.name.as_str())
+        .collect();
+    let (subject, verb, object) = match names.as_slice() {
+        [] => return None,
+        [only] => (only.to_string(), "runs", "it"),
+        [rest @ .., last] => (format!("{} and {last}", rest.join(", ")), "run", "them"),
+    };
+    Some(format!(
+        "{subject} {verb} another build than the master, so no work is placed on {object}. Run elsecall fleet upgrade on the master to give {object} the master's build."
+    ))
+}
+
 fn pill(label: &str, fill: Color, ink: Color, font: TextStyle) -> El {
     row()
         .center_y()
@@ -496,6 +554,74 @@ pub(crate) fn compact_bytes(bytes: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn fleet(releases: &[(&str, Release)]) -> FleetSnapshot {
+        FleetSnapshot {
+            enrolled: true,
+            members: releases
+                .iter()
+                .map(|(name, release)| MemberRow {
+                    name: (*name).into(),
+                    role: Role::Member,
+                    reach: Reachability::Reachable,
+                    gate: Gate::Open,
+                    cpu: None,
+                    memory: None,
+                    load: None,
+                    release: release.clone(),
+                })
+                .collect(),
+            standing: Standing::Rostered,
+        }
+    }
+
+    #[test]
+    fn the_summary_names_members_on_another_release_and_the_repair() {
+        let matching = |version: &str| Release::Matching {
+            version: version.into(),
+        };
+        let behind = Release::Behind {
+            version: "0.2.1".into(),
+        };
+        assert_eq!(
+            release_summary(&fleet(&[("mac-mini", matching("0.2.2"))])),
+            None
+        );
+        // An unreachable member's release is unknown, not outdated.
+        assert_eq!(
+            release_summary(&fleet(&[("macbook", Release::Unknown { version: None })])),
+            None
+        );
+        assert_eq!(
+            release_summary(&fleet(&[
+                ("mac-mini", matching("0.2.2")),
+                ("macbook-pro", behind.clone())
+            ]))
+            .unwrap(),
+            "macbook-pro runs another build than the master, so no work is placed on it. Run elsecall fleet upgrade on the master to give it the master's build."
+        );
+        assert!(
+            release_summary(&fleet(&[
+                ("a", behind.clone()),
+                (
+                    "b",
+                    Release::OtherBuild {
+                        version: "0.2.2".into()
+                    }
+                ),
+                (
+                    "c",
+                    Release::Ahead {
+                        version: "0.3.0".into()
+                    }
+                )
+            ]))
+            .unwrap()
+            .starts_with(
+                "a, b and c run another build than the master, so no work is placed on them."
+            )
+        );
+    }
 
     #[test]
     fn labels_counts_cpu_memory_and_load() {

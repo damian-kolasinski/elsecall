@@ -2026,7 +2026,10 @@ restarted service reports; logs record upgrade events, IDs, build IDs and codes.
 ID) and `version_skew` (whether it differs from the master's), and `data.version_skew`
 lists the members on another build with the repair. `doctor` shows the same as
 `fleet_builds` and `version_skew`; skew does not change doctor's verdict about this
-machine, but its `next_step` points at the repair. Until members run one build:
+machine, but its `next_step` points at the repair. The fleet window shows each member's
+release and marks one on another build than the master as outdated (or newer, or another
+build of the same version), with a line naming those members and the repair. Until
+members run one build:
 
 - **Refused with `version_skew`:** work between members on different builds:
   placement (quotes, placed runs and their channels), configuration sync, workspace

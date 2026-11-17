@@ -1099,6 +1099,7 @@ dependencies = [
  "png 0.18.1",
  "rune",
  "rune-kit",
+ "semver",
  "serde",
  "serde_json",
  "tempfile",
