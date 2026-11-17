@@ -5,6 +5,7 @@ pub mod channel;
 pub mod download;
 pub mod helper;
 pub mod local_channel;
+pub mod rehearsal;
 pub mod selection;
 pub mod service;
 pub mod store;

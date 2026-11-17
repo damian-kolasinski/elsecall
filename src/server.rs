@@ -69,6 +69,7 @@ pub async fn serve(
     process_sampler: Arc<dyn crate::outside_pressure::ProcessSampler>,
     members_listener: peer_listener::Settings,
 ) -> Result<()> {
+    crate::release_update::rehearsal::startup()?;
     let updates = crate::release_update::service::UpdateAdapters::production(
         !crate::process_service::requested()?,
     )?;
