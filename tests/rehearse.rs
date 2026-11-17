@@ -1026,6 +1026,13 @@ fn latest_margin(member: &TestMember) -> Option<f64> {
         .last()
         .map(|s| s.parameters.placement.keep_local_margin)
 }
+/// Waits until both members run with `margin` and serve again.
+///
+/// A synced settings change reaches a member by relaunching its service once it
+/// is idle. The successor records its settings while it starts, before its local
+/// and member listeners open, so a recorded margin alone does not mean the member
+/// answers yet. Its first answer comes from the successor: the predecessor
+/// stopped listening before it executed it.
 fn wait_margin(alpha: &TestMember, bravo: &TestMember, margin: f64) {
     let end = Instant::now() + processes::WAIT;
     while latest_margin(alpha) != Some(margin) || latest_margin(bravo) != Some(margin) {
@@ -1038,6 +1045,16 @@ fn wait_margin(alpha: &TestMember, bravo: &TestMember, margin: f64) {
         sleep(Duration::from_millis(50));
     }
     diagnostics::note(format!("both members recorded keep_local_margin {margin}"));
+    for member in [alpha, bravo] {
+        while !member.run(&["status"]).status.success() {
+            assert!(
+                Instant::now() < end,
+                "{} did not serve after relaunching",
+                member.name
+            );
+            sleep(Duration::from_millis(20));
+        }
+    }
 }
 fn proposal_file(dir: &Path) -> std::path::PathBuf {
     let path = dir.join("proposal.json");
