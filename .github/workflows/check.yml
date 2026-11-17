@@ -1,7 +1,16 @@
 name: Check
+# Once per commit: a pull request tests its revisions, and main tests each
+# commit that lands there. Pushes of review branches and of tags would only
+# test the same commits again.
 on:
   push:
+    branches: [main]
   pull_request:
+concurrency:
+  # A newer revision of a pull request supersedes the run of the older one.
+  # Every main commit keeps its own run, since any of them may be released.
+  group: check-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:
@@ -9,6 +18,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.99.0
