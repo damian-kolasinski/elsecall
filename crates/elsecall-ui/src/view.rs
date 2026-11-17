@@ -3,16 +3,30 @@
 use std::borrow::Cow;
 
 use rune::tok::TextStyle;
-use rune::{Align, Color, El, col, row, text};
+use rune::{Align, Color, El, Icon, col, icon, row, text};
 use rune_kit::{Button, Cell, Table, TableColumn};
 
 use crate::app::AppState;
 use crate::fleet_source::{Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Role, Standing};
+use crate::load_trend::LoadTrend;
 use crate::theme;
 
 const DASH: &str = "—";
 const STALE_OPACITY: f32 = 0.45;
 const PILL_HEIGHT: f32 = 22.0;
+const TREND_SIZE: f32 = 14.0;
+const BORDER_WIDTH: f32 = 1.0;
+
+static TREND_UP: Icon = Icon {
+    name: "elsecall-trend-up",
+    view: 16.0,
+    body: r#"<path d="M8 13V3.5M4 7.5L8 3.5L12 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>"#,
+};
+static TREND_DOWN: Icon = Icon {
+    name: "elsecall-trend-down",
+    view: 16.0,
+    body: r#"<path d="M8 3V12.5M4 8.5L8 12.5L12 8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>"#,
+};
 
 #[derive(Clone, Copy)]
 struct Paints {
@@ -24,6 +38,9 @@ struct Paints {
     border: Color,
     brand_fill: Color,
     brand_ink: Color,
+    role_fill: Color,
+    role_ink: Color,
+    rising: Color,
     online_fill: Color,
     online_ink: Color,
     offline_fill: Color,
@@ -48,6 +65,9 @@ pub fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
         border: kit.c.border_base,
         brand_fill: kit.c.info.bg,
         brand_ink: kit.c.info.fg,
+        role_fill: kit.c.layer_02,
+        role_ink: kit.c.text_base,
+        rising: kit.c.warning.icon,
         online_fill: kit.c.success.bg,
         online_ink: kit.c.success.fg,
         offline_fill: kit.c.danger.bg,
@@ -237,9 +257,19 @@ fn member_card(state: &AppState, dark: bool, paints: Paints) -> El {
         .min_h(0.0)
         .fill(paints.card)
         .radius(theme::RADIUS_SMALL)
-        .border(1.0, paints.border)
+        .border(BORDER_WIDTH, paints.border)
         .clip_rounded(theme::RADIUS_SMALL)
-        .child(table.h_full().w_full().grow(1.0).min_h(0.0));
+        // Row highlights stay inside the border: the table sits within its 1pt width
+        // and is clipped to the border's inner curve at the corners.
+        .padding(BORDER_WIDTH)
+        .child(
+            col()
+                .w_full()
+                .grow(1.0)
+                .min_h(0.0)
+                .clip_rounded(theme::RADIUS_SMALL - BORDER_WIDTH)
+                .child(table.h_full().w_full().grow(1.0).min_h(0.0)),
+        );
     if state.stale() {
         card = card.opacity(STALE_OPACITY);
     }
@@ -279,8 +309,8 @@ fn members_table(state: &AppState, dark: bool, paints: Paints) -> El {
                 .resizable(false),
         )
         .column(
-            TableColumn::new("load", "Load")
-                .width(212.0)
+            TableColumn::new("load", "Load (1 min)")
+                .width(136.0)
                 .align(Align::End)
                 .resizable(false),
         )
@@ -295,7 +325,7 @@ fn cell(member: &MemberRow, column: &str, paints: Paints) -> Cell {
         "status" => status_cell(member, paints),
         "cpu" => Cell::text(cpu_label(member.cpu)).mono(),
         "memory" => Cell::text(memory_label(member.memory.as_ref())).mono(),
-        "load" => Cell::text(load_label(member.load.as_ref())).mono(),
+        "load" => load_cell(member.load.as_ref(), paints),
         _ => Cell::text(""),
     }
 }
@@ -308,7 +338,12 @@ fn role_cell(member: &MemberRow, paints: Paints) -> Cell {
             paints.brand_ink,
             paints.label,
         )),
-        Role::Member => Cell::text("member").muted(),
+        Role::Member => Cell::el(pill(
+            "member",
+            paints.role_fill,
+            paints.role_ink,
+            paints.label,
+        )),
     }
 }
 
@@ -340,6 +375,49 @@ fn status_cell(member: &MemberRow, paints: Paints) -> Cell {
         );
     }
     Cell::el(line)
+}
+
+/// The 1-minute average and an arrow for where it is heading. The arrow's slot is kept
+/// when there is no arrow, so every value lines up.
+fn load_cell(load: Option<&LoadAverages>, paints: Paints) -> Cell {
+    // Fills the cell, so the tooltip shows anywhere in it, not only over the digits.
+    let line = row()
+        .w_full()
+        .h_full()
+        .justify_end()
+        .center_y()
+        .gap(theme::SPACE_1);
+    let value = |label: String| {
+        text(label)
+            .font(theme::scale().mono)
+            .color(paints.text)
+            .a11y_hidden()
+    };
+    let blank = || rune::el().w(TREND_SIZE).h(TREND_SIZE).a11y_hidden();
+    let Some(load) = load else {
+        return Cell::el(
+            line.label("Load average not reported")
+                .child(value(DASH.into()))
+                .child(blank()),
+        );
+    };
+    let trend = LoadTrend::of(load);
+    let mark = match trend {
+        LoadTrend::Rising => icon(&TREND_UP, TREND_SIZE)
+            .color(paints.rising)
+            .a11y_hidden(),
+        LoadTrend::Falling => icon(&TREND_DOWN, TREND_SIZE)
+            .color(paints.subtle)
+            .a11y_hidden(),
+        LoadTrend::Steady => blank(),
+    };
+    let summary = load_summary(load, trend);
+    Cell::el(
+        line.label(summary.clone())
+            .help(summary)
+            .child(value(format!("{:.1}", load.one)))
+            .child(mark),
+    )
 }
 
 fn pill(label: &str, fill: Color, ink: Color, font: TextStyle) -> El {
@@ -385,17 +463,15 @@ pub(crate) fn memory_label(memory: Option<&MemoryUse>) -> String {
     }
 }
 
-pub(crate) fn load_label(load: Option<&LoadAverages>) -> String {
-    match load {
-        Some(load)
-            if [load.one, load.five, load.fifteen]
-                .iter()
-                .all(|value| value.is_finite()) =>
-        {
-            format!("{:.1}  {:.1}  {:.1}", load.one, load.five, load.fifteen)
-        }
-        _ => DASH.into(),
-    }
+/// The tooltip and spoken label of a load cell: every average and where it is heading.
+pub(crate) fn load_summary(load: &LoadAverages, trend: LoadTrend) -> String {
+    format!(
+        "Load average: 1 min {:.1} · 5 min {:.1} · 15 min {:.1}, {}",
+        load.one,
+        load.five,
+        load.fifteen,
+        trend.word()
+    )
 }
 
 pub(crate) fn compact_bytes(bytes: u64) -> String {
@@ -440,13 +516,14 @@ mod tests {
             "36 GB / 64 GB"
         );
         assert_eq!(memory_label(None), "—");
+        let load = LoadAverages {
+            one: 207.4,
+            five: 187.0,
+            fifteen: 141.3,
+        };
         assert_eq!(
-            load_label(Some(&LoadAverages {
-                one: 1.25,
-                five: 1.0,
-                fifteen: 0.94,
-            })),
-            "1.2  1.0  0.9"
+            load_summary(&load, LoadTrend::of(&load)),
+            "Load average: 1 min 207.4 · 5 min 187.0 · 15 min 141.3, rising"
         );
     }
 }

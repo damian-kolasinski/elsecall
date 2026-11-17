@@ -17,6 +17,7 @@ const SCENES: &[&str] = &[
     "solo",
     "no-tailnet",
     "members",
+    "members-selected",
     "upgrade",
     "upgrading",
     "upgrade-failed",

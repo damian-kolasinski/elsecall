@@ -62,7 +62,7 @@ Headless frames use rune's tooling, the same `--snap` path as rune's hello examp
 cargo run -p elsecall-ui -- --snap /tmp/fleet.png --scene members --theme light --scale 1
 ```
 
-Scenes: `loading`, `unavailable-first`, `unavailable`, `solo`, `members`,
+Scenes: `loading`, `unavailable-first`, `unavailable`, `solo`, `members`, `members-selected`,
 `upgrade`, `upgrading`, `upgrade-failed`, `release-available`, `release-loading`,
 `release-downloading`, `release-waiting`, `release-installing`, `release-reopening`,
 `release-failed`, `release-offline`, `release-future`.

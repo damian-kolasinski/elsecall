@@ -32,6 +32,7 @@ const SCENES: &[(&str, Scene)] = &[
     ("solo", scene_solo),
     ("no-tailnet", scene_no_tailnet),
     ("members", scene_members),
+    ("members-selected", scene_members_selected),
     ("upgrade", scene_upgrade),
     ("upgrading", scene_upgrading),
     ("upgrade-failed", scene_upgrade_failed),
@@ -474,6 +475,12 @@ fn scene_members(state: &mut AppState) {
     state.phase = Phase::Ready(members_snapshot());
 }
 
+/// The last row selected, so its highlight meets the card's border and bottom corners.
+fn scene_members_selected(state: &mut AppState) {
+    scene_members(state);
+    state.table.select("builder");
+}
+
 fn scene_upgrade(state: &mut AppState) {
     scene_members(state);
     state.self_build = Some("1111111111111111".into());
@@ -673,9 +680,9 @@ fn members_snapshot() -> FleetSnapshot {
                 Some(0.91),
                 Some(gigabytes(52, 64)),
                 Some(LoadAverages {
-                    one: 14.2,
+                    one: 9.4,
                     five: 11.8,
-                    fifteen: 9.4,
+                    fifteen: 14.2,
                 }),
             ),
         ],
