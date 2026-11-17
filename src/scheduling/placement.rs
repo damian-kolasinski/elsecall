@@ -893,12 +893,34 @@ pub fn decide(
         })
         .collect();
     let (winner, reason) = pick(&contenders, wanted.hold_left, wanted.parameters);
+    let reason = reason + &unreachable_left_out(&unreachable);
     Verdict {
         candidates,
         unreachable,
         winner,
         reason,
     }
+}
+
+/// Every member placement could not ask and why, each as a sentence to append
+/// to a reason. A reason that named only the members that answered would read
+/// as though the fleet had no room anywhere else.
+pub fn unreachable_left_out(unreachable: &[Unreachable]) -> String {
+    unreachable
+        .iter()
+        .map(|u| left_out(&u.member, &u.why))
+        .collect()
+}
+
+/// " `member` was left out: `why`", the sentence every reason uses to name a
+/// member placement did not consider.
+pub fn left_out(member: &str, why: &str) -> String {
+    let mut rest = why.chars();
+    let why: String = rest
+        .next()
+        .map(|first| first.to_lowercase().chain(rest).collect())
+        .unwrap_or_default();
+    format!(" {member} was left out: {why}")
 }
 
 /// A scored candidate as picking the winner sees it.
@@ -1311,6 +1333,45 @@ mod tests {
     }
     fn none() -> (RunHistory, SyncHistory) {
         (RunHistory::default(), SyncHistory::default())
+    }
+
+    #[test]
+    fn the_reason_names_every_member_left_out_and_why() {
+        let (runs, syncs) = none();
+        let mut observations = vec![member("mini", true, 10.0, 1.0, Copy::Caller)];
+        learn(
+            &mut observations,
+            &workspace(),
+            &runs,
+            &syncs,
+            &LossHistory::default(),
+        );
+        let left_out = |member: &str, why: &str| Unreachable {
+            peer_io: None,
+            member: member.into(),
+            why: why.into(),
+        };
+        let verdict = decide(
+            observations,
+            vec![
+                left_out("devbox", "It could not give a quote (version_skew)."),
+                left_out("laptop", "Not asked yet."),
+            ],
+            &Wanted {
+                size: cores(2.0),
+                hold_left: secs(600),
+                parameters: &defaults(),
+            },
+        );
+        assert_eq!(verdict.winner.as_deref(), Some("mini"));
+        assert!(
+            verdict.reason.starts_with("Only the calling member, mini, ")
+                && verdict.reason.ends_with(
+                    " devbox was left out: it could not give a quote (version_skew). laptop was left out: not asked yet."
+                ),
+            "{}",
+            verdict.reason
+        );
     }
     /// The history of the label "build", without a family.
     fn label_history(

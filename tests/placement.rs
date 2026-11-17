@@ -970,6 +970,62 @@ fn perf_an_unreachable_member_is_left_out_and_named() {
     );
 }
 
+/// The run labelled `label` in `member`'s `elsecall runs`, once there is one.
+fn listed(member: &TestMember, label: &str) -> Option<Value> {
+    member.ok(&["runs", "--limit", "10"])["runs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["label"] == label)
+        .cloned()
+}
+
+#[test]
+fn a_waiting_request_and_its_start_name_the_member_left_out() {
+    let alpha = Machine::start("alpha", 2, 0.0, 1.0);
+    let mut bravo = Machine::start("bravo", 2, 0.0, 1.0);
+    enrol(&alpha.member, &bravo.member);
+    let (_temp, repo) = repository();
+    bravo.member.stop();
+    let mut here = hold(&alpha.member, "2", "hold alpha");
+    let child = spawn(
+        &alpha.member,
+        &repo,
+        &[
+            "--placeable",
+            "--size",
+            "2",
+            "--label",
+            "waits",
+            "--",
+            "/usr/bin/true",
+        ],
+    );
+    // While it waits behind the lease, its reason says bravo was not asked,
+    // rather than leaving the wait to read as a fleet without room.
+    let mut waiting = Value::Null;
+    until(
+        "the waiting request's reason",
+        crate::processes::WAIT,
+        || {
+            waiting = listed(&alpha.member, "waits").unwrap_or_default();
+            waiting["reason"].is_string()
+        },
+    );
+    assert_eq!(waiting["state"], "queued", "{waiting}");
+    let reason = waiting["reason"].as_str().unwrap();
+    assert!(reason.contains(" bravo was left out: it "), "{reason}");
+
+    here.kill().unwrap();
+    let _ = here.wait();
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success(), "{output:?}");
+    let ended = listed(&alpha.member, "waits").unwrap();
+    assert_eq!(ended["member"], "alpha", "{ended}");
+    let reason = ended["reason"].as_str().unwrap();
+    assert!(reason.contains(" bravo was left out: it "), "{reason}");
+}
+
 #[test]
 fn replay_reproduces_real_decisions_and_flips_them_under_changed_parameters() {
     // bravo is warm and twice as fast: it wins by default, 33 s against 60 s.

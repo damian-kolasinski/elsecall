@@ -32,7 +32,7 @@ use crate::{
         learning,
         leftovers::Leftovers,
         load::{Gate, LoadHistory},
-        messages::{Grant, MemberState, Runs},
+        messages::{Grant, MemberState, RunSummary, Runs},
         parameters::Parameters,
         placed::{Members, PlacedGrant, Side},
         pre_run_sync::PreRunSync,
@@ -1583,16 +1583,24 @@ impl Scheduler {
         self.records.production_activity(since)
     }
 
+    /// Recent runs and leases; one still waiting for placement carries why, from
+    /// its latest scoring, so a wait never reads as a fleet without room when
+    /// members were left out.
     pub fn runs(&self, limit: u32) -> Result<Runs> {
-        Ok(Runs {
-            member: self.member_state(),
-            runs: self
-                .records
-                .recent(limit)?
-                .into_iter()
-                .map(Into::into)
-                .collect(),
-        })
+        let member = self.member_state();
+        let records = self.records.recent(limit)?;
+        let book = self.book();
+        let runs = records
+            .into_iter()
+            .map(|record| {
+                let mut summary = RunSummary::from(record);
+                if summary.reason.is_none() {
+                    summary.reason = self.waiting_reason(&book, &summary.run_id);
+                }
+                summary
+            })
+            .collect();
+        Ok(Runs { member, runs })
     }
 
     /// The latest `limit` placeable requests since `since`, oldest first, for

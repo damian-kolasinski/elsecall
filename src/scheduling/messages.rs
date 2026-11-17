@@ -174,7 +174,8 @@ pub struct RunSummary {
     /// Set when the work ran on another member than the one that asked for it.
     #[serde(default)]
     pub placed: Option<PlacedSummary>,
-    /// Why it ran where it did, or why it did not run.
+    /// Why it ran where it did, or why it did not run; while a placeable
+    /// request waits, why from its latest scoring.
     #[serde(default)]
     pub reason: Option<String>,
 }
