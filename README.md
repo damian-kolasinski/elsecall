@@ -81,6 +81,13 @@ it downloads and installs the matching CLI, service and UI, then reopens the win
 Background checks never install anything. Network failures preserve cached offers
 and do not interrupt the fleet view.
 
+A check reads GitHub's latest-release page and confirms that the release's archive
+and signature are published, using GitHub's web pages rather than its REST API: the
+API allows only 60 unauthenticated requests an hour per address, which every Mac
+behind one router shares. A check that cannot reach GitHub reports
+`release_check_failed` as `check_error` in `elsecall update status`; the service tries
+again within the hour.
+
 The same updater is available to scripts through the local service:
 
 ```sh

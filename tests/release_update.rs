@@ -25,7 +25,6 @@ use elsecall::{
         speed::SpeedMeter,
     },
 };
-use serde_json::json;
 use std::{
     future::IntoFuture,
     sync::{Arc, Mutex},
@@ -168,22 +167,50 @@ fn service(
 }
 
 #[test]
-fn stable_catalog_filters_unpublished_prerelease_unsigned_and_unsupported_artifacts() {
-    let entry = |version: &str, draft: bool, pre: bool, signed: bool| json!({"tag_name":format!("v{version}"),"draft":draft,"prerelease":pre,"assets":[{"name":format!("elsecall-v{version}-aarch64-apple-darwin.tar.gz")},{"name":if signed {"packslip.sigstore.json"}else{"README.txt"}}]});
-    let bytes = serde_json::to_vec(&json!([
-        entry("0.1.1", false, false, true),
-        entry("0.2.0", false, false, true),
-        entry("1.0.0", true, false, true),
-        entry("2.0.0-beta.1", false, true, true),
-        entry("3.0.0", false, false, false),
-        entry("01.0.0", false, false, true)
-    ]))
-    .unwrap();
+fn the_latest_release_is_offered_only_when_it_is_stable_and_fully_published() {
+    use release_update::catalog::latest_installable;
+    let page = "https://github.com/damian-kolasinski/elsecall/releases";
+    let everything = |_: &Release, _: &str| Ok(true);
     assert_eq!(
-        release_update::catalog::select(&bytes).unwrap(),
-        Some(release("0.2.0"))
+        latest_installable(&format!("{page}/tag/v0.2.1"), everything).unwrap(),
+        Some(release("0.2.1"))
     );
-    assert!(release_update::catalog::select(b"{}").is_err());
+    // A repository without releases redirects to its release list.
+    assert_eq!(latest_installable(page, everything).unwrap(), None);
+    for tag in ["v2.0.0-beta.1", "v01.0.0", "0.2.1", "v0.2.1+other"] {
+        assert_eq!(
+            latest_installable(&format!("{page}/tag/{tag}"), everything).unwrap(),
+            None,
+            "{tag}"
+        );
+    }
+    let asked = std::sync::Mutex::new(Vec::new());
+    let unsigned = |release: &Release, name: &str| {
+        asked
+            .lock()
+            .unwrap()
+            .push(format!("{} {name}", release.version));
+        Ok(name != "packslip.sigstore.json")
+    };
+    assert_eq!(
+        latest_installable(&format!("{page}/tag/v0.2.1"), unsigned).unwrap(),
+        None
+    );
+    assert_eq!(
+        *asked.lock().unwrap(),
+        vec![
+            "0.2.1 elsecall-v0.2.1-aarch64-apple-darwin.tar.gz",
+            "0.2.1 packslip.sigstore.json"
+        ]
+    );
+    // Another repository's release is never offered.
+    assert!(
+        latest_installable(
+            "https://github.com/example/other/releases/tag/v9.0.0",
+            everything
+        )
+        .is_err()
+    );
     for version in ["../0.2.0", "0.2.0-beta.1", "0.2.0+other", "v0.2.0", ""] {
         assert!(ReleaseVersion::try_from(version.to_owned()).is_err());
     }

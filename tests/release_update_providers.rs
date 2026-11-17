@@ -169,3 +169,14 @@ fn mise_activation_and_rollback_preserve_other_tools_options_and_concurrent_user
     assert!(selection.restore(&release(), &previous).is_err());
     assert_eq!(fs::read_to_string(&config).unwrap(), edited);
 }
+
+/// The real latest release on GitHub. Not part of `mise run check`: it needs the
+/// network, and the answer changes with every release.
+#[test]
+#[ignore]
+fn live_latest_release_is_read_without_the_rate_limited_api() {
+    use elsecall::release_update::{ReleaseCatalog, catalog::GithubReleases};
+    let latest = GithubReleases.latest().unwrap();
+    println!("{latest:?}");
+    assert!(latest.is_some());
+}
