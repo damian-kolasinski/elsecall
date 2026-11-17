@@ -274,19 +274,26 @@ fn refusal(message: Message) -> String {
     }
 }
 
-/// The member's latest upgrade record, as the master reads it.
-fn latest(runtime: &tokio::runtime::Runtime, master: &TestMember, member: &TestMember) -> Value {
-    let status: UpgradeStatus = runtime
-        .block_on(peer_client::call(
-            &master.key(),
-            &member.as_member(),
-            hyper::Method::GET,
-            protocol::STATUS_ROUTE,
-            None::<&()>,
-            Duration::from_secs(2),
-        ))
-        .unwrap();
-    serde_json::to_value(status.latest).unwrap()
+/// The member's latest upgrade record, as the master reads it, or None when the
+/// member did not answer in time, as a loaded machine's member may not.
+fn latest(
+    runtime: &tokio::runtime::Runtime,
+    master: &TestMember,
+    member: &TestMember,
+) -> Option<Value> {
+    let status: UpgradeStatus = match runtime.block_on(peer_client::call(
+        &master.key(),
+        &member.as_member(),
+        hyper::Method::GET,
+        protocol::STATUS_ROUTE,
+        None::<&()>,
+        Duration::from_secs(2),
+    )) {
+        Ok(status) => status,
+        Err(failure) if failure.code == "member_unavailable" => return None,
+        Err(failure) => panic!("{failure:?}"),
+    };
+    Some(serde_json::to_value(status.latest).unwrap())
 }
 
 /// Waits until the member reports it is waiting for work labelled `label`.
@@ -298,7 +305,7 @@ fn until_draining(
 ) {
     let deadline = Instant::now() + crate::processes::WAIT;
     loop {
-        let value = latest(runtime, master, member);
+        let value = latest(runtime, master, member).unwrap_or_default();
         if value["state"] == "draining" && value["in_flight"][0]["label"] == label {
             return;
         }

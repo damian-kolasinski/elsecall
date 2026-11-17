@@ -43,16 +43,43 @@ fn installed_environment(member: &TestMember) -> Vec<(String, String)> {
 
 /// A free port below the ephemeral range, so a stopped member's port is not taken by
 /// another connection's ephemeral source port before the member restarts.
+///
+/// The port stays reserved for the rest of this test process, across a member's
+/// stop and restart: a lock file per port keeps other test processes, which a
+/// per-test runner starts concurrently, from choosing it while it is unbound.
 pub fn free_port() -> u16 {
-    use std::sync::atomic::{AtomicU16, Ordering};
+    use std::os::{fd::AsRawFd, unix::fs::OpenOptionsExt};
+    use std::sync::{
+        Mutex,
+        atomic::{AtomicU16, Ordering},
+    };
     static NEXT: AtomicU16 = AtomicU16::new(0);
-    let base = 20_000 + (std::process::id() % 100) as u16 * 200;
-    loop {
-        let port = base + NEXT.fetch_add(1, Ordering::Relaxed) % 20_000;
+    static RESERVED: Mutex<Vec<std::fs::File>> = Mutex::new(Vec::new());
+    // The per-user temporary directory, so no other account can prepare it.
+    let directory = std::env::temp_dir().join("elsecall-test-ports");
+    std::fs::create_dir_all(&directory).unwrap();
+    // Ports 20000-48999, below macOS's ephemeral range from 49152.
+    let start = (std::process::id() % 100) as u16 * 200;
+    for _ in 0..29_000 {
+        let port = 20_000 + (start + NEXT.fetch_add(1, Ordering::Relaxed) % 29_000) % 29_000;
+        let lock = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .custom_flags(libc::O_NOFOLLOW)
+            .open(directory.join(port.to_string()))
+            .unwrap();
+        // The lock belongs to this process's open file and ends when it exits;
+        // services it starts do not inherit the close-on-exec descriptor.
+        // SAFETY: flock has no memory-safety preconditions.
+        if unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
+            continue;
+        }
         if std::net::TcpListener::bind(("127.0.0.1", port)).is_ok() {
+            RESERVED.lock().unwrap().push(lock);
             return port;
         }
     }
+    panic!("no member port is free in {}", directory.display());
 }
 
 pub fn cli(home: &Path, args: &[&str]) -> Output {
@@ -370,6 +397,24 @@ impl TestMember {
         let value = json(&output);
         assert!(output.status.success(), "{} {args:?}: {value}", self.name);
         value["data"].clone()
+    }
+
+    /// For polling loops: a command's data, or None while the service cannot answer,
+    /// as while it relaunches itself for new service settings. Any other failure
+    /// fails the test.
+    pub fn poll(&self, args: &[&str]) -> Option<Value> {
+        let output = self.run(args);
+        let value = json(&output);
+        if output.status.success() {
+            return Some(value["data"].clone());
+        }
+        let code = value["error"]["code"].as_str();
+        assert!(
+            matches!(code, Some("service_unavailable" | "service_timeout")),
+            "{} {args:?}: {value}",
+            self.name
+        );
+        None
     }
 
     /// Runs a command that must fail and returns its error code.

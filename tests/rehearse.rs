@@ -106,11 +106,9 @@ fn production(member: &TestMember, seconds: &str) -> Child {
 fn wait_running(member: &TestMember, label: &str) {
     let end = Instant::now() + processes::WAIT;
     loop {
-        if member.ok(&["runs"])["runs"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|r| {
+        // Proposal settings relaunch the service, which cannot answer meanwhile.
+        if member.poll(&["runs"]).is_some_and(|data| {
+            data["runs"].as_array().unwrap().iter().any(|r| {
                 r["label"].as_str().is_some_and(|l| {
                     l == label
                         || label.starts_with("rehearsal:")
@@ -118,7 +116,7 @@ fn wait_running(member: &TestMember, label: &str) {
                             && l.ends_with(label.strip_prefix("rehearsal:").unwrap())
                 }) && r["state"] == "running"
             })
-        {
+        }) {
             return;
         }
         assert!(Instant::now() < end);
@@ -905,34 +903,55 @@ fn managed(alpha: &TestMember, bravo: &TestMember) {
         sleep(Duration::from_millis(100));
     }
 }
+/// Each member's service settings, as `sync status` and the fleet view both report
+/// them. Both ask every member over its channel, and a loaded member may not answer
+/// one of them in time, nor alpha's own service while new service settings
+/// relaunch it. That observation is repeated, but two answers that differ fail at
+/// once.
 fn service_snapshots(alpha: &TestMember) -> std::collections::BTreeMap<String, Value> {
-    let status = alpha.ok(&["sync", "status"]);
-    let fleet = alpha.ok(&["fleet"]);
-    status["members"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|member| {
-            let name = member["member"].as_str().unwrap();
-            let service = &member["sync"]["service"];
-            let peer = fleet["members"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .find(|m| m["name"] == name)
-                .unwrap();
-            assert_eq!(
-                service["effective_fingerprint"],
-                peer["status"]["config_sync"]["service"]["effective_fingerprint"]
-            );
+    let end = Instant::now() + processes::WAIT;
+    loop {
+        let (Some(status), Some(fleet)) = (alpha.poll(&["sync", "status"]), alpha.poll(&["fleet"]))
+        else {
             assert!(
-                service["effective_fingerprint"]
-                    .as_str()
-                    .is_some_and(|f| f.len() == 16)
+                Instant::now() < end,
+                "alpha's service never answered: {}",
+                alpha.log()
             );
-            (name.to_owned(), service.clone())
-        })
-        .collect()
+            sleep(Duration::from_millis(100));
+            continue;
+        };
+        let answered = |fingerprint: &Value| fingerprint.as_str().is_some_and(|f| f.len() == 16);
+        let snapshots: Option<std::collections::BTreeMap<_, _>> = status["members"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|member| {
+                let name = member["member"].as_str().unwrap();
+                let service = &member["sync"]["service"];
+                let peer = fleet["members"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|m| m["name"] == name)
+                    .unwrap();
+                let seen = &peer["status"]["config_sync"]["service"]["effective_fingerprint"];
+                if !answered(&service["effective_fingerprint"]) || !answered(seen) {
+                    return None;
+                }
+                assert_eq!(service["effective_fingerprint"], *seen, "{status} {fleet}");
+                Some((name.to_owned(), service.clone()))
+            })
+            .collect();
+        if let Some(snapshots) = snapshots {
+            return snapshots;
+        }
+        assert!(
+            Instant::now() < end,
+            "a member never reported its service settings: {status} {fleet}"
+        );
+        sleep(Duration::from_millis(100));
+    }
 }
 fn sealed_service(member: &TestMember) -> Vec<u8> {
     use elsecall::config_sync::{
@@ -1458,7 +1477,10 @@ fn compare_restores_after_signal_and_new_production_work() {
         let input = fixture(temp.path(), &[0, 3000, 6000]);
         let output = temp.path().join("interrupted.json");
         let proposal = proposal_file(temp.path());
-        let child = spawn_comparison(&alpha, &input, &output, &proposal, "10s");
+        // The limit also bounds baseline preparation, which a loaded machine can
+        // stretch past ten seconds before the proposal ever activates. Both cases
+        // end the comparison early, so a wider limit does not lengthen them.
+        let child = spawn_comparison(&alpha, &input, &output, &proposal, "60s");
         wait_margin(&alpha, &bravo, 0.2);
         wait_running(&alpha, "rehearsal:build fixture");
         let production = if signal {

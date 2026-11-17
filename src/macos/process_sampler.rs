@@ -216,8 +216,20 @@ mod tests {
             .stdout(std::process::Stdio::null())
             .spawn()
             .unwrap();
-        std::thread::sleep(Duration::from_millis(300));
-        let sampled = MacProcessSampler.sample().unwrap();
+        // Wait for CPU time rather than wall time: on a loaded machine the child
+        // can wait for a core much longer than it runs.
+        let deadline = std::time::Instant::now() + Duration::from_secs(120);
+        let sampled = loop {
+            let sampled = MacProcessSampler.sample().unwrap();
+            let busy = sampled
+                .iter()
+                .find(|p| p.pid == child.id())
+                .is_some_and(|p| p.cpu_time >= Duration::from_millis(100));
+            if busy || std::time::Instant::now() >= deadline {
+                break sampled;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        };
         child.kill().unwrap();
         child.wait().unwrap();
         let me = sampled

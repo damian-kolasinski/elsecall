@@ -247,7 +247,9 @@ mod tests {
     fn captures_stdout_and_stops_a_program_that_overruns_its_deadline() {
         let dir = tempfile::tempdir().unwrap();
         let speaker = write_script(dir.path(), "speak.sh", "#!/bin/sh\nprintf 'hello'\n");
-        let captured = capture(&speaker, dir.path(), Duration::from_secs(5)).unwrap();
+        // An allowance, not an expectation: capture returns when the program ends,
+        // which on a loaded machine can take seconds.
+        let captured = capture(&speaker, dir.path(), Duration::from_secs(60)).unwrap();
         assert!(captured.status.success());
         assert_eq!(captured.stdout, b"hello");
 
@@ -266,7 +268,8 @@ mod tests {
             "brief.sh",
             "#!/bin/sh\nprintf 'hello\\n' >/dev/stdout &\nexit 0\n",
         );
-        let captured = capture(&brief, dir.path(), Duration::from_secs(2)).unwrap();
+        // Capture returns once the pipe closes; the deadline is only an allowance.
+        let captured = capture(&brief, dir.path(), Duration::from_secs(60)).unwrap();
         assert!(captured.status.success());
         assert_eq!(captured.stdout, b"hello\n");
     }
