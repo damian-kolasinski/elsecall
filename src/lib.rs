@@ -33,6 +33,7 @@ pub mod housekeeping;
 pub mod idle_load;
 pub mod inbound_firewall;
 pub mod inspection;
+pub mod install_window;
 pub mod installation;
 pub mod inventory_reader;
 pub mod label_pattern;

@@ -374,6 +374,7 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
     }
     crate::fleet_upgrade::journal::Journal::new(&paths.data).remove()?;
     crate::release_update::store::remove(paths)?;
+    crate::window_app::remove_locked(paths);
     match fs::remove_dir(&paths.data) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::DirectoryNotEmpty => Err(Failure::new(

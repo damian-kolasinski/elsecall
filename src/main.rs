@@ -6,11 +6,12 @@ use elsecall::{
     fleet_cli,
     inbound_firewall::{Inbound, InboundFirewall},
     inspection::{Health, Inspection, Machine},
+    install_window,
     installation::{self, ServiceManager},
     local_access,
     macos::{
         application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
-        processes::MacProcesses, tailscale::TailscaleCli,
+        processes::MacProcesses, tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
     },
     paths::Paths,
     peer_listener, scheduling, tailnet,
@@ -37,6 +38,9 @@ enum Command {
         /// use the desktop session if there is one, else the background session.
         #[arg(long, value_enum)]
         session: Option<SessionArg>,
+        /// Also open the fleet window and wait until it is ready; exits 1 if it cannot
+        #[arg(long)]
+        open: bool,
     },
     /// Stop the service and remove Elsecall-owned installation files
     Uninstall {
@@ -336,21 +340,32 @@ async fn run(cli: Cli) -> Result<bool> {
         } => {
             output(elsecall::workload_migration::migrate(&paths, &sources)?);
         }
-        Command::Install { session } => {
+        Command::Install { session, open } => {
             let source =
                 std::env::current_exe().map_err(|e| Failure::io("Find current executable", e))?;
             let session = session.map(|session| match session {
                 SessionArg::Desktop => installation::Session::Desktop,
                 SessionArg::Background => installation::Session::Background,
             });
-            let installed = installation::install(&paths, &source, manager, session)?;
-            wait_ready(&paths).await?;
+            let (installed, window) = install_window::install(
+                &paths,
+                &source,
+                manager,
+                session,
+                &MacWindowLauncher,
+                open,
+                wait_ready(&paths),
+            )
+            .await?;
+            let complete = !open || window.opened();
             // Other members can reach the service only if the firewall lets them.
             let mut data = serde_json::to_value(installed).expect("serializable installation");
             data["member_listener_firewall"] =
                 serde_json::to_value(ApplicationFirewall.inbound(&paths.executable()))
                     .expect("serializable firewall state");
+            data["window"] = serde_json::to_value(window).expect("serializable window state");
             output(data);
+            return Ok(complete);
         }
         Command::Uninstall { force } => {
             installation::uninstall(&paths, manager, force)?;

@@ -4,7 +4,12 @@ use crate::{
     paths::Paths,
     private_files,
 };
-use std::{fs, io::Write, os::unix::fs::PermissionsExt, path::Path};
+use std::{
+    fs,
+    io::Write,
+    os::unix::fs::PermissionsExt,
+    path::{Path, PathBuf},
+};
 
 /// OS operations needed to prepare and launch the fleet window.
 pub trait WindowLauncher: Send + Sync {
@@ -50,6 +55,55 @@ pub fn publish_locked(
     transaction: &crate::installation::Transaction,
     launcher: &dyn WindowLauncher,
 ) -> Result<()> {
+    let placed = place_locked(transaction, launcher)?;
+    if let Err(error) = launcher.open(placed.app()) {
+        placed.restore()?;
+        return Err(error);
+    }
+    Ok(())
+}
+
+/// A newly published app. The bundle it replaced stays staged until this is
+/// dropped, which keeps the new app, or restored.
+pub struct Placed {
+    app: PathBuf,
+    staging: tempfile::TempDir,
+    replaced: bool,
+}
+impl Placed {
+    pub fn app(&self) -> &Path {
+        &self.app
+    }
+
+    /// Puts the replaced bundle back, or removes an app that replaced nothing.
+    fn restore(self) -> Result<()> {
+        let staged = self.staging.path().join("Elsecall.app");
+        let restored = if self.replaced {
+            exchange(&staged, &self.app)
+        } else {
+            fs::rename(&self.app, &staged)
+                .map_err(|error| Failure::io("Restore the Elsecall app", error))
+        };
+        restored.map_err(|restore_error| {
+            let recovery = self.staging.keep();
+            Failure::new(
+                "window_restore_failed",
+                restore_error.message,
+                format!(
+                    "The previous app was preserved in {}. Restore it before retrying.",
+                    recovery.display()
+                ),
+            )
+        })
+    }
+}
+
+/// Signs the stored window into a staged bundle and swaps it in for the app,
+/// without opening it.
+pub fn place_locked(
+    transaction: &crate::installation::Transaction,
+    launcher: &dyn WindowLauncher,
+) -> Result<Placed> {
     let paths = transaction.paths();
     let bytes = match fs::read(paths.window_executable()) {
         Ok(bytes) => bytes,
@@ -68,27 +122,7 @@ pub fn publish_locked(
     let exists = match fs::symlink_metadata(&app) {
         Ok(_) => {
             private_files::owned_tree(&paths.home, &app.join("Contents/MacOS"))?;
-            let plist = fs::read(app.join("Contents/Info.plist"))
-                .map_err(|error| Failure::io("Read installed app identity", error))?;
-            let plist: plist::Value = plist::from_bytes(&plist).map_err(|error| {
-                Failure::new(
-                    "window_conflict",
-                    format!("The existing app identity could not be read ({error})."),
-                    "Inspect Elsecall.app before retrying.",
-                )
-            })?;
-            if plist
-                .as_dictionary()
-                .and_then(|dict| dict.get("CFBundleIdentifier"))
-                .and_then(plist::Value::as_string)
-                != Some("com.elsecall.ui")
-            {
-                return Err(Failure::new(
-                    "window_conflict",
-                    "The existing Elsecall.app belongs to another application.",
-                    "Move that application before retrying.",
-                ));
-            }
+            check_identity(&app)?;
             true
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
@@ -108,27 +142,66 @@ pub fn publish_locked(
         fs::rename(&staged, &app)
             .map_err(|error| Failure::io("Publish the Elsecall app", error))?;
     }
-    if let Err(error) = launcher.open(&app) {
-        let restored = if exists {
-            exchange(&staged, &app)
-        } else {
-            fs::rename(&app, &staged)
-                .map_err(|error| Failure::io("Restore the Elsecall app", error))
-        };
-        if let Err(restore_error) = restored {
-            let recovery = staging.keep();
-            return Err(Failure::new(
-                "window_restore_failed",
-                restore_error.message,
-                format!(
-                    "The previous app was preserved in {}. Restore it before retrying.",
-                    recovery.display()
-                ),
-            ));
-        }
-        return Err(error);
+    Ok(Placed {
+        app,
+        staging,
+        replaced: exists,
+    })
+}
+
+/// Refuses an app at the window's path that Elsecall did not publish.
+fn check_identity(app: &Path) -> Result<()> {
+    let plist = fs::read(app.join("Contents/Info.plist"))
+        .map_err(|error| Failure::io("Read installed app identity", error))?;
+    let plist: plist::Value = plist::from_bytes(&plist).map_err(|error| {
+        Failure::new(
+            "window_conflict",
+            format!("The existing app identity could not be read ({error})."),
+            "Inspect Elsecall.app before retrying.",
+        )
+    })?;
+    if plist
+        .as_dictionary()
+        .and_then(|dict| dict.get("CFBundleIdentifier"))
+        .and_then(plist::Value::as_string)
+        != Some("com.elsecall.ui")
+    {
+        return Err(Failure::new(
+            "window_conflict",
+            "The existing Elsecall.app belongs to another application.",
+            "Move that application before retrying.",
+        ));
     }
     Ok(())
+}
+
+/// Removes the app this installation published, within the uninstall's lock.
+///
+/// Uninstall calls this after removing everything else, so the app never stops it:
+/// anything that is not provably Elsecall's app in an owned, safe directory is
+/// kept, and so is an app whose removal fails. A running window keeps its open
+/// files and shows the service as unavailable.
+pub fn remove_locked(paths: &Paths) {
+    let app = paths.window_app();
+    let parent = app.parent().expect("app has a parent");
+    // The app exists, so the owned-tree check creates nothing; it refuses a
+    // symlinked or shared directory anywhere below home.
+    let removable = fs::symlink_metadata(&app).is_ok_and(|metadata| metadata.is_dir())
+        && private_files::owned_tree(&paths.home, parent).is_ok()
+        && check_identity(&app).is_ok();
+    if !removable {
+        return;
+    }
+    // Move the bundle aside first, so a failure part way leaves no half-deleted app.
+    let Ok(staging) = tempfile::Builder::new()
+        .prefix(".elsecall-window-")
+        .tempdir_in(parent)
+    else {
+        return;
+    };
+    if fs::rename(&app, staging.path().join("Elsecall.app")).is_ok() {
+        drop(staging);
+    }
 }
 
 fn write_bundle(app: &Path, binary: &[u8]) -> Result<()> {
