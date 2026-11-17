@@ -1,0 +1,5 @@
+# Host-side dependencies of scripts/vm/ecvm, installed into a private venv.
+vncdotool==1.4.2
+pillow==13.0.0
+twisted==26.10.0
+cryptography==50.0.2
