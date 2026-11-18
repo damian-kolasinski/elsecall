@@ -15,6 +15,17 @@ pub struct FleetSnapshot {
     pub standing: Standing,
 }
 
+impl FleetSnapshot {
+    /// Whether this Mac is the master, the one that adds Macs.
+    pub fn this_is_master(&self) -> bool {
+        self.standing == Standing::Rostered
+            && self
+                .members
+                .iter()
+                .any(|member| member.this_member && member.role == Role::Master)
+    }
+}
+
 /// Whether this machine has a roster. Without one it is not even the master of its
 /// own fleet of one, and an empty member list says nothing.
 #[derive(Clone, Debug, PartialEq)]
@@ -35,6 +46,8 @@ pub enum Standing {
 #[derive(Clone, Debug, PartialEq)]
 pub struct MemberRow {
     pub name: String,
+    /// This Mac's own row.
+    pub this_member: bool,
     pub role: Role,
     pub reach: Reachability,
     pub gate: Gate,

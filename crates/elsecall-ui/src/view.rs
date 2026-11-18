@@ -44,6 +44,14 @@ struct Paints {
 }
 
 pub fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
+    let page = fleet_page(state, cx);
+    let kit = theme::kit(cx.system_dark());
+    let mut layer = Vec::new();
+    crate::add_mac_view::sheet(state, &kit, cx.is_reduced_motion(), &mut layer);
+    rune_kit::root(page, layer)
+}
+
+fn fleet_page(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
     let dark = cx.system_dark();
     let kit = theme::kit(dark);
     let paints = Paints {
@@ -173,6 +181,18 @@ fn header(state: &AppState, paints: &Paints, dark: bool) -> El {
     }
     if state.update_available() {
         line = line.child(update_button(state, dark));
+    }
+    if state
+        .shown()
+        .is_some_and(|snapshot| snapshot.this_is_master())
+    {
+        line = line.child(
+            Button::new("Add Mac")
+                .disabled(state.stale())
+                .on_press(|state: &mut AppState| state.open_add_mac())
+                .build(&theme::kit(dark))
+                .key("add-mac"),
+        );
     }
     if let Some(at) = state.refreshed() {
         line = line.child(
@@ -586,6 +606,7 @@ mod tests {
                 .iter()
                 .map(|(name, release)| MemberRow {
                     name: (*name).into(),
+                    this_member: false,
                     role: Role::Member,
                     reach: Reachability::Reachable,
                     gate: Gate::Open,

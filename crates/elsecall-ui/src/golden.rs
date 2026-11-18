@@ -32,7 +32,18 @@ const SCENES: &[&str] = &[
     "release-offline",
     "release-future",
     "release-fleet",
+    "add-mac-prepare",
+    "add-mac-looking",
+    "add-mac-choose",
+    "add-mac-sign-in",
+    "add-mac-adding",
+    "add-mac-approve",
+    "add-mac-done",
+    "add-mac-failed",
 ];
+/// Animated scenes again later in their loop: the switch turned on, and the
+/// browser's page after the click.
+const TIMED: &[(&str, f64)] = &[("add-mac-prepare", 2.8), ("add-mac-approve", 2.4)];
 const BLESS: &str =
     "ELSECALL_UI_BLESS=1 cargo test -p elsecall-ui --bin elsecall-ui fleet_scenes_match_goldens";
 const APPEARANCES: &[&str] = &["light", "dark"];
@@ -83,6 +94,17 @@ fn fleet_scenes_match_goldens() {
                 "2",
             ],
         );
+    }
+    for (scene, at) in TIMED {
+        let suffix = format!("-at{}", (at * 10.0).round() as u32);
+        let at = at.to_string();
+        for appearance in APPEARANCES {
+            compare(scene, appearance, &suffix, &["--at", &at]);
+        }
+    }
+    // The sheet's widest page at the window's minimum size.
+    for appearance in APPEARANCES {
+        compare("add-mac-approve", appearance, "-minimum", MINIMUM_WINDOW);
     }
 }
 

@@ -6,6 +6,8 @@ use std::sync::Arc;
 use rune::{App, AppSpec, Chrome, Latest, Tx, Waker};
 use rune_kit::TableState;
 
+use crate::add_mac_flow::{AddMac, AddUpdate, Page as AddMacPage, RunUpdate};
+use crate::add_mac_source::{self, AddMacSource, Inbox};
 use crate::fleet_source::{
     FleetSnapshot, Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Release, Role,
     SourceFailure, Standing,
@@ -49,6 +51,14 @@ const SCENES: &[(&str, Scene)] = &[
     ("release-offline", scene_release_offline),
     ("release-future", scene_release_future),
     ("release-fleet", scene_release_fleet),
+    ("add-mac-prepare", scene_add_mac_prepare),
+    ("add-mac-looking", scene_add_mac_looking),
+    ("add-mac-choose", scene_add_mac_choose),
+    ("add-mac-sign-in", scene_add_mac_sign_in),
+    ("add-mac-adding", scene_add_mac_adding),
+    ("add-mac-approve", scene_add_mac_approve),
+    ("add-mac-done", scene_add_mac_done),
+    ("add-mac-failed", scene_add_mac_failed),
 ];
 
 pub(crate) enum Phase {
@@ -77,9 +87,75 @@ pub struct AppState {
     opened_at_ms: u64,
     release_disconnected: bool,
     bundle: Arc<dyn Bundle>,
+    add_mac: AddMac,
+    add_source: Arc<dyn AddMacSource>,
+    nearby_feed:
+        Arc<Latest<Result<Vec<elsecall::nearby_macs::NearbyMac>, elsecall::failure::Failure>>>,
+    add_inbox: Arc<Inbox<RunUpdate>>,
+    /// When the sheet last asked for the Macs nearby, on the window's clock.
+    last_look: Option<f64>,
+    /// The window's clock at the last poll, which drives the sheet's animations.
+    clock: f64,
 }
 
+/// How often the sheet looks for Macs nearby while it lists them.
+const LOOK_EVERY: f64 = 3.0;
+/// Frames for the sheet's illustrations.
+const ANIMATION_FRAME: std::time::Duration = std::time::Duration::from_millis(33);
+
 impl AppState {
+    pub(crate) fn add_mac(&self) -> &AddMac {
+        &self.add_mac
+    }
+
+    pub(crate) fn add_mac_mut(&mut self) -> &mut AddMac {
+        &mut self.add_mac
+    }
+
+    pub(crate) fn clock(&self) -> f64 {
+        self.clock
+    }
+
+    pub(crate) fn open_add_mac(&mut self) {
+        self.add_mac.open();
+        self.last_look = None;
+    }
+
+    /// Closes the sheet, stopping an add that still runs.
+    /// While an add runs, closing only stops it: the sheet stays to show how it
+    /// ended.
+    pub(crate) fn close_add_mac(&mut self) {
+        if self.add_mac.adding() {
+            self.add_source.stop(self.add_mac.run());
+            return;
+        }
+        self.add_mac.close();
+    }
+
+    pub(crate) fn stop_add_mac(&mut self) {
+        self.add_source.stop(self.add_mac.run());
+    }
+
+    /// The window is quitting: an add it started stops with it.
+    fn quit_add_mac(&mut self) {
+        if self.add_mac.adding() {
+            self.add_source.stop(self.add_mac.run());
+        }
+    }
+
+    /// Starts the add on a thread of its own; its updates arrive in the inbox.
+    pub(crate) fn start_add_mac(&mut self) {
+        let Some(request) = self.add_mac.start() else {
+            return;
+        };
+        let source = Arc::clone(&self.add_source);
+        let inbox = Arc::clone(&self.add_inbox);
+        let run = request.run;
+        std::thread::spawn(move || {
+            source.add(request, &|update| inbox.push(RunUpdate { run, update }));
+        });
+    }
+
     pub(crate) fn phase(&self) -> &Phase {
         &self.phase
     }
@@ -325,6 +401,7 @@ pub fn run() {
     };
     let app = App::new(spec())
         .chrome(CHROME)
+        .on_quit(|state, _| state.quit_add_mac())
         .args(args)
         .on_ready(move |_| {
             if let Some(socket) = ready.take()
@@ -375,6 +452,12 @@ fn init() -> AppState {
         opened_at_ms: elsecall::release_update::now_millis(),
         release_disconnected: false,
         bundle: Arc::new(uninstalled::RunningBundle::current()),
+        add_mac: AddMac::default(),
+        add_source: add_mac_source::production(),
+        nearby_feed: Arc::new(Latest::default()),
+        add_inbox: Arc::new(Inbox::default()),
+        last_look: None,
+        clock: 0.0,
     }
 }
 
@@ -389,7 +472,9 @@ fn setup(state: &mut AppState, waker: Waker) {
     state.feed.set_waker(waker.clone());
     state.upgrade_feed.set_waker(waker.clone());
     state.release_feed.set_waker(waker.clone());
-    state.release_start.set_waker(waker);
+    state.release_start.set_waker(waker.clone());
+    state.nearby_feed.set_waker(waker.clone());
+    state.add_inbox.set_waker(waker);
     if state.follow_service {
         refresh::start(Arc::clone(&state.feed), socket_source::shared());
         release_source::start(
@@ -399,8 +484,8 @@ fn setup(state: &mut AppState, waker: Waker) {
     }
 }
 
-fn poll(state: &mut AppState, _: f64, tx: &mut Tx) -> bool {
-    let mut changed = false;
+fn poll(state: &mut AppState, now: f64, tx: &mut Tx) -> bool {
+    let mut changed = poll_add_mac(state, now, tx);
     if let Some(update) = state.feed.take() {
         state.apply_refresh(update);
         changed = true;
@@ -441,6 +526,48 @@ fn poll(state: &mut AppState, _: f64, tx: &mut Tx) -> bool {
     }
     if changed {
         tx.instant();
+    }
+    changed
+}
+
+/// The Add Mac sheet's background work and animation frames.
+fn poll_add_mac(state: &mut AppState, now: f64, tx: &mut Tx) -> bool {
+    state.clock = now;
+    let mut changed = false;
+    for update in state.add_inbox.drain() {
+        if let Some(link) = state.add_mac.apply(update) {
+            let _ = tx.open_url(link.as_str());
+        }
+        changed = true;
+    }
+    if let Some(found) = state.nearby_feed.take() {
+        state.add_mac.set_nearby(found);
+        changed = true;
+    }
+    // Scenes show a fixed list rather than this network's.
+    if state.follow_service
+        && state.add_mac.looking()
+        && !state.nearby_feed.is_pending()
+        && state.last_look.is_none_or(|at| now - at >= LOOK_EVERY)
+    {
+        state.last_look = Some(now);
+        state
+            .nearby_feed
+            .request(Arc::clone(&state.add_source), |source| source.nearby());
+    }
+    let animated = matches!(
+        state.add_mac.page,
+        AddMacPage::Prepare
+            | AddMacPage::Adding {
+                approval: Some(_),
+                ..
+            }
+    );
+    if animated {
+        tx.wake_after(ANIMATION_FRAME);
+        changed = true;
+    } else if state.add_mac.looking() {
+        tx.wake_after(std::time::Duration::from_secs_f64(LOOK_EVERY));
     }
     changed
 }
@@ -676,6 +803,98 @@ fn scene_release_offline(state: &mut AppState) {
     ));
 }
 
+fn scene_add_mac_prepare(state: &mut AppState) {
+    scene_members(state);
+    state.add_mac.open();
+}
+
+fn scene_add_mac_looking(state: &mut AppState) {
+    scene_add_mac_prepare(state);
+    state.add_mac.show_choose();
+}
+
+fn scene_add_mac_choose(state: &mut AppState) {
+    scene_add_mac_prepare(state);
+    state.add_mac.set_nearby(Ok(vec![
+        crate::add_mac_flow::mac("MacBook Pro", true, None),
+        crate::add_mac_flow::mac("Studio", false, None),
+        crate::add_mac_flow::mac("Mac mini", true, Some("mac-mini")),
+    ]));
+    state.add_mac.show_choose();
+}
+
+fn scene_add_mac_sign_in(state: &mut AppState) {
+    scene_add_mac_choose(state);
+    state.add_mac.show_sign_in();
+    state.add_mac.account.replace_text("devbox");
+    state.add_mac.password.replace_text("example");
+}
+
+fn scene_add_mac_adding(state: &mut AppState) {
+    scene_add_mac_sign_in(state);
+    state.add_mac.start();
+    for step in [
+        elsecall::add_mac::Step::Check,
+        elsecall::add_mac::Step::Tailnet,
+        elsecall::add_mac::Step::Install,
+    ] {
+        state
+            .add_mac
+            .apply_current(AddUpdate::Event(elsecall::add_mac::Event::Step { step }));
+    }
+}
+
+fn scene_add_mac_approve(state: &mut AppState) {
+    scene_add_mac_sign_in(state);
+    state.add_mac.start();
+    for event in [
+        elsecall::add_mac::Event::Step {
+            step: elsecall::add_mac::Step::Check,
+        },
+        elsecall::add_mac::Event::Step {
+            step: elsecall::add_mac::Step::Tailnet,
+        },
+        elsecall::add_mac::Event::Approve {
+            link: elsecall::remote_mac::LoginLink::parse("https://login.tailscale.com/a/example")
+                .expect("a Tailscale link"),
+            approval: elsecall::add_mac::Approval::Login,
+        },
+    ] {
+        state.add_mac.apply_current(AddUpdate::Event(event));
+    }
+}
+
+fn scene_add_mac_done(state: &mut AppState) {
+    scene_add_mac_sign_in(state);
+    state.add_mac.start();
+    let report = serde_json::from_value(serde_json::json!({
+        "member": "macbook-pro",
+        "host": "macbook-pro.local",
+        "mac": {
+            "model": "Mac16,10",
+            "serial_number": null,
+            "macos_version": "26.1",
+            "ssh_host_key": "SHA256:exampleHostKeyFingerprint (ED25519)"
+        },
+        "readiness": "awaiting_provisioning",
+        "tailscale_key_expiry": null,
+        "steps": [],
+        "next_step": ""
+    }))
+    .expect("a report");
+    state.add_mac.apply_current(AddUpdate::Finished(Ok(report)));
+}
+
+fn scene_add_mac_failed(state: &mut AppState) {
+    scene_add_mac_sign_in(state);
+    state.add_mac.start();
+    state.add_mac.apply_current(AddUpdate::Finished(Err(elsecall::failure::Failure::new(
+        "ssh_password_refused",
+        "macbook-pro.local refused the password for devbox.",
+        "Check the account's short name and password on that Mac, and that Remote Login allows that account.",
+    ))));
+}
+
 fn solo_snapshot() -> FleetSnapshot {
     FleetSnapshot {
         enrolled: false,
@@ -770,6 +989,8 @@ fn member(
     };
     MemberRow {
         name: name.into(),
+        // The scenes' master is this Mac.
+        this_member: role == Role::Master,
         role,
         reach,
         gate,
@@ -787,6 +1008,10 @@ fn gigabytes(used: u64, total: u64) -> MemoryUse {
         total_bytes: total << 30,
     }
 }
+
+#[cfg(test)]
+#[path = "add_mac_tests.rs"]
+mod add_mac_tests;
 
 #[cfg(test)]
 mod tests {

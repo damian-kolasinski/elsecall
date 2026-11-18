@@ -1814,7 +1814,10 @@ offers a login link (a fresh daemon takes the Mac's Bonjour name): the command p
 it on standard error and opens it in the master's browser, where the operator
 approves the Mac; a tailnet that approves devices gets its admin console instead. It
 waits up to `--approval-wait` and then fails with `tailscale_login_pending`, the link in
-`details.url`; running it again continues. Over
+`details.url`; running it again continues. With `--progress json`, standard error has
+one event per line instead (`{"event":"step","step":"tailnet"}`, or
+`{"event":"approve","link":…,"approval":"login"|"device"}`) and the command opens no
+link itself; the fleet window's **Add Mac** sheet follows an add this way. Over
 one SSH connection that ignores the operator's SSH configuration and keys and trusts
 the Mac's host key for the rest of the command, it:
 

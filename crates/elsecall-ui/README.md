@@ -72,6 +72,46 @@ Scenes: `loading`, `unavailable-first`, `unavailable`, `solo`, `no-tailnet`, `me
 any fleet data (banner, no table). `unavailable` keeps the last table, greyed,
 under that banner.
 
+## Add Mac
+
+**Add Mac** in the header opens a sheet that walks through [Adding a Mac](../../docs/add-mac.md):
+
+1. **On the new Mac**: a looping illustration of System Settings › General › Sharing
+   with Remote Login being turned on, beside the three things to do there.
+2. **Choose it**: the Macs on this network, looked for again every 3 seconds while
+   the page is open, each with its model, host name and address. Each shows whether
+   it is ready, needs Remote Login, may not be a Mac, or is a member (picking one
+   repairs it). Any Mac Remote Login reaches can be picked; one is picked for you only
+   when it is the only one ready, since anything on the network can advertise itself.
+   A host name or address can be typed instead. When looking fails, the sheet says
+   why and what to do, with a way to the Local Network setting when macOS denies it.
+3. **Sign in**: the exact Mac again (name, model, host, address), then an
+   administrator account and its password in a secure field. The password leaves the
+   sheet's state when the add starts and the child's input right after it is written.
+4. **Add**: each step of `fleet add` as it runs. When Tailscale waits for approval,
+   the window opens its page in the browser and the sheet shows an illustration of
+   clicking Connect, with **Open the page again**. **Stop**, the sheet's close button
+   and Escape stop the add and keep the sheet to show how it ended; quitting the window
+   stops it too. The end shows the new member with its readiness, serial number, host
+   key and Tailscale key expiry, or the failure with **Try again**, which keeps the
+   account (and **Open the page** while an approval is pending).
+
+Add Mac shows only on the master, the Mac that adds others.
+
+The sheet runs the installed `elsecall` CLI as this app's child: `fleet nearby`, and
+`fleet add --progress json` with the password on standard input, reading one event per
+line from its standard error. So macOS asks once whether Elsecall may use the local
+network (the app's `NSLocalNetworkUsageDescription` and `NSBonjourServices`), and
+the window and agents share one implementation. Illustrations are drawn from the
+window's clock at about 30 frames a second while they show, and hold their last frame
+under Reduce Motion.
+
+Scenes: `add-mac-prepare`, `add-mac-looking`, `add-mac-choose`, `add-mac-sign-in`,
+`add-mac-adding`, `add-mac-approve`, `add-mac-done`, `add-mac-failed`. Goldens also
+capture the two illustrations later in their loop (`-at28`, `-at24`) and the approval
+page at the window's minimum size. Pointer-driven tests walk the sheet from the header
+to a member, and stop an add, with the CLI faked at its boundary.
+
 ## Golden tests
 
 `cargo test -p elsecall-ui --bin elsecall-ui fleet_scenes_match_goldens` renders each

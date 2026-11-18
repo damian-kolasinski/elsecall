@@ -1,3 +1,6 @@
+mod add_mac_flow;
+mod add_mac_source;
+mod add_mac_view;
 mod app;
 mod fleet_source;
 mod load_trend;

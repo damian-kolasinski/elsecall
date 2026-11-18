@@ -43,6 +43,14 @@ const INFO_PLIST: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
   <string>14.0</string>
   <key>NSHighResolutionCapable</key>
   <true/>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>Elsecall finds Macs on your network and connects to the one you add to your fleet.</string>
+  <key>NSBonjourServices</key>
+  <array>
+    <string>_ssh._tcp</string>
+    <string>_companion-link._tcp</string>
+    <string>_device-info._tcp</string>
+  </array>
 </dict>
 </plist>
 "#;

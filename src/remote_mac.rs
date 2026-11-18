@@ -1,7 +1,7 @@
 //! The Mac being added, as the master reaches it: what it is, its tailnet, and the
 //! changes Add Mac makes there. The production adapter is SSH (`openssh_mac`).
 use crate::{failure::Result, inbound_firewall::Rule, tailscale_bottle::Bottle};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// What the Mac is, read once before anything changes.
@@ -60,9 +60,16 @@ pub enum TailscaleVariant {
 
 /// Tailscale's own login or admin link. The master opens it in a browser, so it
 /// can only be made from a link on `login.tailscale.com`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(into = "String")]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(into = "String", try_from = "String")]
 pub struct LoginLink(String);
+
+impl TryFrom<String> for LoginLink {
+    type Error = String;
+    fn try_from(url: String) -> std::result::Result<Self, String> {
+        Self::parse(&url).ok_or_else(|| "not a Tailscale login link".into())
+    }
+}
 
 impl LoginLink {
     pub fn parse(url: &str) -> Option<Self> {

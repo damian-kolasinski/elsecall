@@ -4,7 +4,7 @@
 //! decides which advertisements are Macs, whether each can be reached over Remote
 //! Login, and which are already fleet members.
 use crate::failure::Result;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, net::IpAddr, time::Duration};
 
 /// What an advertisement offers the master.
@@ -51,7 +51,7 @@ pub struct KnownMember {
 }
 
 /// Whether the master can reach a Mac over SSH.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "remote_login", rename_all = "snake_case")]
 pub enum RemoteLogin {
     On {
@@ -63,7 +63,7 @@ pub enum RemoteLogin {
 
 /// Whether a Mac is already a fleet member. Default Mac names repeat across
 /// networks, so a name alone only suggests it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "membership", rename_all = "snake_case")]
 pub enum Membership {
     NotMember,
@@ -77,7 +77,7 @@ pub enum Membership {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NearbyMac {
     /// The Mac's computer name.
     pub name: String,
@@ -389,5 +389,20 @@ mod tests {
         assert_eq!(off["membership"], "not_member");
         assert!(off.get("ssh_port").is_none());
         assert!(off.get("member").is_none());
+        // The window reads them back.
+        assert_eq!(
+            serde_json::from_value::<NearbyMac>(json)
+                .unwrap()
+                .membership,
+            Membership::Member {
+                member: "macbook-pro".into()
+            }
+        );
+        assert_eq!(
+            serde_json::from_value::<NearbyMac>(off)
+                .unwrap()
+                .remote_login,
+            RemoteLogin::Off
+        );
     }
 }
