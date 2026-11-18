@@ -1,7 +1,0 @@
-prepare: Blocked; artifact absent; onboarding_installer_unavailable
-claim: candidate possession and master receipt verified
-after restart: onboarding_invitation_used
-wrong fleet: onboarding_invitation_rejected
-expired: onboarding_invitation_rejected
-cancel: Cancelled
-Demonstrated trust primitives only. No Mac installed, enrolled, or controlled.

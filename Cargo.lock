@@ -1093,7 +1093,6 @@ dependencies = [
 name = "elsecall-ui"
 version = "0.2.2"
 dependencies = [
- "cc",
  "elsecall",
  "libc",
  "png 0.18.1",

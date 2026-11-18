@@ -464,9 +464,6 @@ pub async fn serve_with_updates(
         .merge(desired_routes)
         .merge(crate::ui_app::routes(paths.clone()))
         .merge(update_routes)
-        .merge(crate::onboarding_local_api::routes(
-            paths.data.join("onboarding"),
-        ))
         .merge(crate::trace_api::routes(reporter.clone()))
         .merge(crate::report_api::routes(reporter))
         .merge(relay)

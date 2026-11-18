@@ -101,16 +101,6 @@ pub fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
             ),
         );
     }
-    if state.onboarding.demo {
-        page = page.child(
-            text("AirDrop demo · neutral fleet · harmless text file only")
-                .font(paints.small)
-                .color(paints.secondary),
-        );
-    }
-    if let Some((title, detail)) = state.onboarding.copy() {
-        page = page.child(banner(title, detail, &paints));
-    }
     if let Some(error) = state.update_error() {
         page = page.child(text(error).font(paints.small).color(paints.secondary));
     }
@@ -185,17 +175,6 @@ fn header(state: &AppState, paints: &Paints, dark: bool) -> El {
     if let Some(notice) = state.release_notice() {
         line = line.child(text(notice).font(paints.small).color(paints.secondary));
     }
-    line = line.child(
-        Button::new(if state.onboarding.busy() {
-            "Adding Mac…"
-        } else {
-            "Add Mac"
-        })
-        .disabled(state.onboarding.busy() || state.stale() || state.shown().is_none())
-        .on_press(|state: &mut AppState| state.onboarding.start())
-        .build(&theme::kit(dark))
-        .key("add-mac"),
-    );
     if state.update_available() {
         line = line.child(update_button(state, dark));
     }

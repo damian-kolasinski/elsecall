@@ -57,6 +57,9 @@ fn uninstall_removes_everything_a_running_service_created() {
             "{expected} missing from {created:?}"
         );
     }
+    // Earlier builds kept onboarding operations here; nothing writes them now.
+    fs::create_dir_all(data.join("onboarding")).unwrap();
+    fs::write(data.join("onboarding/0123456789abcdef.json"), "{}").unwrap();
     let uninstalled = member.ok(&["uninstall", "--force"]);
     assert!(!data.exists(), "left behind: {:?}", names(&data));
     assert_eq!(uninstalled["status"], "uninstalled");
