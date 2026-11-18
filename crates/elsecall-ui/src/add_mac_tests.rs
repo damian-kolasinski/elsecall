@@ -9,10 +9,10 @@ use elsecall::nearby_macs::NearbyMac;
 use elsecall::remote_mac::LoginLink;
 use rune::Tx;
 
-use super::{AppState, init, poll, scene_members};
+use super::{AppState, init, poll, render, scene_members};
 use crate::add_mac_flow::{AddRequest, AddUpdate, Page, mac};
 use crate::add_mac_source::AddMacSource;
-use crate::{theme, view};
+use crate::theme;
 
 const LINK: &str = "https://login.tailscale.com/a/example";
 
@@ -107,12 +107,7 @@ fn window(cli: Arc<FakeCli>) -> rune::Runtime<AppState> {
     // The sheet looks for Macs, as in the running window, but through the fake.
     state.follow_service = true;
     state.add_source = cli;
-    let mut rt = rune::Runtime::new(
-        state,
-        view::fleet,
-        (1120.0, 560.0),
-        rune::Env::new(false, 1.0),
-    );
+    let mut rt = rune::Runtime::new(state, render, (1120.0, 560.0), rune::Env::new(false, 1.0));
     rt.frame(0.0);
     rt
 }
@@ -221,12 +216,7 @@ fn only_the_master_offers_add_mac() {
     let _guard = theme::serial_render();
     let mut state = init();
     scene_members(&mut state);
-    let mut rt = rune::Runtime::new(
-        state,
-        view::fleet,
-        (1120.0, 560.0),
-        rune::Env::new(false, 1.0),
-    );
+    let mut rt = rune::Runtime::new(state, render, (1120.0, 560.0), rune::Env::new(false, 1.0));
     rt.frame(0.0);
     assert!(rt.presented("add-mac").is_some());
     // The same fleet seen from a member that is not the master.
@@ -237,12 +227,7 @@ fn only_the_master_offers_add_mac() {
         row.this_member = row.role != crate::fleet_source::Role::Master;
     }
     state.phase = super::Phase::Ready(snapshot);
-    let mut rt = rune::Runtime::new(
-        state,
-        view::fleet,
-        (1120.0, 560.0),
-        rune::Env::new(false, 1.0),
-    );
+    let mut rt = rune::Runtime::new(state, render, (1120.0, 560.0), rune::Env::new(false, 1.0));
     rt.frame(0.0);
     assert!(rt.presented("add-mac").is_none());
 }

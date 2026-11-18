@@ -7,7 +7,9 @@ use crate::{
 };
 use std::{
     collections::BTreeMap,
+    fs::OpenOptions,
     io::Read,
+    os::unix::fs::OpenOptionsExt,
     path::{Path, PathBuf},
 };
 
@@ -37,11 +39,22 @@ pub fn invalid() -> Failure {
 
 /// Missing configuration means defaults. Never inspects repository files.
 pub fn read(path: &Path) -> Result<Option<String>> {
-    let file = match std::fs::File::open(path) {
+    let file = match OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK)
+        .open(path)
+    {
         Ok(file) => file,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(e) => return Err(Failure::io("Read workload configuration", e)),
     };
+    if !file
+        .metadata()
+        .map_err(|e| Failure::io("Inspect workload configuration", e))?
+        .is_file()
+    {
+        return Err(invalid());
+    }
     let mut text = String::new();
     file.take(LIMIT + 1)
         .read_to_string(&mut text)
@@ -59,6 +72,15 @@ pub fn load(paths: &Paths, directory: &Path) -> Result<WorkloadSettings> {
 }
 
 impl Configuration {
+    /// The policy used when no directory entry applies.
+    pub fn global(&self) -> &WorkloadSettings {
+        &self.defaults.settings
+    }
+
+    pub fn has_directory_policies(&self) -> bool {
+        !self.directories.is_empty()
+    }
+
     pub fn parse(text: &str) -> Result<Self> {
         if text.len() as u64 > LIMIT {
             return Err(invalid());
@@ -149,6 +171,18 @@ impl Configuration {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn does_not_wait_for_a_writer_on_a_nonregular_policy_file() {
+        use std::{ffi::CString, os::unix::ffi::OsStrExt};
+        let scratch = tempfile::tempdir().unwrap();
+        let path = scratch.path().join(FILE_NAME);
+        let c_path = CString::new(path.as_os_str().as_bytes()).unwrap();
+        // SAFETY: The C string is valid for the duration of the call.
+        assert_eq!(unsafe { libc::mkfifo(c_path.as_ptr(), 0o600) }, 0);
+        assert_eq!(read(&path).unwrap_err().code, "invalid_request");
+    }
+
     #[test]
     fn defaults_and_most_specific_directory_are_complete_policies() {
         let config = Configuration::parse(

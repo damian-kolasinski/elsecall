@@ -44,14 +44,6 @@ struct Paints {
 }
 
 pub fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
-    let page = fleet_page(state, cx);
-    let kit = theme::kit(cx.system_dark());
-    let mut layer = Vec::new();
-    crate::add_mac_view::sheet(state, &kit, cx.is_reduced_motion(), &mut layer);
-    rune_kit::root(page, layer)
-}
-
-fn fleet_page(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
     let dark = cx.system_dark();
     let kit = theme::kit(dark);
     let paints = Paints {

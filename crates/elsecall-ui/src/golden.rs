@@ -45,7 +45,15 @@ const SCENES: &[&str] = &[
 /// browser's page after the click.
 const TIMED: &[(&str, f64)] = &[("add-mac-prepare", 2.8), ("add-mac-approve", 2.4)];
 const BLESS: &str =
-    "ELSECALL_UI_BLESS=1 cargo test -p elsecall-ui --bin elsecall-ui fleet_scenes_match_goldens";
+    "ELSECALL_UI_BLESS=1 cargo test -p elsecall-ui --bin elsecall-ui scenes_match_goldens";
+const CONFIGURATION_SCENES: &[&str] = &[
+    "configuration-rules",
+    "configuration-search",
+    "configuration-no-matches",
+    "configuration-toml",
+    "configuration-missing",
+    "configuration-invalid",
+];
 const APPEARANCES: &[&str] = &["light", "dark"];
 const MINIMUM_WINDOW: &[&str] = &["--size", "1040x480"];
 /// Channel delta rune's pixel comparison counts as more than antialiasing noise.
@@ -53,20 +61,8 @@ const CHANNEL_TOLERANCE: u8 = 8;
 
 #[test]
 fn fleet_scenes_match_goldens() {
-    if metal_device_count() == 0 {
-        assert!(
-            std::env::var_os("ELSECALL_UI_BLESS").is_none(),
-            "Metal returned no devices, so the fleet goldens cannot be blessed"
-        );
-        if std::env::var_os("ELSECALL_UI_SKIP_GOLDENS").is_some() {
-            eprintln!(
-                "skipping fleet goldens: ELSECALL_UI_SKIP_GOLDENS=1 (Metal enumerated no devices)"
-            );
-            return;
-        }
-        panic!(
-            "Fleet goldens need a Metal device. The probe found none (Metal failed to load, or this agent, SSH, or background session cannot see the GPU). Run the test in Terminal.app, or set ELSECALL_UI_SKIP_GOLDENS=1 to skip."
-        );
+    if !can_render() {
+        return;
     }
     let _guard = theme::serial_render();
     for scene in SCENES {
@@ -76,7 +72,7 @@ fn fleet_scenes_match_goldens() {
     }
     let hover = tempfile::NamedTempFile::new().unwrap();
     // The demand cell of the selected MacBook at minimum width.
-    std::fs::write(hover.path(), r#"[{"t":0.1,"type":"move","x":976,"y":223}]"#).unwrap();
+    std::fs::write(hover.path(), r#"[{"t":0.1,"type":"move","x":976,"y":267}]"#).unwrap();
     // Check the full header and the selected member's role pill at minimum width.
     for appearance in APPEARANCES {
         compare("release-fleet", appearance, "-minimum", MINIMUM_WINDOW);
@@ -106,6 +102,36 @@ fn fleet_scenes_match_goldens() {
     for appearance in APPEARANCES {
         compare("add-mac-approve", appearance, "-minimum", MINIMUM_WINDOW);
     }
+}
+
+#[test]
+fn configuration_scenes_match_goldens() {
+    if !can_render() {
+        return;
+    }
+    let _guard = theme::serial_render();
+    for scene in CONFIGURATION_SCENES {
+        for appearance in APPEARANCES {
+            compare(scene, appearance, "", MINIMUM_WINDOW);
+        }
+    }
+}
+
+fn can_render() -> bool {
+    if metal_device_count() != 0 {
+        return true;
+    }
+    assert!(
+        std::env::var_os("ELSECALL_UI_BLESS").is_none(),
+        "Metal returned no devices, so the goldens cannot be blessed"
+    );
+    if std::env::var_os("ELSECALL_UI_SKIP_GOLDENS").is_some() {
+        eprintln!("skipping goldens: ELSECALL_UI_SKIP_GOLDENS=1 (Metal enumerated no devices)");
+        return false;
+    }
+    panic!(
+        "Goldens need a Metal device. Run the test in Terminal.app, or set ELSECALL_UI_SKIP_GOLDENS=1 to skip."
+    );
 }
 
 fn metal_device_count() -> usize {
