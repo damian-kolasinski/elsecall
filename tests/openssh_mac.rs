@@ -82,6 +82,35 @@ async fn the_adapter_reads_installs_and_authorizes_on_a_real_mac() {
     assert!(mac.authorize_key(&line).await.unwrap());
     assert!(!mac.authorize_key(&line).await.unwrap(), "added once");
 
+    // Tailscale, when asked to: it stays installed and waiting for a login.
+    if std::env::var_os("ELSECALL_E2E_TAILSCALE").is_some() {
+        assert_eq!(tailnet, elsecall::remote_mac::RemoteTailnet::Absent);
+        let bottle = elsecall::tailscale_bottle::for_macos(facts.macos_major().unwrap()).unwrap();
+        mac.install_tailscale(&bottle).await.unwrap();
+        assert_eq!(
+            mac.tailnet().await.unwrap(),
+            elsecall::remote_mac::RemoteTailnet::LoggedOut {
+                variant: elsecall::remote_mac::TailscaleVariant::AddMacDaemon,
+                domain: None,
+            }
+        );
+        let login = mac
+            .start_tailscale_login(Some("macbook-pro"))
+            .await
+            .unwrap();
+        assert!(
+            matches!(&login, elsecall::remote_mac::Login::Approve(link) if link.as_str().starts_with("https://login.tailscale.com/")),
+            "{login:?}"
+        );
+        // Asking again offers a link again rather than failing.
+        assert!(matches!(
+            mac.start_tailscale_login(None).await.unwrap(),
+            elsecall::remote_mac::Login::Approve(_)
+        ));
+        // Installing again repairs rather than failing.
+        mac.install_tailscale(&bottle).await.unwrap();
+    }
+
     let uninstalled = mac.elsecall(&["uninstall", "--force"]).await.unwrap();
     assert_eq!(uninstalled["status"], "uninstalled", "{uninstalled}");
     assert_eq!(mac.installed_build().await.unwrap(), None);

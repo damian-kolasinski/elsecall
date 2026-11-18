@@ -7,18 +7,36 @@ mod members;
 mod processes;
 
 use elsecall::{
-    add_mac::{self, Master, Outcome, Step},
+    add_mac::{self, Approval, Event, Master, Outcome, Step},
     failure::{Failure, Result},
     inbound_firewall::Rule,
     paths::Paths,
-    remote_mac::{Build, MacFacts, RemoteMac, RemoteTailnet, TailnetNode},
+    remote_mac::{
+        Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant,
+    },
+    tailscale_bottle::Bottle,
 };
 use members::{TestMember, free_port};
 use serde_json::Value;
-use std::{path::Path, process::Output};
+use std::{path::Path, process::Output, time::Duration};
 
 const DOMAIN: &str = "example.ts.net";
+const LINK: &str = "https://login.tailscale.com/a/example";
 const KEY: &str = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleMasterKey me@example.com\n";
+
+/// The fake Mac's Tailscale.
+#[derive(Debug, Clone, PartialEq)]
+enum Tailscale {
+    Online,
+    Absent,
+    /// Add Mac's daemon, logged out of `domain` (or never logged in). Once a
+    /// login starts, the operator approves it after this many more reads of its
+    /// state, or never.
+    Waiting {
+        approved_after: Option<u32>,
+        domain: Option<String>,
+    },
+}
 
 /// A Mac reached as if over SSH: commands run here, in its own home.
 struct FakeMac {
@@ -27,6 +45,12 @@ struct FakeMac {
     port: u16,
     facts: MacFacts,
     domain: Option<String>,
+    tailscale: Tailscale,
+    /// After installing Tailscale, how many reads until the operator approves.
+    approves_after: Option<u32>,
+    /// The bottle Add Mac installed, and the name it logged in with.
+    installed_tailscale: Option<Bottle>,
+    logged_in_as: Option<Option<String>>,
     /// What the Mac's firewall does with incoming connections to Elsecall.
     firewall: Rule,
     opened: Vec<String>,
@@ -53,6 +77,10 @@ impl FakeMac {
             },
             home,
             domain: Some(DOMAIN.into()),
+            tailscale: Tailscale::Online,
+            approves_after: Some(2),
+            installed_tailscale: None,
+            logged_in_as: None,
             firewall: Rule::NotAllowed,
             opened: Vec::new(),
         }
@@ -113,12 +141,55 @@ impl RemoteMac for FakeMac {
         Ok(true)
     }
     async fn tailnet(&mut self) -> Result<RemoteTailnet> {
+        match self.tailscale.clone() {
+            Tailscale::Online => (),
+            Tailscale::Absent => return Ok(RemoteTailnet::Absent),
+            Tailscale::Waiting {
+                approved_after: Some(0),
+                ..
+            } if self.logged_in_as.is_some() => self.tailscale = Tailscale::Online,
+            Tailscale::Waiting {
+                approved_after,
+                domain,
+            } => {
+                if self.logged_in_as.is_some() {
+                    self.tailscale = Tailscale::Waiting {
+                        approved_after: approved_after.map(|n| n - 1),
+                        domain: domain.clone(),
+                    };
+                }
+                return Ok(RemoteTailnet::LoggedOut {
+                    variant: TailscaleVariant::AddMacDaemon,
+                    domain,
+                });
+            }
+        }
         Ok(RemoteTailnet::Online(TailnetNode {
             name: self.name.into(),
             domain: self.domain.clone(),
             addresses: vec!["127.0.0.1".parse().unwrap()],
             key_expiry: Some("2027-05-17T10:00:00Z".into()),
         }))
+    }
+    async fn install_tailscale(&mut self, bottle: &Bottle) -> Result<()> {
+        assert_eq!(
+            self.tailscale,
+            Tailscale::Absent,
+            "installed only when absent"
+        );
+        self.installed_tailscale = Some(*bottle);
+        self.tailscale = Tailscale::Waiting {
+            approved_after: self.approves_after,
+            domain: None,
+        };
+        Ok(())
+    }
+    async fn start_tailscale_login(&mut self, hostname: Option<&str>) -> Result<Login> {
+        if self.tailscale == Tailscale::Online {
+            return Ok(Login::Online);
+        }
+        self.logged_in_as = Some(hostname.map(Into::into));
+        Ok(Login::Approve(LoginLink::parse(LINK).unwrap()))
     }
     async fn installed_build(&mut self) -> Result<Option<String>> {
         let executable = self.paths().executable();
@@ -184,6 +255,7 @@ fn master(alpha: &TestMember, ssh_public_key: Option<&str>) -> Master {
             window: None,
         },
         tailnet_domain: DOMAIN.into(),
+        approval_wait: Duration::from_secs(60),
         ssh_public_key: ssh_public_key.map(Into::into),
     }
 }
@@ -192,7 +264,7 @@ fn master(alpha: &TestMember, ssh_public_key: Option<&str>) -> Master {
 async fn add(
     mac: &mut FakeMac,
     master: &Master,
-    progress: impl FnMut(Step),
+    progress: impl FnMut(Event),
 ) -> Result<add_mac::AddReport> {
     let fleet = add_mac::preflight(&master.socket).await?;
     let host = format!("{}.local", mac.name);
@@ -214,7 +286,7 @@ async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired(
     let master = master(&alpha, Some(KEY));
     let mut heard = Vec::new();
 
-    let report = add(&mut mac, &master, |step| heard.push(step))
+    let report = add(&mut mac, &master, |event| heard.push(event))
         .await
         .unwrap();
     assert_eq!(report.member, "bravo");
@@ -230,7 +302,7 @@ async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired(
             (Step::Verify, Outcome::Done),
         ]
     );
-    assert_eq!(heard.len(), 7);
+    assert_eq!(heard.len(), 7, "a step each, and no approval: {heard:?}");
     let json = serde_json::to_value(&report).unwrap();
     assert_eq!(json["readiness"], "awaiting_provisioning");
     assert_eq!(json["mac"]["model"], "Mac16,10");
@@ -336,4 +408,114 @@ async fn an_unreachable_member_stops_the_add_before_the_mac_is_reached() {
     let refused = add_mac::preflight(&master.socket).await.err().unwrap();
     assert_eq!(refused.code, "member_unavailable");
     assert!(refused.message.contains("charlie"), "{}", refused.message);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_mac_without_tailscale_gets_it_and_joins_once_approved() {
+    let alpha = TestMember::install("alpha", Path::new(env!("CARGO_BIN_EXE_elsecall")));
+    let mut mac = FakeMac::new("bravo");
+    mac.tailscale = Tailscale::Absent;
+    mac.facts.local_host_name = Some("Bravo".into());
+    let mut heard = Vec::new();
+    let report = add(&mut mac, &master(&alpha, Some(KEY)), |event| {
+        heard.push(event)
+    })
+    .await
+    .unwrap();
+    assert_eq!(outcomes(&report)[1], (Step::Tailnet, Outcome::Done));
+    // The bottle for its macOS, logged in under its Bonjour name.
+    assert_eq!(mac.installed_tailscale.unwrap().macos, 26);
+    assert_eq!(mac.logged_in_as, Some(Some("bravo".into())));
+    assert!(heard.contains(&Event::Approve {
+        link: LoginLink::parse(LINK).unwrap(),
+        approval: Approval::Login,
+    }));
+    let approve = heard
+        .iter()
+        .position(|e| matches!(e, Event::Approve { .. }))
+        .unwrap();
+    assert_eq!(
+        heard[approve - 1],
+        Event::Step {
+            step: Step::Tailnet
+        }
+    );
+    assert_eq!(alpha.view_of("bravo")["reachability"], "reachable");
+    // The firewall lets Add Mac's tailscaled through as well as Elsecall.
+    assert_eq!(
+        mac.opened,
+        [
+            mac.paths().executable().to_string_lossy().into_owned(),
+            "/usr/local/bin/tailscaled".to_owned()
+        ]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_logged_out_daemon_logs_in_again_without_reinstalling() {
+    let alpha = TestMember::install("alpha", Path::new(env!("CARGO_BIN_EXE_elsecall")));
+    let mut mac = FakeMac::new("bravo");
+    mac.tailscale = Tailscale::Waiting {
+        approved_after: Some(1),
+        domain: Some(DOMAIN.into()),
+    };
+    let report = add(&mut mac, &master(&alpha, None), |_| ()).await.unwrap();
+    assert_eq!(outcomes(&report)[1], (Step::Tailnet, Outcome::Done));
+    assert!(mac.installed_tailscale.is_none());
+    // It logged in before, so it keeps its own name and settings.
+    assert_eq!(mac.logged_in_as, Some(None));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_daemon_of_another_tailnet_is_refused_not_switched() {
+    let alpha = TestMember::install("alpha", Path::new(env!("CARGO_BIN_EXE_elsecall")));
+    let mut mac = FakeMac::new("bravo");
+    mac.tailscale = Tailscale::Waiting {
+        approved_after: Some(0),
+        domain: Some("example.beta.tailscale.net".into()),
+    };
+    let refused = add(&mut mac, &master(&alpha, None), |_| ())
+        .await
+        .unwrap_err();
+    assert_eq!(refused.code, "tailnet_mismatch");
+    assert_eq!(mac.logged_in_as, None, "no login was started");
+    assert!(!mac.paths().executable().exists());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_unapproved_mac_stops_before_elsecall_is_installed() {
+    let alpha = TestMember::install("alpha", Path::new(env!("CARGO_BIN_EXE_elsecall")));
+    let mut mac = FakeMac::new("bravo");
+    mac.tailscale = Tailscale::Absent;
+    mac.approves_after = None;
+    let mut master = master(&alpha, Some(KEY));
+    master.approval_wait = Duration::from_secs(3);
+    let refused = add(&mut mac, &master, |_| ()).await.unwrap_err();
+    assert_eq!(refused.code, "tailscale_login_pending");
+    assert_eq!(
+        refused.details.unwrap()["url"],
+        "https://login.tailscale.com/a/example"
+    );
+    assert!(!mac.paths().executable().exists());
+
+    // Approved later: running it again finds the Mac on the tailnet.
+    mac.tailscale = Tailscale::Waiting {
+        approved_after: Some(0),
+        domain: None,
+    };
+    let report = add(&mut mac, &master, |_| ()).await.unwrap();
+    assert_eq!(outcomes(&report)[1], (Step::Tailnet, Outcome::Already));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_mac_on_macos_14_without_tailscale_is_told_to_install_it() {
+    let alpha = TestMember::install("alpha", Path::new(env!("CARGO_BIN_EXE_elsecall")));
+    let mut mac = FakeMac::new("bravo");
+    mac.tailscale = Tailscale::Absent;
+    mac.facts.macos_version = "14.7".into();
+    let refused = add(&mut mac, &master(&alpha, None), |_| ())
+        .await
+        .unwrap_err();
+    assert_eq!(refused.code, "tailscale_unavailable");
+    assert!(mac.installed_tailscale.is_none());
 }

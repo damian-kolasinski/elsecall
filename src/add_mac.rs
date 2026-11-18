@@ -12,8 +12,11 @@ use crate::{
     inbound_firewall::Rule,
     member_code,
     paths::Paths,
-    remote_mac::{Build, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant},
+    remote_mac::{
+        Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant,
+    },
     roster::Readiness,
+    tailscale_bottle,
 };
 use hyper::Method;
 use serde::{Deserialize, Serialize};
@@ -30,6 +33,8 @@ const ARCHITECTURE: &str = "arm64";
 const SERVICE_TIMEOUT: Duration = Duration::from_secs(15);
 /// How long a joined Mac may take to answer the master as a member.
 const VERIFY_WITHIN: Duration = Duration::from_secs(30);
+/// How often the Mac's tailnet is read while the operator approves it.
+const APPROVAL_POLL: Duration = Duration::from_secs(2);
 
 /// A step of adding a Mac, in order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -49,7 +54,7 @@ impl Step {
     pub fn doing(self) -> &'static str {
         match self {
             Step::Check => "checking the Mac",
-            Step::Tailnet => "checking its tailnet",
+            Step::Tailnet => "putting it on the tailnet",
             Step::Install => "installing Elsecall",
             Step::Firewall => "opening the firewall for Elsecall",
             Step::SshKey => "authorizing the master's SSH key",
@@ -58,6 +63,38 @@ impl Step {
         }
     }
 }
+
+/// What the operator hears while a Mac is added.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "event", rename_all = "snake_case")]
+pub enum Event {
+    /// A step starts.
+    Step { step: Step },
+    /// Tailscale on the Mac waits for the operator to approve it at `link`, in a
+    /// browser signed in to the master's tailnet.
+    Approve { link: LoginLink, approval: Approval },
+}
+
+/// What the operator approves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Approval {
+    /// The Mac's login to the tailnet.
+    Login,
+    /// The Mac as a device, on a tailnet whose admin approves new devices.
+    Device,
+}
+
+/// The Mac on the tailnet, and whether Add Mac's own daemon runs it, so its
+/// firewall should let that daemon through too.
+struct Joined {
+    node: TailnetNode,
+    outcome: Outcome,
+    daemon: Option<&'static str>,
+}
+
+/// Where Add Mac's `tailscaled` lives on the Mac.
+const DAEMON: &str = "/usr/local/bin/tailscaled";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
@@ -106,6 +143,8 @@ pub struct Master {
     pub tailnet_domain: String,
     /// The operator's public SSH key on the master, if there is one.
     pub ssh_public_key: Option<String>,
+    /// How long to wait for the operator to approve the Mac in Tailscale.
+    pub approval_wait: Duration,
 }
 
 /// The fleet as the master's service reports it, as far as adding needs it.
@@ -155,13 +194,13 @@ pub async fn add<M: RemoteMac>(
     host: &str,
     master: &Master,
     fleet: &Preflight,
-    mut progress: impl FnMut(Step),
+    mut progress: impl FnMut(Event),
 ) -> Result<AddReport> {
     let mut steps = Vec::new();
     let mut record = |step, outcome| steps.push(StepReport { step, outcome });
 
     // Everything that can refuse, before anything changes.
-    progress(Step::Check);
+    progress(Event::Step { step: Step::Check });
     let facts = mac.facts().await?;
     check(&facts)?;
     if !mac.sudo_accepted().await? {
@@ -195,11 +234,16 @@ pub async fn add<M: RemoteMac>(
     }
     record(Step::Check, Outcome::Done);
 
-    progress(Step::Tailnet);
-    let node = on_tailnet(mac.tailnet().await?, &master.tailnet_domain, host)?;
-    record(Step::Tailnet, Outcome::Already);
+    progress(Event::Step {
+        step: Step::Tailnet,
+    });
+    let joined = join_tailnet(mac, &facts, master, host, &mut progress).await?;
+    let node = joined.node;
+    record(Step::Tailnet, joined.outcome);
 
-    progress(Step::Install);
+    progress(Event::Step {
+        step: Step::Install,
+    });
     let wanted = crate::build_identity::Digest::of_file(&master.build.executable)
         .map_err(|error| Failure::io("Read the master's build", error))?
         .build_id()
@@ -212,25 +256,40 @@ pub async fn add<M: RemoteMac>(
     };
     record(Step::Install, outcome);
 
-    progress(Step::Firewall);
-    let outcome = match rule {
-        Rule::Unfiltered | Rule::Allowed => Outcome::Already,
-        Rule::NotAllowed | Rule::Unknown | Rule::AllBlocked => {
-            mac.allow_incoming(std::slice::from_ref(&executable))
-                .await?;
-            if mac.incoming(&executable).await? != Rule::Allowed {
+    progress(Event::Step {
+        step: Step::Firewall,
+    });
+    // Elsecall's listener, and Add Mac's tailscaled so peers can connect directly
+    // rather than through Tailscale's relays.
+    let mut blocked = Vec::new();
+    for program in std::iter::once(executable.as_str()).chain(joined.daemon) {
+        let rule = if program == executable {
+            rule
+        } else {
+            mac.incoming(program).await?
+        };
+        if !matches!(rule, Rule::Unfiltered | Rule::Allowed) {
+            blocked.push(program.to_owned());
+        }
+    }
+    let outcome = if blocked.is_empty() {
+        Outcome::Already
+    } else {
+        mac.allow_incoming(&blocked).await?;
+        for program in &blocked {
+            if mac.incoming(program).await? != Rule::Allowed {
                 return Err(Failure::new(
                     "firewall_unchanged",
-                    format!("The firewall on {host} still does not allow Elsecall."),
+                    format!("The firewall on {host} still does not allow {program}."),
                     "Allow it in System Settings > Network > Firewall > Options on that Mac, then add it again.",
                 ));
             }
-            Outcome::Done
         }
+        Outcome::Done
     };
     record(Step::Firewall, outcome);
 
-    progress(Step::SshKey);
+    progress(Event::Step { step: Step::SshKey });
     let outcome = match &master.ssh_public_key {
         None => Outcome::Skipped {
             why: "The master has no SSH key in ~/.ssh; create one with ssh-keygen -t ed25519 and run Add Mac again.".into(),
@@ -246,7 +305,7 @@ pub async fn add<M: RemoteMac>(
     };
     record(Step::SshKey, outcome);
 
-    progress(Step::Enroll);
+    progress(Event::Step { step: Step::Enroll });
     let identity = mac.elsecall(&["fleet", "identity"]).await?;
     let code = text(&identity, "code")?.to_owned();
     // The name that is enrolled is the one in the code, which must be the Mac's
@@ -283,7 +342,7 @@ pub async fn add<M: RemoteMac>(
         .await?;
     record(Step::Enroll, Outcome::Done);
 
-    progress(Step::Verify);
+    progress(Event::Step { step: Step::Verify });
     let readiness = verify(&master.socket, &member).await?;
     record(Step::Verify, Outcome::Done);
 
@@ -419,34 +478,167 @@ fn check(facts: &MacFacts) -> Result<()> {
     Ok(())
 }
 
-/// The Mac's tailnet node, when it is on the master's tailnet.
-fn on_tailnet(tailnet: RemoteTailnet, domain: &str, host: &str) -> Result<TailnetNode> {
-    match tailnet {
-        RemoteTailnet::Online(node) if node.domain.as_deref() == Some(domain) => Ok(node),
-        RemoteTailnet::Online(node) => Err(Failure::new(
-            "tailnet_mismatch",
-            format!(
-                "{host} is on another tailnet ({}) than the master ({domain}).",
-                node.domain.as_deref().unwrap_or("unknown"),
-            ),
-            "Log that Mac out of its tailnet and into the master's, then add it again. Add Mac never switches a tailnet.",
-        )),
-        RemoteTailnet::Offline {
-            variant: TailscaleVariant::App,
-        } => Err(Failure::new(
-            "tailscale_offline",
-            format!("Tailscale on {host} is not connected to a tailnet."),
-            "Open Tailscale on that Mac and log in to the master's tailnet, then add it again.",
-        )),
-        RemoteTailnet::Offline {
-            variant: TailscaleVariant::Daemon,
+/// Puts the Mac on the master's tailnet: as it is when it is there already,
+/// otherwise installing Add Mac's daemon when it has none (or repairing it) and
+/// logging it in, which the operator approves at the link `progress` hears. A Mac
+/// that belongs to another tailnet is refused, never switched.
+async fn join_tailnet<M: RemoteMac>(
+    mac: &mut M,
+    facts: &MacFacts,
+    master: &Master,
+    host: &str,
+    progress: &mut impl FnMut(Event),
+) -> Result<Joined> {
+    let domain = master.tailnet_domain.as_str();
+    let (fresh, daemon) = match mac.tailnet().await? {
+        RemoteTailnet::Online(node) => {
+            return Ok(Joined {
+                node: same_tailnet(node, domain, host)?,
+                outcome: Outcome::Already,
+                daemon: None,
+            });
         }
-        | RemoteTailnet::Absent => Err(Failure::new(
-            "tailscale_required",
-            format!("{host} is not on the master's tailnet."),
-            "Install Tailscale on that Mac and log in to the master's tailnet, then add it again.",
-        )),
+        RemoteTailnet::LoggedOut {
+            variant: TailscaleVariant::App,
+            ..
+        }
+        | RemoteTailnet::NotRunning {
+            variant: TailscaleVariant::App,
+        } => {
+            return Err(Failure::new(
+                "tailscale_offline",
+                format!("Tailscale on {host} is not connected to a tailnet."),
+                "Open Tailscale on that Mac and log in to the master's tailnet, then add it again.",
+            ));
+        }
+        RemoteTailnet::LoggedOut {
+            domain: Some(other),
+            ..
+        } if other != domain => return Err(mismatch(host, Some(&other), domain)),
+        RemoteTailnet::NotRunning {
+            variant: TailscaleVariant::OtherDaemon,
+        } => {
+            return Err(Failure::new(
+                "tailscale_stopped",
+                format!("Tailscale's daemon on {host} is installed but not running."),
+                "Start it on that Mac (for Homebrew's: sudo brew services start tailscale), then add it again.",
+            ));
+        }
+        RemoteTailnet::Absent
+        | RemoteTailnet::NotRunning {
+            variant: TailscaleVariant::AddMacDaemon,
+        } => {
+            let bottle = facts
+                .macos_major()
+                .and_then(tailscale_bottle::for_macos)
+                .ok_or_else(|| {
+                    Failure::new(
+                        "tailscale_unavailable",
+                        format!(
+                            "Add Mac has no Tailscale build for macOS {}.",
+                            facts.macos_version
+                        ),
+                        "Install Tailscale on that Mac from tailscale.com and log in to the master's tailnet, then add it again.",
+                    )
+                })?;
+            mac.install_tailscale(&bottle).await?;
+            (true, Some(DAEMON))
+        }
+        RemoteTailnet::LoggedOut { variant, domain } => (
+            domain.is_none(),
+            (variant == TailscaleVariant::AddMacDaemon).then_some(DAEMON),
+        ),
+    };
+    // Only a daemon that never logged in is named; another keeps its settings.
+    let hostname = if fresh { tailnet_hostname(facts) } else { None };
+    let (link, approval) = match mac.start_tailscale_login(hostname.as_deref()).await? {
+        Login::Online => {
+            return match mac.tailnet().await? {
+                RemoteTailnet::Online(node) => Ok(Joined {
+                    node: same_tailnet(node, domain, host)?,
+                    outcome: Outcome::Done,
+                    daemon,
+                }),
+                _ => Err(Failure::new(
+                    "tailscale_offline",
+                    format!("Tailscale on {host} did not come online."),
+                    "Check tailscale status on that Mac over SSH, then add it again.",
+                )),
+            };
+        }
+        Login::Approve(link) => (link, Approval::Login),
+        Login::DeviceApproval => (LoginLink::device_approval(), Approval::Device),
+    };
+    progress(Event::Approve {
+        link: link.clone(),
+        approval,
+    });
+    let deadline = tokio::time::Instant::now() + master.approval_wait;
+    loop {
+        // A read that hangs ends at the deadline rather than after its own bound.
+        if let Ok(read) = tokio::time::timeout_at(deadline, mac.tailnet()).await
+            && let RemoteTailnet::Online(node) = read?
+        {
+            return Ok(Joined {
+                node: same_tailnet(node, domain, host)?,
+                outcome: Outcome::Done,
+                daemon,
+            });
+        }
+        if tokio::time::Instant::now() >= deadline {
+            let (what, hint) = match approval {
+                Approval::Login => (
+                    "its login",
+                    "Open the link in a browser signed in to the master's tailnet, approve the Mac, then run elsecall fleet add again.",
+                ),
+                Approval::Device => (
+                    "device approval",
+                    "Approve the Mac in the Tailscale admin console, then run elsecall fleet add again.",
+                ),
+            };
+            return Err(Failure::new(
+                "tailscale_login_pending",
+                format!("Tailscale on {host} waits for {what} at {}", link.as_str()),
+                hint,
+            )
+            .with_details(serde_json::json!({ "url": link, "approval": approval })));
+        }
+        tokio::time::sleep(APPROVAL_POLL).await;
     }
+}
+
+/// The tailnet name to give the Mac: its Bonjour name, which is also how the
+/// operator saw it on the local network. `None` leaves Tailscale's own choice.
+fn tailnet_hostname(facts: &MacFacts) -> Option<String> {
+    let name: String = facts
+        .local_host_name
+        .as_deref()?
+        .to_ascii_lowercase()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect();
+    let name = name.trim_matches('-').to_owned();
+    (!name.is_empty() && name.len() <= 63).then_some(name)
+}
+
+/// `node`, when it is on the master's tailnet.
+fn same_tailnet(node: TailnetNode, domain: &str, host: &str) -> Result<TailnetNode> {
+    if node.domain.as_deref() == Some(domain) {
+        Ok(node)
+    } else {
+        Err(mismatch(host, node.domain.as_deref(), domain))
+    }
+}
+
+fn mismatch(host: &str, theirs: Option<&str>, domain: &str) -> Failure {
+    Failure::new(
+        "tailnet_mismatch",
+        format!(
+            "{host} belongs to another tailnet ({}) than the master ({domain}).",
+            theirs.unwrap_or("unknown")
+        ),
+        "Log that Mac out of its tailnet and into the master's, then add it again. Add Mac never switches a tailnet.",
+    )
 }
 
 fn text<'a>(value: &'a Value, field: &str) -> Result<&'a str> {
@@ -526,38 +718,42 @@ mod tests {
         assert_eq!(check(&user).unwrap_err().code, "not_administrator");
     }
 
-    fn node(domain: Option<&str>) -> RemoteTailnet {
-        RemoteTailnet::Online(TailnetNode {
+    fn node(domain: Option<&str>) -> TailnetNode {
+        TailnetNode {
             name: "macbook-pro".into(),
             domain: domain.map(Into::into),
             addresses: vec!["100.64.0.20".parse().unwrap()],
             key_expiry: None,
-        })
+        }
     }
 
     #[test]
     fn only_the_masters_tailnet_is_accepted() {
         let master = "example.ts.net";
-        assert!(on_tailnet(node(Some(master)), master, "h").is_ok());
+        assert!(same_tailnet(node(Some(master)), master, "h").is_ok());
         for other in [Some("example.beta.tailscale.net"), None] {
             assert_eq!(
-                on_tailnet(node(other), master, "h").unwrap_err().code,
+                same_tailnet(node(other), master, "h").unwrap_err().code,
                 "tailnet_mismatch"
             );
         }
-        let app = RemoteTailnet::Offline {
-            variant: TailscaleVariant::App,
+    }
+
+    #[test]
+    fn the_tailnet_name_is_the_bonjour_name_as_a_dns_label() {
+        let named = |name: Option<&str>| {
+            tailnet_hostname(&MacFacts {
+                local_host_name: name.map(Into::into),
+                ..facts()
+            })
         };
+        assert_eq!(named(Some("MacBook-Pro")).as_deref(), Some("macbook-pro"));
         assert_eq!(
-            on_tailnet(app, master, "h").unwrap_err().code,
-            "tailscale_offline"
+            named(Some("Studio_2 (old)")).as_deref(),
+            Some("studio-2--old")
         );
-        assert_eq!(
-            on_tailnet(RemoteTailnet::Absent, master, "h")
-                .unwrap_err()
-                .code,
-            "tailscale_required"
-        );
+        assert_eq!(named(Some("---")), None);
+        assert_eq!(named(None), None);
     }
 
     fn fleet(members: serde_json::Value) -> FleetView {

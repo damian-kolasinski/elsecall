@@ -12,7 +12,8 @@ use crate::{
     failure::{Failure, Result},
     inbound_firewall::Rule,
     macos::application_firewall,
-    remote_mac::{Build, MacFacts, RemoteMac, RemoteTailnet, TailscaleVariant},
+    remote_mac::{Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailscaleVariant},
+    tailscale_bottle::Bottle,
 };
 use serde_json::Value;
 use std::{path::Path, process::Stdio, time::Duration};
@@ -34,6 +35,11 @@ const INSTALLED: &str = "$HOME/Library/Application Support/Elsecall/elsecall";
 /// Printed before each command's own output, so whatever the account's login
 /// shell prints on start is left out.
 const MARKER: &str = "--elsecall-output--";
+/// The only directories commands are looked up in: the account's own PATH could
+/// put another `mkdir` or `shasum` first, and root must never run those.
+const SYSTEM_PATH: &str = "/usr/bin:/bin:/usr/sbin:/sbin";
+/// How long Tailscale may take to offer a login link.
+const LOGIN_LINK_WITHIN: Duration = Duration::from_secs(20);
 
 pub struct OpensshMac {
     target: String,
@@ -131,7 +137,7 @@ impl OpensshMac {
 
     /// Runs `script` with `/bin/sh` on the Mac, with `input` on its standard input.
     async fn run(&self, script: &str, input: Zeroizing<Vec<u8>>) -> Result<Ran> {
-        let wrapped = format!("printf '%s\\n' {MARKER}; {script}");
+        let wrapped = format!("PATH={SYSTEM_PATH}; export PATH; printf '%s\\n' {MARKER}; {script}");
         let mut child = Command::new(SSH)
             .args(["-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes"])
             .args(options(self.directory.path()))
@@ -189,14 +195,18 @@ impl OpensshMac {
         })
     }
 
-    /// Runs `script` as root through sudo, which reads the password first; the
-    /// script itself gets no standard input.
+    /// Runs `script` as root through sudo, which reads the password first. The
+    /// script gets no standard input and an environment of its own, with system
+    /// directories only on its PATH.
     async fn sudo(&self, script: &str) -> Result<Ran> {
         let mut input = Zeroizing::new(self.password.as_bytes().to_vec());
         input.push(b'\n');
         let script = format!("exec </dev/null; {script}");
         self.run(
-            &format!("sudo -S -k -p '' -- /bin/sh -c {}", quote(&script)),
+            &format!(
+                "/usr/bin/sudo -S -k -p '' -- /usr/bin/env -i PATH={SYSTEM_PATH} HOME=/var/root /bin/sh -c {}",
+                quote(&script)
+            ),
             input,
         )
         .await
@@ -257,6 +267,44 @@ impl RemoteMac for OpensshMac {
     async fn tailnet(&mut self) -> Result<RemoteTailnet> {
         let ran = self.run(TAILNET, Zeroizing::default()).await?;
         Ok(parse_tailnet(&ran.stdout))
+    }
+
+    async fn install_tailscale(&mut self, bottle: &Bottle) -> Result<()> {
+        let ran = self.sudo(&install_script(bottle)).await?;
+        if !ran.success {
+            return Err(remote_failure("Installing Tailscale on the Mac", &ran));
+        }
+        Ok(())
+    }
+
+    async fn start_tailscale_login(&mut self, hostname: Option<&str>) -> Result<Login> {
+        let hostname = hostname
+            .map(|name| format!(" --hostname={}", quote(name)))
+            .unwrap_or_default();
+        // `up` prints the link and waits for the login; the link outlives its
+        // timeout, and the status reports it.
+        let up = self
+            .sudo(&format!(
+                r#"for t in /opt/homebrew/bin/tailscale /usr/local/bin/tailscale; do [ -x "$t" ] && break; done
+"$t" up --timeout=5s{hostname} >/dev/null"#
+            ))
+            .await?;
+        let deadline = std::time::Instant::now() + LOGIN_LINK_WITHIN;
+        loop {
+            let ran = self.run(TAILNET, Zeroizing::default()).await?;
+            if let Some(login) = login(&ran.stdout) {
+                return Ok(login);
+            }
+            if std::time::Instant::now() > deadline {
+                return Err(Failure::new(
+                    "tailscale_login_failed",
+                    "Tailscale on the Mac did not offer a login link.",
+                    "Run sudo tailscale up on that Mac over SSH to see why, then add it again.",
+                )
+                .with_details(serde_json::json!({ "tailscale_up": tail(&up.stderr) })));
+            }
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
     }
 
     async fn installed_build(&mut self) -> Result<Option<String>> {
@@ -367,6 +415,51 @@ impl RemoteMac for OpensshMac {
             .await?;
         Ok(String::from_utf8_lossy(&output).trim() == "added")
     }
+}
+
+/// Run by root: downloads `bottle` into a directory root created, checks its
+/// pinned digest, installs `tailscaled` as a LaunchDaemon and then `tailscale`,
+/// so the command's presence means the daemon was installed, and waits until the
+/// daemon answers.
+fn install_script(bottle: &Bottle) -> String {
+    format!(
+        r#"set -eu
+d=$(mktemp -d /tmp/elsecall-tailscale.XXXXXX); trap 'rm -rf "$d"' EXIT; cd "$d"
+token=$(curl -fsS --max-time 30 'https://ghcr.io/token?scope=repository:homebrew/core/tailscale:pull' | sed -n 's/.*"token" *: *"\([^"]*\)".*/\1/p')
+[ -n "$token" ] || {{ echo 'Homebrew registry gave no token' >&2; exit 1; }}
+curl -fsSL --max-time 300 -H "Authorization: Bearer $token" -o bottle.tar.gz {url}
+echo '{sha256}  bottle.tar.gz' | shasum -a 256 -c - >/dev/null || {{ echo 'Tailscale download does not match its pinned digest' >&2; exit 1; }}
+tar -xzf bottle.tar.gz 'tailscale/{version}/bin/tailscale' 'tailscale/{version}/bin/tailscaled'
+mkdir -p /usr/local/bin
+./tailscale/{version}/bin/tailscaled install-system-daemon
+install -m 755 ./tailscale/{version}/bin/tailscale /usr/local/bin/tailscale
+i=0; until /usr/local/bin/tailscale status --json 2>/dev/null | grep -q BackendState; do
+  i=$((i+1)); [ $i -gt 60 ] && {{ echo 'tailscaled did not start' >&2; exit 3; }}; sleep 0.25; done"#,
+        url = quote(&bottle.url()),
+        sha256 = bottle.sha256,
+        version = bottle.version,
+    )
+}
+
+/// Where a login stands, from the TAILNET probe's output; `None` while the
+/// daemon has not offered a link yet.
+fn login(probe: &[u8]) -> Option<Login> {
+    let text = String::from_utf8_lossy(probe);
+    let status: Value = serde_json::from_str(text.split_once('\n')?.1).ok()?;
+    match status["BackendState"].as_str()? {
+        "Running" => Some(Login::Online),
+        "NeedsMachineAuth" => Some(Login::DeviceApproval),
+        _ => status["AuthURL"]
+            .as_str()
+            .and_then(LoginLink::parse)
+            .map(Login::Approve),
+    }
+}
+
+/// The last lines of a command's error output.
+fn tail(stderr: &str) -> String {
+    let lines: Vec<&str> = stderr.trim().lines().collect();
+    lines[lines.len().saturating_sub(5)..].join("\n")
 }
 
 /// Adds `line` to `$HOME/.ssh/authorized_keys` unless its key is there, printing
@@ -576,9 +669,10 @@ fn parse_facts(output: &str) -> Result<MacFacts> {
     })
 }
 
-/// Prints `variant=<path>` for the first Tailscale command found, then its status;
-/// `variant=none` when there is none.
-const TAILNET: &str = r#"for t in /Applications/Tailscale.app/Contents/MacOS/Tailscale /usr/local/bin/tailscale /opt/homebrew/bin/tailscale; do
+/// Prints `variant=<path>` for the first Tailscale command found, in the order
+/// Elsecall's own tailnet discovery uses, then its status; `variant=none` when
+/// there is none.
+const TAILNET: &str = r#"for t in /Applications/Tailscale.app/Contents/MacOS/Tailscale /opt/homebrew/bin/tailscale /usr/local/bin/tailscale; do
   if [ -x "$t" ]; then echo "variant=$t"; TAILSCALE_BE_CLI=1 "$t" status --json --peers=false 2>/dev/null; exit 0; fi
 done
 echo variant=none"#;
@@ -589,12 +683,21 @@ fn parse_tailnet(output: &[u8]) -> RemoteTailnet {
     let variant = match first.strip_prefix("variant=") {
         None | Some("none") => return RemoteTailnet::Absent,
         Some(path) if path.contains("Tailscale.app") => TailscaleVariant::App,
-        Some(_) => TailscaleVariant::Daemon,
+        Some("/usr/local/bin/tailscale") => TailscaleVariant::AddMacDaemon,
+        Some(_) => TailscaleVariant::OtherDaemon,
     };
-    match crate::macos::tailscale::online_node(status.as_bytes()) {
-        Some(node) => RemoteTailnet::Online(node),
-        None => RemoteTailnet::Offline { variant },
+    let Ok(json) = serde_json::from_str::<Value>(status) else {
+        return RemoteTailnet::NotRunning { variant };
+    };
+    if let Some(node) = crate::macos::tailscale::online_node(status.as_bytes()) {
+        return RemoteTailnet::Online(node);
     }
+    // The tailnet it belongs to, logged out or awaiting approval.
+    let domain = json["CurrentTailnet"]["MagicDNSSuffix"]
+        .as_str()
+        .filter(|suffix| !suffix.is_empty())
+        .map(|suffix| suffix.trim_end_matches('.').to_ascii_lowercase());
+    RemoteTailnet::LoggedOut { variant, domain }
 }
 
 #[cfg(test)]
@@ -627,16 +730,33 @@ mod tests {
         assert_eq!(parse_tailnet(b"variant=none\n"), RemoteTailnet::Absent);
         assert_eq!(
             parse_tailnet(b"variant=/usr/local/bin/tailscale\n"),
-            RemoteTailnet::Offline {
-                variant: TailscaleVariant::Daemon
+            RemoteTailnet::NotRunning {
+                variant: TailscaleVariant::AddMacDaemon
+            }
+        );
+        assert_eq!(
+            parse_tailnet(b"variant=/opt/homebrew/bin/tailscale\n"),
+            RemoteTailnet::NotRunning {
+                variant: TailscaleVariant::OtherDaemon
             }
         );
         assert_eq!(
             parse_tailnet(
                 b"variant=/Applications/Tailscale.app/Contents/MacOS/Tailscale\n{\"BackendState\":\"NeedsLogin\",\"Self\":null}"
             ),
-            RemoteTailnet::Offline {
-                variant: TailscaleVariant::App
+            RemoteTailnet::LoggedOut {
+                variant: TailscaleVariant::App,
+                domain: None
+            }
+        );
+        assert_eq!(
+            parse_tailnet(
+                br#"variant=/usr/local/bin/tailscale
+{"BackendState":"Stopped","CurrentTailnet":{"MagicDNSSuffix":"Example.beta.tailscale.net."}}"#
+            ),
+            RemoteTailnet::LoggedOut {
+                variant: TailscaleVariant::AddMacDaemon,
+                domain: Some("example.beta.tailscale.net".into())
             }
         );
         let RemoteTailnet::Online(node) = parse_tailnet(
@@ -665,6 +785,51 @@ mod tests {
             assert!(!valid_name(bad), "{bad}");
         }
         assert_eq!(quote("it's"), r"'it'\''s'");
+    }
+
+    #[test]
+    fn a_login_is_read_from_the_probe() {
+        let probe = |status: &str| format!("variant=/usr/local/bin/tailscale\n{status}");
+        assert_eq!(
+            login(probe(r#"{"BackendState":"NeedsLogin","AuthURL":"https://login.tailscale.com/a/example"}"#).as_bytes()),
+            Some(Login::Approve(LoginLink::parse("https://login.tailscale.com/a/example").unwrap()))
+        );
+        assert_eq!(
+            login(probe(r#"{"BackendState":"Running"}"#).as_bytes()),
+            Some(Login::Online)
+        );
+        assert_eq!(
+            login(probe(r#"{"BackendState":"NeedsMachineAuth"}"#).as_bytes()),
+            Some(Login::DeviceApproval)
+        );
+        // No link yet, or one that is not Tailscale's: keep waiting, never open it.
+        for waiting in [
+            r#"{"BackendState":"NeedsLogin","AuthURL":""}"#,
+            r#"{"BackendState":"NeedsLogin","AuthURL":"https://example.com/a/x"}"#,
+            r#"{"BackendState":"NeedsLogin","AuthURL":"https://login.tailscale.com/a/x y"}"#,
+            "not json",
+        ] {
+            assert_eq!(login(probe(waiting).as_bytes()), None, "{waiting}");
+        }
+    }
+
+    #[test]
+    fn the_install_checks_the_pinned_digest_before_unpacking_as_root() {
+        let bottle = crate::tailscale_bottle::for_macos(26).unwrap();
+        let script = install_script(&bottle);
+        assert!(script.starts_with("set -eu\n"), "{script}");
+        let check = script
+            .find(&format!(
+                "echo '{}  bottle.tar.gz' | shasum -a 256 -c -",
+                bottle.sha256
+            ))
+            .unwrap();
+        let unpack = script.find("tar -xzf").unwrap();
+        let daemon = script.find("install-system-daemon").unwrap();
+        let command = script.find("install -m 755").unwrap();
+        assert!(check < unpack && unpack < daemon && daemon < command);
+        // Downloaded into a directory root made, never one the account chose.
+        assert!(script.contains("d=$(mktemp -d /tmp/elsecall-tailscale.XXXXXX)"));
     }
 
     #[test]
