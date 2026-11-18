@@ -2,13 +2,10 @@
 
 use std::time::Duration;
 
-use elsecall::scheduling::{
-    request::{AtDeadline, DEFAULT_SIZE, Placement, Urgency},
-    timestamp::Timestamp,
-};
+use elsecall::scheduling::request::AtDeadline;
 use elsecall::workload_configuration::FILE_NAME;
-use elsecall::workload_settings::{RulePlacement, RuleUrgency, WhenUnavailable};
-use rune::{El, Latest, LiveRegion, ScrollSpec, TextEdit, Waker, col, el, row, text};
+use elsecall::workload_settings::{LabelRule, RulePlacement, RuleUrgency, WhenUnavailable};
+use rune::{El, Latest, ScrollSpec, TextEdit, Waker, col, el, row, text};
 use rune_kit::{Button, ButtonVariant, Kit, SegmentedControl, TextInput};
 
 use crate::{
@@ -20,18 +17,17 @@ use crate::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Tab {
     Rules,
-    Check,
     Toml,
 }
 
 impl Tab {
-    const ALL: [Self; 3] = [Self::Rules, Self::Check, Self::Toml];
+    const ALL: [Self; 2] = [Self::Rules, Self::Toml];
 }
 
 #[derive(Default)]
 pub(crate) struct ConfigurationView {
     tab: Option<Tab>,
-    label: TextEdit,
+    search: TextEdit,
     result: Option<Result<Policy, ReadError>>,
     reads: Latest<Result<Policy, ReadError>>,
 }
@@ -46,6 +42,10 @@ impl ConfigurationView {
             self.tab = Some(Tab::Rules);
             self.reload();
         }
+    }
+
+    pub(crate) fn close(&mut self) {
+        self.tab = None;
     }
 
     pub(crate) fn set_waker(&self, waker: Waker) {
@@ -66,10 +66,10 @@ impl ConfigurationView {
         self.reads.request((), |_| Policy::personal());
     }
 
-    pub(crate) fn scene(&mut self, tab: Tab, result: Result<Policy, ReadError>, label: &str) {
+    pub(crate) fn scene(&mut self, tab: Tab, result: Result<Policy, ReadError>, query: &str) {
         self.tab = Some(tab);
         self.result = Some(result);
-        self.label = TextEdit::new(label);
+        self.search = TextEdit::new(query);
     }
 }
 
@@ -82,13 +82,6 @@ pub(crate) fn render(state: &AppState, kit: &Kit) -> El {
         .w_full()
         .center_y()
         .gap(theme::SPACE_3)
-        .child(
-            Button::new("‹ Fleet")
-                .variant(ButtonVariant::Ghost)
-                .on_press(|state: &mut AppState| state.configuration.tab = None)
-                .build(kit)
-                .key("configuration-back"),
-        )
         .child(
             text(FILE_NAME)
                 .font(theme::scale().mono)
@@ -103,15 +96,32 @@ pub(crate) fn render(state: &AppState, kit: &Kit) -> El {
                 .build(kit)
                 .key("configuration-reload"),
         );
-    let tabs = SegmentedControl::new(
-        ["Rules", "Check a label", "TOML"].as_slice(),
-        Some(tab as usize),
-    )
-    .label("Configuration view")
-    .width(Some(360.0))
-    .on_pick(|state: &mut AppState, index, _| state.configuration.tab = Some(Tab::ALL[index]))
-    .build(kit)
-    .key("configuration-tabs");
+    let tabs = SegmentedControl::new(&["Rules", "TOML"], Some(tab as usize))
+        .label("Configuration view")
+        .width(Some(172.0))
+        .on_pick(|state: &mut AppState, index, _| state.configuration.tab = Some(Tab::ALL[index]))
+        .build(kit)
+        .key("configuration-tabs");
+    let mut controls = row().w_full().center_y().gap(theme::SPACE_3).child(tabs);
+    if tab == Tab::Rules
+        && config.result.as_ref().is_some_and(|result| {
+            result
+                .as_ref()
+                .is_ok_and(|policy| !policy.global.labels.is_empty())
+        })
+    {
+        controls = controls.child(el().grow(1.0)).child(
+            TextInput::new(&config.search)
+                .label("Search rule patterns")
+                .placeholder("Search rule patterns")
+                .leading_icon(kit.glyph.search)
+                .width(Some(260.0))
+                .clear_button()
+                .on_edit(|state: &mut AppState| &mut state.configuration.search)
+                .build(kit)
+                .key("configuration-search"),
+        );
+    }
     let content = match config.result.as_ref() {
         None => message("Reading workloads.toml…", kit),
         Some(Err(ReadError::Unreadable)) => message(
@@ -122,8 +132,7 @@ pub(crate) fn render(state: &AppState, kit: &Kit) -> El {
             message("Invalid workloads.toml. Fix the file and reload.", kit)
         }
         Some(Ok(policy)) => match tab {
-            Tab::Rules => rules(policy, kit),
-            Tab::Check => check(policy, &config.label, kit),
+            Tab::Rules => rules(policy, &config.search.text, kit),
             Tab::Toml => source(policy, kit),
         },
     };
@@ -154,7 +163,7 @@ pub(crate) fn render(state: &AppState, kit: &Kit) -> El {
                 .min_h(0.0)
                 .gap(theme::SPACE_3)
                 .child(toolbar)
-                .child(tabs)
+                .child(controls)
                 .child(
                     col()
                         .key(format!("configuration-scroll-{}", tab as usize))
@@ -186,18 +195,28 @@ fn message(value: &'static str, kit: &Kit) -> El {
     panel(kit).padding(theme::SPACE_3).child(small(value, kit))
 }
 
-fn rules(policy: &Policy, kit: &Kit) -> El {
+fn matching_rules<'a>(rules: &'a [LabelRule], query: &str) -> impl Iterator<Item = &'a LabelRule> {
+    let needle = query.trim().to_lowercase();
+    rules
+        .iter()
+        .filter(move |rule| needle.is_empty() || rule.pattern.to_lowercase().contains(&needle))
+}
+
+fn rules(policy: &Policy, query: &str, kit: &Kit) -> El {
     let labels = &policy.global.labels;
+    let mut matches = matching_rules(labels, query).peekable();
     let timed = labels
         .iter()
         .any(|rule| matches!(rule.urgency, Some(RuleUrgency::Deferrable { .. })));
     let placement = labels.iter().any(|rule| rule.placement.is_some());
     let mut view = panel(kit);
-    if labels.is_empty() {
+    if matches.peek().is_none() {
         let note = if policy.source.is_none() {
             "No workloads.toml. Using built-in defaults."
-        } else {
+        } else if labels.is_empty() {
             "No global label rules."
+        } else {
+            "No rules match your search."
         };
         view = view.child(row().padding(theme::SPACE_3).child(small(note, kit)));
     } else {
@@ -215,10 +234,10 @@ fn rules(policy: &Policy, kit: &Kit) -> El {
         }
         let mut table = col()
             .role("table")
-            .label("Label rules, first match wins")
+            .label("Global label rules, in file order")
             .w_full()
             .child(header);
-        for rule in labels {
+        for rule in matches {
             let timing = match rule.urgency {
                 Some(RuleUrgency::Interactive {
                     hold_limit: Some(limit),
@@ -296,96 +315,6 @@ fn table_row(kit: &Kit, fill: rune::Color) -> El {
         .border_sides([0.0, 0.0, 1.0, 0.0], kit.c.border_base)
 }
 
-fn check(policy: &Policy, label: &TextEdit, kit: &Kit) -> El {
-    let input = row()
-        .w_full()
-        .center_y()
-        .gap(theme::SPACE_3)
-        .padding(theme::SPACE_3)
-        .child(small("Run label", kit))
-        .child(
-            TextInput::new(label)
-                .label("Run label")
-                .placeholder("Type a label")
-                .text_style(theme::scale().mono)
-                .width(Some(345.0))
-                .on_edit(|state: &mut AppState| &mut state.configuration.label)
-                .build(kit)
-                .key("configuration-label"),
-        )
-        .child(el().grow(1.0))
-        .child(small("Global policy only", kit));
-    let now = Timestamp::now();
-    let result = match policy.preview(&label.text, now) {
-        Ok(resolved) => {
-            let request = resolved.request;
-            let rule = request.settings.and_then(|settings| settings.rule);
-            let title = match rule {
-                Some(rule) => format!("Matched {}", rule.pattern),
-                None if label.text.is_empty() => "No label supplied".into(),
-                None => "No matching rule".into(),
-            };
-            let size = match request.size {
-                Some(cores) => cores.to_string(),
-                None if label.text.is_empty() => DEFAULT_SIZE.to_string(),
-                None => format!("Learned or {DEFAULT_SIZE}"),
-            };
-            let (timing_label, timing) = match request.urgency {
-                Urgency::Interactive { hold_limit_ms } => (
-                    "Max wait",
-                    hold_limit_ms.map_or_else(
-                        || "Calculated".into(),
-                        |ms| duration(Duration::from_millis(ms)),
-                    ),
-                ),
-                Urgency::Deferrable {
-                    deadline,
-                    at_deadline,
-                } => ("Deadline", deadline_label(deadline.since(now), at_deadline)),
-            };
-            col()
-                .w_full()
-                .gap(theme::SPACE_2)
-                .child(
-                    text(title)
-                        .wrap_anywhere()
-                        .font(theme::scale().label)
-                        .color(kit.c.info.fg),
-                )
-                .child(
-                    row()
-                        .gap(theme::SPACE_8)
-                        .child(fact("Weighted cores", size, kit))
-                        .child(fact(timing_label, timing, kit))
-                        .child(fact(
-                            "Placement",
-                            match request.placement {
-                                Placement::Pinned => "Pinned",
-                                Placement::Placeable | Placement::Member(_) => "Placeable",
-                            },
-                            kit,
-                        )),
-                )
-        }
-        Err(error) => small(error.message, kit),
-    };
-    panel(kit).child(input).child(
-        col()
-            .w_full()
-            .padding(theme::SPACE_3)
-            .border_sides([1.0, 0.0, 0.0, 0.0], kit.c.border_base)
-            .live_region(LiveRegion::Polite)
-            .child(result),
-    )
-}
-
-fn fact(label: &'static str, value: impl Into<String>, kit: &Kit) -> El {
-    col()
-        .gap(theme::SPACE_1)
-        .child(small(label, kit))
-        .child(text(value).font(theme::scale().body).color(kit.c.text_base))
-}
-
 fn source(policy: &Policy, kit: &Kit) -> El {
     match policy.source.as_deref() {
         None => message("No workloads.toml. Using built-in defaults.", kit),
@@ -446,7 +375,35 @@ fn deadline_label(deadline: Duration, action: AtDeadline) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::source_preview;
+    use super::{matching_rules, source_preview};
+    use elsecall::workload_settings::WorkloadSettings;
+
+    #[test]
+    fn search_matches_literal_pattern_text_in_file_order() {
+        let settings = WorkloadSettings::parse(
+            r#"
+[[labels]]
+match = "acme test Checkout"
+[[labels]]
+match = "acme test *"
+[[labels]]
+match = "elsecall build"
+"#,
+        )
+        .unwrap();
+        let matches = |query| {
+            matching_rules(&settings.labels, query)
+                .map(|rule| rule.pattern.as_str())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(matches(" TEST "), ["acme test Checkout", "acme test *"]);
+        assert_eq!(matches("*"), ["acme test *"]);
+        assert_eq!(
+            matches(""),
+            ["acme test Checkout", "acme test *", "elsecall build"]
+        );
+        assert!(matches("unlisted").is_empty());
+    }
 
     #[test]
     fn preview_bounds_shaping_even_for_wide_unicode_and_many_empty_lines() {

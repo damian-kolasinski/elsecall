@@ -3,8 +3,8 @@
 use std::num::NonZeroU32;
 use std::sync::Arc;
 
-use rune::{App, AppSpec, Chrome, Latest, MenuItem, Tx, Waker};
-use rune_kit::TableState;
+use rune::{App, AppSpec, Chrome, Latest, MenuItem, Tx, Waker, col};
+use rune_kit::{SegmentedControl, TableState, WindowTitlebar};
 
 use crate::add_mac_flow::{AddMac, AddUpdate, Page as AddMacPage, RunUpdate};
 use crate::add_mac_source::{self, AddMacSource, Inbox};
@@ -62,7 +62,8 @@ const SCENES: &[(&str, Scene)] = &[
     ("add-mac-done", scene_add_mac_done),
     ("add-mac-failed", scene_add_mac_failed),
     ("configuration-rules", scene_configuration_rules),
-    ("configuration-check", scene_configuration_check),
+    ("configuration-search", scene_configuration_search),
+    ("configuration-no-matches", scene_configuration_no_matches),
     ("configuration-toml", scene_configuration_toml),
     ("configuration-missing", scene_configuration_missing),
     ("configuration-invalid", scene_configuration_invalid),
@@ -112,6 +113,13 @@ const LOOK_EVERY: f64 = 3.0;
 const ANIMATION_FRAME: std::time::Duration = std::time::Duration::from_millis(33);
 
 impl AppState {
+    fn open_configuration(&mut self, tx: &mut Tx) {
+        if !self.add_mac.is_open() {
+            self.configuration.open();
+            tx.instant();
+        }
+    }
+
     pub(crate) fn add_mac(&self) -> &AddMac {
         &self.add_mac
     }
@@ -431,21 +439,50 @@ pub(crate) fn render_scene(argv: Vec<String>) -> Result<(), String> {
 
 fn window() -> App<AppState> {
     App::new(spec()).chrome(CHROME).menu_item(
-        MenuItem::new("Configuration…", |state: &mut AppState, tx: &mut Tx| {
-            state.configuration.open();
-            tx.instant();
-        })
-        .id("workload-configuration")
-        .key_equivalent("cmd+comma".parse().expect("known menu shortcut")),
+        MenuItem::new("Configuration…", AppState::open_configuration)
+            .id("workload-configuration")
+            .key_equivalent("cmd+comma".parse().expect("known menu shortcut")),
     )
 }
 
 fn render(state: &AppState, cx: &mut rune::Cx<AppState>) -> rune::El {
-    if state.configuration.visible() {
-        configuration_view::render(state, &theme::kit(cx.system_dark()))
+    let kit = theme::kit(cx.system_dark());
+    let navigation = SegmentedControl::new(
+        &["Fleet", "Configuration"],
+        Some(usize::from(state.configuration.visible())),
+    )
+    .label("Elsecall pages")
+    .width(Some(244.0))
+    .on_pick(|state: &mut AppState, index, tx| {
+        if index == 0 {
+            state.configuration.close();
+            tx.instant();
+        } else {
+            state.open_configuration(tx);
+        }
+    })
+    .build(&kit)
+    .key("main-navigation");
+    let toolbar = WindowTitlebar::from_insets(cx.chrome_insets())
+        .leading_padding(theme::SPACE_8)
+        .fill(kit.c.page)
+        .leading(navigation)
+        .build(&kit)
+        .border_sides([0.0, 0.0, 1.0, 0.0], kit.c.border_base);
+    let page = if state.configuration.visible() {
+        configuration_view::render(state, &kit)
     } else {
         view::fleet(state, cx)
-    }
+    };
+    let base = col()
+        .w_full()
+        .h_full()
+        .fill(kit.c.page)
+        .child(toolbar)
+        .child(col().w_full().grow(1.0).min_h(0.0).child(page));
+    let mut overlays = Vec::new();
+    crate::add_mac_view::sheet(state, &kit, cx.is_reduced_motion(), &mut overlays);
+    rune_kit::root(base, overlays)
 }
 
 fn spec() -> AppSpec<AppState> {
@@ -612,11 +649,18 @@ fn scene_configuration_rules(state: &mut AppState) {
     state.configuration.scene(Tab::Rules, sample_policy(), "");
 }
 
-fn scene_configuration_check(state: &mut AppState) {
+fn scene_configuration_search(state: &mut AppState) {
     scene_loading(state);
     state
         .configuration
-        .scene(Tab::Check, sample_policy(), "elsecall build");
+        .scene(Tab::Rules, sample_policy(), "BUILD");
+}
+
+fn scene_configuration_no_matches(state: &mut AppState) {
+    scene_loading(state);
+    state
+        .configuration
+        .scene(Tab::Rules, sample_policy(), "unlisted task");
 }
 
 fn scene_configuration_toml(state: &mut AppState) {

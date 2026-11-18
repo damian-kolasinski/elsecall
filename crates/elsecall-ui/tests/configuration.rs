@@ -1,10 +1,10 @@
-//! Drive the native UI through menu and input events against an isolated personal file.
+//! Drive the native UI through toolbar and input events against an isolated personal file.
 
 use serde_json::{Value, json};
 use std::{fs, path::Path, process::Command};
 
 #[test]
-fn inspect_rules_check_a_label_and_read_the_source_without_the_service() {
+fn navigate_search_rules_and_read_the_source_without_the_service() {
     if std::env::var_os("ELSECALL_UI_SKIP_GOLDENS").is_some() {
         return;
     }
@@ -20,29 +20,28 @@ fn inspect_rules_check_a_label_and_read_the_source_without_the_service() {
     fs::write(
         &script,
         json!([
-            {"t": 0.1, "menu": "workload-configuration"},
-            {"t": 0.7, "key": "segment1"},
-            {"t": 0.9, "key": "configuration-label"},
-            {"t": 1.1, "type": "type", "text": "elsecall build", "every": 0.015},
-            {"t": 1.7, "key": "segment2"},
-            {"t": 2.0, "key": "configuration-back"}
+            {"t": 0.1, "key": "main-navigation/segment1"},
+            {"t": 0.8, "key": "configuration-search"},
+            {"t": 1.0, "type": "type", "text": "BUILD", "every": 0.015},
+            {"t": 1.75, "key": "configuration-tabs/segment1"},
+            {"t": 2.1, "key": "main-navigation/segment0"}
         ])
         .to_string(),
     )
     .unwrap();
 
-    let rules = snapshot(home.path(), &script, "0.6");
+    let rules = snapshot(home.path(), &script, "loading", "0.6");
     assert!(visible(&rules, "elsecall check"));
     assert!(visible(&rules, "Run unmanaged"));
 
-    let check = snapshot(home.path(), &script, "1.6");
-    for text in ["Matched elsecall build", "4.5", "15m", "Pinned"] {
-        assert!(visible(&check, text), "expected {text:?} in label preview");
-    }
+    let filtered = snapshot(home.path(), &script, "loading", "1.6");
+    assert!(visible(&filtered, "elsecall build"));
+    assert!(!visible(&filtered, "elsecall check"));
+    assert!(visible(&filtered, "4.5"));
 
-    let toml = snapshot(home.path(), &script, "1.95");
+    let toml = snapshot(home.path(), &script, "loading", "1.95");
     assert!(visible(&toml, source));
-    let fleet = snapshot(home.path(), &script, "2.25");
+    let fleet = snapshot(home.path(), &script, "loading", "2.25");
     assert!(visible(&fleet, "Fleet"));
     assert!(!visible(&fleet, "workloads.toml"));
     assert_eq!(
@@ -51,12 +50,41 @@ fn inspect_rules_check_a_label_and_read_the_source_without_the_service() {
     );
 }
 
-fn snapshot(home: &Path, script: &Path, at: &str) -> Value {
+#[test]
+fn add_mac_keeps_configuration_closed_until_the_sheet_is_dismissed() {
+    if std::env::var_os("ELSECALL_UI_SKIP_GOLDENS").is_some() {
+        return;
+    }
+    let home = tempfile::Builder::new()
+        .prefix("ec-ui-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let script = home.path().join("input.json");
+    fs::write(
+        &script,
+        json!([
+            {"t": 0.2, "key": "main-navigation/segment1"},
+            {"t": 0.4, "menu": "workload-configuration"},
+            {"t": 0.8, "key": "add-mac-cancel"},
+            {"t": 1.25, "key": "main-navigation/segment1"}
+        ])
+        .to_string(),
+    )
+    .unwrap();
+    let active = snapshot(home.path(), &script, "add-mac-prepare", "0.65");
+    assert!(visible(&active, "Remote Login is on"));
+    assert!(!visible(&active, "workloads.toml"));
+    let dismissed = snapshot(home.path(), &script, "add-mac-prepare", "1.7");
+    assert!(visible(&dismissed, "workloads.toml"));
+    assert!(!visible(&dismissed, "Remote Login is on"));
+}
+
+fn snapshot(home: &Path, script: &Path, scene: &str, at: &str) -> Value {
     let tree = home.join("tree.json");
     let output = Command::new(env!("CARGO_BIN_EXE_elsecall-ui"))
         .args([
             "--scene",
-            "loading",
+            scene,
             "--realtime",
             "--size",
             "1040x480",

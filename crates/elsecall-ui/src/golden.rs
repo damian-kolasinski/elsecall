@@ -48,7 +48,8 @@ const BLESS: &str =
     "ELSECALL_UI_BLESS=1 cargo test -p elsecall-ui --bin elsecall-ui scenes_match_goldens";
 const CONFIGURATION_SCENES: &[&str] = &[
     "configuration-rules",
-    "configuration-check",
+    "configuration-search",
+    "configuration-no-matches",
     "configuration-toml",
     "configuration-missing",
     "configuration-invalid",
@@ -71,7 +72,7 @@ fn fleet_scenes_match_goldens() {
     }
     let hover = tempfile::NamedTempFile::new().unwrap();
     // The demand cell of the selected MacBook at minimum width.
-    std::fs::write(hover.path(), r#"[{"t":0.1,"type":"move","x":976,"y":223}]"#).unwrap();
+    std::fs::write(hover.path(), r#"[{"t":0.1,"type":"move","x":976,"y":267}]"#).unwrap();
     // Check the full header and the selected member's role pill at minimum width.
     for appearance in APPEARANCES {
         compare("release-fleet", appearance, "-minimum", MINIMUM_WINDOW);
