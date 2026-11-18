@@ -405,7 +405,7 @@ async fn run(cli: Cli) -> Result<bool> {
             elsecall::release_update::helper::run(
                 &paths,
                 &id,
-                &elsecall::release_update::helper::production_download(&paths),
+                &*elsecall::release_update::helper::production_download(&paths)?,
                 &elsecall::release_update::helper::production_selection(&paths),
                 manager,
                 &elsecall::macos::window_launcher::MacWindowLauncher,

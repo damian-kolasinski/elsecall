@@ -1,7 +1,10 @@
-//! Local upgrades from published, signed releases. Discovery never installs code.
+//! Local upgrades from signed releases: the published ones, or for test builds a
+//! local channel (see `channel`). Discovery never installs code.
 pub mod catalog;
+pub mod channel;
 pub mod download;
 pub mod helper;
+pub mod local_channel;
 pub mod selection;
 pub mod service;
 pub mod store;

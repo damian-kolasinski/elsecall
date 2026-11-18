@@ -8,6 +8,7 @@ cargo nextest --version >/dev/null 2>&1 || {
 }
 cargo fmt --all -- --check
 cargo clippy --workspace --locked --all-targets -- -D warnings
+scripts/check-local-channel.sh
 if [ -d scripts/vm ]; then
   python3 -m unittest discover -s scripts/vm -p 'test_*.py'
 fi

@@ -68,7 +68,7 @@ async fn inspection_failure_crosses_real_api_without_becoming_false_health_failu
             tailnet: Arc::new(NoTailnet),
             port: 1,
         },
-        elsecall::release_update::service::UpdateAdapters::production(false),
+        elsecall::release_update::service::UpdateAdapters::production(false).unwrap(),
     ));
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(120);
     loop {

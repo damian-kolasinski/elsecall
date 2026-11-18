@@ -219,10 +219,8 @@ fn check_stage(stage: &StagedRelease) -> Result<()> {
     Ok(())
 }
 // Keep helper execution free of private diagnostics from external programs.
-pub fn production_download(paths: &Paths) -> super::download::MiseDownload {
-    super::download::MiseDownload {
-        paths: paths.clone(),
-    }
+pub fn production_download(paths: &Paths) -> Result<Box<dyn ReleaseDownload>> {
+    Ok(super::channel::Channel::this_build()?.download(paths))
 }
 pub fn production_selection(paths: &Paths) -> super::selection::MiseSelection {
     super::selection::MiseSelection {

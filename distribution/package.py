@@ -6,6 +6,7 @@ import io
 import os
 import re
 import subprocess
+import sys
 import tarfile
 import tomllib
 from pathlib import Path
@@ -18,6 +19,10 @@ PRERELEASE = rf"(?:{NUMBER}|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
 SEMVER = re.compile(
     rf"{NUMBER}\.{NUMBER}\.{NUMBER}(?:-{PRERELEASE}(?:\.{PRERELEASE})*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
 )
+# Builds made with the local-release-channel feature carry this. They follow a
+# developer's own release channel and must never be published; see
+# src/release_update/channel.rs.
+LOCAL_CHANNEL_MARKER = b"ELSECALL-LOCAL-RELEASE-CHANNEL-BUILD"
 
 
 def version(root=ROOT):
@@ -52,24 +57,36 @@ def release_env(root, env=None):
     return prepared
 
 
-def build(root=ROOT, target=TARGET):
+def build(root=ROOT, target=TARGET, features=(), env=None):
+    """Build both executables; features and env apply to the CLI only."""
     if target != TARGET:
         raise ValueError("unsupported release target")
     host = subprocess.check_output(["rustc", "-vV"], text=True).split("host: ", 1)[1].splitlines()[0]
     if host != target:
         raise ValueError("release verification requires a native target")
-    env = release_env(root)
+    # Only the caller's env may make a local-channel build, never the shell's.
+    base = {
+        key: value
+        for key, value in release_env(root).items()
+        if not key.startswith("ELSECALL_LOCAL_RELEASE_")
+    }
     for crate, deployment in ((TOOL, "13.0"), ("elsecall-ui", "14.0")):
+        command = ["cargo", "build", "--locked", "--release", "--target", target, "-p", crate]
+        extra = {}
+        if crate == TOOL and features:
+            command += ["--features", ",".join(features)]
+            extra = env or {}
         subprocess.run(
-            ["cargo", "build", "--locked", "--release", "--target", target, "-p", crate],
+            command,
             cwd=root,
-            env={**env, "MACOSX_DEPLOYMENT_TARGET": deployment},
+            env={**base, **extra, "MACOSX_DEPLOYMENT_TARGET": deployment},
             check=True,
         )
     return Path(root) / "target" / target / "release" / TOOL
 
 
-def archive(binary, output, release_version, target=TARGET):
+def archive(binary, output, release_version, target=TARGET, local_channel=False):
+    """Package a release; local_channel archives only builds that follow the local channel."""
     binary = Path(binary)
     if binary.is_symlink() or not binary.is_file() or not os.access(binary, os.X_OK):
         raise ValueError("release executable unavailable")
@@ -84,6 +101,12 @@ def archive(binary, output, release_version, target=TARGET):
     window = companion.read_bytes()
     if any(str(Path.home()).encode() in data for data in (executable, window)):
         raise ValueError("release executable contains a private build path")
+    if (LOCAL_CHANNEL_MARKER in executable) != local_channel:
+        raise ValueError(
+            "release executable follows the local release channel"
+            if not local_channel
+            else "local channel archive needs a local-release-channel build"
+        )
     readme = (
         b"Elsecall\n\n"
         b"This archive contains the elsecall and elsecall-ui executables.\n"
