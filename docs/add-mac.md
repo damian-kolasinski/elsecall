@@ -3,7 +3,7 @@
 How a Mac becomes a fleet member: the operator turns on Remote Login on it, then
 the master does the rest over SSH. At the end the Mac is a member that the master
 reaches and controls over the tailnet. It is **awaiting provisioning**, so placement
-gives it no work and configuration sync sends it nothing. Installing its tools is
+gives it no work. Installing its tools is
 [fleet tool management](fleet-tools.md), a separate feature.
 
 A change to anything here is a product decision and updates this document first.
@@ -114,21 +114,22 @@ it without changing its readiness.
   place learns the password, and the master would install Elsecall on it and enroll
   it. An enrolled member can change the roster and move the master role, so this is
   more than a leaked password. Comparing fingerprints by hand would break the
-  one-switch flow, so the operator may compare the reported model, serial number and
-  fingerprint, and the member takes no work and no synced files until it is marked
-  ready.
+  one-switch flow, so the risk is accepted; the operator may compare the reported
+  model, serial number and fingerprint. Holding back synced files from a new member
+  would not contain it, since an enrolled member can mark itself ready.
 - **Awaiting provisioning is roster state.** A member enrolled by Add Mac is listed
   in the roster's `awaiting_provisioning`, so every member and every future master
   agrees on it. Placement leaves it out and says why in the run's reason; work that
   names it with `--member` still runs there, which is how the master controls it.
-  Configuration sync leaves it out too, so synced secrets reach it only once the
-  operator has seen it working. Upgrades include it. `elsecall fleet ready <name>`,
+  Configuration sync and upgrades include it as any member. It cannot become master.
+  `elsecall fleet ready <name>`,
   and later provisioning, marks it ready with a roster change, which, like every
   roster change, is refused while a member is unreachable unless forced. A roster
   with no member awaiting provisioning serializes exactly as before. A member on a
-  build that predates this drops the list when it stores the roster and then reports
-  it out of sync; `fleet upgrade` brings it to the master's build, then
-  `fleet sync` repairs it.
+  build that predates this drops the list when it stores the roster, and a roster
+  change it makes marks every waiting member ready. So Add Mac refuses while a
+  reachable member runs another build than the master, with `fleet upgrade` as the
+  fix.
 - **Only the master adds Macs.** This is a product choice, not a security boundary:
   any member can still enroll by hand. The master's build is the one copied, and the
   master is where the fleet is looked after.
@@ -143,8 +144,8 @@ it without changing its readiness.
 ## Slices
 
 1. This document; the earlier AirDrop installer and invitation work is removed.
-2. Members awaiting provisioning take no placed work and no synced files;
-   `fleet ready` marks one ready.
+2. Members awaiting provisioning take no placed work; `fleet ready` marks one
+   ready.
 3. `elsecall fleet nearby`: Macs on the local network.
 4. `elsecall fleet add` over SSH for a Mac already on the master's tailnet.
 5. Tailscale for a Mac that is not on the tailnet.

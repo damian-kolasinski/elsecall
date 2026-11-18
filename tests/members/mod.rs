@@ -518,7 +518,20 @@ impl Drop for TestMember {
 
 /// Enrols `joining` on `sponsor` and completes the join on `joining`.
 pub fn enrol(sponsor: &TestMember, joining: &TestMember) {
-    let report = sponsor.ok(&["fleet", "enroll", &joining.code()]);
+    enrol_with(sponsor, joining, &[]);
+}
+
+/// Enrols `joining` as awaiting provisioning, as Add Mac does.
+#[allow(dead_code)]
+pub fn enrol_awaiting(sponsor: &TestMember, joining: &TestMember) {
+    enrol_with(sponsor, joining, &["--awaiting-provisioning"]);
+}
+
+fn enrol_with(sponsor: &TestMember, joining: &TestMember, options: &[&str]) {
+    let code = joining.code();
+    let mut args = vec!["fleet", "enroll", &code];
+    args.extend_from_slice(options);
+    let report = sponsor.ok(&args);
     let next = report["next_step"].as_str().unwrap();
     let code = next.rsplit(' ').next().unwrap();
     joining.ok(&["fleet", "join", code]);

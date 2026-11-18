@@ -190,7 +190,8 @@ impl Scheduler {
         let request = QuoteRequest {
             workspaces: workspaces.clone(),
         };
-        let others: Vec<String> = standing.members.into_iter().filter(|m| *m != own).collect();
+        // A member awaiting provisioning takes no placed work, so it is not asked.
+        let others: Vec<String> = standing.placeable_others(&own).cloned().collect();
         let asked: Vec<&String> = others.iter().filter(|m| !skipped.contains(m)).collect();
         let asked_at = Instant::now();
         let wait = if new.is_some() {
@@ -468,14 +469,14 @@ impl Scheduler {
             return self.pump(book);
         };
         let moved_to = match self.place_of(entry) {
-            Some(Place::Here) => Some(own),
+            Some(Place::Here) => Some(own.clone()),
             Some(Place::Member(member)) => Some(member),
             Some(Place::Undecided) | None => None,
         };
         let verdict = entry.auto.as_ref().and_then(|a| a.verdict.as_ref());
         let left_out = verdict.map_or_else(String::new, |(v, _)| {
             placement::unreachable_left_out(&v.unreachable)
-        });
+        }) + &self.members.standing().awaiting_left_out(&own);
         let reason = match (&moved_to, verdict) {
             (Some(member), Some((verdict, _))) if verdict.winner.as_ref() == Some(member) => {
                 verdict.reason.clone()
@@ -508,8 +509,9 @@ impl Scheduler {
         let own = self.name();
         let mut observations = vec![self.observe_here(book, id, &own, now)];
         let mut unreachable = Vec::new();
-        for member in self.members.standing().members {
-            if member == own || auto.excluded.contains(&member) {
+        let standing = self.members.standing();
+        for member in standing.placeable_others(&own).cloned() {
+            if auto.excluded.contains(&member) {
                 continue;
             }
             match book.quotes.answer(&member) {
@@ -547,7 +549,8 @@ impl Scheduler {
             hold_left: expires_at.since(now),
             parameters: &self.parameters().placement,
         };
-        let verdict = placement::decide(observations, unreachable, &wanted);
+        let mut verdict = placement::decide(observations, unreachable, &wanted);
+        verdict.reason += &standing.awaiting_left_out(&own);
         let scoring = Scoring {
             scored_at: now,
             size: wanted.size,

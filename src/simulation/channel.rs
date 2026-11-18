@@ -50,6 +50,7 @@ impl Members for Channel {
             name: Some(self.own.clone()),
             master: self.master.clone(),
             members: self.registry.lock().unwrap().keys().cloned().collect(),
+            awaiting_provisioning: Vec::new(),
         }
     }
     fn offer(

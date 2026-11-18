@@ -971,6 +971,40 @@ fn perf_an_unreachable_member_is_left_out_and_named() {
     );
 }
 
+#[test]
+fn a_member_awaiting_provisioning_takes_only_work_that_names_it() {
+    let alpha = Machine::start("alpha", 10, 0.0, 1.0);
+    let bravo = Machine::start("bravo", 10, 0.0, 1.0);
+    members::enrol_awaiting(&alpha.member, &bravo.member);
+    let (_temp, repo) = repository();
+
+    let (id, member) = placed(&alpha.member, &repo, &["--placeable"]);
+    assert_eq!(member, "alpha");
+    let record = explain(&alpha.member, &id);
+    let candidates = record["decision"]["candidates"].as_array().unwrap();
+    assert_eq!(candidates.len(), 1, "{record}");
+    assert!(
+        record["decision"]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("bravo was left out: it is awaiting provisioning"),
+        "{record}"
+    );
+
+    // The master still controls it: work that names it runs there.
+    let (_, member) = placed(&alpha.member, &repo, &["--member", "bravo"]);
+    assert_eq!(member, "bravo");
+
+    alpha.member.ok(&["fleet", "ready", "bravo"]);
+    let (id, _) = placed(&alpha.member, &repo, &["--placeable"]);
+    let record = explain(&alpha.member, &id);
+    assert_eq!(
+        record["decision"]["candidates"].as_array().unwrap().len(),
+        2,
+        "{record}"
+    );
+}
+
 /// The run labelled `label` in `member`'s `elsecall runs`, once there is one.
 fn listed(member: &TestMember, label: &str) -> Option<Value> {
     member.ok(&["runs", "--limit", "10"])["runs"]

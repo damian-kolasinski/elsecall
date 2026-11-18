@@ -5,7 +5,7 @@ mod members;
 mod processes;
 use elsecall::{fleet::PeerStatus, member_key::MemberKey, peer_auth, peer_client, roster::Member};
 use hyper::Method;
-use members::{TestMember, enrol};
+use members::{TestMember, enrol, enrol_awaiting};
 use std::time::Duration;
 
 fn names(view: &serde_json::Value) -> Vec<String> {
@@ -429,4 +429,37 @@ fn enrolling_again_before_the_member_joined_repeats_the_join_step() {
         .to_owned();
     b.ok(&["fleet", "join", &code]);
     assert_eq!(a.view_of("bravo")["in_sync"], true);
+}
+
+#[test]
+fn a_member_awaits_provisioning_on_every_member_until_marked_ready() {
+    let a = TestMember::start("alpha");
+    let b = TestMember::start("bravo");
+    enrol_awaiting(&a, &b);
+    for member in [&a, &b] {
+        assert_eq!(
+            member.view_of("bravo")["readiness"],
+            "awaiting_provisioning"
+        );
+        assert_eq!(member.view_of("alpha")["readiness"], "ready");
+        assert_eq!(member.view_of("bravo")["in_sync"], true);
+    }
+    // It can be controlled, but cannot hold the master role while it waits.
+    assert_eq!(
+        a.fails(&["fleet", "move-master", "bravo"]),
+        "member_awaiting_provisioning"
+    );
+    // Enrolling it again, as a repeated Add Mac does, keeps it waiting.
+    a.ok(&["fleet", "enroll", &b.code()]);
+    assert_eq!(a.view_of("bravo")["readiness"], "awaiting_provisioning");
+
+    let ready = a.ok(&["fleet", "ready", "bravo"]);
+    assert_eq!(ready["complete"], true, "{ready}");
+    for member in [&a, &b] {
+        assert_eq!(member.view_of("bravo")["readiness"], "ready");
+        assert_eq!(member.view_of("bravo")["in_sync"], true);
+    }
+    // Marking it again changes nothing; an unknown member is refused.
+    assert_eq!(a.ok(&["fleet", "ready", "bravo"])["epoch"], ready["epoch"]);
+    assert_eq!(a.fails(&["fleet", "ready", "zulu"]), "not_a_member");
 }
