@@ -101,6 +101,35 @@ pub struct Standing {
     /// The member this member records as master.
     pub master: Option<String>,
     pub members: Vec<String>,
+    /// Members placement leaves out until they are provisioned. Work that names
+    /// one still runs there.
+    pub awaiting_provisioning: Vec<String>,
+}
+
+impl Standing {
+    /// The other members placement may give work it did not name to.
+    pub fn placeable_others(&self, own: &str) -> impl Iterator<Item = &String> {
+        self.members
+            .iter()
+            .filter(move |m| *m != own && !self.awaiting_provisioning.contains(m))
+    }
+
+    /// The sentences that name every member left out because it awaits
+    /// provisioning, to append to a reason.
+    pub fn awaiting_left_out(&self, own: &str) -> String {
+        self.awaiting_provisioning
+            .iter()
+            .filter(|m| *m != own)
+            .map(|member| {
+                crate::scheduling::placement::left_out(
+                    member,
+                    &format!(
+                        "It is awaiting provisioning; elsecall fleet ready {member} lets placement use it."
+                    ),
+                )
+            })
+            .collect()
+    }
 }
 
 /// The other members, as placement reaches them.
@@ -284,4 +313,28 @@ pub struct PlacedGrant {
     /// consistency check of a location within one is current by construction.
     #[serde(default)]
     pub synced_paths: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn members_awaiting_provisioning_are_not_placeable_and_are_named() {
+        let standing = Standing {
+            name: Some("alpha".into()),
+            master: Some("alpha".into()),
+            members: vec!["alpha".into(), "bravo".into(), "charlie".into()],
+            awaiting_provisioning: vec!["bravo".into()],
+        };
+        let others: Vec<&String> = standing.placeable_others("alpha").collect();
+        assert_eq!(others, ["charlie"]);
+        assert_eq!(
+            standing.awaiting_left_out("alpha"),
+            " bravo was left out: it is awaiting provisioning; elsecall fleet ready bravo lets placement use it."
+        );
+        // A member never names itself as left out.
+        assert_eq!(standing.awaiting_left_out("bravo"), "");
+        assert_eq!(Standing::default().awaiting_left_out("alpha"), "");
+    }
 }

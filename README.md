@@ -245,7 +245,8 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall copies` | The copies of other members' workspaces this machine holds, their object stores and sizes, free space and recent removals (see "Housekeeping of copies") |
 | `elsecall copies prune [--dry-run]` | Run a housekeeping pass now, or report what it would remove |
 | `elsecall fleet identity` | This member's name, public key, tailnet endpoints and member code |
-| `elsecall fleet enroll <code>` / `join <code>` | Enrol another machine (on a member), then join (on that machine) |
+| `elsecall fleet enroll <code> [--awaiting-provisioning]` / `join <code>` | Enrol another machine (on a member), then join (on that machine) |
+| `elsecall fleet ready <name>` | Mark a member awaiting provisioning ready, so placement may give it work |
 | `elsecall fleet remove <name>` / `leave` | Remove a member (on another member), then forget the fleet (on that machine) |
 | `elsecall fleet move-master <name>` | Move the master role, updating every member |
 | `elsecall fleet check-authority <name>` | Ask a member whether it accepts placement authority from this member |
@@ -1791,6 +1792,15 @@ elsecall fleet join <code from next_step>
 elsecall fleet
 ```
 
+A member enrolled with `--awaiting-provisioning`, as [Adding a Mac](docs/add-mac.md)
+does, is listed in the roster as awaiting provisioning, and `elsecall fleet` shows
+its `readiness` as `awaiting_provisioning` (every other member is `ready`). Placement
+leaves it out, naming it in the run's reason; work that names it with `--member`
+still runs there, and configuration sync and upgrades include it as any member. It
+cannot become master (`member_awaiting_provisioning`). `elsecall fleet ready <name>` marks it
+ready on every member; like other roster changes it refuses while a member is
+unreachable unless given `--force`. Enrolling it again keeps its readiness.
+
 Removal also takes a step on each machine: `elsecall fleet remove <name>` on another
 member, then `elsecall fleet leave` on the removed machine. A removed member's
 requests are refused immediately. The master cannot be removed, and a member cannot
@@ -1805,7 +1815,7 @@ would accept placement from this one. `elsecall fleet move-master <name>`, run o
 member, moves the role. There is no automatic election, and the master cannot be
 removed or `leave` without `--force`.
 
-`enroll`, `remove` and `move-master` update every member and refuse while any member is
+`enroll`, `remove`, `move-master` and `ready` update every member and refuse while any member is
 unreachable (for `enroll`, other than the member being enrolled, which may not have
 joined yet: it shows as `awaiting_join`, and enrolling it again prints the join step
 again); `--force` changes the reachable members and reports the others as

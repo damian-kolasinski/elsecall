@@ -7,7 +7,7 @@ use crate::{
     member_key::PublicKey,
     membership_store::Membership,
     peer_client,
-    roster::MemberName,
+    roster::{MemberName, Readiness},
 };
 use hyper::Method;
 use serde::{Deserialize, Serialize};
@@ -39,6 +39,8 @@ pub struct MemberView {
     pub key: PublicKey,
     pub endpoints: Vec<SocketAddr>,
     pub role: Role,
+    /// Whether placement may give the member work, as the roster records it.
+    pub readiness: Readiness,
     pub this_member: bool,
     #[serde(flatten)]
     pub reach: Reach,
@@ -299,6 +301,7 @@ async fn members(fleet: &Fleet) -> FleetView {
             } else {
                 Role::Member
             },
+            readiness: roster.readiness(&member.name),
             this_member: member.key == fleet.public_key(),
             reach: match status {
                 Ok(status) => Reach::Reachable {
@@ -345,6 +348,7 @@ fn without_roster(
                 key,
                 endpoints,
                 role: Role::Master,
+                readiness: Readiness::Ready,
                 this_member: true,
                 reach: Reach::Unreachable {
                     error: error.clone(),
@@ -391,6 +395,7 @@ mod tests {
             key: crate::member_key::MemberKey::generate().unwrap().public(),
             endpoints: Vec::new(),
             role: Role::Member,
+            readiness: Readiness::Ready,
             this_member: false,
             reach: Reach::Unreachable {
                 error: Failure::new("member_unavailable", "gone", "check"),

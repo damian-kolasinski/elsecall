@@ -5,6 +5,7 @@ use crate::{
     failure::Result,
     fleet::Fleet,
     peer_client,
+    roster::Readiness,
     scheduling::{
         placed::{Members, OfferReply, PlacementOffer, Standing},
         quote::{Quote, QuoteRequest},
@@ -43,6 +44,12 @@ impl Members for FleetMembers {
             members: roster
                 .members()
                 .iter()
+                .map(|m| m.name.to_string())
+                .collect(),
+            awaiting_provisioning: roster
+                .members()
+                .iter()
+                .filter(|m| roster.readiness(&m.name) == Readiness::AwaitingProvisioning)
                 .map(|m| m.name.to_string())
                 .collect(),
         }

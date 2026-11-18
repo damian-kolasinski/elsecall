@@ -642,6 +642,7 @@ async fn structured_placement_requires_acknowledgement_without_retry_or_attach()
                 name: Some("caller".into()),
                 master: Some("caller".into()),
                 members: vec!["caller".into(), "peer".into()],
+                awaiting_provisioning: Vec::new(),
             }
         }
         fn offer(&self, _: &str, offer: &PlacementOffer) -> BoxFuture<'static, Result<OfferReply>> {
@@ -772,6 +773,7 @@ async fn a_peer_that_lost_its_placed_runs_keeps_short_work_and_not_long_work() {
                 name: Some("caller".into()),
                 master: Some("caller".into()),
                 members: vec!["caller".into(), "peer".into()],
+                awaiting_provisioning: Vec::new(),
             }
         }
         fn offer(&self, _: &str, _: &PlacementOffer) -> BoxFuture<'static, Result<OfferReply>> {

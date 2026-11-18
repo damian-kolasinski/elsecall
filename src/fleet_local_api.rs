@@ -1,6 +1,12 @@
 //! Fleet operations on the local socket, where the same-user rule authorizes the
 //! operator. The service holds the member key; the CLI never reads it.
-use crate::{api, failure::Failure, fleet::Fleet, fleet_changes, fleet_view, roster::MemberName};
+use crate::{
+    api,
+    failure::Failure,
+    fleet::Fleet,
+    fleet_changes, fleet_view,
+    roster::{MemberName, Readiness},
+};
 use axum::{
     Json, Router,
     body::Bytes,
@@ -17,6 +23,15 @@ pub struct CodeRequest {
     pub code: String,
     #[serde(default)]
     pub force: bool,
+}
+#[derive(Serialize, Deserialize)]
+pub struct EnrollRequest {
+    pub code: String,
+    #[serde(default)]
+    pub force: bool,
+    /// Applies to a member enrolled for the first time.
+    #[serde(default)]
+    pub readiness: Readiness,
 }
 #[derive(Serialize, Deserialize)]
 pub struct MemberRequest {
@@ -59,6 +74,7 @@ pub fn routes(fleet: Arc<Fleet>, placed: Arc<dyn fleet_view::PlacedRuns>) -> Rou
         .route("/v1/fleet/leave", post(leave))
         .route("/v1/fleet/sync", post(sync))
         .route("/v1/fleet/master", post(move_master))
+        .route("/v1/fleet/ready", post(mark_ready))
         .route("/v1/fleet/placement-probe", post(probe_placement))
         .with_state(fleet)
         .merge(viewing)
@@ -110,8 +126,10 @@ async fn identity(State(fleet): State<Arc<Fleet>>) -> Response {
     respond(fleet.identity())
 }
 async fn enroll(State(fleet): State<Arc<Fleet>>, body: Bytes) -> Response {
-    match parse::<CodeRequest>(&body) {
-        Ok(request) => respond(fleet_changes::enroll(&fleet, &request.code, request.force).await),
+    match parse::<EnrollRequest>(&body) {
+        Ok(request) => respond(
+            fleet_changes::enroll(&fleet, &request.code, request.readiness, request.force).await,
+        ),
         Err(error) => respond::<()>(Err(error)),
     }
 }
@@ -145,6 +163,14 @@ async fn move_master(State(fleet): State<Arc<Fleet>>, body: Bytes) -> Response {
     match parse::<MemberRequest>(&body) {
         Ok(request) => {
             respond(fleet_changes::move_master(&fleet, &request.name, request.force).await)
+        }
+        Err(error) => respond::<()>(Err(error)),
+    }
+}
+async fn mark_ready(State(fleet): State<Arc<Fleet>>, body: Bytes) -> Response {
+    match parse::<MemberRequest>(&body) {
+        Ok(request) => {
+            respond(fleet_changes::mark_ready(&fleet, &request.name, request.force).await)
         }
         Err(error) => respond::<()>(Err(error)),
     }

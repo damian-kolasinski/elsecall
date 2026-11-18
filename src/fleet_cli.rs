@@ -3,9 +3,9 @@
 use crate::{
     client,
     failure::Result,
-    fleet_local_api::{CodeRequest, ForceRequest, MemberRequest, SyncRequest},
+    fleet_local_api::{CodeRequest, EnrollRequest, ForceRequest, MemberRequest, SyncRequest},
     paths::Paths,
-    roster::MemberName,
+    roster::{MemberName, Readiness},
 };
 use clap::{Args, Subcommand};
 use hyper::Method;
@@ -32,6 +32,9 @@ enum FleetCommand {
         /// Change the fleet even if some members are unreachable
         #[arg(long)]
         force: bool,
+        /// Leave the new member out of placement until `fleet ready` marks it ready
+        #[arg(long)]
+        awaiting_provisioning: bool,
     },
     /// Join the fleet with the code `fleet enroll` printed on the enrolling member (step 2 of 2)
     Join { code: String },
@@ -55,6 +58,13 @@ enum FleetCommand {
     MoveMaster {
         name: MemberName,
         /// Move even if some members are unreachable; they keep trusting the old master
+        #[arg(long)]
+        force: bool,
+    },
+    /// Mark a member awaiting provisioning ready, so placement may give it work
+    Ready {
+        name: MemberName,
+        /// Change the fleet even if some members are unreachable
         #[arg(long)]
         force: bool,
     },
@@ -100,10 +110,22 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
             return Ok((data, true));
         }
         Some(FleetCommand::Identity) => (Method::GET, "/v1/fleet/identity", None),
-        Some(FleetCommand::Enroll { code, force }) => (
+        Some(FleetCommand::Enroll {
+            code,
+            force,
+            awaiting_provisioning,
+        }) => (
             Method::POST,
             "/v1/fleet/enroll",
-            Some(serde_json::to_value(CodeRequest { code, force })),
+            Some(serde_json::to_value(EnrollRequest {
+                code,
+                force,
+                readiness: if awaiting_provisioning {
+                    Readiness::AwaitingProvisioning
+                } else {
+                    Readiness::Ready
+                },
+            })),
         ),
         Some(FleetCommand::Join { code }) => (
             Method::POST,
@@ -129,6 +151,11 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
         Some(FleetCommand::MoveMaster { name, force }) => (
             Method::POST,
             "/v1/fleet/master",
+            Some(serde_json::to_value(MemberRequest { name, force })),
+        ),
+        Some(FleetCommand::Ready { name, force }) => (
+            Method::POST,
+            "/v1/fleet/ready",
             Some(serde_json::to_value(MemberRequest { name, force })),
         ),
         Some(FleetCommand::CheckAuthority { name }) => (

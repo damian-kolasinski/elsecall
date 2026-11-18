@@ -9,7 +9,7 @@ use crate::{
     member_code,
     membership_store::Membership,
     peer_client::{self, PEER_TIMEOUT},
-    roster::{Change, Member, MemberName, Offer, Roster, not_a_member},
+    roster::{Change, Member, MemberName, Offer, Readiness, Roster, not_a_member},
 };
 use hyper::Method;
 use serde::Serialize;
@@ -56,7 +56,12 @@ pub struct LeaveReport {
     pub next_step: String,
 }
 
-pub async fn enroll(fleet: &Fleet, code: &str, force: bool) -> Result<ChangeReport> {
+pub async fn enroll(
+    fleet: &Fleet,
+    code: &str,
+    readiness: Readiness,
+    force: bool,
+) -> Result<ChangeReport> {
     let candidate = member_code::decode(code)?;
     if candidate.key == fleet.public_key() {
         return Err(Failure::new(
@@ -68,7 +73,7 @@ pub async fn enroll(fleet: &Fleet, code: &str, force: bool) -> Result<ChangeRepo
     let _change = fleet.lock_changes().await;
     let roster = fleet.roster()?;
     let already_enrolled = roster.member_by_key(&candidate.key).is_some();
-    let change = roster.enrol(candidate.clone())?;
+    let change = roster.enrol(candidate.clone(), readiness)?;
     // The member being enrolled may not have joined yet, so it is not required to be
     // reachable; its join step establishes contact.
     let probed: Vec<Member> = others(fleet, &roster)
@@ -237,6 +242,24 @@ pub async fn move_master(fleet: &Fleet, name: &MemberName, force: bool) -> Resul
     );
     report.config_sync = handed_over;
     Ok(report)
+}
+
+/// Marks `name` ready on every member, so placement may give it work.
+pub async fn mark_ready(fleet: &Fleet, name: &MemberName, force: bool) -> Result<ChangeReport> {
+    let _change = fleet.lock_changes().await;
+    let roster = enrolled_roster(fleet, name)?;
+    let change = roster.mark_ready(name)?;
+    let recipients = others(fleet, &roster);
+    require_reachable(fleet, &recipients, force).await?;
+    // Repeating it delivers the same roster to members that missed it.
+    let next = apply(fleet, &roster, change)?;
+    let deliveries = deliver(fleet, &next, &recipients).await;
+    Ok(report(
+        fleet,
+        &next,
+        deliveries,
+        format!("{name} is ready on every member: placement may give it work."),
+    ))
 }
 
 /// Asks `name` whether it accepts placement authority from this member.

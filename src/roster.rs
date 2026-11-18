@@ -9,7 +9,7 @@ use crate::{
     tailnet::is_member_address,
 };
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
+use std::{collections::BTreeSet, net::SocketAddr};
 
 pub(crate) const MAX_MEMBERS: usize = 64;
 const MAX_ENDPOINTS: usize = 8;
@@ -104,23 +104,46 @@ impl Member {
     }
 }
 
+/// Whether placement may give a member work. Members enrolled by hand, and every
+/// member of a roster that predates readiness, are ready.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Readiness {
+    /// Enrolled before its tools were installed: placement leaves it out until it
+    /// is marked ready. Work required on it by name still runs there.
+    AwaitingProvisioning,
+    #[default]
+    Ready,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "RawRoster")]
 pub struct Roster {
     epoch: u64,
     master: MemberName,
     members: Vec<Member>,
+    /// Members awaiting provisioning; every name is a member. Absent when empty, so
+    /// a roster without such members reads the same to builds that predate it.
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    awaiting_provisioning: BTreeSet<MemberName>,
 }
 #[derive(Deserialize)]
 struct RawRoster {
     epoch: u64,
     master: MemberName,
     members: Vec<Member>,
+    #[serde(default)]
+    awaiting_provisioning: BTreeSet<MemberName>,
 }
 impl TryFrom<RawRoster> for Roster {
     type Error = Failure;
     fn try_from(raw: RawRoster) -> Result<Self> {
-        Roster::new(raw.epoch, raw.master, raw.members)
+        Roster::validated(
+            raw.epoch,
+            raw.master,
+            raw.members,
+            raw.awaiting_provisioning,
+        )
     }
 }
 
@@ -143,7 +166,17 @@ pub enum Offer {
 }
 
 impl Roster {
+    /// A roster whose members are all ready.
     pub fn new(epoch: u64, master: MemberName, members: Vec<Member>) -> Result<Self> {
+        Self::validated(epoch, master, members, BTreeSet::new())
+    }
+
+    fn validated(
+        epoch: u64,
+        master: MemberName,
+        members: Vec<Member>,
+        awaiting_provisioning: BTreeSet<MemberName>,
+    ) -> Result<Self> {
         let invalid = |message: &str| {
             Failure::new(
                 "invalid_roster",
@@ -168,11 +201,34 @@ impl Roster {
         if !members.iter().any(|m| m.name == master) {
             return Err(invalid("The master must be an enrolled member."));
         }
+        if !awaiting_provisioning
+            .iter()
+            .all(|name| members.iter().any(|m| &m.name == name))
+        {
+            return Err(invalid(
+                "Only enrolled members can be awaiting provisioning.",
+            ));
+        }
+        if awaiting_provisioning.contains(&master) {
+            return Err(invalid("The master cannot be awaiting provisioning."));
+        }
         Ok(Self {
             epoch,
             master,
             members,
+            awaiting_provisioning,
         })
+    }
+
+    /// The same awaiting set, carried into a changed roster.
+    fn next(&self, epoch: u64, master: MemberName, members: Vec<Member>) -> Result<Roster> {
+        let awaiting = self
+            .awaiting_provisioning
+            .iter()
+            .filter(|name| members.iter().any(|m| &m.name == *name))
+            .cloned()
+            .collect();
+        Self::validated(epoch, master, members, awaiting)
     }
     /// The roster of a machine that has not joined a fleet: itself, as master.
     pub fn solo(member: Member) -> Self {
@@ -180,6 +236,7 @@ impl Roster {
             epoch: 0,
             master: member.name.clone(),
             members: vec![member],
+            awaiting_provisioning: BTreeSet::new(),
         }
     }
     pub fn epoch(&self) -> u64 {
@@ -197,8 +254,18 @@ impl Roster {
     pub fn member_by_key(&self, key: &PublicKey) -> Option<&Member> {
         self.members.iter().find(|m| &m.key == key)
     }
+    /// Whether placement may give `name` work. Callers pass a member's name.
+    pub fn readiness(&self, name: &MemberName) -> Readiness {
+        if self.awaiting_provisioning.contains(name) {
+            Readiness::AwaitingProvisioning
+        } else {
+            Readiness::Ready
+        }
+    }
 
-    pub fn enrol(&self, member: Member) -> Result<Change> {
+    /// Enrols `member`. `readiness` applies to a new member only: enrolling a member
+    /// again, for example with new endpoints, keeps its readiness.
+    pub fn enrol(&self, member: Member, readiness: Readiness) -> Result<Change> {
         match (self.member(&member.name), self.member_by_key(&member.key)) {
             (Some(by_name), Some(by_key))
                 if by_name == by_key && by_name.endpoints == member.endpoints =>
@@ -207,8 +274,13 @@ impl Roster {
             }
             (None, None) => {
                 let mut members = self.members.clone();
+                let mut awaiting = self.awaiting_provisioning.clone();
+                if readiness == Readiness::AwaitingProvisioning {
+                    awaiting.insert(member.name.clone());
+                }
                 members.push(member);
-                Roster::new(self.next_epoch(), self.master.clone(), members).map(Change::Changed)
+                Roster::validated(self.next_epoch(), self.master.clone(), members, awaiting)
+                    .map(Change::Changed)
             }
             (Some(by_name), Some(by_key)) if by_name == by_key => {
                 // Same member with new endpoints, e.g. after its tailnet addresses changed.
@@ -223,7 +295,8 @@ impl Roster {
                         }
                     })
                     .collect();
-                Roster::new(self.next_epoch(), self.master.clone(), members).map(Change::Changed)
+                self.next(self.next_epoch(), self.master.clone(), members)
+                    .map(Change::Changed)
             }
             _ => Err(Failure::new(
                 "member_conflict",
@@ -244,7 +317,7 @@ impl Roster {
 
     /// The same roster with an epoch above `highest`, so it replaces every roster seen.
     pub fn reissued_after(&self, highest: u64) -> Result<Roster> {
-        Roster::new(
+        self.next(
             highest.max(self.epoch).saturating_add(1),
             self.master.clone(),
             self.members.clone(),
@@ -275,16 +348,41 @@ impl Roster {
             .filter(|m| &m.name != name)
             .cloned()
             .collect();
-        Roster::new(self.next_epoch(), self.master.clone(), members)
+        self.next(self.next_epoch(), self.master.clone(), members)
     }
 
     /// Makes `name` the master.
     pub fn with_master(&self, name: &MemberName) -> Result<Change> {
         self.member(name).ok_or_else(|| not_a_member(name))?;
+        if self.awaiting_provisioning.contains(name) {
+            return Err(Failure::new(
+                "member_awaiting_provisioning",
+                format!("{name} is awaiting provisioning and cannot become the master."),
+                format!("Mark it ready with elsecall fleet ready {name} first."),
+            ));
+        }
         if name == &self.master {
             return Ok(Change::Unchanged);
         }
-        Roster::new(self.epoch + 1, name.clone(), self.members.clone()).map(Change::Changed)
+        self.next(self.epoch + 1, name.clone(), self.members.clone())
+            .map(Change::Changed)
+    }
+
+    /// Marks `name` ready, so placement may give it work.
+    pub fn mark_ready(&self, name: &MemberName) -> Result<Change> {
+        self.member(name).ok_or_else(|| not_a_member(name))?;
+        if !self.awaiting_provisioning.contains(name) {
+            return Ok(Change::Unchanged);
+        }
+        let mut awaiting = self.awaiting_provisioning.clone();
+        awaiting.remove(name);
+        Roster::validated(
+            self.next_epoch(),
+            self.master.clone(),
+            self.members.clone(),
+            awaiting,
+        )
+        .map(Change::Changed)
     }
 
     /// Decides whether `offered`, sent by `sender`, should replace this roster on the
@@ -379,21 +477,32 @@ pub mod tests {
         let a = member("a", 1);
         let b = member("b", 2);
         let solo = Roster::solo(a.clone());
-        let two = changed(solo.enrol(b.clone()).unwrap());
+        let two = changed(solo.enrol(b.clone(), Readiness::Ready).unwrap());
         assert_eq!(two.epoch(), 1);
         assert_eq!(two.master().name, a.name);
-        assert_eq!(two.enrol(b.clone()).unwrap(), Change::Unchanged);
+        assert_eq!(
+            two.enrol(b.clone(), Readiness::Ready).unwrap(),
+            Change::Unchanged
+        );
         let mut impostor = member("b", 3);
         assert_eq!(
-            two.enrol(impostor.clone()).unwrap_err().code,
+            two.enrol(impostor.clone(), Readiness::Ready)
+                .unwrap_err()
+                .code,
             "member_conflict"
         );
         impostor.name = "c".parse().unwrap();
         impostor.key = b.key;
-        assert_eq!(two.enrol(impostor).unwrap_err().code, "member_conflict");
+        assert_eq!(
+            two.enrol(impostor, Readiness::Ready).unwrap_err().code,
+            "member_conflict"
+        );
         let mut moved = b.clone();
         moved.endpoints = vec!["127.0.0.1:9".parse().unwrap()];
-        assert_eq!(changed(two.enrol(moved).unwrap()).epoch(), 2);
+        assert_eq!(
+            changed(two.enrol(moved, Readiness::Ready).unwrap()).epoch(),
+            2
+        );
 
         assert_eq!(
             two.remove(&a.name, &b.key).unwrap_err().code,
@@ -415,7 +524,11 @@ pub mod tests {
     fn moving_the_master_role_needs_a_member_and_bumps_the_epoch() {
         let a = member("a", 1);
         let b = member("b", 2);
-        let two = changed(Roster::solo(a.clone()).enrol(b.clone()).unwrap());
+        let two = changed(
+            Roster::solo(a.clone())
+                .enrol(b.clone(), Readiness::Ready)
+                .unwrap(),
+        );
         let moved = changed(two.with_master(&b.name).unwrap());
         assert_eq!((moved.epoch(), &moved.master().name), (2, &b.name));
         assert_eq!(moved.with_master(&b.name).unwrap(), Change::Unchanged);
@@ -436,15 +549,19 @@ pub mod tests {
         let a = member("a", 1);
         let b = member("b", 2);
         let c = member("c", 3);
-        let one = changed(Roster::solo(a.clone()).enrol(b.clone()).unwrap());
-        let two = changed(one.enrol(c.clone()).unwrap());
+        let one = changed(
+            Roster::solo(a.clone())
+                .enrol(b.clone(), Readiness::Ready)
+                .unwrap(),
+        );
+        let two = changed(one.enrol(c.clone(), Readiness::Ready).unwrap());
         assert_eq!(one.offer(&two, &b.key, &a.key).unwrap(), Offer::Accept);
         assert_eq!(
             two.offer(&two, &b.key, &a.key).unwrap(),
             Offer::AlreadyCurrent
         );
         assert_eq!(two.offer(&one, &b.key, &a.key).unwrap(), Offer::Stale);
-        let other = changed(one.enrol(member("d", 4)).unwrap());
+        let other = changed(one.enrol(member("d", 4), Readiness::Ready).unwrap());
         assert_eq!(two.offer(&other, &b.key, &a.key).unwrap(), Offer::Conflict);
         assert!(one.offer(&two, &c.key, &member("x", 9).key).is_err());
         let without_b = two.remove(&b.name, &a.key).unwrap();
@@ -457,5 +574,80 @@ pub mod tests {
         );
         assert!(one.reissued_after(MAX_EPOCH).is_err());
         assert!(one.reissued_after(u64::MAX).is_err());
+    }
+
+    #[test]
+    fn a_member_awaits_provisioning_until_marked_ready() {
+        let a = member("a", 1);
+        let b = member("b", 2);
+        let solo = Roster::solo(a.clone());
+        let two = changed(
+            solo.enrol(b.clone(), Readiness::AwaitingProvisioning)
+                .unwrap(),
+        );
+        assert_eq!(two.readiness(&b.name), Readiness::AwaitingProvisioning);
+        assert_eq!(two.readiness(&a.name), Readiness::Ready);
+
+        // Enrolling again, even as ready or with new endpoints, keeps it waiting.
+        assert_eq!(
+            two.enrol(b.clone(), Readiness::Ready).unwrap(),
+            Change::Unchanged
+        );
+        let mut moved = b.clone();
+        moved.endpoints = vec!["127.0.0.1:9".parse().unwrap()];
+        let moved = changed(two.enrol(moved, Readiness::Ready).unwrap());
+        assert_eq!(moved.readiness(&b.name), Readiness::AwaitingProvisioning);
+        // It cannot become the master; re-issuing keeps it waiting.
+        assert_eq!(
+            two.with_master(&b.name).unwrap_err().code,
+            "member_awaiting_provisioning"
+        );
+        let reissued = two.reissued_after(7).unwrap();
+        assert_eq!(reissued.readiness(&b.name), Readiness::AwaitingProvisioning);
+
+        let ready = changed(two.mark_ready(&b.name).unwrap());
+        assert_eq!(ready.epoch(), two.epoch() + 1);
+        assert_eq!(ready.readiness(&b.name), Readiness::Ready);
+        assert_eq!(ready.mark_ready(&b.name).unwrap(), Change::Unchanged);
+        assert_eq!(
+            two.mark_ready(&"zz".parse().unwrap()).unwrap_err().code,
+            "not_a_member"
+        );
+        // Removing the member forgets that it was waiting.
+        let removed = two.remove(&b.name, &a.key).unwrap();
+        let back = changed(removed.enrol(b.clone(), Readiness::Ready).unwrap());
+        assert_eq!(back.readiness(&b.name), Readiness::Ready);
+    }
+
+    #[test]
+    fn rosters_without_waiting_members_serialize_as_before() {
+        let a = member("a", 1);
+        let b = member("b", 2);
+        let ready = changed(
+            Roster::solo(a.clone())
+                .enrol(b.clone(), Readiness::Ready)
+                .unwrap(),
+        );
+        let json = serde_json::to_value(&ready).unwrap();
+        assert!(json.get("awaiting_provisioning").is_none(), "{json}");
+        assert_eq!(serde_json::from_value::<Roster>(json).unwrap(), ready);
+
+        let waiting = changed(
+            Roster::solo(a.clone())
+                .enrol(b.clone(), Readiness::AwaitingProvisioning)
+                .unwrap(),
+        );
+        let json = serde_json::to_value(&waiting).unwrap();
+        assert_eq!(json["awaiting_provisioning"], serde_json::json!(["b"]));
+        assert_eq!(
+            serde_json::from_value::<Roster>(json.clone()).unwrap(),
+            waiting
+        );
+        let mut stranger = json.clone();
+        stranger["awaiting_provisioning"] = serde_json::json!(["zz"]);
+        assert!(serde_json::from_value::<Roster>(stranger).is_err());
+        let mut master = json;
+        master["awaiting_provisioning"] = serde_json::json!(["a"]);
+        assert!(serde_json::from_value::<Roster>(master).is_err());
     }
 }
