@@ -25,6 +25,9 @@ pub struct Presence {
     pub name: String,
     /// Addresses the member listener binds. Never empty.
     pub addresses: Vec<IpAddr>,
+    /// The tailnet's DNS domain, such as `example.ts.net`, which tells tailnets
+    /// apart; `None` when Tailscale reports none.
+    pub domain: Option<String>,
 }
 
 pub trait Tailnet: Send + Sync {
@@ -62,8 +65,9 @@ pub fn unavailable(reason: &str) -> Failure {
 }
 
 /// An explicit presence, read from `ELSECALL_TAILNET_NAME` and
-/// `ELSECALL_TAILNET_ADDRESSES` (comma-separated). It replaces discovery entirely,
-/// for diagnosis and for running several members on one machine.
+/// `ELSECALL_TAILNET_ADDRESSES` (comma-separated), with an optional
+/// `ELSECALL_TAILNET_DOMAIN`. It replaces discovery entirely, for diagnosis and
+/// for running several members on one machine.
 pub struct Configured(Presence);
 impl Configured {
     pub fn from_env() -> Option<Result<Self>> {
@@ -104,6 +108,9 @@ impl Configured {
         Ok(Self(Presence {
             name: name.into(),
             addresses,
+            domain: std::env::var("ELSECALL_TAILNET_DOMAIN")
+                .ok()
+                .filter(|domain| !domain.is_empty()),
         }))
     }
 }

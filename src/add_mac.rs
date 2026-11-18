@@ -1,0 +1,628 @@
+//! Adding a Mac to the fleet from the master: checks it, puts Elsecall on it,
+//! opens its firewall, authorizes the master's SSH key, enrolls it awaiting
+//! provisioning and verifies it answers as a member. See docs/add-mac.md.
+//!
+//! Everything that can refuse runs before anything changes, and every step checks
+//! before it acts, so running it again continues where an earlier run stopped,
+//! and running it on a member repairs it.
+use crate::{
+    authorized_keys, client,
+    failure::{Failure, Result},
+    fleet_local_api::EnrollRequest,
+    inbound_firewall::Rule,
+    member_code,
+    paths::Paths,
+    remote_mac::{Build, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant},
+    roster::Readiness,
+};
+use hyper::Method;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::{
+    path::{Path, PathBuf},
+    time::{Duration, Instant},
+};
+
+/// The oldest macOS the master's build runs on.
+const MINIMUM_MACOS: u32 = 14;
+/// The architecture of the only build Elsecall ships.
+const ARCHITECTURE: &str = "arm64";
+const SERVICE_TIMEOUT: Duration = Duration::from_secs(15);
+/// How long a joined Mac may take to answer the master as a member.
+const VERIFY_WITHIN: Duration = Duration::from_secs(30);
+
+/// A step of adding a Mac, in order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Step {
+    Check,
+    Tailnet,
+    Install,
+    Firewall,
+    SshKey,
+    Enroll,
+    Verify,
+}
+
+impl Step {
+    /// What the step does, for progress lines.
+    pub fn doing(self) -> &'static str {
+        match self {
+            Step::Check => "checking the Mac",
+            Step::Tailnet => "checking its tailnet",
+            Step::Install => "installing Elsecall",
+            Step::Firewall => "opening the firewall for Elsecall",
+            Step::SshKey => "authorizing the master's SSH key",
+            Step::Enroll => "enrolling it",
+            Step::Verify => "verifying it answers as a member",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "outcome", rename_all = "snake_case")]
+pub enum Outcome {
+    Done,
+    /// Nothing needed changing.
+    Already,
+    Skipped {
+        why: String,
+    },
+}
+
+#[derive(Debug, Serialize)]
+pub struct StepReport {
+    pub step: Step,
+    #[serde(flatten)]
+    pub outcome: Outcome,
+}
+
+/// What the operator may compare with About This Mac on the added Mac.
+#[derive(Debug, Serialize)]
+pub struct Identification {
+    pub model: Option<String>,
+    pub serial_number: Option<String>,
+    pub macos_version: String,
+    pub ssh_host_key: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AddReport {
+    pub member: String,
+    pub host: String,
+    pub mac: Identification,
+    pub readiness: Readiness,
+    /// When the Mac's Tailscale node key expires; `null` when expiry is disabled.
+    pub tailscale_key_expiry: Option<String>,
+    pub steps: Vec<StepReport>,
+    pub next_step: String,
+}
+
+/// The master's side of adding: its service, its build, its tailnet and its key.
+pub struct Master {
+    pub socket: PathBuf,
+    pub build: Build,
+    /// The master's tailnet DNS domain, which the Mac's must equal.
+    pub tailnet_domain: String,
+    /// The operator's public SSH key on the master, if there is one.
+    pub ssh_public_key: Option<String>,
+}
+
+/// The fleet as the master's service reports it, as far as adding needs it.
+#[derive(Debug, Deserialize)]
+struct FleetView {
+    master: String,
+    members: Vec<ViewedMember>,
+}
+#[derive(Debug, Deserialize)]
+struct ViewedMember {
+    name: String,
+    key: String,
+    this_member: bool,
+    reachability: String,
+    #[serde(default)]
+    in_sync: bool,
+    readiness: Readiness,
+    version_skew: Option<bool>,
+    #[serde(default)]
+    error: Option<Failure>,
+}
+
+/// What the fleet must be before a Mac is touched: this member its master, every
+/// other member reachable and on the master's build.
+pub struct Preflight {
+    master_name: String,
+    members: Vec<ViewedMember>,
+}
+
+/// Checks the fleet. Runs before connecting to the Mac, so a refusal sends it
+/// nothing, not even the password.
+pub async fn preflight(socket: &Path) -> Result<Preflight> {
+    let fleet = view(socket).await?;
+    let own = require_master(&fleet)?;
+    require_reachable(&fleet)?;
+    require_one_build(&fleet)?;
+    Ok(Preflight {
+        master_name: own,
+        members: fleet.members,
+    })
+}
+
+/// Adds the Mac reached through `mac` as `host`. `progress` hears each step as it
+/// starts.
+pub async fn add<M: RemoteMac>(
+    mac: &mut M,
+    host: &str,
+    master: &Master,
+    fleet: &Preflight,
+    mut progress: impl FnMut(Step),
+) -> Result<AddReport> {
+    let mut steps = Vec::new();
+    let mut record = |step, outcome| steps.push(StepReport { step, outcome });
+
+    // Everything that can refuse, before anything changes.
+    progress(Step::Check);
+    let facts = mac.facts().await?;
+    check(&facts)?;
+    if !mac.sudo_accepted().await? {
+        return Err(Failure::new(
+            "sudo_refused",
+            format!(
+                "sudo on {host} did not accept the password for {}.",
+                facts.account
+            ),
+            "Use the password of an administrator account on that Mac.",
+        ));
+    }
+    let executable = Paths::for_home(Path::new(&facts.home))?
+        .executable()
+        .to_string_lossy()
+        .into_owned();
+    let rule = mac.incoming(&executable).await?;
+    if rule == Rule::AllBlocked {
+        return Err(Failure::new(
+            "firewall_blocks_all",
+            format!(
+                "The firewall on {host} blocks all incoming connections, so other members could never reach Elsecall there."
+            ),
+            "On that Mac, turn off \"Block all incoming connections\" in System Settings > Network > Firewall > Options, then add it again.",
+        ));
+    }
+    let installed = mac.installed_build().await?;
+    if installed.is_some() {
+        let identity = mac.elsecall(&["fleet", "identity"]).await?;
+        refuse_another_fleet(&identity, &fleet.members, host)?;
+    }
+    record(Step::Check, Outcome::Done);
+
+    progress(Step::Tailnet);
+    let node = on_tailnet(mac.tailnet().await?, &master.tailnet_domain, host)?;
+    record(Step::Tailnet, Outcome::Already);
+
+    progress(Step::Install);
+    let wanted = crate::build_identity::Digest::of_file(&master.build.executable)
+        .map_err(|error| Failure::io("Read the master's build", error))?
+        .build_id()
+        .to_string();
+    let outcome = if installed.as_deref() == Some(wanted.as_str()) {
+        Outcome::Already
+    } else {
+        mac.install(&master.build).await?;
+        Outcome::Done
+    };
+    record(Step::Install, outcome);
+
+    progress(Step::Firewall);
+    let outcome = match rule {
+        Rule::Unfiltered | Rule::Allowed => Outcome::Already,
+        Rule::NotAllowed | Rule::Unknown | Rule::AllBlocked => {
+            mac.allow_incoming(std::slice::from_ref(&executable))
+                .await?;
+            if mac.incoming(&executable).await? != Rule::Allowed {
+                return Err(Failure::new(
+                    "firewall_unchanged",
+                    format!("The firewall on {host} still does not allow Elsecall."),
+                    "Allow it in System Settings > Network > Firewall > Options on that Mac, then add it again.",
+                ));
+            }
+            Outcome::Done
+        }
+    };
+    record(Step::Firewall, outcome);
+
+    progress(Step::SshKey);
+    let outcome = match &master.ssh_public_key {
+        None => Outcome::Skipped {
+            why: "The master has no SSH key in ~/.ssh; create one with ssh-keygen -t ed25519 and run Add Mac again.".into(),
+        },
+        Some(key) => {
+            let line = authorized_keys::line(key, &fleet.master_name)?;
+            if mac.authorize_key(&line).await? {
+                Outcome::Done
+            } else {
+                Outcome::Already
+            }
+        }
+    };
+    record(Step::SshKey, outcome);
+
+    progress(Step::Enroll);
+    let identity = mac.elsecall(&["fleet", "identity"]).await?;
+    let code = text(&identity, "code")?.to_owned();
+    // The name that is enrolled is the one in the code, which must be the Mac's
+    // tailnet name.
+    let member = member_code::decode(&code)?.name.to_string();
+    if member != node.name {
+        return Err(Failure::new(
+            "unexpected_response",
+            format!(
+                "Elsecall on {host} calls itself {member}, but its tailnet name is {}.",
+                node.name
+            ),
+            "Run elsecall doctor on that Mac, then add it again.",
+        ));
+    }
+    let _: Value = client::send(
+        &master.socket,
+        Method::POST,
+        "/v1/fleet/enroll",
+        Some(
+            serde_json::to_value(EnrollRequest {
+                code,
+                force: false,
+                readiness: Readiness::AwaitingProvisioning,
+            })
+            .expect("serializable request"),
+        ),
+        SERVICE_TIMEOUT,
+    )
+    .await?;
+    let sponsor: Value =
+        client::get_within(&master.socket, "/v1/fleet/identity", SERVICE_TIMEOUT).await?;
+    mac.elsecall(&["fleet", "join", text(&sponsor, "code")?])
+        .await?;
+    record(Step::Enroll, Outcome::Done);
+
+    progress(Step::Verify);
+    let readiness = verify(&master.socket, &member).await?;
+    record(Step::Verify, Outcome::Done);
+
+    Ok(AddReport {
+        next_step: match readiness {
+            Readiness::AwaitingProvisioning => format!(
+                "{member} is a member awaiting provisioning: run work there with elsecall run --member {member}, and mark it ready with elsecall fleet ready {member} once its tools are installed."
+            ),
+            Readiness::Ready => format!("{member} is a member and takes placed work."),
+        },
+        member,
+        host: host.to_owned(),
+        mac: Identification {
+            model: facts.model,
+            serial_number: facts.serial_number,
+            macos_version: facts.macos_version,
+            ssh_host_key: mac.host_key().to_owned(),
+        },
+        readiness,
+        tailscale_key_expiry: node.key_expiry,
+        steps,
+    })
+}
+
+async fn view(socket: &Path) -> Result<FleetView> {
+    client::get_large_within(socket, "/v1/fleet", SERVICE_TIMEOUT).await
+}
+
+/// This member's name, when it is the master.
+fn require_master(fleet: &FleetView) -> Result<String> {
+    match fleet.members.iter().find(|m| m.this_member) {
+        Some(own) if own.name == fleet.master => Ok(own.name.clone()),
+        _ => Err(Failure::new(
+            "not_master",
+            "Only the master adds Macs: it copies its own build to them.",
+            format!("Run elsecall fleet add on the master ({}).", fleet.master),
+        )),
+    }
+}
+
+/// Enrolling refuses while a member is unreachable, so this refuses first, before
+/// the Mac changes.
+fn require_reachable(fleet: &FleetView) -> Result<()> {
+    let unreachable: Vec<&str> = fleet
+        .members
+        .iter()
+        .filter(|m| !m.this_member && m.reachability != "reachable")
+        .map(|m| m.name.as_str())
+        .collect();
+    if unreachable.is_empty() {
+        return Ok(());
+    }
+    Err(Failure::new(
+        "member_unavailable",
+        format!(
+            "These members cannot be reached, so the fleet cannot change: {}.",
+            unreachable.join(", ")
+        ),
+        "Bring them back, or remove them with elsecall fleet remove, then add the Mac.",
+    ))
+}
+
+/// A member on another build would drop the new member's readiness from any roster
+/// it changes, so every member must run the master's build first.
+fn require_one_build(fleet: &FleetView) -> Result<()> {
+    let skewed: Vec<&str> = fleet
+        .members
+        .iter()
+        .filter(|m| m.version_skew != Some(false) && !m.this_member)
+        .map(|m| m.name.as_str())
+        .collect();
+    if skewed.is_empty() {
+        return Ok(());
+    }
+    Err(Failure::new(
+        "version_skew",
+        format!(
+            "These members do not run the master's build: {}.",
+            skewed.join(", ")
+        ),
+        "Bring them to the master's build with elsecall fleet upgrade, then add the Mac.",
+    ))
+}
+
+/// Refuses a Mac enrolled in a fleet that does not list it: joining would fail
+/// after the master enrolled it.
+fn refuse_another_fleet(identity: &Value, members: &[ViewedMember], host: &str) -> Result<()> {
+    let enrolled = identity["enrolled"] == true;
+    let key = identity["key"].as_str().unwrap_or_default();
+    if enrolled && !members.iter().any(|m| m.key == key) {
+        return Err(Failure::new(
+            "member_of_another_fleet",
+            format!("{host} already belongs to another fleet."),
+            "Remove it from that fleet (elsecall fleet remove there, then elsecall fleet leave on it), then add it again.",
+        ));
+    }
+    Ok(())
+}
+
+/// Refuses a Mac the master's build cannot run on, or an account that cannot
+/// administer it.
+fn check(facts: &MacFacts) -> Result<()> {
+    if facts.architecture != ARCHITECTURE {
+        return Err(Failure::new(
+            "unsupported_mac",
+            format!(
+                "The Mac has a {} processor; Elsecall is built for Apple silicon only.",
+                facts.architecture
+            ),
+            "Add a Mac with Apple silicon.",
+        ));
+    }
+    if facts
+        .macos_major()
+        .is_none_or(|major| major < MINIMUM_MACOS)
+    {
+        return Err(Failure::new(
+            "unsupported_mac",
+            format!(
+                "The Mac runs macOS {}; Elsecall needs macOS {MINIMUM_MACOS} or later.",
+                facts.macos_version
+            ),
+            "Update macOS on that Mac, then add it again.",
+        ));
+    }
+    if !facts.administrator {
+        return Err(Failure::new(
+            "not_administrator",
+            format!("{} is not an administrator on that Mac.", facts.account),
+            "Use an administrator account's name and password.",
+        ));
+    }
+    Ok(())
+}
+
+/// The Mac's tailnet node, when it is on the master's tailnet.
+fn on_tailnet(tailnet: RemoteTailnet, domain: &str, host: &str) -> Result<TailnetNode> {
+    match tailnet {
+        RemoteTailnet::Online(node) if node.domain.as_deref() == Some(domain) => Ok(node),
+        RemoteTailnet::Online(node) => Err(Failure::new(
+            "tailnet_mismatch",
+            format!(
+                "{host} is on another tailnet ({}) than the master ({domain}).",
+                node.domain.as_deref().unwrap_or("unknown"),
+            ),
+            "Log that Mac out of its tailnet and into the master's, then add it again. Add Mac never switches a tailnet.",
+        )),
+        RemoteTailnet::Offline {
+            variant: TailscaleVariant::App,
+        } => Err(Failure::new(
+            "tailscale_offline",
+            format!("Tailscale on {host} is not connected to a tailnet."),
+            "Open Tailscale on that Mac and log in to the master's tailnet, then add it again.",
+        )),
+        RemoteTailnet::Offline {
+            variant: TailscaleVariant::Daemon,
+        }
+        | RemoteTailnet::Absent => Err(Failure::new(
+            "tailscale_required",
+            format!("{host} is not on the master's tailnet."),
+            "Install Tailscale on that Mac and log in to the master's tailnet, then add it again.",
+        )),
+    }
+}
+
+fn text<'a>(value: &'a Value, field: &str) -> Result<&'a str> {
+    value[field].as_str().ok_or_else(|| {
+        Failure::new(
+            "unexpected_response",
+            format!("The response had no {field}."),
+            "Check that the Mac runs the master's Elsecall build.",
+        )
+    })
+}
+
+/// Waits until the master reaches `member` with the same roster, and returns its
+/// readiness.
+async fn verify(socket: &Path, member: &str) -> Result<Readiness> {
+    let deadline = Instant::now() + VERIFY_WITHIN;
+    loop {
+        let fleet = view(socket).await?;
+        let entry = fleet.members.into_iter().find(|m| m.name == member);
+        if let Some(entry) = &entry
+            && entry.reachability == "reachable"
+            && entry.in_sync
+        {
+            return Ok(entry.readiness);
+        }
+        if Instant::now() > deadline {
+            let why = entry.and_then(|e| e.error).map_or_else(
+                || "it does not record the master's roster".into(),
+                |e| e.message,
+            );
+            return Err(Failure::new(
+                "member_unverified",
+                format!("{member} joined, but the master cannot reach it as a member: {why}"),
+                "Run elsecall doctor on that Mac (over SSH), then run Add Mac again.",
+            ));
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn facts() -> MacFacts {
+        MacFacts {
+            macos_version: "26.1".into(),
+            architecture: "arm64".into(),
+            model: Some("Mac16,10".into()),
+            serial_number: None,
+            account: "devbox".into(),
+            home: "/Users/devbox".into(),
+            administrator: true,
+            local_host_name: Some("macbook-pro".into()),
+        }
+    }
+
+    #[test]
+    fn only_an_administrator_on_a_supported_mac_passes() {
+        assert!(check(&facts()).is_ok());
+        let intel = MacFacts {
+            architecture: "x86_64".into(),
+            ..facts()
+        };
+        assert_eq!(check(&intel).unwrap_err().code, "unsupported_mac");
+        for old in ["13.6.1", "", "garbage"] {
+            let old = MacFacts {
+                macos_version: old.into(),
+                ..facts()
+            };
+            assert_eq!(check(&old).unwrap_err().code, "unsupported_mac");
+        }
+        let user = MacFacts {
+            administrator: false,
+            ..facts()
+        };
+        assert_eq!(check(&user).unwrap_err().code, "not_administrator");
+    }
+
+    fn node(domain: Option<&str>) -> RemoteTailnet {
+        RemoteTailnet::Online(TailnetNode {
+            name: "macbook-pro".into(),
+            domain: domain.map(Into::into),
+            addresses: vec!["100.64.0.20".parse().unwrap()],
+            key_expiry: None,
+        })
+    }
+
+    #[test]
+    fn only_the_masters_tailnet_is_accepted() {
+        let master = "example.ts.net";
+        assert!(on_tailnet(node(Some(master)), master, "h").is_ok());
+        for other in [Some("example.beta.tailscale.net"), None] {
+            assert_eq!(
+                on_tailnet(node(other), master, "h").unwrap_err().code,
+                "tailnet_mismatch"
+            );
+        }
+        let app = RemoteTailnet::Offline {
+            variant: TailscaleVariant::App,
+        };
+        assert_eq!(
+            on_tailnet(app, master, "h").unwrap_err().code,
+            "tailscale_offline"
+        );
+        assert_eq!(
+            on_tailnet(RemoteTailnet::Absent, master, "h")
+                .unwrap_err()
+                .code,
+            "tailscale_required"
+        );
+    }
+
+    fn fleet(members: serde_json::Value) -> FleetView {
+        serde_json::from_value(serde_json::json!({"master": "mac-mini", "members": members}))
+            .unwrap()
+    }
+
+    fn member(name: &str, own: bool, reachability: &str, skew: Option<bool>) -> serde_json::Value {
+        serde_json::json!({
+            "name": name, "key": format!("key-{name}"), "this_member": own,
+            "reachability": reachability, "readiness": "ready", "version_skew": skew,
+        })
+    }
+
+    #[test]
+    fn the_master_alone_adds_to_a_reachable_fleet_on_one_build() {
+        let good = fleet(serde_json::json!([
+            member("mac-mini", true, "reachable", Some(false)),
+            member("macbook-pro", false, "reachable", Some(false)),
+        ]));
+        assert_eq!(require_master(&good).unwrap(), "mac-mini");
+        assert!(require_reachable(&good).is_ok());
+        assert!(require_one_build(&good).is_ok());
+
+        let skewed = fleet(serde_json::json!([
+            member("mac-mini", true, "reachable", Some(false)),
+            member("macbook-pro", false, "reachable", Some(true)),
+        ]));
+        assert_eq!(require_one_build(&skewed).unwrap_err().code, "version_skew");
+        let down = fleet(serde_json::json!([
+            member("mac-mini", true, "reachable", Some(false)),
+            member("macbook-pro", false, "unreachable", None),
+        ]));
+        assert_eq!(
+            require_reachable(&down).unwrap_err().code,
+            "member_unavailable"
+        );
+        let elsewhere = fleet(serde_json::json!([member(
+            "macbook-pro",
+            true,
+            "reachable",
+            Some(false)
+        ),]));
+        assert_eq!(require_master(&elsewhere).unwrap_err().code, "not_master");
+    }
+
+    #[test]
+    fn a_mac_in_another_fleet_is_refused_and_a_member_is_repaired() {
+        let members = fleet(serde_json::json!([member(
+            "mac-mini",
+            true,
+            "reachable",
+            Some(false)
+        )]))
+        .members;
+        let solo = serde_json::json!({"enrolled": false, "key": "key-new"});
+        assert!(refuse_another_fleet(&solo, &members, "h").is_ok());
+        let ours = serde_json::json!({"enrolled": true, "key": "key-mac-mini"});
+        assert!(refuse_another_fleet(&ours, &members, "h").is_ok());
+        let theirs = serde_json::json!({"enrolled": true, "key": "key-other"});
+        assert_eq!(
+            refuse_another_fleet(&theirs, &members, "h")
+                .unwrap_err()
+                .code,
+            "member_of_another_fleet"
+        );
+    }
+}

@@ -1,6 +1,7 @@
 //! Tailnet discovery through the Tailscale command-line interface.
 use crate::{
     failure::Result,
+    remote_mac::TailnetNode,
     tailnet::{Presence, Tailnet, is_tailnet_address, unavailable},
 };
 use serde::Deserialize;
@@ -76,6 +77,37 @@ struct Node {
     dns_name: String,
     #[serde(default, rename = "TailscaleIPs")]
     tailscale_ips: Vec<IpAddr>,
+    #[serde(default)]
+    key_expiry: Option<String>,
+}
+
+/// The node `tailscale status --json` describes, when it is on a tailnet: its
+/// name, its tailnet's domain, and only its addresses inside the tailnet ranges,
+/// since command output is external data.
+pub fn online_node(bytes: &[u8]) -> Option<TailnetNode> {
+    let status: Status = serde_json::from_slice(bytes).ok()?;
+    if status.backend_state != "Running" {
+        return None;
+    }
+    let node = status.this?;
+    let dns_name = node.dns_name.trim_end_matches('.').to_ascii_lowercase();
+    let (name, domain) = match dns_name.split_once('.') {
+        Some((name, domain)) => (name.to_owned(), Some(domain.to_owned())),
+        None => (dns_name.clone(), None),
+    };
+    let addresses: Vec<IpAddr> = node
+        .tailscale_ips
+        .into_iter()
+        .filter(|address| is_tailnet_address(*address))
+        .collect();
+    (!name.is_empty() && !addresses.is_empty()).then_some(TailnetNode {
+        name,
+        domain,
+        addresses,
+        key_expiry: node
+            .key_expiry
+            .filter(|expiry| !expiry.starts_with("0001-")),
+    })
 }
 
 fn parse(bytes: &[u8]) -> Result<Presence> {
@@ -84,25 +116,13 @@ fn parse(bytes: &[u8]) -> Result<Presence> {
     if status.backend_state != "Running" {
         return Err(unavailable("Tailscale is not running"));
     }
-    let node = status
-        .this
-        .ok_or_else(|| unavailable("Tailscale reported no node"))?;
-    let name = node
-        .dns_name
-        .split('.')
-        .next()
-        .unwrap_or_default()
-        .to_ascii_lowercase();
-    // Command output is external data: keep only addresses inside tailnet ranges.
-    let addresses: Vec<IpAddr> = node
-        .tailscale_ips
-        .into_iter()
-        .filter(|address| is_tailnet_address(*address))
-        .collect();
-    if name.is_empty() || addresses.is_empty() {
-        return Err(unavailable("Tailscale reported no name or addresses"));
-    }
-    Ok(Presence { name, addresses })
+    let node =
+        online_node(bytes).ok_or_else(|| unavailable("Tailscale reported no name or addresses"))?;
+    Ok(Presence {
+        name: node.name,
+        addresses: node.addresses,
+        domain: node.domain,
+    })
 }
 
 #[cfg(test)]
@@ -117,6 +137,7 @@ mod tests {
         .unwrap();
         assert_eq!(presence.name, "mac-mini");
         assert_eq!(presence.addresses.len(), 2);
+        assert_eq!(presence.domain.as_deref(), Some("example.ts.net"));
         assert_eq!(
             parse(br#"{"BackendState":"Stopped","Self":null}"#)
                 .unwrap_err()

@@ -245,6 +245,7 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall copies` | The copies of other members' workspaces this machine holds, their object stores and sizes, free space and recent removals (see "Housekeeping of copies") |
 | `elsecall copies prune [--dry-run]` | Run a housekeeping pass now, or report what it would remove |
 | `elsecall fleet identity` | This member's name, public key, tailnet endpoints and member code |
+| `elsecall fleet add <host> --user <account>` | On the master: add a Mac over SSH, with the account's password on standard input (see "Adding a Mac") |
 | `elsecall fleet nearby [--browse 2s]` | The Macs on the local network, whether Remote Login is on, and which are members (see "Finding Macs nearby") |
 | `elsecall fleet enroll <code> [--awaiting-provisioning]` / `join <code>` | Enrol another machine (on a member), then join (on that machine) |
 | `elsecall fleet ready <name>` | Mark a member awaiting provisioning ready, so placement may give it work |
@@ -1797,6 +1798,45 @@ asks the service for the fleet; when macOS Local Network privacy denies that pro
 it fails with `local_network_denied`, and with `bonjour_unavailable` when the system's
 Bonjour service does not answer. Listing is best effort: a Mac that does not
 advertise itself can still be added by host name or address.
+
+**Adding a Mac.** `elsecall fleet add <host> --user <account>`, run on the master with
+the account's password on standard input, adds a Mac with Remote Login on in one
+command ([Adding a Mac](docs/add-mac.md)). The Mac must already be on the master's
+tailnet; Add Mac refuses a Mac on another tailnet (`tailnet_mismatch`) and one without
+Tailscale (`tailscale_required`, or `tailscale_offline` for the Tailscale app). Over
+one SSH connection that ignores the operator's SSH configuration and keys and trusts
+the Mac's host key for the rest of the command, it:
+
+1. checks the Mac before changing anything: Apple silicon and macOS 14 or later
+   (`unsupported_mac`), an administrator account (`not_administrator`), a password
+   sudo accepts (`sudo_refused`), a firewall that does not block all incoming
+   connections (`firewall_blocks_all`), and no membership in another fleet
+   (`member_of_another_fleet`);
+2. copies the master's installed build (and its window, when it has one) and runs its
+   `install`, unless the Mac already runs that build;
+3. lets the Application Firewall pass Elsecall when it filters and has no rule for it,
+   then checks that it does (`firewall_unchanged` otherwise);
+4. adds the master's `~/.ssh/id_ed25519.pub` (or `id_ecdsa`, `id_rsa`) to the account's
+   `authorized_keys`, accepted only from tailnet addresses and marked
+   `elsecall-master:<master>`; without a key this step is skipped and says how to make
+   one. `fleet leave` and `uninstall` on the Mac remove the marked lines;
+5. enrolls the Mac awaiting provisioning and has it join, then waits until the master
+   reaches it as a member in sync.
+
+Progress lines go to standard error. The result names the `member`, the Mac's `model`,
+`serial_number`, `macos_version` and `ssh_host_key` fingerprint (to compare with
+About This Mac), its `readiness`, its Tailscale `tailscale_key_expiry`, each step's
+outcome (`done`, `already` or `skipped`) and the `next_step`. Every step checks before
+it changes anything, so running the command again continues where it stopped, and
+running it on a member repairs it without changing its readiness. Before it connects to the Mac it refuses on any member but the master (`not_master`),
+while a member is unreachable (`member_unavailable`), while a member runs another build
+(`version_skew`), and when Tailscale reports no tailnet domain on the master
+(`tailnet_domain_unknown`). An error from Elsecall on the Mac is reported as
+`remote_elsecall_failed`, with the Mac's own error in `details.remote_error`. Ctrl-C
+or SIGTERM stops it with `add_stopped` and ends the SSH connection. A refused password is `ssh_password_refused`; a Mac it cannot reach
+is `ssh_unreachable`. The password never appears in arguments, the environment, files
+or output: OpenSSH gets it through Elsecall's askpass helper from a socket in a private
+directory, and sudo on standard input.
 
 Enrolment takes a step on each machine. Member codes contain only public keys and
 endpoints; carry them between machines yourself (for example over ssh):

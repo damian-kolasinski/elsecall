@@ -51,12 +51,16 @@ pub struct Uninstalled {
     pub mise: Selection,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kept: Option<Kept>,
+    /// Why the master's SSH key that Add Mac authorized could not be removed from
+    /// `~/.ssh/authorized_keys`; absent when it was removed or never there.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub master_ssh_key_error: Option<Failure>,
 }
 
 impl Uninstalled {
     /// Whether nothing Elsecall meant to remove is still there.
     pub fn complete(&self) -> bool {
-        !matches!(self.mise, Selection::Failed { .. })
+        !matches!(self.mise, Selection::Failed { .. }) && self.master_ssh_key_error.is_none()
     }
 }
 
@@ -78,5 +82,6 @@ pub fn uninstall(
         status: "uninstalled",
         mise,
         kept,
+        master_ssh_key_error: crate::authorized_keys::remove_ours(&paths.home).err(),
     })
 }

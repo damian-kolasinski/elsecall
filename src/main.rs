@@ -166,6 +166,11 @@ enum ServiceCommand {
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    // As OpenSSH's askpass program, for `fleet add`; it gets the prompt as its
+    // only argument, so this comes before any parsing.
+    if let Some(socket) = std::env::var_os(elsecall::askpass::SOCKET_VARIABLE) {
+        return ExitCode::from(elsecall::askpass::answer(std::path::Path::new(&socket)));
+    }
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(error) if error.use_stderr() => {
