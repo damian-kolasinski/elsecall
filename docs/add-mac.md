@@ -42,18 +42,19 @@ it without changing its readiness.
    without it. Members are listed as members, so the window can repair one.
    Discovery is a port; the production adapter uses the system's DNS-SD.
 2. **Connects over SSH** to the address Bonjour resolved, with the account and
-   password, and checks the Mac. It refuses a Mac it cannot run the master's build
+   password, and checks the Mac before changing anything. It refuses a Mac it cannot run the master's build
    on (the build is arm64 for macOS 14 or later), an account that is not an
    administrator, and a password sudo does not accept. It reports the Mac's model,
    serial number and SSH host key fingerprint, which the operator may compare with
-   About This Mac.
+   About This Mac. It also refuses a firewall that blocks all incoming connections
+   and a Mac that belongs to another fleet. Refusals that need only the fleet (not
+   the master, a member unreachable or on another build) come before connecting.
 3. **Puts the Mac on the tailnet.**
    - A Mac already on the master's tailnet is used as it is.
    - A Mac on another tailnet is refused, never switched.
-   - A Mac with the Tailscale app installed but not logged in is logged in through
-     the app's own command line when the app is running; otherwise it is refused
-     with what to open. Tailscale's variants cannot run side by side, so the master
-     never installs a second one.
+   - A Mac with the Tailscale app installed but not logged in is refused with what
+     to open: the app's login needs a person on that Mac. Tailscale's variants
+     cannot run side by side, so the master never installs a second one.
    - A Mac without Tailscale gets Tailscale's open-source `tailscaled` as a root
      LaunchDaemon (`tailscaled install-system-daemon`, which places both commands in
      `/usr/local/bin`, where Elsecall looks for them). The binaries come from

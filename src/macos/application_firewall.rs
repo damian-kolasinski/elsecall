@@ -2,7 +2,7 @@
 //!
 //! The firewall keeps a rule per executable. Elsecall's binary has no Developer ID
 //! signature, so it is not allowed automatically; loopback is never filtered.
-use crate::inbound_firewall::{Inbound, InboundFirewall};
+use crate::inbound_firewall::{Inbound, InboundFirewall, Rule};
 use std::{path::Path, process::Command};
 
 const TOOL: &str = "/usr/libexec/ApplicationFirewall/socketfilterfw";
@@ -30,13 +30,34 @@ impl InboundFirewall for ApplicationFirewall {
     }
 }
 
-fn verdict(state: &str, block_all: &str, apps: &str, executable: &Path) -> Inbound {
+/// The rule for `executable`, from the output of `--getglobalstate`,
+/// `--getblockall` and `--listapps`.
+pub fn rule(state: &str, block_all: &str, apps: &str, executable: &str) -> Rule {
     if state.contains("disabled") || state.contains("State = 0") {
-        return Inbound::Unfiltered;
+        Rule::Unfiltered
+    } else if block_all.contains("enabled") {
+        Rule::AllBlocked
+    } else if allowed(apps, executable) {
+        Rule::Allowed
+    } else {
+        Rule::NotAllowed
     }
+}
+
+/// The shell commands that query the firewall without privileges, for a Mac
+/// reached remotely; their outputs go to `rule` in this order.
+pub const QUERIES: [&str; 3] = [
+    "/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate",
+    "/usr/libexec/ApplicationFirewall/socketfilterfw --getblockall",
+    "/usr/libexec/ApplicationFirewall/socketfilterfw --listapps",
+];
+
+fn verdict(state: &str, block_all: &str, apps: &str, executable: &Path) -> Inbound {
     let path = executable.to_string_lossy();
-    if !block_all.contains("enabled") && allowed(apps, &path) {
-        return Inbound::Allowed;
+    match rule(state, block_all, apps, &path) {
+        Rule::Unfiltered => return Inbound::Unfiltered,
+        Rule::Allowed => return Inbound::Allowed,
+        Rule::NotAllowed | Rule::AllBlocked | Rule::Unknown => (),
     }
     let quoted = format!("'{}'", path.replace('\'', r"'\''"));
     let mut commands = vec![

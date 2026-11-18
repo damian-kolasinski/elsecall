@@ -28,6 +28,16 @@ pub struct FleetArgs {
 enum FleetCommand {
     /// Print this member's name, key, endpoints and the code another member enrols it with
     Identity,
+    /// On the master: add a Mac over SSH, with its account's password on standard
+    /// input. It installs the master's build, enrolls the Mac awaiting provisioning
+    /// and verifies it answers as a member (see docs/add-mac.md)
+    Add {
+        /// The Mac's host name or address, as elsecall fleet nearby lists it
+        host: String,
+        /// An administrator account on that Mac
+        #[arg(long)]
+        user: String,
+    },
     /// List the Macs on the local network, whether Remote Login is on, and which are members
     Nearby {
         /// How long to browse the network before resolving what answered
@@ -117,6 +127,9 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
             let data = client::get_large_within(&socket, "/v1/fleet", TIMEOUT).await?;
             return Ok((data, true));
         }
+        Some(FleetCommand::Add { host, user }) => {
+            return crate::add_mac_cli::run(paths, host, user).await;
+        }
         Some(FleetCommand::Nearby { browse }) => {
             return crate::nearby_cli::run(paths, browse.min(MAX_BROWSE)).await;
         }
@@ -181,7 +194,15 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
         ),
     };
     let body = body.map(|b| b.expect("serializable request"));
-    let data: Value = client::send(&socket, method, route, body, TIMEOUT).await?;
+    let left = route == "/v1/fleet/leave";
+    let mut data: Value = client::send(&socket, method, route, body, TIMEOUT).await?;
+    if left {
+        // The master that added this Mac may no longer reach it over SSH.
+        if let Err(error) = crate::authorized_keys::remove_ours(&paths.home) {
+            data["master_ssh_key_error"] = serde_json::to_value(error).expect("serializable");
+            return Ok((data, false));
+        }
+    }
     let complete = data
         .get("complete")
         .and_then(Value::as_bool)

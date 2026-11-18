@@ -57,6 +57,19 @@ fn uninstall_removes_everything_a_running_service_created() {
             "{expected} missing from {created:?}"
         );
     }
+    // The master's key that Add Mac authorized goes; the account's own stay.
+    let ssh = member.home.path().join(".ssh");
+    fs::create_dir_all(&ssh).unwrap();
+    let ours = elsecall::authorized_keys::line(
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleMasterKey me@example.com",
+        "mac-mini",
+    )
+    .unwrap();
+    fs::write(
+        ssh.join("authorized_keys"),
+        format!("ssh-rsa AAAAOwnKey devbox@example.com\n{ours}\n"),
+    )
+    .unwrap();
     // Earlier builds kept onboarding operations here; nothing writes them now.
     fs::create_dir_all(data.join("onboarding")).unwrap();
     fs::write(data.join("onboarding/0123456789abcdef.json"), "{}").unwrap();
@@ -65,6 +78,10 @@ fn uninstall_removes_everything_a_running_service_created() {
     assert_eq!(uninstalled["status"], "uninstalled");
     assert!(uninstalled.get("kept").is_none(), "{uninstalled}");
     assert_eq!(uninstalled["mise"]["state"], "no_mise");
+    assert_eq!(
+        fs::read_to_string(ssh.join("authorized_keys")).unwrap(),
+        "ssh-rsa AAAAOwnKey devbox@example.com\n"
+    );
 }
 
 /// Uninstalls, which succeeds and names what it kept.

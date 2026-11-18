@@ -1,6 +1,7 @@
 //! Whether the operating system's firewall lets tailnet members reach the installed
-//! service. Elsecall never changes firewall rules: that needs administrator rights, so
-//! it reports the commands for the operator to run.
+//! service. Changing a rule needs administrator rights, so a member reports the
+//! commands for the operator to run; only Add Mac adds the rule, with the password
+//! the operator gave it.
 use serde::Serialize;
 use std::path::Path;
 
@@ -15,6 +16,20 @@ pub enum Inbound {
     /// runs these commands (they need administrator rights).
     Blocked { commands: Vec<String> },
     /// The firewall state could not be read.
+    Unknown,
+}
+
+/// What the firewall does with incoming connections to one executable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Rule {
+    /// No firewall filters incoming connections.
+    Unfiltered,
+    Allowed,
+    /// Filtered, with no rule that allows it.
+    NotAllowed,
+    /// The firewall blocks every incoming connection, whatever the rules say.
+    AllBlocked,
+    /// The firewall's state could not be read.
     Unknown,
 }
 

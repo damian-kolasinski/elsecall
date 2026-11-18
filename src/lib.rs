@@ -1,8 +1,12 @@
 //! Local inspection, admission, installation and fleet membership, with platform and
 //! transport adapters.
+pub mod add_mac;
+pub mod add_mac_cli;
 pub mod admission_api;
 pub mod admission_cli;
 pub mod api;
+pub mod askpass;
+pub mod authorized_keys;
 pub mod build_identity;
 pub mod child_start;
 pub mod client;
@@ -47,6 +51,7 @@ pub mod membership_store;
 pub mod mise_cli;
 pub mod nearby_cli;
 pub mod nearby_macs;
+pub mod openssh_mac;
 pub mod outside_pressure;
 pub mod outside_pressure_api;
 pub mod outside_pressure_gate;
@@ -64,6 +69,7 @@ pub mod placement_config_sync;
 pub mod placement_host;
 pub mod private_files;
 pub mod process_service;
+pub mod remote_mac;
 pub mod remote_run;
 pub mod replay_api;
 pub mod replay_cli;

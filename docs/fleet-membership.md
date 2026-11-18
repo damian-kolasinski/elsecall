@@ -67,9 +67,11 @@ runs without a desktop login, and installation on the second member.
 - **Broken fleet state degrades rather than stops the service.** If the key or roster
   cannot be opened, the local API still serves `status` and `machine`. The member
   listener stays closed, and fleet commands return the error with its repair.
-- **The firewall is reported, not changed.** The macOS Application Firewall drops
-  inbound tailnet connections to an executable it has no rule for, and adding one needs
-  root. `install` and `doctor` report `member_listener_firewall` with the exact commands.
+- **The firewall is reported, not changed, except by Add Mac.** The macOS Application
+  Firewall drops inbound tailnet connections to an executable it has no rule for, and
+  adding one needs root. `install` and `doctor` report `member_listener_firewall` with
+  the exact commands. [Adding a Mac](add-mac.md) adds the rule itself, with the
+  administrator password the operator gave it for that.
 
 ## Automated evidence
 
