@@ -38,6 +38,7 @@ Agents using the CLI are the primary consumers. Humans using the web interface a
   - UI flows: end-to-end UI tests covering crucial paths.
   - Rendering optimizations: end-to-end performance tests with a baseline and evidence of the claimed improvement, stubbing only parts that do not affect the measured behavior.
 - Install, update or uninstall Elsecall only in a macOS VM (`docs/e2e-vm.md`) or another test account, never in the operator's own account, whose installation other projects use; the VM is also the place for a fresh Mac and for demos of those flows. Verify everything else on the host: tests, the CLI and UI scenes are faster there, and the host runs at most two VMs, often both taken by other sessions.
+- Test the update path (update check, install, service restart, window reopen, rollback) against local builds: `scripts/local-release.sh build` and `serve` on the host, then the printed install in a VM. Never publish a release just to test an update.
 
 ## Public material
 
