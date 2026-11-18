@@ -37,6 +37,10 @@ enum FleetCommand {
         /// An administrator account on that Mac
         #[arg(long)]
         user: String,
+        /// How long to wait for the Mac's approval in Tailscale, when it has to join
+        /// the tailnet
+        #[arg(long, default_value = "10m", value_parser = humantime::parse_duration)]
+        approval_wait: Duration,
     },
     /// List the Macs on the local network, whether Remote Login is on, and which are members
     Nearby {
@@ -127,8 +131,12 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
             let data = client::get_large_within(&socket, "/v1/fleet", TIMEOUT).await?;
             return Ok((data, true));
         }
-        Some(FleetCommand::Add { host, user }) => {
-            return crate::add_mac_cli::run(paths, host, user).await;
+        Some(FleetCommand::Add {
+            host,
+            user,
+            approval_wait,
+        }) => {
+            return crate::add_mac_cli::run(paths, host, user, approval_wait).await;
         }
         Some(FleetCommand::Nearby { browse }) => {
             return crate::nearby_cli::run(paths, browse.min(MAX_BROWSE)).await;

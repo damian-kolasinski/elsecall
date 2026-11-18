@@ -1,7 +1,7 @@
 //! `elsecall fleet add`: adds a Mac from the master over SSH. It runs in the CLI's
 //! own process, which macOS lets reach the local network, unlike the service.
 use crate::{
-    add_mac::{self, Master},
+    add_mac::{self, Approval, Event, Master},
     authorized_keys,
     failure::{Failure, Result},
     macos::tailscale::TailscaleCli,
@@ -11,7 +11,10 @@ use crate::{
     tailnet::{Configured, Tailnet},
 };
 use serde_json::Value;
-use std::io::{IsTerminal, Read};
+use std::{
+    io::{IsTerminal, Read},
+    time::Duration,
+};
 use tokio::signal::unix::{SignalKind, signal};
 use zeroize::Zeroizing;
 
@@ -23,11 +26,16 @@ const SSH_KEYS: [&str; 3] = [
     ".ssh/id_rsa.pub",
 ];
 
-pub async fn run(paths: &Paths, host: String, account: String) -> Result<(Value, bool)> {
+pub async fn run(
+    paths: &Paths,
+    host: String,
+    account: String,
+    approval_wait: Duration,
+) -> Result<(Value, bool)> {
     let stdin = std::io::stdin();
     let terminal = stdin.is_terminal();
     let password = password(stdin.lock(), terminal)?;
-    let master = master(paths)?;
+    let master = master(paths, approval_wait)?;
     // Refusals that need no Mac come before the password goes anywhere.
     let fleet = add_mac::preflight(&master.socket).await?;
     let askpass = std::env::current_exe()
@@ -37,7 +45,27 @@ pub async fn run(paths: &Paths, host: String, account: String) -> Result<(Value,
         signal(SignalKind::interrupt()).map_err(|error| Failure::io("Watch for Ctrl-C", error))?;
     let mut terminate =
         signal(SignalKind::terminate()).map_err(|error| Failure::io("Watch for SIGTERM", error))?;
-    let progress = |step: add_mac::Step| eprintln!("elsecall fleet add {host}: {}", step.doing());
+    let progress = |event: Event| match event {
+        Event::Step { step } => eprintln!("elsecall fleet add {host}: {}", step.doing()),
+        Event::Approve { link, approval } => {
+            let what = match approval {
+                Approval::Login => "approve the Mac in Tailscale",
+                Approval::Device => "approve the Mac as a device in the Tailscale admin console",
+            };
+            eprintln!(
+                "elsecall fleet add {host}: {what} at {} (opening it in your browser)",
+                link.as_str()
+            );
+            // Only Tailscale's own links can be made, and opening one must not
+            // hold up the flow.
+            let _ = std::process::Command::new("/usr/bin/open")
+                .arg(link.as_str())
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn();
+        }
+    };
     // Stopping drops the flow and then `mac`, which ends the SSH connection.
     let report = tokio::select! {
         report = add_mac::add(&mut mac, &host, &master, &fleet, progress) => report?,
@@ -86,7 +114,7 @@ fn password(input: impl Read, terminal: bool) -> Result<Zeroizing<String>> {
 }
 
 /// The master's build, tailnet and SSH key.
-fn master(paths: &Paths) -> Result<Master> {
+fn master(paths: &Paths, approval_wait: Duration) -> Result<Master> {
     let executable = paths.executable();
     if !executable.is_file() {
         return Err(Failure::new(
@@ -117,6 +145,7 @@ fn master(paths: &Paths) -> Result<Master> {
         build: Build { executable, window },
         tailnet_domain,
         ssh_public_key,
+        approval_wait,
     })
 }
 

@@ -1,6 +1,6 @@
 //! The Mac being added, as the master reaches it: what it is, its tailnet, and the
 //! changes Add Mac makes there. The production adapter is SSH (`openssh_mac`).
-use crate::{failure::Result, inbound_firewall::Rule};
+use crate::{failure::Result, inbound_firewall::Rule, tailscale_bottle::Bottle};
 use serde::Serialize;
 use std::path::PathBuf;
 
@@ -33,10 +33,16 @@ impl MacFacts {
 pub enum RemoteTailnet {
     /// No Tailscale is installed.
     Absent,
-    /// Tailscale is installed but not on a tailnet: stopped, logged out or
-    /// waiting for a login.
-    Offline {
+    /// Installed, but its daemon does not answer.
+    NotRunning {
         variant: TailscaleVariant,
+    },
+    /// Its daemon answers but the Mac is not on a tailnet: logged out, waiting
+    /// for a login, or waiting for the tailnet's device approval. `domain` is the
+    /// tailnet it belongs or belonged to, when it knows one.
+    LoggedOut {
+        variant: TailscaleVariant,
+        domain: Option<String>,
     },
     Online(TailnetNode),
 }
@@ -46,8 +52,49 @@ pub enum RemoteTailnet {
 pub enum TailscaleVariant {
     /// The Tailscale app, from the App Store or Tailscale's own download.
     App,
-    /// The open-source `tailscaled`, as Homebrew or Add Mac installs it.
-    Daemon,
+    /// The open-source `tailscaled` that Add Mac installs in `/usr/local/bin`.
+    AddMacDaemon,
+    /// Another open-source `tailscaled`, such as Homebrew's.
+    OtherDaemon,
+}
+
+/// Tailscale's own login or admin link. The master opens it in a browser, so it
+/// can only be made from a link on `login.tailscale.com`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(into = "String")]
+pub struct LoginLink(String);
+
+impl LoginLink {
+    pub fn parse(url: &str) -> Option<Self> {
+        (url.starts_with("https://login.tailscale.com/")
+            && url.len() <= 2048
+            && url.bytes().all(|b| b.is_ascii_graphic()))
+        .then(|| Self(url.to_owned()))
+    }
+    /// Where the tailnet's admin approves new devices.
+    pub fn device_approval() -> Self {
+        Self("https://login.tailscale.com/admin/machines".into())
+    }
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<LoginLink> for String {
+    fn from(link: LoginLink) -> String {
+        link.0
+    }
+}
+
+/// Where logging the daemon in stands.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Login {
+    /// It is on a tailnet.
+    Online,
+    /// The operator approves it at this link.
+    Approve(LoginLink),
+    /// It logged in; the tailnet's admin must still approve the device.
+    DeviceApproval,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -81,6 +128,13 @@ pub trait RemoteMac {
     /// Whether sudo accepts the account's password.
     async fn sudo_accepted(&mut self) -> Result<bool>;
     async fn tailnet(&mut self) -> Result<RemoteTailnet>;
+    /// Installs `bottle`'s `tailscaled` as a root LaunchDaemon, then `tailscale`,
+    /// both in `/usr/local/bin`. For a Mac without Tailscale, or to repair Add
+    /// Mac's own daemon when it does not answer.
+    async fn install_tailscale(&mut self, bottle: &Bottle) -> Result<()>;
+    /// Starts logging the daemon in, as `hostname` when given (only for a daemon
+    /// that never logged in), and says where the login stands.
+    async fn start_tailscale_login(&mut self, hostname: Option<&str>) -> Result<Login>;
     /// The installed Elsecall's build ID, or `None` when it is not installed or
     /// not running.
     async fn installed_build(&mut self) -> Result<Option<String>>;

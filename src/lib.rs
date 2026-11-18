@@ -87,6 +87,7 @@ pub mod server;
 pub mod service_configuration;
 pub mod service_relaunch;
 pub mod tailnet;
+pub mod tailscale_bottle;
 pub mod tool_inventory;
 pub mod tools_api;
 pub mod tools_cli;

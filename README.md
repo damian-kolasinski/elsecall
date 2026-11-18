@@ -245,7 +245,7 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall copies` | The copies of other members' workspaces this machine holds, their object stores and sizes, free space and recent removals (see "Housekeeping of copies") |
 | `elsecall copies prune [--dry-run]` | Run a housekeeping pass now, or report what it would remove |
 | `elsecall fleet identity` | This member's name, public key, tailnet endpoints and member code |
-| `elsecall fleet add <host> --user <account>` | On the master: add a Mac over SSH, with the account's password on standard input (see "Adding a Mac") |
+| `elsecall fleet add <host> --user <account> [--approval-wait 10m]` | On the master: add a Mac over SSH, with the account's password on standard input (see "Adding a Mac") |
 | `elsecall fleet nearby [--browse 2s]` | The Macs on the local network, whether Remote Login is on, and which are members (see "Finding Macs nearby") |
 | `elsecall fleet enroll <code> [--awaiting-provisioning]` / `join <code>` | Enrol another machine (on a member), then join (on that machine) |
 | `elsecall fleet ready <name>` | Mark a member awaiting provisioning ready, so placement may give it work |
@@ -1801,9 +1801,20 @@ advertise itself can still be added by host name or address.
 
 **Adding a Mac.** `elsecall fleet add <host> --user <account>`, run on the master with
 the account's password on standard input, adds a Mac with Remote Login on in one
-command ([Adding a Mac](docs/add-mac.md)). The Mac must already be on the master's
-tailnet; Add Mac refuses a Mac on another tailnet (`tailnet_mismatch`) and one without
-Tailscale (`tailscale_required`, or `tailscale_offline` for the Tailscale app). Over
+command ([Adding a Mac](docs/add-mac.md)). A Mac on another tailnet is refused
+(`tailnet_mismatch`), and so is one whose Tailscale app is logged out
+(`tailscale_offline`). A Mac without Tailscale gets Tailscale's open-source
+`tailscale` and `tailscaled` in `/usr/local/bin`, with the daemon as a root
+LaunchDaemon: Homebrew's bottle for its macOS, downloaded by root on the Mac and
+checked against the SHA-256 pinned in this build (`src/tailscale_bottle.rs`); Homebrew
+itself is not installed. A Tailscale that remembers another tailnet is refused
+(`tailnet_mismatch`), another daemon that does not run is refused
+(`tailscale_stopped`), and Add Mac's own is installed again. There is no bottle for macOS 14 (`tailscale_unavailable`). Tailscale then
+offers a login link (a fresh daemon takes the Mac's Bonjour name): the command prints
+it on standard error and opens it in the master's browser, where the operator
+approves the Mac; a tailnet that approves devices gets its admin console instead. It
+waits up to `--approval-wait` and then fails with `tailscale_login_pending`, the link in
+`details.url`; running it again continues. Over
 one SSH connection that ignores the operator's SSH configuration and keys and trusts
 the Mac's host key for the rest of the command, it:
 
@@ -1814,8 +1825,9 @@ the Mac's host key for the rest of the command, it:
    (`member_of_another_fleet`);
 2. copies the master's installed build (and its window, when it has one) and runs its
    `install`, unless the Mac already runs that build;
-3. lets the Application Firewall pass Elsecall when it filters and has no rule for it,
-   then checks that it does (`firewall_unchanged` otherwise);
+3. lets the Application Firewall pass Elsecall, and Add Mac's `tailscaled`, when it
+   filters and has no rule for them, then checks that it does (`firewall_unchanged`
+   otherwise);
 4. adds the master's `~/.ssh/id_ed25519.pub` (or `id_ecdsa`, `id_rsa`) to the account's
    `authorized_keys`, accepted only from tailnet addresses and marked
    `elsecall-master:<master>`; without a key this step is skipped and says how to make

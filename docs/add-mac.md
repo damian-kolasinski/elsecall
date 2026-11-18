@@ -51,26 +51,35 @@ it without changing its readiness.
    the master, a member unreachable or on another build) come before connecting.
 3. **Puts the Mac on the tailnet.**
    - A Mac already on the master's tailnet is used as it is.
-   - A Mac on another tailnet is refused, never switched.
+   - A Mac on another tailnet is refused, never switched, also when Tailscale there
+     is logged out but remembers that tailnet.
+   - Add Mac's own daemon that does not answer is installed again; another
+     `tailscaled` that does not answer, such as Homebrew's, is refused with how to
+     start it.
    - A Mac with the Tailscale app installed but not logged in is refused with what
      to open: the app's login needs a person on that Mac. Tailscale's variants
      cannot run side by side, so the master never installs a second one.
    - A Mac without Tailscale gets Tailscale's open-source `tailscaled` as a root
-     LaunchDaemon (`tailscaled install-system-daemon`, which places both commands in
+     LaunchDaemon (`tailscaled install-system-daemon`, with both commands in
      `/usr/local/bin`, where Elsecall looks for them). The binaries come from
-     Homebrew's bottle for the Mac's macOS and architecture, or the newest earlier
-     macOS when there is none yet. The Tailscale version and each bottle's SHA-256
+     Homebrew's bottle for the newest macOS the Mac runs: each bottle's `tailscaled`
+     needs its own macOS or later, and macOS 14 has none, so such a Mac is refused
+     with a pointer to Tailscale's own download. The Tailscale version and each bottle's SHA-256
      are pinned in the Elsecall build, so the download is checked against what the
      build was reviewed with. Homebrew itself is not installed. This variant needs no
      system extension or VPN approval on the Mac. Features only the Tailscale app
      has, such as Taildrop, are not available on it.
-   - `tailscale up` prints a login link; the master opens it and waits for the
-     approval, then checks that the Mac's tailnet is the master's.
+   - `tailscale up` prints a login link; a daemon that never logged in takes the
+     Mac's Bonjour name, one that did keeps its settings. The master opens the link
+     and waits for the approval, then checks that the Mac's tailnet is the
+     master's. A tailnet that approves devices gets its admin console opened
+     instead. Only links on `login.tailscale.com` are opened.
 4. **Installs Elsecall** by copying the master's own executable, so the new member
    runs the master's exact build, and running its `install`. The session follows
    the existing rule: desktop when the account has a desktop login, otherwise
    background.
-5. **Opens the Application Firewall** for Elsecall and `tailscaled` when it is on,
+5. **Opens the Application Firewall** for Elsecall, and for Add Mac's `tailscaled` so
+   peers connect directly rather than through Tailscale's relays, when it is on,
    with sudo. This changes the rule that Elsecall only reports firewall rules
    ([fleet membership](fleet-membership.md)): during Add Mac the operator has
    granted administrator access for exactly this.
@@ -89,6 +98,12 @@ it without changing its readiness.
 
 ## Decisions
 
+- **Root runs only system programs it fetched itself.** Root steps run under
+  `/usr/bin/sudo` with an empty environment and only system directories on `PATH`,
+  and every account command gets the same `PATH`, since the account's shell setup
+  could put its own `mkdir` or `shasum` first. Tailscale is downloaded, checked
+  and installed by root in a directory root created, never from a path the
+  account could change.
 - **SSH from the master, not an installer on the Mac.** A plain Mac exposes nothing
   else the master can use, and an installer delivered to it would need a Developer ID
   signature, notarization and several approvals on the Mac. Turning on Remote Login
