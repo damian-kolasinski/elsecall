@@ -41,6 +41,12 @@ that then reaches neither the service nor its app closes itself.
 cargo run -p elsecall-ui
 ```
 
+Open **Elsecall → Configuration…** (⌘,) to inspect personal `workloads.toml`.
+**Rules** shows global label rules and the service-unavailable fallback. **Check a
+label** previews global file policy before command-line or environment overrides.
+**TOML** shows the source, including any directory policies. Use **Reload** after
+editing the file. The view works while the service is offline.
+
 `mise run build` still builds only the `elsecall` service binary. This crate is
 outside that default workspace member. To install both from a checkout:
 

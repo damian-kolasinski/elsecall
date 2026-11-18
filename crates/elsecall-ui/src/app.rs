@@ -3,11 +3,12 @@
 use std::num::NonZeroU32;
 use std::sync::Arc;
 
-use rune::{App, AppSpec, Chrome, Latest, Tx, Waker};
+use rune::{App, AppSpec, Chrome, Latest, MenuItem, Tx, Waker};
 use rune_kit::TableState;
 
 use crate::add_mac_flow::{AddMac, AddUpdate, Page as AddMacPage, RunUpdate};
 use crate::add_mac_source::{self, AddMacSource, Inbox};
+use crate::configuration_view::{self, ConfigurationView, Tab};
 use crate::fleet_source::{
     FleetSnapshot, Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Release, Role,
     SourceFailure, Standing,
@@ -19,6 +20,7 @@ use crate::theme;
 use crate::uninstalled::{self, Bundle};
 use crate::view;
 use crate::window_upgrade::{self, UpgradeState, WindowUpgrade};
+use crate::workload_policy::{Policy, ReadError};
 use elsecall::release_update::{Job, Phase as ReleasePhase, Status as ReleaseStatus};
 
 const CHROME: Chrome = Chrome {
@@ -59,6 +61,11 @@ const SCENES: &[(&str, Scene)] = &[
     ("add-mac-approve", scene_add_mac_approve),
     ("add-mac-done", scene_add_mac_done),
     ("add-mac-failed", scene_add_mac_failed),
+    ("configuration-rules", scene_configuration_rules),
+    ("configuration-check", scene_configuration_check),
+    ("configuration-toml", scene_configuration_toml),
+    ("configuration-missing", scene_configuration_missing),
+    ("configuration-invalid", scene_configuration_invalid),
 ];
 
 pub(crate) enum Phase {
@@ -71,6 +78,7 @@ pub(crate) enum Phase {
 }
 
 pub struct AppState {
+    pub(crate) configuration: ConfigurationView,
     phase: Phase,
     refreshed: Option<String>,
     table: TableState,
@@ -399,8 +407,7 @@ pub fn run() {
     } else {
         None
     };
-    let app = App::new(spec())
-        .chrome(CHROME)
+    let app = window()
         .on_quit(|state, _| state.quit_add_mac())
         .args(args)
         .on_ready(move |_| {
@@ -419,7 +426,26 @@ pub fn run() {
 
 #[cfg(test)]
 pub(crate) fn render_scene(argv: Vec<String>) -> Result<(), String> {
-    App::new(spec()).chrome(CHROME).args(argv).try_run()
+    window().args(argv).try_run()
+}
+
+fn window() -> App<AppState> {
+    App::new(spec()).chrome(CHROME).menu_item(
+        MenuItem::new("Configuration…", |state: &mut AppState, tx: &mut Tx| {
+            state.configuration.open();
+            tx.instant();
+        })
+        .id("workload-configuration")
+        .key_equivalent("cmd+comma".parse().expect("known menu shortcut")),
+    )
+}
+
+fn render(state: &AppState, cx: &mut rune::Cx<AppState>) -> rune::El {
+    if state.configuration.visible() {
+        configuration_view::render(state, &theme::kit(cx.system_dark()))
+    } else {
+        view::fleet(state, cx)
+    }
 }
 
 fn spec() -> AppSpec<AppState> {
@@ -430,12 +456,13 @@ fn spec() -> AppSpec<AppState> {
         families: theme::FAMILIES,
         setup: Some(setup),
         poll: Some(poll),
-        ..AppSpec::new("Elsecall", (1120.0, 560.0), init, view::fleet)
+        ..AppSpec::new("Elsecall", (1120.0, 560.0), init, render)
     }
 }
 
 fn init() -> AppState {
     AppState {
+        configuration: ConfigurationView::default(),
         phase: Phase::Loading,
         refreshed: None,
         table: TableState::new(),
@@ -469,6 +496,7 @@ fn own_build() -> Option<String> {
 }
 
 fn setup(state: &mut AppState, waker: Waker) {
+    state.configuration.set_waker(waker.clone());
     state.feed.set_waker(waker.clone());
     state.upgrade_feed.set_waker(waker.clone());
     state.release_feed.set_waker(waker.clone());
@@ -486,6 +514,7 @@ fn setup(state: &mut AppState, waker: Waker) {
 
 fn poll(state: &mut AppState, now: f64, tx: &mut Tx) -> bool {
     let mut changed = poll_add_mac(state, now, tx);
+    changed |= state.configuration.poll();
     if let Some(update) = state.feed.take() {
         state.apply_refresh(update);
         changed = true;
@@ -570,6 +599,43 @@ fn poll_add_mac(state: &mut AppState, now: f64, tx: &mut Tx) -> bool {
         tx.wake_after(std::time::Duration::from_secs_f64(LOOK_EVERY));
     }
     changed
+}
+
+fn sample_policy() -> Result<Policy, ReadError> {
+    Policy::parse(Some(
+        include_str!("../../../tests/fixtures/development-workloads.toml").into(),
+    ))
+}
+
+fn scene_configuration_rules(state: &mut AppState) {
+    scene_loading(state);
+    state.configuration.scene(Tab::Rules, sample_policy(), "");
+}
+
+fn scene_configuration_check(state: &mut AppState) {
+    scene_loading(state);
+    state
+        .configuration
+        .scene(Tab::Check, sample_policy(), "elsecall build");
+}
+
+fn scene_configuration_toml(state: &mut AppState) {
+    scene_loading(state);
+    state.configuration.scene(Tab::Toml, sample_policy(), "");
+}
+
+fn scene_configuration_missing(state: &mut AppState) {
+    scene_loading(state);
+    state
+        .configuration
+        .scene(Tab::Rules, Policy::parse(None), "");
+}
+
+fn scene_configuration_invalid(state: &mut AppState) {
+    scene_loading(state);
+    state
+        .configuration
+        .scene(Tab::Rules, Err(ReadError::Invalid), "");
 }
 
 fn scene_loading(state: &mut AppState) {
