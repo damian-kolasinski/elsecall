@@ -273,7 +273,7 @@ fn members_table(state: &AppState, dark: bool, paints: Paints) -> El {
         )
         .column(
             TableColumn::new("role", "Role")
-                .width(84.0)
+                .width(104.0)
                 .resizable(false),
         )
         .column(

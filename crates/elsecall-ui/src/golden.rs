@@ -17,6 +17,7 @@ const SCENES: &[&str] = &[
     "solo",
     "no-tailnet",
     "members",
+    "members-selected",
     "outdated-member",
     "upgrade",
     "upgrading",
@@ -61,9 +62,10 @@ fn fleet_scenes_match_goldens() {
             compare(scene, appearance, false);
         }
     }
-    // The header at the window's minimum width, with every control it can show.
+    // Check the full header and the selected member's role pill at minimum width.
     for appearance in APPEARANCES {
         compare("release-fleet", appearance, true);
+        compare("members-selected", appearance, true);
     }
 }
 
