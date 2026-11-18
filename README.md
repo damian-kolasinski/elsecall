@@ -344,8 +344,18 @@ load at that moment, waiting and run times, and the outcome. Records never conta
 command arguments or environment values; labels are stored as given. Ended records
 are deleted after 30 days. Leases and runs whose holders survive a service restart
 keep their capacity. When the service stops, queued requests end at once and their
-callers receive `service_unavailable`. Hold limits and deadlines follow the wall
-clock, so they pass on time after the machine sleeps.
+callers receive `service_unavailable`. **A handover is the exception:** while an
+install, release update or fleet upgrade replaces the service, `run`, `lease acquire`
+and `lease release` wait for the new service and ask it again, up to five minutes
+per handover, instead of failing. That covers a request the stopping service turned away, one made
+while no service answers, and one an update's closed admission refused with
+`update_in_progress`. The wait is said once on stderr; scripts and agents see only
+the new service's answer. A handover is recognized by the installation lock's
+holder, recorded in the lock by process ID and start time while it holds it, still
+running; a service that is merely not running still fails at once. A retried
+request gets a fresh hold limit.
+Hold limits and deadlines follow the wall clock, so they pass on time after the
+machine sleeps.
 
 **Learned sizes.** Elsecall measures each run's CPU time, including every process
 the command waited for, as the command exits. A run that declares no size (neither
@@ -1164,7 +1174,9 @@ What consumers no longer write:
   nothing, and `lease release` succeeds too. The default is still to fail with
   `service_unavailable`. It applies whenever the request ends with
   `service_unavailable`, including when the service stops while the request
-  waits, but never to `--member` work, which is bound to that member.
+  waits, but never to `--member` work, which is bound to that member. During a
+  handover to another build the request first waits for the new service (see
+  "Admission and leases"), so it runs managed, not unmanaged.
 - **Formatting failures.** On exit 125 the stderr line before the envelope already
   tells the agent what to do (see "Failure lines"); pass it on unchanged.
 - **Re-exec retries.** A script that re-execs itself and acquires again gets its
@@ -2103,8 +2115,8 @@ a build is running code on it. Each member, at the same time as the others:
    remains, the member is `deferred`: nothing is installed, its work keeps running,
    and the report lists the work it waited for. Running work is never stopped. A
    request made in the second between the member falling idle and its restart is
-   treated as at any service restart: a granted lease or run keeps its capacity, a
-   queued request ends with `service_unavailable`.
+   a handover: a granted lease or run keeps its capacity, and a queued request waits
+   for the new service and asks it again (see "Admission and leases").
 
    Elsecall's own work, such as housekeeping and its fidelity drift check, is
    marked `internal: true` in the report. While the member waits, its queued

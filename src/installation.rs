@@ -1,6 +1,7 @@
 //! Installation policy; the service manager is supplied at the system boundary.
 use crate::{
     failure::{Failure, Result},
+    lifecycle_holder,
     paths::Paths,
     private_files,
 };
@@ -77,14 +78,36 @@ fn owns_links(paths: &Paths) -> bool {
     linked(&paths.bin, &paths.executable()) || linked(&paths.agent, &paths.plist())
 }
 
-fn installation_lock(paths: &Paths) -> Result<fs::File> {
-    private_files::try_lock(&paths.data.join("installation.lock"))?.ok_or_else(|| {
-        Failure::new(
-            "operation_in_progress",
-            "Another Elsecall install, restart or uninstall is running.",
-            "Wait for it to finish, then retry.",
-        )
-    })
+const INSTALLATION_LOCK: &str = "installation.lock";
+
+/// The lock every lifecycle operation holds, with its holder recorded in it until it
+/// is released, so [`operation_running`] can tell without taking the lock.
+struct InstallationLock(fs::File);
+impl Drop for InstallationLock {
+    fn drop(&mut self) {
+        lifecycle_holder::clear(&self.0);
+    }
+}
+
+fn installation_lock(paths: &Paths) -> Result<InstallationLock> {
+    let mut lock =
+        private_files::try_lock(&paths.data.join(INSTALLATION_LOCK))?.ok_or_else(|| {
+            Failure::new(
+                "operation_in_progress",
+                "Another Elsecall install, restart or uninstall is running.",
+                "Wait for it to finish, then retry.",
+            )
+        })?;
+    lifecycle_holder::record(&mut lock);
+    Ok(InstallationLock(lock))
+}
+
+/// Whether an install, update, upgrade, restart or uninstall is replacing the
+/// service in the state directory `data`: from before it stops the service until it
+/// has confirmed the new one. Asking never takes the lock, so it cannot make such
+/// an operation fail.
+pub fn operation_running(data: &Path) -> bool {
+    lifecycle_holder::running(&data.join(INSTALLATION_LOCK))
 }
 
 fn link(link: &Path, target: &Path) -> Result<()> {
@@ -140,7 +163,7 @@ pub fn install(
 /// while excluding every other lifecycle operation.
 pub struct Transaction {
     paths: Paths,
-    _lock: fs::File,
+    _lock: InstallationLock,
 }
 impl Transaction {
     pub fn begin(paths: &Paths) -> Result<Self> {
@@ -223,7 +246,10 @@ fn install_locked(
     })
 }
 
-pub fn restart(paths: &Paths, manager: &dyn ServiceManager) -> Result<()> {
+/// Restarts the installed service. The returned transaction keeps other lifecycle
+/// operations out, and tells requests a handover is in progress, until the caller
+/// has confirmed the restarted service and drops it.
+pub fn restart(paths: &Paths, manager: &dyn ServiceManager) -> Result<Transaction> {
     if !installed(paths)? {
         return Err(Failure::new(
             "not_installed",
@@ -231,7 +257,7 @@ pub fn restart(paths: &Paths, manager: &dyn ServiceManager) -> Result<()> {
             "Run elsecall install to repair it.",
         ));
     }
-    let _lock = installation_lock(paths)?;
+    let transaction = Transaction::begin(paths)?;
     if !check_receipt(paths)? {
         return Err(Failure::new(
             "not_installed",
@@ -247,7 +273,8 @@ pub fn restart(paths: &Paths, manager: &dyn ServiceManager) -> Result<()> {
             "Run elsecall install to rewrite it.",
         )
     })?;
-    restart_locked(paths, manager, session)
+    restart_locked(paths, manager, session)?;
+    Ok(transaction)
 }
 
 fn restart_locked(paths: &Paths, manager: &dyn ServiceManager, session: Session) -> Result<()> {

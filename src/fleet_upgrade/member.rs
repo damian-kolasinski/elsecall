@@ -8,8 +8,8 @@
 //! the upgrade of this member is `deferred`: nothing is installed, the work keeps
 //! running, and the master reports what it waited for. Work is never stopped. A
 //! local request made in the second between the member falling idle and the
-//! restart behaves as at any service restart: a granted lease or run keeps its
-//! capacity, a queued request ends with `service_unavailable`.
+//! restart behaves as at any handover: a granted lease or run keeps its capacity,
+//! and the CLI asks the new service again for a queued request.
 //!
 //! **Elsecall's own work.** The service asks its own admission for housekeeping
 //! and similar passes on a timer. While the member drains, that work is held: a
