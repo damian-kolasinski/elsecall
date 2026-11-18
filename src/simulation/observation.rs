@@ -18,6 +18,8 @@ impl MachineInspector for Observation {
     fn inspect(&self) -> Result<Machine> {
         Ok(Machine {
             hostname: Some(self.member.clone()),
+            local_host_name: None,
+            lan_addresses: None,
             os: "virtual".into(),
             os_version: None,
             architecture: "virtual".into(),

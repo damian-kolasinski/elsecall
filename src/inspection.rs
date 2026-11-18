@@ -5,6 +5,14 @@ use std::{sync::Arc, time::Instant};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Machine {
     pub hostname: Option<String>,
+    /// The machine's Bonjour name on the local network, without `.local`; absent
+    /// from members whose build predates it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_host_name: Option<String>,
+    /// Its addresses on its local networks, without loopback, link-local and
+    /// tailnet ones; absent from members whose build predates them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lan_addresses: Option<Vec<std::net::IpAddr>>,
     pub os: String,
     pub os_version: Option<String>,
     pub architecture: String,
@@ -124,13 +132,13 @@ impl Inspection {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_machine_keeps_its_load_averages_beside_the_flattened_sample() {
-        let machine = Machine {
+impl Machine {
+    /// A machine with plausible values, as an inspection reports them.
+    pub(crate) fn fixture() -> Self {
+        Machine {
             hostname: None,
+            local_host_name: None,
+            lan_addresses: None,
             os: "macos".into(),
             os_version: None,
             architecture: "aarch64".into(),
@@ -156,7 +164,17 @@ mod tests {
                 thermal_state: ThermalState::Nominal,
                 load_one_minute: Some(213.0),
             },
-        };
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_machine_keeps_its_load_averages_beside_the_flattened_sample() {
+        let machine = Machine::fixture();
         let json = serde_json::to_value(&machine).unwrap();
         assert_eq!(json["load_average"]["one_minute"], 213.0, "{json}");
         assert_eq!(json["load_one_minute"], 213.0);

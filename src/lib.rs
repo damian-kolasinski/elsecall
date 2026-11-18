@@ -45,6 +45,8 @@ pub mod member_code;
 pub mod member_key;
 pub mod membership_store;
 pub mod mise_cli;
+pub mod nearby_cli;
+pub mod nearby_macs;
 pub mod outside_pressure;
 pub mod outside_pressure_api;
 pub mod outside_pressure_gate;
