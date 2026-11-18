@@ -248,6 +248,7 @@ fn map_member(member: WireMember, master: Option<&str>) -> Result<MemberRow, Sou
     );
     Ok(MemberRow {
         name: member.name,
+        this_member: member.this_member,
         role,
         reach,
         gate,
@@ -279,6 +280,8 @@ struct WireRosterError {
 struct WireMember {
     name: String,
     role: WireRole,
+    #[serde(default)]
+    this_member: bool,
     reachability: String,
     #[serde(default)]
     status: Option<WireStatus>,

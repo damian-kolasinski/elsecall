@@ -41,6 +41,10 @@ enum FleetCommand {
         /// the tailnet
         #[arg(long, default_value = "10m", value_parser = humantime::parse_duration)]
         approval_wait: Duration,
+        /// How to report progress on standard error: lines for people, or one JSON
+        /// event per line for a program (which then opens approval links itself)
+        #[arg(long, value_enum, default_value_t = crate::add_mac_cli::Progress::Text)]
+        progress: crate::add_mac_cli::Progress,
     },
     /// List the Macs on the local network, whether Remote Login is on, and which are members
     Nearby {
@@ -135,8 +139,9 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
             host,
             user,
             approval_wait,
+            progress,
         }) => {
-            return crate::add_mac_cli::run(paths, host, user, approval_wait).await;
+            return crate::add_mac_cli::run(paths, host, user, approval_wait, progress).await;
         }
         Some(FleetCommand::Nearby { browse }) => {
             return crate::nearby_cli::run(paths, browse.min(MAX_BROWSE)).await;

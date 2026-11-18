@@ -37,7 +37,7 @@ const VERIFY_WITHIN: Duration = Duration::from_secs(30);
 const APPROVAL_POLL: Duration = Duration::from_secs(2);
 
 /// A step of adding a Mac, in order.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Step {
     Check,
@@ -65,7 +65,7 @@ impl Step {
 }
 
 /// What the operator hears while a Mac is added.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "event", rename_all = "snake_case")]
 pub enum Event {
     /// A step starts.
@@ -76,7 +76,7 @@ pub enum Event {
 }
 
 /// What the operator approves.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Approval {
     /// The Mac's login to the tailnet.
@@ -96,7 +96,7 @@ struct Joined {
 /// Where Add Mac's `tailscaled` lives on the Mac.
 const DAEMON: &str = "/usr/local/bin/tailscaled";
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
 pub enum Outcome {
     Done,
@@ -107,7 +107,7 @@ pub enum Outcome {
     },
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct StepReport {
     pub step: Step,
     #[serde(flatten)]
@@ -115,7 +115,7 @@ pub struct StepReport {
 }
 
 /// What the operator may compare with About This Mac on the added Mac.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Identification {
     pub model: Option<String>,
     pub serial_number: Option<String>,
@@ -123,7 +123,7 @@ pub struct Identification {
     pub ssh_host_key: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AddReport {
     pub member: String,
     pub host: String,
@@ -737,6 +737,34 @@ mod tests {
                 "tailnet_mismatch"
             );
         }
+    }
+
+    #[test]
+    fn progress_events_are_the_json_lines_the_window_reads() {
+        let step = Event::Step {
+            step: Step::Tailnet,
+        };
+        assert_eq!(
+            serde_json::to_string(&step).unwrap(),
+            r#"{"event":"step","step":"tailnet"}"#
+        );
+        let approve = Event::Approve {
+            link: LoginLink::parse("https://login.tailscale.com/a/example").unwrap(),
+            approval: Approval::Login,
+        };
+        let line = serde_json::to_string(&approve).unwrap();
+        assert_eq!(
+            line,
+            r#"{"event":"approve","link":"https://login.tailscale.com/a/example","approval":"login"}"#
+        );
+        assert_eq!(serde_json::from_str::<Event>(&line).unwrap(), approve);
+        // A link that is not Tailscale's is refused when read, too.
+        assert!(
+            serde_json::from_str::<Event>(
+                r#"{"event":"approve","link":"https://example.com/x","approval":"login"}"#
+            )
+            .is_err()
+        );
     }
 
     #[test]
