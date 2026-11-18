@@ -2275,7 +2275,7 @@ elsecall uninstall
 Uninstall removes the owned CLI and LaunchAgent links, executable, configuration,
 request records, receipt, socket, locks, current and rotated logs, member key, fleet roster and upgrade
 record, the service's own state (load, outside-pressure, peer-I/O and tuning databases,
-caller caches and onboarding operations), and the fleet window's
+caller caches, and onboarding operations earlier builds kept), and the fleet window's
 `~/Applications/Elsecall.app` when Elsecall published it (another application at that
 path is kept). An open window closes itself within a few seconds, once it can reach
 neither the service nor its app. While the

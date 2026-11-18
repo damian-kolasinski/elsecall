@@ -19,8 +19,10 @@ runs without a desktop login, and installation on the second member.
   the nonce stops replaying a response onto another request. Requests outside a
   60-second window, or with a nonce seen inside it, are refused (`peer_auth`).
 - **Tailscale gives addresses, a node name and encryption, never identity.** Discovery
-  is a port (`tailnet::Tailnet`). The production adapter runs the Tailscale CLI at a
-  fixed path with `TAILSCALE_BE_CLI=1`, which the app bundle needs outside a terminal.
+  is a port (`tailnet::Tailnet`). The production adapter runs the first Tailscale CLI it
+  finds at fixed paths, never through PATH: the app bundle's, then `/opt/homebrew/bin`,
+  then `/usr/local/bin`. It sets `TAILSCALE_BE_CLI=1`, which the app bundle needs
+  outside a terminal.
   It keeps only addresses inside the tailnet ranges. The listener binds each tailnet
   address on port 47821, never a wildcard, and retries discovery every 30 seconds.
   `ELSECALL_TAILNET_NAME`/`ELSECALL_TAILNET_ADDRESSES` replace discovery. Only then may

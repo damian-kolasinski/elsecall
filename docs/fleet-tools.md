@@ -40,13 +40,14 @@ does not uninstall it.
 
 The master downloads each Xcode archive once and streams it to members. Steps
 that need root (placing the app, selecting it, accepting the license) go through
-a narrowly scoped sudoers drop-in. `elsecall fleet add` installs that drop-in.
+a narrowly scoped sudoers drop-in.
 It does not grant a general root shell.
 
 ## Joining a machine
 
-`elsecall fleet add <ssh-host>` is how a machine joins: Elsecall is installed
-there, the machine is enrolled, and the sudoers drop-in is installed.
+`elsecall fleet add` is the usual way a machine joins: [Adding a Mac](add-mac.md). The machine
+ends up enrolled and awaiting provisioning. Installing the sudoers drop-in belongs
+to the Xcode slice, which also says what it allows.
 
 ## Interface
 

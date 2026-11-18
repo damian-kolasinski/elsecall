@@ -433,7 +433,8 @@ fn remove_service_state(data: &Path) -> Result<()> {
     ] {
         remove_database(&data.join(database))?;
     }
-    // Callers' caches and onboarding operations belong to the service alone.
+    // Callers' caches belong to the service alone; earlier builds also kept
+    // onboarding operations here.
     remove_tree(&data.join("workspaces"))?;
     remove_tree(&data.join("onboarding"))?;
     if !holds_entries(&data.join("copies")) {

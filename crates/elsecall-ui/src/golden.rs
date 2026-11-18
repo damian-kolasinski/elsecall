@@ -31,13 +31,6 @@ const SCENES: &[&str] = &[
     "release-offline",
     "release-future",
     "release-fleet",
-    "demo-airdrop",
-    "add-mac-preparing",
-    "add-mac-picker",
-    "add-mac-blocked",
-    "add-mac-cancelled",
-    "add-mac-failed",
-    "add-mac-unconfirmed",
 ];
 const BLESS: &str =
     "ELSECALL_UI_BLESS=1 cargo test -p elsecall-ui --bin elsecall-ui fleet_scenes_match_goldens";
@@ -68,10 +61,9 @@ fn fleet_scenes_match_goldens() {
             compare(scene, appearance, false);
         }
     }
-    for scene in ["add-mac-blocked", "add-mac-failed", "add-mac-picker"] {
-        for appearance in APPEARANCES {
-            compare(scene, appearance, true);
-        }
+    // The header at the window's minimum width, with every control it can show.
+    for appearance in APPEARANCES {
+        compare("release-fleet", appearance, true);
     }
 }
 
