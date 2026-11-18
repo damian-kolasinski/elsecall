@@ -112,15 +112,13 @@ To bump rune, change that rev in six places: `rune` and `rune-kit` in
 
 ## Appearance
 
-Colours, type and spacing come from mergegate:
+Colours use the shared brand palette. The table in `src/theme.rs` maps the
+light and dark swatches onto Rune Kit's semantic roles. Type and spacing use
+Mergegate's `appearance/tokens.json` and `ui/design-system/tokens.css`.
 
-- `appearance/tokens.json`
-- `ui/design-system/appearance.css`
-- `ui/design-system/tokens.css`
-
-The mapping onto rune's `Kit` is the table in `src/theme.rs`. UI text is DM Sans
-(`assets/fonts/DMSans.ttf`, OFL in `OFL.txt`, copied from mergegate
-`ios/Resources`). Monospace text uses the system mono face (SF Mono on macOS).
+UI text is DM Sans (`assets/fonts/DMSans.ttf`, OFL in `OFL.txt`, copied from
+Mergegate's `ios/Resources`). Monospace text uses the system mono face (SF Mono
+on macOS).
 
 ## Icon
 

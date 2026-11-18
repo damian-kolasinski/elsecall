@@ -5,13 +5,12 @@
     Source of Elsecall.icns and elsecall.png, and drawn into
     social-preview.png; regenerate them with scripts/render-icon.sh. Laid out
     on Apple's macOS icon grid: an 824 x 824 body, corner radius 185.4, on a
-    1024 x 1024 canvas with a drop shadow. Colours derive from the window's
-    brand tokens (src/theme.rs in elsecall-ui); #0b4f82 lightens the dark
-    brand tint for the top of the gradient.
+    1024 x 1024 canvas with a drop shadow. Colours use the shared brand
+    palette, with Blue 600 (#005999) and Blue 900 (#052033) as the gradient stops.
   -->
   <defs>
     <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#0b4f82"/>
+      <stop offset="0" stop-color="#005999"/>
       <stop offset="1" stop-color="#052033"/>
     </linearGradient>
     <radialGradient id="glow" cx="512" cy="340" r="300" gradientUnits="userSpaceOnUse">
