@@ -32,7 +32,8 @@ running executable is never overwritten. A release ID inside the signed bundle
 identifies the original binary, since signing changes executable bytes.
 Updates require the same user and a macOS desktop session. Installing just a CLI
 without its companion preserves the previously staged window; it offers no new UI.
-The Finder app is preserved when the service is uninstalled.
+`elsecall uninstall` removes the Finder app after stopping the service. A window
+that then reaches neither the service nor its app closes itself.
 
 ## Run
 

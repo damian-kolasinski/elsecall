@@ -92,6 +92,7 @@ pub mod tools_cli;
 pub mod toolset;
 pub mod toolset_api;
 pub mod ui_app;
+pub mod uninstall;
 pub mod upgrade_drain;
 pub mod upgrade_helper_process;
 pub mod version_skew;

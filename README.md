@@ -231,7 +231,7 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall doctor` | Installation integrity, launchd registration, API connectivity, relevant paths and recovery guidance |
 | `elsecall service restart` | Stop/start the registered service and wait for readiness |
 | `elsecall install [--open]` | Install/update and wait for readiness; in a desktop session, put the fleet window in place as an app and, with `--open`, open it (see "Desktop UI") |
-| `elsecall uninstall` | Stop the service and remove its installation |
+| `elsecall uninstall [--force] [--keep-mise]` | Stop the service, remove its installation and window, and remove Elsecall's request from mise's global configuration (see "Uninstall") |
 | `elsecall run [options] -- COMMAND...` | Run a command once this machine has room, passing its I/O, signals and exit code through (see "Running commands") |
 | `elsecall lease acquire [options]` | Wait for capacity, then hold it for the calling script (see "Admission and leases") |
 | `elsecall lease release [RUN_ID]` | Release one lease, or every lease of the calling script |
@@ -2266,6 +2266,8 @@ warnings for unusually large logs, databases or other state. Size warnings are
 advisory and include retention guidance; they do not change API health. See
 [State retention](docs/state-retention.md).
 
+### Uninstall
+
 ```sh
 elsecall uninstall
 ```
@@ -2275,7 +2277,8 @@ request records, receipt, socket, locks, current and rotated logs, member key, f
 record, the service's own state (load, outside-pressure, peer-I/O and tuning databases,
 caller caches and onboarding operations), and the fleet window's
 `~/Applications/Elsecall.app` when Elsecall published it (another application at that
-path is kept). While the
+path is kept). An open window closes itself within a few seconds, once it can reach
+neither the service nor its app. While the
 machine is enrolled in a fleet, uninstall refuses with `fleet_member` unless given
 `--force`, because a reinstalled machine has a new key and must be enrolled again.
 
@@ -2287,8 +2290,27 @@ since the copies live outside the state directory, under `~/.elsecall/workspaces
 their callers' paths, and a later install's housekeeping removes them through it;
 `rehearsal-session.json` after an interrupted rehearsal; workload migration backups;
 and a master's `fleet-config.toml`, `fleet-tools.toml` and `service-config-backups/`.
-When anything stays, uninstall completes and then reports `files_preserved`.
-Shared parent directories and unrecognized files are preserved. If an installation
+Shared parent directories and unrecognized files are preserved. When anything
+stays, uninstall still succeeds and lists it under `kept`: the state directory and
+the names left in it.
+
+After the installation is gone, uninstall removes Elsecall's request from the global
+mise configuration that holds it, which the one-command installer added, with
+`mise unuse`, then deletes the releases nothing else requests with `mise prune`, so
+`elsecall` no longer resolves through mise. Requests in project configurations, and
+the releases they or running programs use, stay. It finds mise in mise's usual
+install locations, then on `PATH`, where the installer also looks. `mise` in the output is:
+
+| `state` | Meaning |
+| --- | --- |
+| `removed` | Removed from `config`, which requested `version`; `pruned` is false when the prune failed and the releases stayed |
+| `absent` | mise holds no global request, or has no packslip backend and so cannot resolve one |
+| `no_mise` | No mise was found |
+| `kept` | Left as asked with `--keep-mise` |
+| `failed` | Reading or removing the request failed; `error.hint` names the `mise unuse` command to run instead. Uninstall exits 1, after removing everything else |
+
+mise itself stays, since other tools may use it. A refused uninstall, such as one
+of an enrolled member without `--force`, leaves mise alone. If an installation
 link was replaced by something else, removal
 stops with a conflict instead of deleting it. Repeating uninstall after a clean
 removal succeeds. Build outputs in this repository are separate from the installed

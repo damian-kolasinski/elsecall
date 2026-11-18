@@ -4,6 +4,7 @@ use crate::{
     build_identity::Digest,
     failure::{Failure, Result},
     paths::Paths,
+    uninstall::Selection,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -34,6 +35,12 @@ pub trait CliSelection: Send + Sync {
 pub struct MiseSelection {
     pub paths: Paths,
 }
+/// Which global requests count: mise marks one active only while its release is installed.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Requests {
+    Active,
+    Any,
+}
 #[derive(Deserialize)]
 struct Entry {
     active: bool,
@@ -45,30 +52,7 @@ struct Source {
 }
 impl CliSelection for MiseSelection {
     fn snapshot(&self) -> Result<Option<Snapshot>> {
-        let mise = super::tools::mise(&self.paths)?;
-        let bytes = super::tools::run(
-            &mise,
-            &["ls", "--global", "--current", "--json", TOOL],
-            &self.paths.home,
-            Duration::from_secs(30),
-            &[("HOME".into(), self.paths.home.as_os_str().to_owned())],
-        )?;
-        let entries: Vec<Entry> = serde_json::from_slice(&bytes)
-            .map_err(|_| invalid("Could not read the global mise selection."))?;
-        let active: Vec<_> = entries.into_iter().filter(|entry| entry.active).collect();
-        if active.is_empty() {
-            return Ok(None);
-        }
-        if active.len() != 1 {
-            return Err(invalid(
-                "Elsecall has multiple global mise requests; select one before updating.",
-            ));
-        }
-        let config = active.into_iter().next().expect("one entry").source.path;
-        owned_config(&self.paths, &config)?;
-        let text =
-            fs::read_to_string(&config).map_err(|e| Failure::io("Read mise selection", e))?;
-        read(&config, &text).map(Some)
+        self.snapshot_with(&super::tools::mise(&self.paths)?, Requests::Active)
     }
     fn activate(
         &self,
@@ -151,6 +135,126 @@ impl CliSelection for MiseSelection {
             }
         }
         Ok(false)
+    }
+}
+impl MiseSelection {
+    fn snapshot_with(&self, mise: &Path, requests: Requests) -> Result<Option<Snapshot>> {
+        let bytes = super::tools::run(
+            mise,
+            &["ls", "--global", "--current", "--json", TOOL],
+            &self.paths.home,
+            Duration::from_secs(30),
+            &[("HOME".into(), self.paths.home.as_os_str().to_owned())],
+        )?;
+        let entries: Vec<Entry> = serde_json::from_slice(&bytes)
+            .map_err(|_| invalid("Could not read the global mise selection."))?;
+        let active: Vec<_> = entries
+            .into_iter()
+            .filter(|entry| entry.active || requests == Requests::Any)
+            .collect();
+        if active.is_empty() {
+            return Ok(None);
+        }
+        if active.len() != 1 {
+            return Err(invalid(
+                "Elsecall has multiple global mise requests; select one before updating.",
+            ));
+        }
+        let config = active.into_iter().next().expect("one entry").source.path;
+        owned_config(&self.paths, &config)?;
+        let text =
+            fs::read_to_string(&config).map_err(|e| Failure::io("Read mise selection", e))?;
+        read(&config, &text).map(Some)
+    }
+
+    fn run(&self, mise: &Path, arguments: &[&str]) -> Result<Vec<u8>> {
+        super::tools::run(
+            mise,
+            arguments,
+            &self.paths.home,
+            Duration::from_secs(60),
+            &[("HOME".into(), self.paths.home.as_os_str().to_owned())],
+        )
+    }
+}
+impl crate::uninstall::CliRequest for MiseSelection {
+    fn forget(&self) -> Selection {
+        let Some(mise) = super::tools::find_mise(&self.paths) else {
+            return Selection::NoMise;
+        };
+        let Ok(backends) = self.run(&mise, &["backends", "ls"]) else {
+            return kept("mise could not list its backends.", None);
+        };
+        // A mise without packslip cannot resolve Elsecall's request, and refuses to
+        // list it.
+        if !String::from_utf8_lossy(&backends)
+            .lines()
+            .any(|line| line.trim() == "packslip")
+        {
+            return Selection::Absent;
+        }
+        // A request for a release mise no longer has still puts it back on the PATH
+        // at the next `mise install`.
+        let snapshot = match self.snapshot_with(&mise, Requests::Any) {
+            Ok(Some(snapshot)) => snapshot,
+            Ok(None) => return Selection::Absent,
+            Err(_) => {
+                return kept(
+                    "Elsecall's request in mise's global configuration could not be read.",
+                    None,
+                );
+            }
+        };
+        let Some(config) = snapshot.config.to_str() else {
+            return kept(
+                "mise's global configuration has a path that cannot be passed to mise.",
+                None,
+            );
+        };
+        // The file that holds the request, not whichever global file mise would pick.
+        if self
+            .run(&mise, &["unuse", "--no-prune", "--path", config, TOOL])
+            .is_err()
+        {
+            return kept(
+                "mise could not remove Elsecall's request.",
+                Some(&snapshot.config),
+            );
+        }
+        // Without --yes, mise skips the prune when nobody can confirm it. It keeps
+        // the releases another configuration requests or a running program uses.
+        let pruned = self
+            .run(&mise, &["prune", "--yes", "--tools", TOOL])
+            .is_ok();
+        Selection::Removed {
+            config: snapshot.config,
+            version: snapshot.version,
+            pruned,
+        }
+    }
+}
+fn kept(message: &str, config: Option<&Path>) -> Selection {
+    let hint = match config {
+        Some(config) => format!(
+            "Run mise unuse --path {} {TOOL}.",
+            shell_quoted(&config.to_string_lossy())
+        ),
+        None => format!("Run mise unuse --global {TOOL}."),
+    };
+    Selection::Failed {
+        error: Failure::new("mise_request_kept", message, hint),
+    }
+}
+/// `text` as one shell word.
+fn shell_quoted(text: &str) -> String {
+    if !text.is_empty()
+        && text
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "/._-+~:@".contains(c))
+    {
+        text.to_owned()
+    } else {
+        format!("'{}'", text.replace('\'', "'\\''"))
     }
 }
 fn applied(release: &Release, previous: &Snapshot) -> Snapshot {
@@ -287,5 +391,23 @@ fn set(node: &mut toml_edit::Item, key: &str, value: Option<&str>) {
             }
         }
         _ => unreachable!("validated mise tool request"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::shell_quoted;
+
+    #[test]
+    fn a_path_is_quoted_only_when_the_shell_would_split_or_expand_it() {
+        assert_eq!(
+            shell_quoted("/Users/me/.config/mise/config.toml"),
+            "/Users/me/.config/mise/config.toml"
+        );
+        assert_eq!(
+            shell_quoted("/Users/me/My Configs/mise.toml"),
+            "'/Users/me/My Configs/mise.toml'"
+        );
+        assert_eq!(shell_quoted("/Users/me/it's/$x"), "'/Users/me/it'\\''s/$x'");
     }
 }

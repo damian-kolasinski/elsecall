@@ -92,7 +92,11 @@ fn install_update_restart_and_clean_uninstall_using_real_files_and_fake_lifecycl
         fs::read_to_string(paths.configuration()).unwrap(),
         "[capacity]\nreserved_cores = 3\n"
     );
-    installation::uninstall(&paths, &manager, false).unwrap();
+    assert!(
+        installation::uninstall(&paths, &manager, false)
+            .unwrap()
+            .is_none()
+    );
     assert!(!paths.data.exists());
     assert!(!paths.bin.is_symlink());
     assert!(!paths.agent.is_symlink());
@@ -156,12 +160,11 @@ fn uninstall_preserves_unknown_files_and_conflicting_links() {
     assert_eq!(fs::read_to_string(&paths.bin).unwrap(), "replacement");
     fs::remove_file(&paths.bin).unwrap();
     fs::write(paths.data.join("unrelated"), "keep me").unwrap();
-    assert_eq!(
-        installation::uninstall(&paths, &manager, false)
-            .unwrap_err()
-            .code,
-        "files_preserved"
-    );
+    let kept = installation::uninstall(&paths, &manager, false)
+        .unwrap()
+        .expect("the unrelated file is kept");
+    assert_eq!(kept.directory, paths.data);
+    assert_eq!(kept.entries, ["unrelated"]);
     assert_eq!(
         fs::read_to_string(paths.data.join("unrelated")).unwrap(),
         "keep me"
