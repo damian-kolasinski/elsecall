@@ -1,18 +1,18 @@
-//! Mergegate colour and type, mapped onto a rune [`Kit`](rune_kit::Kit).
+//! Shared palette colours and Mergegate type, mapped onto a rune [`Kit`](rune_kit::Kit).
 //!
-//! Hex values are the colours `appearance/tokens.json` resolves to in
-//! `ui/design-system/appearance.css` (`:root` for light, `prefers-color-scheme: dark`
-//! for dark). Spacing and radii are from `ui/design-system/tokens.css`
+//! Elsecall pairs shared palette swatches for light and dark mode, using
+//! Mergegate's semantic colour roles. Spacing and radii are from `ui/design-system/tokens.css`
 //! (`--space-*` 4/8/12/16/24/32, `--radius-small` 4, `--radius-pill` 999,
 //! `--control-height` 32). `--text-on-fill` is `var(--background-page)`, so dark
 //! mode resolves it to the dark page colour.
 //!
-//! | Kit field | Mergegate token | Light | Dark |
+//! | Kit field | Colour role | Light | Dark |
 //! | --- | --- | --- | --- |
 //! | `page`, `bg_base`, `bg_deep` | `--background-page` | `#f7fcff` | `#222526` |
-//! | `layer_01`, `surface_base`, `surface_weak`, `surface_raised_base` | `--background-subtle` | `#ebeff2` | `#3a3d40` |
+//! | `layer_01`, `surface_base`, `surface_weak`, `surface_raised_base`, `bg_button_neutral` | `--background-subtle` | `#ebeff2` | `#3a3d40` |
 //! | `layer_02` | `--background-secondary` | `#d2d6d9` | `#525659` |
-//! | `hover`, `surface_hover` | `--background-hover` | `#e6ebef` | `#2f3235` |
+//! | `hover`, `surface_hover` | `--background-hover` | `#d2d6d9` | `#222526` |
+//! | `pressed`, table selection | `--background-selected` | `#cceaff` | `#003b66` |
 //! | `bg_accent`, `info.icon` | `--background-brand` | `#003b66` | `#66bfff` |
 //! | `border_focus`, `border_active`, `info.border` | `--border-brand` | `#178fe5` | `#66bfff` |
 //! | `info.bg` | `--background-tint-brand` | `#e5f4ff` | `#052033` |
@@ -20,7 +20,7 @@
 //! | `border_base`, `border_weak`, `border_muted`, `std_border` | `--border-container` | `#9da2a6` | `#84898c` |
 //! | `border_strong` | `--border-strong` | `#84898c` | `#84898c` |
 //! | `text_base`, `text_strong`, `std_text`, `icon_base`, `std_icon` | `--text-primary` | `#3a3d40` | `#ebeff2` |
-//! | `text_muted`, `text_weak`, `icon_muted` | `--text-secondary` | `#525659` | `#b8bcbf` |
+//! | `text_muted`, `text_weak`, `icon_muted`, table headers | `--text-secondary` | `#525659` | `#b8bcbf` |
 //! | `text_faint`, `icon_faint`, `icon_weaker` | `--text-subtle` | `#6b6f73` | `#9da2a6` |
 //! | `text_accent`, `icon_accent` | `--text-brand` | `#003b66` | `#e5f4ff` |
 //! | `text_contrast`, `text_inverse`, `text_invert_strong`, `submit_fg`, `submit_icon` | `--text-on-fill` | `#f7fcff` | `#222526` |
@@ -28,7 +28,7 @@
 //! | `success.fg` | `--text-tint-success` | `#264013` | `#aecc99` |
 //! | `success.border` | `--border-success` | `#93bf73` | `#384d29` |
 //! | `success.icon` | `--background-success` | `#384d29` | `#aecc99` |
-//! | `warning.bg` | `--background-tint-warning` | `#fbf1dc` | `#3a2f14` |
+//! | `warning.bg` | `--background-tint-warning` | `#d9d2c3` | `#332403` |
 //! | `warning.fg` | `--text-tint-warning` | `#4d390b` | `#f2c055` |
 //! | `warning.border` | `--border-warning` | `#d9a11e` | `#664700` |
 //! | `warning.icon` | `--background-warning` | `#805f12` | `#f2c055` |
@@ -36,7 +36,6 @@
 //! | `danger.fg` | `--text-tint-error` | `#732222` | `#ffb3b3` |
 //! | `danger.border` | `--border-error` | `#ff6666` | `#732222` |
 //! | `danger.icon` | `--background-error` | `#732222` | `#ff6666` |
-//! | table selection | `--background-selected` | `#cceaff` | `#16374e` |
 //!
 //! The master badge uses `info` (brand tint). Status badges use `success`, `warning`
 //! and `danger` tint fills with their tint text. Other `Kit` fields stay on
@@ -120,12 +119,12 @@ struct Ink {
     danger_border: &'static str,
 }
 
-/// Light column of the mapping table. Source: `appearance/tokens.json` via `appearance.css`.
+/// Light column of the mapping table.
 const LIGHT: Ink = Ink {
     page: "#f7fcff",
     subtle: "#ebeff2",
     secondary: "#d2d6d9",
-    hover: "#e6ebef",
+    hover: "#d2d6d9",
     selected: "#cceaff",
     brand: "#003b66",
     brand_border: "#178fe5",
@@ -143,7 +142,7 @@ const LIGHT: Ink = Ink {
     success_text: "#264013",
     success_border: "#93bf73",
     warning: "#805f12",
-    warning_tint: "#fbf1dc",
+    warning_tint: "#d9d2c3",
     warning_text: "#4d390b",
     warning_border: "#d9a11e",
     danger: "#732222",
@@ -152,13 +151,13 @@ const LIGHT: Ink = Ink {
     danger_border: "#ff6666",
 };
 
-/// Dark column of the mapping table. Source: `appearance/tokens.json` via `appearance.css`.
+/// Dark column of the mapping table.
 const DARK: Ink = Ink {
     page: "#222526",
     subtle: "#3a3d40",
     secondary: "#525659",
-    hover: "#2f3235",
-    selected: "#16374e",
+    hover: "#222526",
+    selected: "#003b66",
     brand: "#66bfff",
     brand_border: "#66bfff",
     brand_tint: "#052033",
@@ -175,7 +174,7 @@ const DARK: Ink = Ink {
     success_text: "#aecc99",
     success_border: "#384d29",
     warning: "#f2c055",
-    warning_tint: "#3a2f14",
+    warning_tint: "#332403",
     warning_text: "#f2c055",
     warning_border: "#664700",
     danger: "#ff6666",
@@ -238,7 +237,7 @@ pub fn table_style(dark: bool) -> TableStyle {
         header_font: fonts.label,
         text: paint(ink.text),
         muted: paint(ink.text_secondary),
-        header_text: paint(ink.text_subtle),
+        header_text: paint(ink.text_secondary),
         rule: paint(ink.border),
         selected: paint(ink.selected),
         stripe: paint(ink.hover),
@@ -261,9 +260,11 @@ fn apply(kit: &mut Kit, ink: &Ink) {
     kit.c.surface_base = subtle;
     kit.c.surface_weak = subtle;
     kit.c.surface_raised_base = subtle;
+    kit.c.bg_button_neutral = subtle;
     kit.c.layer_02 = paint(ink.secondary);
     kit.c.hover = paint(ink.hover);
     kit.c.surface_hover = paint(ink.hover);
+    kit.c.pressed = paint(ink.selected);
     kit.c.bg_accent = brand;
     kit.c.border_focus = paint(ink.brand_border);
     kit.c.border_active = paint(ink.brand_border);
@@ -317,7 +318,7 @@ fn apply(kit: &mut Kit, ink: &Ink) {
 }
 
 fn paint(hex: &str) -> Color {
-    rune::color::hex(hex).unwrap_or_else(|| panic!("mergegate token {hex} is not a colour"))
+    rune::color::hex(hex).unwrap_or_else(|| panic!("Invalid theme colour {hex}"))
 }
 
 #[cfg(test)]
@@ -329,6 +330,22 @@ pub(crate) fn serial_render() -> std::sync::MutexGuard<'static, ()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn table_headers_have_readable_contrast_at_rest_and_on_hover() {
+        for dark in [false, true] {
+            let kit = kit(dark);
+            let header = table_style(dark).header_text.luminance();
+            for (state, fill) in [("rest", kit.c.layer_01), ("hover", kit.c.hover)] {
+                let fill = fill.luminance();
+                let ratio = (header.max(fill) + 0.05) / (header.min(fill) + 0.05);
+                assert!(
+                    ratio >= 4.5,
+                    "header contrast {ratio:.2} in {state} with dark={dark}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn type_scale_matches_mergegate() {
