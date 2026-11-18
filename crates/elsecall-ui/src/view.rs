@@ -1,9 +1,10 @@
 //! The fleet window, as a pure function of its state.
 
 use std::borrow::Cow;
+use std::num::NonZeroU32;
 
 use rune::tok::TextStyle;
-use rune::{Align, Color, El, Icon, col, icon, row, text};
+use rune::{Align, Color, El, HelpLook, Span, col, rich, row, text};
 use rune_kit::{Button, Cell, Table, TableColumn};
 
 use crate::app::AppState;
@@ -16,19 +17,7 @@ use crate::theme;
 const DASH: &str = "—";
 const STALE_OPACITY: f32 = 0.45;
 const PILL_HEIGHT: f32 = 22.0;
-const TREND_SIZE: f32 = 14.0;
 const BORDER_WIDTH: f32 = 1.0;
-
-static TREND_UP: Icon = Icon {
-    name: "elsecall-trend-up",
-    view: 16.0,
-    body: r#"<path d="M8 13V3.5M4 7.5L8 3.5L12 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>"#,
-};
-static TREND_DOWN: Icon = Icon {
-    name: "elsecall-trend-down",
-    view: 16.0,
-    body: r#"<path d="M8 3V12.5M4 8.5L8 12.5L12 8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>"#,
-};
 
 #[derive(Clone, Copy)]
 struct Paints {
@@ -42,7 +31,6 @@ struct Paints {
     brand_ink: Color,
     role_fill: Color,
     role_ink: Color,
-    rising: Color,
     online_fill: Color,
     online_ink: Color,
     offline_fill: Color,
@@ -69,7 +57,6 @@ pub fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
         brand_ink: kit.c.info.fg,
         role_fill: kit.c.layer_02,
         role_ink: kit.c.text_base,
-        rising: kit.c.warning.icon,
         online_fill: kit.c.success.bg,
         online_ink: kit.c.success.fg,
         offline_fill: kit.c.danger.bg,
@@ -81,6 +68,15 @@ pub fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
         small: theme::scale().small,
         label: theme::scale().label,
     };
+    cx.help_look(
+        HelpLook::system(dark)
+            .fill(paints.page)
+            .ink(paints.text)
+            .ring(BORDER_WIDTH, paints.border)
+            .font(paints.small)
+            .padding(theme::SPACE_3, theme::SPACE_2)
+            .max_width(Some(264.0)),
+    );
     let page = col()
         .w_full()
         .h_full()
@@ -288,7 +284,7 @@ fn members_table(state: &AppState, dark: bool, paints: Paints) -> El {
         )
         .column(
             TableColumn::new("cpu", "CPU")
-                .width(64.0)
+                .width(124.0)
                 .align(Align::End)
                 .resizable(false),
         )
@@ -299,8 +295,8 @@ fn members_table(state: &AppState, dark: bool, paints: Paints) -> El {
                 .resizable(false),
         )
         .column(
-            TableColumn::new("load", "Load (1 min)")
-                .width(136.0)
+            TableColumn::new("cpu-demand", "CPU demand")
+                .width(124.0)
                 .align(Align::End)
                 .resizable(false),
         )
@@ -314,9 +310,9 @@ fn cell(member: &MemberRow, column: &str, paints: Paints) -> Cell {
         "role" => role_cell(member, paints),
         "status" => status_cell(member, paints),
         "release" => release_cell(&member.release, paints),
-        "cpu" => Cell::text(cpu_label(member.cpu)).mono(),
+        "cpu" => cpu_cell(member.cpu, member.logical_cpus, paints),
         "memory" => Cell::text(memory_label(member.memory.as_ref())).mono(),
-        "load" => load_cell(member.load.as_ref(), paints),
+        "cpu-demand" => cpu_demand_cell(member.load, member.logical_cpus, paints),
         _ => Cell::text(""),
     }
 }
@@ -368,46 +364,65 @@ fn status_cell(member: &MemberRow, paints: Paints) -> Cell {
     Cell::el(line)
 }
 
-/// The 1-minute average and an arrow for where it is heading. The arrow's slot is kept
-/// when there is no arrow, so every value lines up.
-fn load_cell(load: Option<&LoadAverages>, paints: Paints) -> Cell {
-    // Fills the cell, so the tooltip shows anywhere in it, not only over the digits.
-    let line = row()
-        .w_full()
-        .h_full()
-        .justify_end()
-        .center_y()
-        .gap(theme::SPACE_1);
-    let value = |label: String| {
-        text(label)
-            .font(theme::scale().mono)
-            .color(paints.text)
-            .a11y_hidden()
+fn cpu_cell(cpu: Option<f64>, count: Option<NonZeroU32>, paints: Paints) -> Cell {
+    let utilization = cpu_label(cpu);
+    let Some(count) = count else {
+        return Cell::text(utilization).mono();
     };
-    let blank = || rune::el().w(TREND_SIZE).h(TREND_SIZE).a11y_hidden();
+    Cell::el(
+        col()
+            .items_end()
+            .child(
+                text(utilization)
+                    .font(theme::scale().mono)
+                    .color(paints.text),
+            )
+            .child(
+                text(logical_cpu_label(count))
+                    .font(paints.small)
+                    .color(paints.secondary),
+            ),
+    )
+}
+
+fn cpu_demand_cell(load: Option<LoadAverages>, count: Option<NonZeroU32>, paints: Paints) -> Cell {
     let Some(load) = load else {
+        return Cell::text(DASH).mono();
+    };
+    let raw_load = load_summary(&load, LoadTrend::of(&load));
+    let line = row().w_full().h_full().justify_end().center_y();
+    let Some(count) = count else {
         return Cell::el(
-            line.label("Load average not reported")
-                .child(value(DASH.into()))
-                .child(blank()),
+            line.label("CPU demand unavailable")
+                .help("This Mac did not report its logical CPU count.")
+                .help_row(raw_load)
+                .child(
+                    text(DASH)
+                        .font(theme::scale().mono)
+                        .color(paints.text)
+                        .a11y_hidden(),
+                ),
         );
     };
-    let trend = LoadTrend::of(load);
-    let mark = match trend {
-        LoadTrend::Rising => icon(&TREND_UP, TREND_SIZE)
-            .color(paints.rising)
-            .a11y_hidden(),
-        LoadTrend::Falling => icon(&TREND_DOWN, TREND_SIZE)
-            .color(paints.subtle)
-            .a11y_hidden(),
-        LoadTrend::Steady => blank(),
-    };
-    let summary = load_summary(load, trend);
+    let demand = load.demand(count);
+    let label = format!("{demand:.1}×");
+    let capacity = format!("{label} CPU capacity");
+    let explanation = cpu_demand_explanation(demand, count);
+    let baseline = "At 1.0×, demand matches CPU capacity.";
+    let underline = Span::new(0, label.len()).underline(paints.subtle);
     Cell::el(
-        line.label(summary.clone())
-            .help(summary)
-            .child(value(format!("{:.1}", load.one)))
-            .child(mark),
+        line.label(capacity.clone())
+            .description(format!("{explanation} {baseline} {raw_load}"))
+            .help(capacity)
+            .help_row(explanation)
+            .help_row(baseline)
+            .help_row(raw_load)
+            .child(
+                rich(label, vec![underline])
+                    .font(theme::scale().mono)
+                    .color(paints.text)
+                    .a11y_hidden(),
+            ),
     )
 }
 
@@ -495,6 +510,30 @@ pub(crate) fn cpu_label(cpu: Option<f64>) -> String {
     }
 }
 
+fn logical_cpu_label(count: NonZeroU32) -> String {
+    let suffix = if count.get() == 1 { "" } else { "s" };
+    format!("{count} logical CPU{suffix}")
+}
+
+fn cpu_demand_explanation(demand: f64, count: NonZeroU32) -> String {
+    let cpus = logical_cpu_label(count);
+    if (demand - 1.0).abs() < 0.05 {
+        format!(
+            "Over the past minute, roughly as much work was ready to run as this Mac’s {cpus} could handle at once."
+        )
+    } else if demand > 1.0 {
+        let excess = (demand - 1.0) * 100.0;
+        format!(
+            "Over the past minute, about {excess:.0}% more work was ready to run than this Mac’s {cpus} could handle at once."
+        )
+    } else {
+        let percent = demand * 100.0;
+        format!(
+            "Over the past minute, the work ready to run would fill about {percent:.0}% of this Mac’s CPU capacity."
+        )
+    }
+}
+
 pub(crate) fn memory_label(memory: Option<&MemoryUse>) -> String {
     match memory {
         Some(memory) => format!(
@@ -506,10 +545,10 @@ pub(crate) fn memory_label(memory: Option<&MemoryUse>) -> String {
     }
 }
 
-/// The tooltip and spoken label of a load cell: every average and where it is heading.
+/// The raw averages and their trend, shown in the demand tooltip.
 pub(crate) fn load_summary(load: &LoadAverages, trend: LoadTrend) -> String {
     format!(
-        "Load average: 1 min {:.1} · 5 min {:.1} · 15 min {:.1}, {}",
+        "Load (1/5/15 min) {:.1} / {:.1} / {:.1} · {}",
         load.one,
         load.five,
         load.fifteen,
@@ -551,6 +590,7 @@ mod tests {
                     reach: Reachability::Reachable,
                     gate: Gate::Open,
                     cpu: None,
+                    logical_cpus: None,
                     memory: None,
                     load: None,
                     release: release.clone(),
@@ -655,7 +695,26 @@ mod tests {
         };
         assert_eq!(
             load_summary(&load, LoadTrend::of(&load)),
-            "Load average: 1 min 207.4 · 5 min 187.0 · 15 min 141.3, rising"
+            "Load (1/5/15 min) 207.4 / 187.0 / 141.3 · rising"
         );
+    }
+
+    #[test]
+    fn demand_uses_the_one_minute_average_and_explains_capacity() {
+        let count = NonZeroU32::new(8).unwrap();
+        let load = LoadAverages {
+            one: 12.0,
+            five: 9.4,
+            fifteen: 7.2,
+        };
+        assert_eq!(logical_cpu_label(NonZeroU32::MIN), "1 logical CPU");
+        assert_eq!(logical_cpu_label(count), "8 logical CPUs");
+        assert_eq!(load.demand(count), 1.5);
+        assert_eq!(
+            cpu_demand_explanation(load.demand(count), count),
+            "Over the past minute, about 50% more work was ready to run than this Mac’s 8 logical CPUs could handle at once."
+        );
+        assert!(cpu_demand_explanation(0.4, count).contains("about 40%"));
+        assert!(cpu_demand_explanation(1.0, count).contains("roughly as much work"));
     }
 }
