@@ -1,5 +1,6 @@
 //! Window state, scenes and the rune app spec.
 
+use std::num::NonZeroU32;
 use std::sync::Arc;
 
 use rune::{App, AppSpec, Chrome, Latest, Tx, Waker};
@@ -496,7 +497,7 @@ fn scene_members(state: &mut AppState) {
 /// The last row selected, so its highlight meets the card's border and bottom corners.
 fn scene_members_selected(state: &mut AppState) {
     scene_members(state);
-    state.table.select("builder");
+    state.table.select("macbook-pro");
 }
 
 /// A member the master's last update left behind, as `elsecall fleet upgrade`
@@ -514,7 +515,7 @@ fn scene_outdated_member(state: &mut AppState) {
             Role::Member,
             Reachability::Reachable,
             Gate::Open,
-            Some(0.12),
+            Some((0.12, 8)),
             Some(gigabytes(10, 32)),
             Some(LoadAverages {
                 one: 1.1,
@@ -683,7 +684,7 @@ fn solo_snapshot() -> FleetSnapshot {
             Role::Master,
             Reachability::Reachable,
             Gate::Open,
-            Some(0.18),
+            Some((0.18, 8)),
             Some(gigabytes(18, 64)),
             Some(LoadAverages {
                 one: 1.4,
@@ -715,12 +716,12 @@ fn members_snapshot() -> FleetSnapshot {
                 Role::Master,
                 Reachability::Reachable,
                 Gate::Open,
-                Some(0.42),
+                Some((0.42, 12)),
                 Some(gigabytes(36, 64)),
                 Some(LoadAverages {
-                    one: 8.2,
-                    five: 7.4,
-                    fifteen: 6.1,
+                    one: 4.8,
+                    five: 4.5,
+                    fifteen: 4.2,
                 }),
             ),
             member(
@@ -733,18 +734,18 @@ fn members_snapshot() -> FleetSnapshot {
                 None,
             ),
             member(
-                "builder",
+                "macbook-pro",
                 Role::Member,
                 Reachability::Reachable,
                 Gate::Blocked {
                     leading_process: Some("Xcode".into()),
                 },
-                Some(0.91),
+                Some((0.91, 8)),
                 Some(gigabytes(52, 64)),
                 Some(LoadAverages {
-                    one: 9.4,
-                    five: 11.8,
-                    fifteen: 14.2,
+                    one: 12.0,
+                    five: 9.4,
+                    fifteen: 7.2,
                 }),
             ),
         ],
@@ -757,7 +758,7 @@ fn member(
     role: Role,
     reach: Reachability,
     gate: Gate,
-    cpu: Option<f64>,
+    cpu: Option<(f64, u32)>,
     memory: Option<MemoryUse>,
     load: Option<LoadAverages>,
 ) -> MemberRow {
@@ -772,7 +773,8 @@ fn member(
         role,
         reach,
         gate,
-        cpu,
+        cpu: cpu.map(|(utilization, _)| utilization),
+        logical_cpus: cpu.and_then(|(_, count)| NonZeroU32::new(count)),
         memory,
         load,
         release,

@@ -17,6 +17,7 @@ const SCENES: &[&str] = &[
     "solo",
     "no-tailnet",
     "members",
+    "members-selected",
     "outdated-member",
     "upgrade",
     "upgrading",
@@ -35,6 +36,7 @@ const SCENES: &[&str] = &[
 const BLESS: &str =
     "ELSECALL_UI_BLESS=1 cargo test -p elsecall-ui --bin elsecall-ui fleet_scenes_match_goldens";
 const APPEARANCES: &[&str] = &["light", "dark"];
+const MINIMUM_WINDOW: &[&str] = &["--size", "1040x480"];
 /// Channel delta rune's pixel comparison counts as more than antialiasing noise.
 const CHANNEL_TOLERANCE: u8 = 8;
 
@@ -58,12 +60,29 @@ fn fleet_scenes_match_goldens() {
     let _guard = theme::serial_render();
     for scene in SCENES {
         for appearance in APPEARANCES {
-            compare(scene, appearance, false);
+            compare(scene, appearance, "", &[]);
         }
     }
-    // The header at the window's minimum width, with every control it can show.
+    let hover = tempfile::NamedTempFile::new().unwrap();
+    // The demand cell of the selected MacBook at minimum width.
+    std::fs::write(hover.path(), r#"[{"t":0.1,"type":"move","x":976,"y":223}]"#).unwrap();
+    // Check the full header and the selected member's role pill at minimum width.
     for appearance in APPEARANCES {
-        compare("release-fleet", appearance, true);
+        compare("release-fleet", appearance, "-minimum", MINIMUM_WINDOW);
+        compare("members-selected", appearance, "-minimum", MINIMUM_WINDOW);
+        compare(
+            "members-selected",
+            appearance,
+            "-demand-tooltip",
+            &[
+                "--size",
+                "1040x480",
+                "--script",
+                hover.path().to_str().unwrap(),
+                "--at",
+                "2",
+            ],
+        );
     }
 }
 
@@ -103,8 +122,7 @@ fn metal_device_count() -> usize {
     }
 }
 
-fn compare(scene: &str, appearance: &str, minimum: bool) {
-    let suffix = if minimum { "-minimum" } else { "" };
+fn compare(scene: &str, appearance: &str, suffix: &str, options: &[&str]) {
     let golden = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/golden")
         .join(format!("{scene}-{appearance}{suffix}.png"));
@@ -112,7 +130,7 @@ fn compare(scene: &str, appearance: &str, minimum: bool) {
     if !bless && !golden.is_file() {
         panic!("missing golden {}\nbless with: {BLESS}", golden.display());
     }
-    let fresh = snap(scene, appearance, minimum);
+    let fresh = snap(scene, appearance, options);
     if bless {
         std::fs::create_dir_all(golden.parent().unwrap()).unwrap();
         std::fs::copy(&fresh, &golden).unwrap();
@@ -136,14 +154,14 @@ fn compare(scene: &str, appearance: &str, minimum: bool) {
     std::fs::remove_file(&fresh).ok();
 }
 
-fn snap(scene: &str, appearance: &str, minimum: bool) -> PathBuf {
+fn snap(scene: &str, appearance: &str, options: &[&str]) -> PathBuf {
     let path = std::env::temp_dir().join(format!(
         "elsecall-ui-{scene}-{appearance}-{}.png",
         std::process::id()
     ));
     let _ = std::fs::remove_file(&path);
     let path_arg = path.to_str().expect("temp path is utf-8").to_string();
-    app::render_scene(vec![
+    let mut arguments = vec![
         "--snap".into(),
         path_arg,
         "--scene".into(),
@@ -152,16 +170,12 @@ fn snap(scene: &str, appearance: &str, minimum: bool) -> PathBuf {
         appearance.into(),
         "--scale".into(),
         "1".into(),
-        "--size".into(),
-        if minimum {
-            "1040x480".into()
-        } else {
-            "1120x560".into()
-        },
         "--at".into(),
         "0".into(),
-    ])
-    .unwrap_or_else(|error| panic!("render {scene} {appearance}: {error}"));
+    ];
+    arguments.extend(options.iter().map(|value| (*value).to_owned()));
+    app::render_scene(arguments)
+        .unwrap_or_else(|error| panic!("render {scene} {appearance}: {error}"));
     assert!(path.is_file(), "snap did not write {}", path.display());
     path
 }

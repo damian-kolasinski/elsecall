@@ -4,6 +4,7 @@
 //! gate are enums so a row cannot be both online and offline, or both open and blocked.
 
 use std::fmt;
+use std::num::NonZeroU32;
 
 /// A point-in-time fleet, as the window lists it.
 #[derive(Clone, Debug, PartialEq)]
@@ -39,6 +40,7 @@ pub struct MemberRow {
     pub gate: Gate,
     /// Busy fraction of logical CPUs, from 0 to 1. Absent when the member did not report it.
     pub cpu: Option<f64>,
+    pub logical_cpus: Option<NonZeroU32>,
     pub memory: Option<MemoryUse>,
     pub load: Option<LoadAverages>,
     pub release: Release,
@@ -121,12 +123,19 @@ pub struct MemoryUse {
     pub total_bytes: u64,
 }
 
-/// Load averages over the last 1, 5 and 15 minutes. Always finite.
+/// Load averages over the last 1, 5 and 15 minutes. Always finite and nonnegative.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LoadAverages {
     pub one: f64,
     pub five: f64,
     pub fifteen: f64,
+}
+
+impl LoadAverages {
+    /// Recent runnable work per logical CPU.
+    pub fn demand(self, logical_cpus: NonZeroU32) -> f64 {
+        self.one / f64::from(logical_cpus.get())
+    }
 }
 
 /// Why a fleet read failed. The window shows `message` and `hint` either way.

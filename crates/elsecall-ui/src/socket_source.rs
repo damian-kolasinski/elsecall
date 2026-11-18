@@ -5,6 +5,7 @@
 //! for a fleet read, so this uses `client::get_large_within` with the same 15
 //! seconds and an 8 MiB bound for member diagnostics.
 
+use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
@@ -208,9 +209,15 @@ fn map_member(member: WireMember, master: Option<&str>) -> Result<MemberRow, Sou
         Reachability::Reachable => member.status.and_then(|status| status.machine),
         Reachability::Unreachable => None,
     };
-    let (cpu, memory, load) = match machine {
+    let (cpu, logical_cpus, memory, load) = match machine {
         Some(machine) => (
             machine.cpu_utilization.filter(|value| value.is_finite()),
+            machine
+                .logical_cpus
+                .as_ref()
+                .and_then(Value::as_u64)
+                .and_then(|count| u32::try_from(count).ok())
+                .and_then(NonZeroU32::new),
             machine.memory.map(|memory| MemoryUse {
                 used_bytes: memory.used_bytes,
                 total_bytes: memory.total_bytes,
@@ -225,10 +232,10 @@ fn map_member(member: WireMember, master: Option<&str>) -> Result<MemberRow, Sou
                 .filter(|load| {
                     [load.one, load.five, load.fifteen]
                         .iter()
-                        .all(|value| value.is_finite())
+                        .all(|value| value.is_finite() && *value >= 0.0)
                 }),
         ),
-        None => (None, None, None),
+        None => (None, None, None, None),
     };
     let role = match member.role {
         WireRole::Master => Role::Master,
@@ -245,6 +252,7 @@ fn map_member(member: WireMember, master: Option<&str>) -> Result<MemberRow, Sou
         reach,
         gate,
         cpu,
+        logical_cpus,
         memory,
         load,
         release,
@@ -306,6 +314,8 @@ struct WireStatus {
 struct WireMachine {
     #[serde(default)]
     cpu_utilization: Option<f64>,
+    #[serde(default)]
+    logical_cpus: Option<Value>,
     #[serde(default)]
     memory: Option<WireMemory>,
     #[serde(default)]
@@ -541,6 +551,10 @@ mod tests {
                 format!("{}.example", row.name)
             );
             assert_eq!(row.cpu, machine["cpu_utilization"].as_f64());
+            assert_eq!(
+                row.logical_cpus.map(|count| u64::from(count.get())),
+                machine["logical_cpus"].as_u64()
+            );
             let memory = row.memory.unwrap();
             assert_eq!(
                 memory.used_bytes,
@@ -574,6 +588,7 @@ mod tests {
         assert!(snap.members[0].cpu.is_some());
         assert!(matches!(snap.members[1].reach, Reachability::Unreachable));
         assert!(snap.members[1].cpu.is_none());
+        assert!(snap.members[1].logical_cpus.is_none());
         assert!(snap.members[1].memory.is_none());
         assert!(snap.members[1].load.is_none());
         assert!(matches!(snap.members[1].gate, Gate::Open));
@@ -590,6 +605,32 @@ mod tests {
                 leading_process: Some(name),
             } => assert_eq!(name, "Xcode"),
             other => panic!("expected Xcode blocking the member, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn capacity_is_independent_of_utilization_and_requires_a_positive_count() {
+        let mut raw = data(include_str!("../tests/fixtures/fleet.json"));
+        let members = raw["members"].as_array_mut().unwrap();
+        members[0]["status"]["machine"]["cpu_utilization"] = Value::Null;
+        members[1]["status"]["machine"]["logical_cpus"] = 0.into();
+        members[2]["status"]["machine"]
+            .as_object_mut()
+            .unwrap()
+            .remove("logical_cpus");
+        let snapshot = snapshot_from_value(&raw).unwrap();
+        assert_eq!(snapshot.members[0].logical_cpus, NonZeroU32::new(12));
+        assert!(snapshot.members[0].cpu.is_none());
+        for member in &snapshot.members[1..] {
+            assert!(member.logical_cpus.is_none());
+            assert!(member.cpu.is_some());
+            assert!(member.load.is_some());
+        }
+        for invalid in [(-1).into(), (u64::from(u32::MAX) + 1).into(), "12".into()] {
+            raw["members"][1]["status"]["machine"]["logical_cpus"] = invalid;
+            let snapshot = snapshot_from_value(&raw).unwrap();
+            assert!(snapshot.members[1].logical_cpus.is_none());
+            assert!(snapshot.members[1].load.is_some());
         }
     }
 
