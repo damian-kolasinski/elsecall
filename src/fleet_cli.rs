@@ -14,6 +14,8 @@ use std::time::Duration;
 
 /// Fleet operations wait for every member's answer, each bounded by its own timeout.
 const TIMEOUT: Duration = Duration::from_secs(15);
+/// Browsing longer finds nothing more on a local network.
+const MAX_BROWSE: Duration = Duration::from_secs(30);
 
 #[derive(Args)]
 #[command(args_conflicts_with_subcommands = true)]
@@ -26,6 +28,12 @@ pub struct FleetArgs {
 enum FleetCommand {
     /// Print this member's name, key, endpoints and the code another member enrols it with
     Identity,
+    /// List the Macs on the local network, whether Remote Login is on, and which are members
+    Nearby {
+        /// How long to browse the network before resolving what answered
+        #[arg(long, default_value = "2s", value_parser = humantime::parse_duration)]
+        browse: Duration,
+    },
     /// Enrol another machine by the code its `fleet identity` printed (step 1 of 2)
     Enroll {
         code: String,
@@ -108,6 +116,9 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
         None => {
             let data = client::get_large_within(&socket, "/v1/fleet", TIMEOUT).await?;
             return Ok((data, true));
+        }
+        Some(FleetCommand::Nearby { browse }) => {
+            return crate::nearby_cli::run(paths, browse.min(MAX_BROWSE)).await;
         }
         Some(FleetCommand::Identity) => (Method::GET, "/v1/fleet/identity", None),
         Some(FleetCommand::Enroll {

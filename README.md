@@ -245,6 +245,7 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall copies` | The copies of other members' workspaces this machine holds, their object stores and sizes, free space and recent removals (see "Housekeeping of copies") |
 | `elsecall copies prune [--dry-run]` | Run a housekeeping pass now, or report what it would remove |
 | `elsecall fleet identity` | This member's name, public key, tailnet endpoints and member code |
+| `elsecall fleet nearby [--browse 2s]` | The Macs on the local network, whether Remote Login is on, and which are members (see "Finding Macs nearby") |
 | `elsecall fleet enroll <code> [--awaiting-provisioning]` / `join <code>` | Enrol another machine (on a member), then join (on that machine) |
 | `elsecall fleet ready <name>` | Mark a member awaiting provisioning ready, so placement may give it work |
 | `elsecall fleet remove <name>` / `leave` | Remove a member (on another member), then forget the fleet (on that machine) |
@@ -1778,6 +1779,24 @@ at one second. Offers and mutations never retry automatically. A failed quote
 leaves that member out while placement continues with eligible responding members.
 Sync and result streams keep their longer exchange/inactivity bounds. See the
 [harness peer-I/O contract](docs/tuning-harness.md#peer-io-diagnosis-and-bounds).
+
+**Finding Macs nearby.** `elsecall fleet nearby` lists the Macs on the local network,
+the first step of [Adding a Mac](docs/add-mac.md). It browses Bonjour for `_ssh._tcp`
+(Remote Login on) and `_companion-link._tcp` (most Macs while Continuity is on), keeps
+the hosts whose `_device-info._tcp` model is a Mac model identifier (or SSH hosts that
+report none), and prints one entry per host: `name`, `host` (such as
+`macbook-pro.local`), `addresses` (IPv4 first, without unscoped link-local IPv6),
+`model`, `remote_login` (`on` with `ssh_port`, or `off`) and `membership`. A Mac is a
+`member` (with `member` naming it) when its host name and one of its addresses match
+what that member reports; a name match alone is a `possible_member`, since default
+Mac names repeat across networks. Members report their Bonjour `local_host_name` and
+`lan_addresses` in machine inspection for this. Macs that can be added come first,
+then those with Remote Login off, SSH hosts without a model, and members; `next_step`
+suggests only a Mac that can be added. It browses in the CLI's own process while it
+asks the service for the fleet; when macOS Local Network privacy denies that process,
+it fails with `local_network_denied`, and with `bonjour_unavailable` when the system's
+Bonjour service does not answer. Listing is best effort: a Mac that does not
+advertise itself can still be added by host name or address.
 
 Enrolment takes a step on each machine. Member codes contain only public keys and
 endpoints; carry them between machines yourself (for example over ssh):

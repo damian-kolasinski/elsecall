@@ -36,6 +36,8 @@ impl MachineInspector for FakeMachine {
     fn inspect(&self) -> Result<Machine> {
         Ok(Machine {
             hostname: Some("test-member.local".into()),
+            local_host_name: None,
+            lan_addresses: None,
             os: "macos".into(),
             os_version: None,
             architecture: "aarch64".into(),

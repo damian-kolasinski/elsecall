@@ -93,6 +93,8 @@ impl MachineInspector for MacMachine {
         let load = sysinfo::System::load_average();
         Ok(Machine {
             hostname: sysinfo::System::host_name(),
+            local_host_name: super::local_host_name::local_host_name(),
+            lan_addresses: Some(super::lan_addresses::lan_addresses()),
             os: "macos".into(),
             os_version: sysinfo::System::os_version(),
             architecture: std::env::consts::ARCH.into(),
