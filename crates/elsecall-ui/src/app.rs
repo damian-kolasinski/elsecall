@@ -13,6 +13,7 @@ use crate::refresh::{self, Update};
 use crate::release_source::{self, ReleaseSnapshot};
 use crate::socket_source;
 use crate::theme;
+use crate::uninstalled::{self, Bundle};
 use crate::view;
 use crate::window_upgrade::{self, UpgradeState, WindowUpgrade};
 use elsecall::release_update::{Job, Phase as ReleasePhase, Status as ReleaseStatus};
@@ -81,6 +82,7 @@ pub struct AppState {
     release_start: Latest<Result<Job, String>>,
     opened_at_ms: u64,
     release_disconnected: bool,
+    bundle: Arc<dyn Bundle>,
     pub(crate) onboarding: crate::onboarding::Onboarding,
 }
 
@@ -297,6 +299,14 @@ impl AppState {
                 self.phase = Phase::Ready(snapshot);
             }
             Err(failure) => {
+                // Uninstall stops the service before it removes the CLI link and the
+                // app, so a window that cannot reach the service and finds both gone
+                // was uninstalled. A service that answers with an error is still there.
+                if matches!(failure, SourceFailure::ServiceUnavailable { .. })
+                    && self.bundle.uninstalled()
+                {
+                    self.bundle.quit();
+                }
                 let last = self.shown().cloned();
                 self.phase = Phase::Unavailable { failure, last };
             }
@@ -371,6 +381,7 @@ fn init() -> AppState {
         release_start: Latest::default(),
         opened_at_ms: elsecall::release_update::now_millis(),
         release_disconnected: false,
+        bundle: Arc::new(uninstalled::RunningBundle::current()),
         onboarding: crate::onboarding::Onboarding::new(
             Arc::new(crate::onboarding_socket::SocketPreparation),
             Box::new(crate::airdrop::AirDrop::default()),
@@ -1101,6 +1112,58 @@ mod tests {
         let failure = state.failure().unwrap();
         assert!(failure.hint().contains("elsecall install"));
         assert!(failure.hint().contains("elsecall service restart"));
+    }
+
+    struct Bundle {
+        uninstalled: std::sync::atomic::AtomicBool,
+        quits: std::sync::atomic::AtomicUsize,
+    }
+    impl crate::uninstalled::Bundle for Bundle {
+        fn uninstalled(&self) -> bool {
+            self.uninstalled.load(std::sync::atomic::Ordering::SeqCst)
+        }
+        fn quit(&self) {
+            self.quits.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+
+    #[test]
+    fn the_window_closes_once_the_service_is_unreachable_and_it_was_uninstalled() {
+        use std::sync::atomic::Ordering;
+        let bundle = Arc::new(Bundle {
+            uninstalled: false.into(),
+            quits: 0.into(),
+        });
+        let mut state = init();
+        state.bundle = bundle.clone();
+        let unavailable = || Update {
+            result: Err(SourceFailure::ServiceUnavailable {
+                message: "The local service could not be reached.".into(),
+                hint: "Run elsecall install if absent, or elsecall service restart if installed."
+                    .into(),
+            }),
+            refreshed_at: "14:32:07".into(),
+        };
+        // A service restart, as during an update, keeps the window.
+        state.apply_refresh(unavailable());
+        assert_eq!(bundle.quits.load(Ordering::SeqCst), 0);
+        bundle.uninstalled.store(true, Ordering::SeqCst);
+        // A service that answers, even with an error, keeps it too.
+        state.apply_refresh(Update {
+            result: Ok(solo_snapshot()),
+            refreshed_at: "14:32:09".into(),
+        });
+        state.apply_refresh(Update {
+            result: Err(SourceFailure::Rejected {
+                message: "The fleet response could not be read.".into(),
+                hint: "Reinstall matching CLI and service versions with elsecall install.".into(),
+            }),
+            refreshed_at: "14:32:11".into(),
+        });
+        assert_eq!(bundle.quits.load(Ordering::SeqCst), 0);
+        // Uninstalled: no service, no app and no CLI link.
+        state.apply_refresh(unavailable());
+        assert_eq!(bundle.quits.load(Ordering::SeqCst), 1);
     }
 
     #[test]

@@ -292,9 +292,22 @@ pub fn installed(paths: &Paths) -> Result<bool> {
         && paths.plist().is_file())
 }
 
+/// What an uninstall left in the state directory.
+#[derive(Debug, Serialize)]
+pub struct Kept {
+    pub directory: std::path::PathBuf,
+    /// The names left directly in `directory`, sorted.
+    pub entries: Vec<String>,
+    pub hint: &'static str,
+}
+
 /// Removes the installation. While this machine is enrolled in a fleet, removal would
 /// discard its member key, so it is refused unless forced.
-pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Result<()> {
+///
+/// State a later install still needs, the operator's own fleet configuration and
+/// files Elsecall does not recognize stay; the uninstall still succeeds and
+/// returns what stayed.
+pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Result<Option<Kept>> {
     if !force && paths.fleet_membership().symlink_metadata().is_ok() {
         return Err(Failure::new(
             "fleet_member",
@@ -308,7 +321,7 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
         .map_err(|e| Failure::io("Inspect installation", e))?
     {
         if !owns_links(paths) {
-            return Ok(());
+            return Ok(None);
         }
         // The links prove ownership of a deleted state directory. Recreate it so
         // removal holds the installation lock like every other lifecycle operation.
@@ -377,12 +390,22 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
     crate::release_update::store::remove(paths)?;
     crate::window_app::remove_locked(paths);
     match fs::remove_dir(&paths.data) {
-        Ok(()) => Ok(()),
-        Err(e) if e.kind() == std::io::ErrorKind::DirectoryNotEmpty => Err(Failure::new(
-            "files_preserved",
-            "Elsecall was uninstalled; backups or unrecognized files remain in its state directory.",
-            "Inspect and remove the remaining files manually if no longer needed.",
-        )),
+        Ok(()) => Ok(None),
+        Err(e) if e.kind() == std::io::ErrorKind::DirectoryNotEmpty => {
+            let mut entries = fs::read_dir(&paths.data)
+                .and_then(|entries| {
+                    entries
+                        .map(|entry| entry.map(|e| e.file_name().to_string_lossy().into_owned()))
+                        .collect::<std::io::Result<Vec<_>>>()
+                })
+                .map_err(|e| Failure::io("List the kept files", e))?;
+            entries.sort();
+            Ok(Some(Kept {
+                directory: paths.data.clone(),
+                entries,
+                hint: "Elsecall keeps these because a later install still needs them, they are your fleet's configuration, or it does not recognize them; README \"Uninstall\" says which is which. Remove them yourself when you no longer need them.",
+            }))
+        }
         Err(e) => Err(Failure::io("Remove state directory", e)),
     }
 }
@@ -399,7 +422,7 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
 /// - `rehearsal-session.json`, which exists only after an interrupted rehearsal
 ///   and lets the next service clean up after it.
 ///
-/// Whatever is kept makes uninstall end with `files_preserved`.
+/// Uninstall lists whatever is kept.
 fn remove_service_state(data: &Path) -> Result<()> {
     for database in [
         "load.sqlite",

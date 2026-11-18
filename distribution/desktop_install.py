@@ -1,4 +1,5 @@
-"""Install a release on this CI runner, require its window to open, then remove it.
+"""Install a release on this CI runner, require its window to open, then remove it
+and require the window to close and the CLI's mise request to go with it.
 
 This replaces the runner's own Elsecall installation, so it refuses to run outside
 GitHub Actions. Pass an archive to install from it, or --script to run the
@@ -11,6 +12,7 @@ import json
 import os
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 import archive_contents
@@ -31,6 +33,29 @@ def opened_window(output):
     if window.get("state") != "opened":
         raise RuntimeError(f"the window did not open: {json.dumps(window)}")
     return window
+
+
+def uninstalled(output, mise):
+    """`elsecall uninstall`'s result, which must report the mise request as `mise`."""
+    document = json.loads(output)
+    data = document.get("data", {})
+    if data.get("status") != "uninstalled":
+        raise RuntimeError(f"uninstall did not finish: {output}")
+    if data.get("mise", {}).get("state") != mise:
+        raise RuntimeError(f"the mise request is not {mise}: {json.dumps(data.get('mise'))}")
+    return data
+
+
+WINDOW = "/Elsecall.app/Contents/MacOS/Elsecall"
+
+
+def window_closes(within=20):
+    """Waits for every window running from the published app to exit."""
+    deadline = time.monotonic() + within
+    while subprocess.run(["pgrep", "-f", WINDOW], capture_output=True, check=False).returncode == 0:
+        if time.monotonic() > deadline:
+            raise RuntimeError(f"the window still runs {within} s after uninstall")
+        time.sleep(0.5)
 
 
 def run(arguments, **options):
@@ -79,9 +104,13 @@ def main():
             raise RuntimeError(f"installed {reported!r}, not release {args.expect_version}")
     if run([str(cli), "status"]).returncode != 0:
         raise RuntimeError("the installed service is not ready")
-    if run([str(cli), "uninstall"]).returncode != 0:
+    removed = run([str(cli), "uninstall"])
+    if removed.returncode != 0:
         raise RuntimeError("uninstall failed")
-    print(json.dumps({"window": window, "uninstalled": True}))
+    # Only the one-command installer requests the CLI in mise.
+    data = uninstalled(removed.stdout, "removed" if args.script else "absent")
+    window_closes()
+    print(json.dumps({"window": window, "uninstalled": True, "mise": data["mise"]}))
 
 
 if __name__ == "__main__":

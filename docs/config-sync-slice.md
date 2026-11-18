@@ -311,4 +311,4 @@ The devbox's `config.toml` was restored to empty afterwards.
   the member's overrides, or outside synced paths.
 - A member that missed a push (offline, newly enrolled) catches up at its next placed run or the next `sync push`.
 - `uninstall` leaves `config-sync/` (replicas and backups) in the state directory
-  and reports `files_preserved`, as it does for other state.
+  and lists it under `kept`, as it does for other state.

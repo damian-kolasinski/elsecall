@@ -30,6 +30,15 @@ class DesktopInstall(unittest.TestCase):
             with self.subTest(window=window["state"]), self.assertRaises(RuntimeError):
                 desktop_install.opened_window(result(window))
 
+    def test_uninstall_must_report_the_expected_mise_request(self):
+        removed = {"state": "removed", "config": "/Users/me/.config/mise/config.toml", "version": "0.2.2"}
+        output = json.dumps({"schema_version": 1, "data": {"status": "uninstalled", "mise": removed}})
+        self.assertEqual(desktop_install.uninstalled(output, "removed")["mise"], removed)
+        with self.assertRaises(RuntimeError):
+            desktop_install.uninstalled(output, "absent")
+        with self.assertRaises(RuntimeError):
+            desktop_install.uninstalled(json.dumps({"schema_version": 1, "data": {"status": "x"}}), "absent")
+
 
 if __name__ == "__main__":
     unittest.main()

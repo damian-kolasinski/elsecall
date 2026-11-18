@@ -42,11 +42,15 @@ enum Command {
         #[arg(long)]
         open: bool,
     },
-    /// Stop the service and remove Elsecall-owned installation files
+    /// Stop the service, remove Elsecall-owned installation files and the window, and
+    /// Elsecall's request in mise's global configuration
     Uninstall {
         /// Uninstall even though this machine is enrolled in a fleet (deletes its member key)
         #[arg(long)]
         force: bool,
+        /// Keep Elsecall's request in mise's global configuration, which the installer added
+        #[arg(long)]
+        keep_mise: bool,
     },
     /// Open the fleet window installed with this CLI release
     Ui,
@@ -367,9 +371,21 @@ async fn run(cli: Cli) -> Result<bool> {
             output(data);
             return Ok(complete);
         }
-        Command::Uninstall { force } => {
-            installation::uninstall(&paths, manager, force)?;
-            output(serde_json::json!({"status": "uninstalled"}));
+        Command::Uninstall { force, keep_mise } => {
+            let uninstalled = elsecall::uninstall::uninstall(
+                &paths,
+                manager,
+                &elsecall::release_update::helper::production_selection(&paths),
+                force,
+                if keep_mise {
+                    elsecall::uninstall::Request::Keep
+                } else {
+                    elsecall::uninstall::Request::Remove
+                },
+            )?;
+            let complete = uninstalled.complete();
+            output(uninstalled);
+            return Ok(complete);
         }
         Command::Ui => {
             let launched = client::post_within::<serde_json::Value>(
