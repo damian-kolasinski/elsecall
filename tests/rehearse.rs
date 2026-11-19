@@ -1031,7 +1031,7 @@ fn service_snapshots(alpha: &TestMember) -> std::collections::BTreeMap<String, V
     }
 }
 fn sealed_service(member: &TestMember) -> Vec<u8> {
-    use elsecall::config_sync::{
+    use elsecall_config_sync::config_sync::{
         state::State,
         store::{FileStore, ReplicaStore},
     };

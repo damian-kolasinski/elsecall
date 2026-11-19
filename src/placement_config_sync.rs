@@ -1,7 +1,7 @@
 //! Placement's way to bring a member's synced configuration up to date before a
 //! run starts there: the adapter of `scheduling::pre_run_sync::PreRunSync` over
 //! configuration sync.
-use crate::config_sync::{
+use elsecall_config_sync::config_sync::{
     compare::Change,
     report::Applied,
     service::{ConfigSync, MemberSync},
@@ -76,7 +76,7 @@ fn pushed(applied: &Applied) -> Vec<PushedPath> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config_sync::history::{FileRecord, PathRecord};
+    use elsecall_config_sync::config_sync::history::{FileRecord, PathRecord};
     use elsecall_config_sync_model::synced_path::SyncedPath;
 
     fn file(change: Change, size: Option<u64>) -> FileRecord {

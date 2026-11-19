@@ -1069,6 +1069,7 @@ dependencies = [
  "elsecall-agent-skill",
  "elsecall-api-response",
  "elsecall-build-identity",
+ "elsecall-config-sync",
  "elsecall-config-sync-model",
  "elsecall-failure",
  "elsecall-fleet",
@@ -1183,6 +1184,43 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+]
+
+[[package]]
+name = "elsecall-config-sync"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "clap",
+ "elsecall-api-response",
+ "elsecall-config-sync-model",
+ "elsecall-failure",
+ "elsecall-fleet",
+ "elsecall-local-client",
+ "elsecall-local-state",
+ "elsecall-membership",
+ "elsecall-peer-transport",
+ "elsecall-rehearsal-identity",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-secure-channel",
+ "elsecall-service-config",
+ "elsecall-service-log",
+ "elsecall-wire",
+ "elsecall-workspace",
+ "futures-util",
+ "getrandom 0.3.4",
+ "hyper",
+ "hyper-util",
+ "libc",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "toml",
+ "zeroize",
 ]
 
 [[package]]

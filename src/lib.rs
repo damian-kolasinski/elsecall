@@ -3,10 +3,6 @@
 pub mod add_mac_cli;
 pub mod admission_api;
 pub mod admission_cli;
-pub mod config_sync;
-pub mod config_sync_api;
-pub mod config_sync_cli;
-pub mod config_sync_local_api;
 pub mod fleet_cli;
 pub mod fleet_upgrade;
 pub mod fleet_upgrade_api;
@@ -23,7 +19,6 @@ pub mod placement_config_sync;
 pub mod placement_host;
 pub mod run_relay;
 pub mod server;
-pub mod service_configuration;
 pub mod service_handover;
 pub mod service_relaunch;
 pub mod ui_app;

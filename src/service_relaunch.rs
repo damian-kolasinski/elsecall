@@ -1,5 +1,5 @@
 //! Automatic service configuration application at an atomic idle boundary.
-use crate::config_sync::service::ConfigSync;
+use elsecall_config_sync::config_sync::service::ConfigSync;
 use elsecall_failure::{Failure, Result};
 use elsecall_scheduling::service::Scheduler;
 use std::{os::unix::process::CommandExt, sync::Arc, time::Duration};

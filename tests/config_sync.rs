@@ -5,7 +5,7 @@ mod diagnostics;
 mod members;
 mod processes;
 
-use elsecall::config_sync::{
+use elsecall_config_sync::config_sync::{
     manifest::{FileNode, Manifest, Node, Tree},
     protocol::{self, Message, Purpose},
     state::State,

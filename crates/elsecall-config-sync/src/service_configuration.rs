@@ -31,7 +31,7 @@ pub struct Temporary {
     pub members: BTreeMap<MemberName, Projection>,
     /// Length of the original document prefix. Older leases lacked this field.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(crate) baseline_len: Option<usize>,
+    pub baseline_len: Option<usize>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -223,7 +223,7 @@ pub fn read(path: &Path) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::service_configuration::*;
     #[test]
     fn lease_round_trip_preserves_source_bytes_and_validates_its_prefix() {
         for original in [
