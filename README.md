@@ -2443,7 +2443,8 @@ them after it with `cargo test --doc`.
 
 `mise run check:affected` compares the branch with its merge base on
 `mergegate/main` (or `--base REF`), including uncommitted and untracked files, and
-runs formatting and Clippy for the whole workspace, then only the tests those
+runs formatting, Clippy and the module shape check (`scripts/module_shape.py`) for
+the whole workspace, then only the tests those
 paths can affect. `--dry-run` prints each changed path, what it selects and the
 commands. A change to the `elsecall` library or executable, a manifest, the lock
 file, the toolchain or the test environment runs every test. A test binary runs

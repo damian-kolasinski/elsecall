@@ -7,6 +7,7 @@ cargo nextest --version >/dev/null 2>&1 || {
   exit 1
 }
 cargo fmt --all -- --check
+python3 scripts/module_shape.py
 cargo clippy --workspace --locked --all-targets -- -D warnings
 scripts/check-local-channel.sh
 if [ -d scripts/vm ]; then

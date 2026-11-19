@@ -1,0 +1,27 @@
+# The module shape check (scripts/module_shape.py): file size, folder breadth
+# and catch-all names, with ceilings that only go down. A second or two on
+# Linux, so it runs on every pull request and on main. It needs only Python and
+# git, never a Rust build.
+name: Module shape
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: module-shape-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  shape:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # The base follows renames and holds the exceptions list to the base's.
+      - name: Check module shape against the base
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: python3 scripts/module_shape.py --base "$BASE"
