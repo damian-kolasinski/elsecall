@@ -1436,7 +1436,6 @@ dependencies = [
  "clap",
  "elsecall-api-response",
  "elsecall-contract",
- "elsecall-fleet",
  "elsecall-host",
  "elsecall-peers",
  "elsecall-scheduling",

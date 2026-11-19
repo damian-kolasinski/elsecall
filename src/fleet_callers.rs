@@ -1,13 +1,13 @@
 //! Housekeeping's view of the fleet: which members exist, and how a question
 //! reaches the member that owns copies here. The adapter of
 //! `housekeeping::callers::Callers` over the authenticated member API.
-use crate::housekeeping::{
-    callers::Callers,
-    exchange::{Answer, Question, ROUTE},
-};
 use elsecall_contract::failure::Result;
 use elsecall_fleet::fleet::Fleet;
 use elsecall_peers::peer_client;
+use elsecall_workspace::housekeeping::{
+    callers::Callers,
+    exchange::{Answer, Question, ROUTE},
+};
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};
@@ -15,12 +15,12 @@ use std::{sync::Arc, time::Duration};
 /// How long a member may take to answer; it checks paths on its own disk.
 const ASK_TIMEOUT: Duration = Duration::from_secs(20);
 
-pub struct FleetCallers {
+pub(crate) struct FleetCallers {
     fleet: Arc<Fleet>,
 }
 
 impl FleetCallers {
-    pub fn new(fleet: Arc<Fleet>) -> Self {
+    pub(crate) fn new(fleet: Arc<Fleet>) -> Self {
         Self { fleet }
     }
 }

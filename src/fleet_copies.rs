@@ -1,11 +1,11 @@
 //! What the fleet reports of this member's copies: the adapter of
 //! `fleet::CopiesReport` over housekeeping.
-use crate::housekeeping::pass::Housekeeper;
 use elsecall_contract::failure::Result;
 use elsecall_fleet::fleet::{CopiesDisk, CopiesReport, CopiesUsage};
+use elsecall_workspace::housekeeping::pass::Housekeeper;
 use std::sync::Arc;
 
-pub struct FleetCopies(pub Arc<Housekeeper>);
+pub(crate) struct FleetCopies(pub Arc<Housekeeper>);
 
 impl CopiesReport for FleetCopies {
     fn usage(&self) -> Result<CopiesUsage> {

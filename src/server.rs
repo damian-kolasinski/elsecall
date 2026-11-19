@@ -1,3 +1,4 @@
+use crate::fleet_callers::FleetCallers;
 use crate::{peer_api, peer_listener};
 use axum::{
     Json, Router,
@@ -15,17 +16,14 @@ use elsecall_peers::{member_key::MemberKey, membership_store::MembershipStore};
 use elsecall_runs::run_relay;
 use elsecall_runs::{placement_api, placement_host::PlacementHost};
 use elsecall_scheduling::service::{Adapters, Scheduler};
-use elsecall_workspace::{copies::Copies, location::Locations, object_sources::ObjectSources};
-use elsecall_workspace::{
-    fleet_callers::FleetCallers,
-    housekeeping::{
-        self,
-        caller_state::CallerState,
-        callers::{Callers, Nobody},
-        catalog::Catalog,
-        pass::{Housekeeper, Parts},
-    },
+use elsecall_workspace::housekeeping::{
+    self,
+    caller_state::CallerState,
+    callers::{Callers, Nobody},
+    catalog::Catalog,
+    pass::{Housekeeper, Parts},
 };
+use elsecall_workspace::{copies::Copies, location::Locations, object_sources::ObjectSources};
 use std::{
     fs,
     os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},
@@ -385,7 +383,7 @@ pub async fn serve_with_updates(
         }))
     };
     if let Ok(fleet) = &fleet {
-        fleet.report_copies(Arc::new(elsecall_workspace::fleet_copies::FleetCopies(
+        fleet.report_copies(Arc::new(crate::fleet_copies::FleetCopies(
             housekeeper.clone(),
         )));
         fleet.report_load(load_log.clone());
@@ -453,9 +451,7 @@ pub async fn serve_with_updates(
     let fleet_routes = match fleet {
         Ok(fleet) => {
             let mut member_routes = placement_api::routes(host)
-                .merge(elsecall_workspace::workspace_check_api::routes(
-                    caller_state,
-                ))
+                .merge(crate::workspace_check_api::routes(caller_state))
                 .merge(elsecall_reports::report_api::peer_routes(reporter.clone()))
                 .merge(elsecall_tuning::trace_api::peer_routes(reporter.clone()))
                 .merge(elsecall_tuning::rehearsal_api::peer_routes(

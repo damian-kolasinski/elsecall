@@ -9,8 +9,6 @@ mod copy;
 mod copy_record;
 pub mod digest;
 mod file_clone;
-pub mod fleet_callers;
-pub mod fleet_copies;
 pub mod framed_link;
 pub mod git;
 mod head;
@@ -31,7 +29,6 @@ pub mod snapshot;
 mod staging;
 mod stat_cache;
 pub mod sync;
-pub mod workspace_check_api;
 
 use elsecall_contract::failure::Failure;
 
