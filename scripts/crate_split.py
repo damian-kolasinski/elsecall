@@ -233,7 +233,9 @@ def absolute(segments: list[str], context: Context, nested: Path_) -> Path_ | No
         return rest if context.root == "crate" else None
     if first == LIBRARY:
         return rest if context.root == LIBRARY else None
-    if first in ("super", "self") and context.reparented:
+    # Files that stay may reach moved siblings through `super::`; files that
+    # move keep their structure, except those whose parent changes.
+    if first in ("super", "self") and (context.reparented or not context.moving):
         here = context.here + nested
         if first == "self":
             return here + rest
