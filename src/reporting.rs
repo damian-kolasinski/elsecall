@@ -37,7 +37,4 @@ pub mod run_phases;
 pub mod statistics;
 pub mod window;
 
-#[cfg(test)]
-pub(crate) mod fixtures;
-
 pub mod tuning;

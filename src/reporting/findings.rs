@@ -924,12 +924,12 @@ pub fn findings(metrics: &Metrics, gathered: &Gathered) -> Vec<Finding> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
     use crate::{
         outside_pressure::sampling::Owner,
         reporting::{
             document::{Gathered, MemberInput, Query, RecordsRead, document},
             facts::Fact,
-            fixtures::{self, MINUTE, Run, T0, bucket},
             leftovers::LeftoverFact,
             window::Window,
         },
@@ -1650,7 +1650,7 @@ mod tests {
                 MemberInput {
                     // What the member recorded: fseventsd hung at 56 GB.
                     outside: Ok(crate::reporting::outside::OutsideHistory {
-                        episodes: vec![fixtures::episode(
+                        episodes: vec![crate::outside_pressure::fixtures::episode(
                             incident_at(108 * 60),
                             Some(incident_at(490 * 60)),
                             &[("fseventsd", 56 << 30, 1.0), ("mds_stores", 2 << 30, 0.1)],
@@ -1863,7 +1863,11 @@ mod tests {
     fn the_remedy_names_the_leading_process_and_suits_its_owner() {
         use crate::outside_pressure::sampling::Owner;
         let process = |name: &str, owner, footprint| {
-            let mut episode = fixtures::episode(incident_start(), None, &[(name, 3 << 29, 2.5)]);
+            let mut episode = crate::outside_pressure::fixtures::episode(
+                incident_start(),
+                None,
+                &[(name, 3 << 29, 2.5)],
+            );
             let mut process = episode.blocked.outside.remove(0);
             process.owner = owner;
             process.memory.footprint_bytes = footprint;
@@ -1912,8 +1916,11 @@ mod tests {
             |m| (60..210).contains(&m).then_some(Pressure::CpuSaturation),
             |_| 0.0,
         ));
-        let mut episode =
-            fixtures::episode(incident_at(3600), None, &[("mds_stores", 1 << 30, 7.9)]);
+        let mut episode = crate::outside_pressure::fixtures::episode(
+            incident_at(3600),
+            None,
+            &[("mds_stores", 1 << 30, 7.9)],
+        );
         episode.blocked.reason = crate::outside_pressure::blocked::Reason::OutsideSaturation {
             outside_utilization: 0.97,
         };

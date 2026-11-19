@@ -62,7 +62,7 @@ mod tests {
             "/peer/v1/config-sync/status",
             "/peer/v1/workspaces/check",
             "/peer/v1/report/facts",
-            crate::fleet_tool_inventory::PEER_ROUTE,
+            "/peer/v1/tools/inventory",
             "/peer/v1/status/../placements",
         ] {
             let refused = refusal(work, Some(&own), Some(other)).expect(work);

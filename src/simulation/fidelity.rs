@@ -592,7 +592,7 @@ pub fn compare(
 mod tests {
     use super::*;
     use crate::{
-        reporting::fixtures,
+        scheduling::fixtures,
         scheduling::{record::WorkspaceIdentity, records::SchedulerSettings},
         workload::trace::{Member, VERSION},
     };

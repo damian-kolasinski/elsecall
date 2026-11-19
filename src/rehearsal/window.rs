@@ -422,7 +422,7 @@ fn slice(source: &Trace, window: &Candidate) -> Trace {
 mod tests {
     use super::*;
     use crate::{
-        reporting::fixtures::{T0, base, bucket},
+        scheduling::fixtures::{T0, base, bucket},
         scheduling::{
             capacity::{Capacity, Cores},
             parameters::Parameters,
@@ -820,7 +820,7 @@ mod tests {
             code: "fleet_busy".into(),
         });
         refusal.fact.failure = Some("fleet_busy".into());
-        let mut decision = crate::reporting::fixtures::decision(
+        let mut decision = crate::scheduling::fixtures::decision(
             crate::scheduling::record::Verdict::FleetBusy,
             vec![],
             None,

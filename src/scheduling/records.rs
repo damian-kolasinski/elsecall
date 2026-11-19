@@ -848,7 +848,7 @@ mod tests {
     }
     #[test]
     fn synthetic_rows_cannot_displace_bounded_production_learning() {
-        use crate::reporting::fixtures::{Run, placed};
+        use crate::scheduling::fixtures::{Run, placed};
         let temp = tempfile::tempdir().unwrap();
         let records = Records::open(&temp.path().join("records.sqlite")).unwrap();
         let production = placed(Run {

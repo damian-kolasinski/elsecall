@@ -193,7 +193,7 @@ pub fn overload(
 mod tests {
     use super::*;
     use crate::{
-        reporting::fixtures::{self, MINUTE, T0, bucket},
+        scheduling::fixtures::{self, MINUTE, T0, bucket},
         scheduling::{record::Record, request::Placement},
     };
 

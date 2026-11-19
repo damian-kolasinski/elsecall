@@ -215,7 +215,7 @@ fn start_scheduler(
 mod tests {
     use super::*;
     use crate::{
-        reporting::fixtures,
+        scheduling::fixtures,
         scheduling::{
             capacity::Cores,
             clock::VirtualClock,

@@ -223,7 +223,7 @@ pub fn backtest(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reporting::fixtures;
+    use crate::scheduling::fixtures;
 
     fn close(a: Option<f64>, b: f64) -> bool {
         a.is_some_and(|a| (a - b).abs() < 1e-9)

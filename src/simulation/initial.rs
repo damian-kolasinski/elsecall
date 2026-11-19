@@ -257,7 +257,7 @@ mod tests {
     use super::*;
     use crate::{
         load_log::LoadLog,
-        reporting::fixtures,
+        scheduling::fixtures,
         scheduling::{
             capacity::Cores,
             clock::{Clock, VirtualClock},

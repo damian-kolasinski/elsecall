@@ -147,7 +147,7 @@ pub(crate) fn nested_problems(trace: &Trace) -> Vec<(String, &'static str)> {
 mod tests {
     use super::*;
     use crate::{
-        reporting::fixtures::{T0, base},
+        scheduling::fixtures::{T0, base},
         scheduling::{
             record::{HoldBasis, HoldLimitRecord, Outcome, WorkspaceIdentity},
             request::{AtDeadline, Placement, Urgency},

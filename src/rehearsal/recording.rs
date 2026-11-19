@@ -200,9 +200,9 @@ mod tests {
     /// A one-member, one-request rehearsal trace whose recording is complete.
     fn complete() -> Trace {
         use std::{collections::BTreeMap, time::Duration};
-        let start = Timestamp::from_millis(crate::reporting::fixtures::T0);
-        let record = crate::reporting::fixtures::pinned(0, "work", "a", 1.0);
-        let mut trace: Trace = serde_json::from_value(serde_json::json!({"trace_version":1,"incomplete":false,"since":start,"until":start.after(Duration::from_secs(60)),"master":"a","members":[{"member":"a","errors":[],"load":[crate::reporting::fixtures::bucket(0,0.1,0.0,0,0,1.0)],"scheduler_settings":[{"at":start,"capacity":{"weighted_cores":10,"reserved":0,"capacity":10},"parameters":{}}]}],"requests":[Request::of(&record).unwrap()],"leftovers":[],"demand":[],"contention":[],"limits":[]})).unwrap();
+        let start = Timestamp::from_millis(crate::scheduling::fixtures::T0);
+        let record = crate::scheduling::fixtures::pinned(0, "work", "a", 1.0);
+        let mut trace: Trace = serde_json::from_value(serde_json::json!({"trace_version":1,"incomplete":false,"since":start,"until":start.after(Duration::from_secs(60)),"master":"a","members":[{"member":"a","errors":[],"load":[crate::scheduling::fixtures::bucket(0,0.1,0.0,0,0,1.0)],"scheduler_settings":[{"at":start,"capacity":{"weighted_cores":10,"reserved":0,"capacity":10},"parameters":{}}]}],"requests":[Request::of(&record).unwrap()],"leftovers":[],"demand":[],"contention":[],"limits":[]})).unwrap();
         let session = "a".repeat(24);
         let id = trace.requests[0].fact.run_id.clone();
         trace.requests[0].fact.synthetic = true;

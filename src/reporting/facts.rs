@@ -302,7 +302,7 @@ impl Fact {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reporting::fixtures::{self, Run};
+    use crate::scheduling::fixtures::{self, Run};
 
     #[test]
     fn a_placed_run_carries_what_was_predicted_where_it_ran() {

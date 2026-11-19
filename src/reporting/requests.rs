@@ -201,7 +201,7 @@ pub fn work(facts: &[Fact], members: &[&str]) -> BTreeMap<String, Work> {
 mod tests {
     use super::*;
     use crate::{
-        reporting::fixtures::{self, Run},
+        scheduling::fixtures::{self, Run},
         scheduling::{
             placement::Source,
             record::{Outcome, Verdict},

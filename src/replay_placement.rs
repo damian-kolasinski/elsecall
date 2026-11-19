@@ -128,7 +128,7 @@ pub fn split(trace: &Trace) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{reporting::fixtures, scheduling::timestamp::Timestamp, workload::trace::Request};
+    use crate::{scheduling::fixtures, scheduling::timestamp::Timestamp, workload::trace::Request};
     fn trace() -> Trace {
         let mut r = Request::of(&fixtures::pinned(1, "acme test Checkout", "master", 1.0)).unwrap();
         r.fact.family = Some("acme test *".into());

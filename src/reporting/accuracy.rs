@@ -396,7 +396,7 @@ fn speed_conversion(facts: &[Fact], context: &Context) -> Vec<SpeedConversion> {
 mod tests {
     use super::*;
     use crate::{
-        reporting::fixtures::{self, Run},
+        scheduling::fixtures::{self, Run},
         scheduling::placement::Source,
     };
 

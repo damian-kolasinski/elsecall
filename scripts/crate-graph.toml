@@ -42,6 +42,10 @@ modules = ["failure"]
 band = "foundation"
 modules = ["label_pattern", "label_rules"]
 
+[crates.rehearsal-identity]
+band = "foundation"
+modules = ["rehearsal_identity"]
+
 [crates.wire]
 band = "foundation"
 modules = ["api", "wire"]

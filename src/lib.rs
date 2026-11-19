@@ -130,6 +130,7 @@ pub mod trace_snapshot;
 
 pub mod rehearsal;
 pub mod rehearsal_api;
+pub mod rehearsal_identity;
 pub mod rehearse_cli;
 
 pub mod tune_cli;

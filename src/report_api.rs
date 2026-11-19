@@ -262,13 +262,13 @@ async fn peer_io(body: Bytes) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scheduling::fixtures::{self, bucket};
     use crate::{
         inspection::{MemoryPressure, ThermalState},
         peer_client::RESPONSE_LIMIT,
         report_protocol::PAGE,
         reporting::{
             facts::{Estimator, Fact, Predicted},
-            fixtures::{self, bucket},
             window::FINE_BUCKETS,
         },
     };
@@ -326,7 +326,7 @@ mod tests {
         // The most episodes, each naming the most processes by the longest
         // names, of four-byte characters.
         // Every timestamp serializes to the same length.
-        let mut episode = fixtures::episode(
+        let mut episode = crate::outside_pressure::fixtures::episode(
             Timestamp::from_millis(fixtures::T0),
             Some(Timestamp::from_millis(fixtures::T0)),
             &[],
@@ -357,9 +357,9 @@ mod tests {
     fn the_largest_report_fits_the_cli_response() {
         use crate::reporting::{
             document::{Gathered, MemberInput, Query, RecordsRead, document},
-            fixtures::{Run, T0},
             window::{MAXIMUM_PERIOD, Window},
         };
+        use crate::scheduling::fixtures::{Run, T0};
         // 50,000 requests from each of two members, every one with its own
         // longest label and failure code, and a series point per fine bucket.
         let until = Timestamp::from_millis(T0 + MAXIMUM_PERIOD.as_millis() as u64);

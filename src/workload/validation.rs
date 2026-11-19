@@ -152,7 +152,7 @@ pub fn page(mut page: Page, window: Window, before: Option<&Cursor>, member: &st
 mod tests {
     use super::*;
     use crate::{
-        reporting::fixtures::{self, Run, T0},
+        scheduling::fixtures::{self, Run, T0},
         scheduling::timestamp::Timestamp,
         workload::trace::Request,
     };

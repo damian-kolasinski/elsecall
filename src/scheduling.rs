@@ -5,6 +5,8 @@ pub mod busy;
 pub mod capacity;
 pub mod clock;
 pub mod estimates;
+#[cfg(test)]
+pub(crate) mod fixtures;
 pub mod gate;
 pub mod learning;
 pub mod leftovers;

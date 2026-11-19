@@ -212,7 +212,7 @@ pub async fn peer_io(fleet: &Fleet, window: Window, member: Option<&str>) -> ser
 mod tests {
     use super::*;
     use crate::{
-        reporting::fixtures::{self, MINUTE, Run, T0, bucket},
+        scheduling::fixtures::{self, MINUTE, Run, T0, bucket},
         scheduling::timestamp::Timestamp,
     };
 
@@ -411,7 +411,7 @@ mod tests {
 
     #[tokio::test]
     async fn outside_histories_name_processes_and_a_member_without_one_is_still_complete() {
-        let episode = fixtures::episode(
+        let episode = crate::outside_pressure::fixtures::episode(
             Timestamp::from_millis(T0),
             None,
             &[("fseventsd", 56 << 30, 1.0)],

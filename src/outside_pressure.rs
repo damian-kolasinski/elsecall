@@ -32,6 +32,8 @@ pub mod warning;
 pub mod watcher;
 
 #[cfg(test)]
+pub(crate) mod fixtures;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod warning_tests;

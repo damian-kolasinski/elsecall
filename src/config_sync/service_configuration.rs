@@ -189,13 +189,13 @@ impl ConfigSync {
         let (roster, manifest) = {
             let _issuing = self.issuing.lock().await;
             let (roster, own) = self.require_master()?;
-            if self.held() || !crate::rehearsal::protocol::valid_session(&request.session) {
-                return Err(crate::rehearsal::invalid(
+            if self.held() || !crate::rehearsal_identity::valid_session(&request.session) {
+                return Err(crate::scheduling::service::invalid_rehearsal(
                     "Invalid rehearsal or master handover in progress.",
                 ));
             }
             let base = self.replica.manifest().filter(|m| m.service.is_some())
-                .ok_or_else(|| crate::rehearsal::invalid("A/B rehearsals require fleet-synced service settings. Enable them before comparing."))?;
+                .ok_or_else(|| crate::scheduling::service::invalid_rehearsal("A/B rehearsals require fleet-synced service settings. Enable them before comparing."))?;
             let bytes = self
                 .replica
                 .store()
@@ -205,18 +205,18 @@ impl ConfigSync {
                 .temporary()
                 .is_some_and(|t| t.session != request.session && t.until > Timestamp::now())
             {
-                return Err(crate::rehearsal::invalid(
+                return Err(crate::scheduling::service::invalid_rehearsal(
                     "Another settings rehearsal is active.",
                 ));
             }
             let bytes = if let Some(until) = request.until {
                 if until <= Timestamp::now() {
-                    return Err(crate::rehearsal::invalid(
+                    return Err(crate::scheduling::service::invalid_rehearsal(
                         "A rehearsal lease must expire in the future.",
                     ));
                 }
                 if config.temporary().is_some() {
-                    return Err(crate::rehearsal::invalid(
+                    return Err(crate::scheduling::service::invalid_rehearsal(
                         "A settings lease is already present; restore it before comparing.",
                     ));
                 }
@@ -228,13 +228,15 @@ impl ConfigSync {
                         .and_then(|k| k.strip_suffix(".reserved_cores"))
                     {
                         if roster.members().iter().all(|m| m.name.as_str() != member) {
-                            return Err(crate::rehearsal::invalid(
+                            return Err(crate::scheduling::service::invalid_rehearsal(
                                 "Proposal names an unenrolled member.",
                             ));
                         }
                         let reserve =
                             crate::scheduling::capacity::Cores::parse(value).ok_or_else(|| {
-                                crate::rehearsal::invalid("Invalid proposal reserve.")
+                                crate::scheduling::service::invalid_rehearsal(
+                                    "Invalid proposal reserve.",
+                                )
                             })?;
                         reserves.insert(member.to_owned(), reserve);
                     } else if key.starts_with("placement.")
@@ -243,14 +245,14 @@ impl ConfigSync {
                     {
                         parameters.push(format!("{key}={value}"));
                     } else {
-                        return Err(crate::rehearsal::invalid(
+                        return Err(crate::scheduling::service::invalid_rehearsal(
                             "Only scheduling service settings may enter a rehearsal lease.",
                         ));
                     }
                 }
                 let overrides =
                     crate::scheduling::parameters::Overrides::parse_settings(&parameters)
-                        .map_err(crate::rehearsal::invalid)?;
+                        .map_err(crate::scheduling::service::invalid_rehearsal)?;
                 let mut members = BTreeMap::new();
                 for member in roster.members() {
                     let settings = config.resolve(&member.name)?;
@@ -312,7 +314,7 @@ impl ConfigSync {
             tokio::time::timeout(Duration::from_secs(15), validation)
                 .await
                 .map_err(|_| {
-                    crate::rehearsal::invalid(
+                    crate::scheduling::service::invalid_rehearsal(
                         "Rehearsal settings validation timed out; no settings were issued.",
                     )
                 })??;
@@ -331,7 +333,7 @@ impl ConfigSync {
             tokio::time::timeout(Duration::from_secs(15), self.push_all(roster, manifest))
                 .await
                 .map_err(|_| {
-                    crate::rehearsal::invalid(
+                    crate::scheduling::service::invalid_rehearsal(
                         "Rehearsal settings delivery is incomplete; restore or await lease expiry.",
                     )
                 })?;

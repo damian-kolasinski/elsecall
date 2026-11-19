@@ -302,7 +302,7 @@ pub fn queues(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reporting::fixtures::{self, MINUTE, T0, bucket};
+    use crate::scheduling::fixtures::{self, MINUTE, T0, bucket};
     use crate::scheduling::record::{Outcome, Record};
 
     /// The 2 hours from `T0`, in minute buckets.

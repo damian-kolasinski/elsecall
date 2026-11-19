@@ -141,8 +141,8 @@ impl Housekeeper {
     /// Remove only this synthetic session's copies and now-unreferenced stores.
     /// Uses the same identity checks, reservations and confined trash as a pass.
     pub async fn clean_rehearsal(self: &Arc<Self>, session: String) -> Result<()> {
-        if !crate::rehearsal::protocol::valid_session(&session) {
-            return Err(crate::rehearsal::invalid(
+        if !crate::rehearsal_identity::valid_session(&session) {
+            return Err(crate::scheduling::service::invalid_rehearsal(
                 "Invalid rehearsal cleanup identity.",
             ));
         }
@@ -156,7 +156,7 @@ impl Housekeeper {
             };
             let mut stores = BTreeMap::new();
             for entry in this.catalog.entries()? {
-                if crate::rehearsal::protocol::scratch_of(&session, &entry.location.caller_root) {
+                if crate::rehearsal_identity::scratch_of(&session, &entry.location.caller_root) {
                     stores.insert(
                         entry.location.store.clone(),
                         entry.location.calling_member.clone(),
@@ -164,7 +164,7 @@ impl Housekeeper {
                     if !this.remove(&entry, Reason::CallerDeleted, &mut pass)
                         && pass.report.problems.is_empty()
                     {
-                        return Err(crate::rehearsal::invalid(
+                        return Err(crate::scheduling::service::invalid_rehearsal(
                             "A synthetic copy is still in use; cleanup must be retried.",
                         ));
                     }
@@ -176,7 +176,7 @@ impl Housekeeper {
                     caller_path,
                     ..
                 } = removed.removed
-                    && crate::rehearsal::protocol::scratch_of(&session, &caller_path)
+                    && crate::rehearsal_identity::scratch_of(&session, &caller_path)
                 {
                     let location = this.locations.locate(
                         &calling_member,
@@ -205,7 +205,7 @@ impl Housekeeper {
                     &mut pass,
                 );
                 if path.exists() && pass.report.problems.is_empty() {
-                    return Err(crate::rehearsal::invalid(
+                    return Err(crate::scheduling::service::invalid_rehearsal(
                         "A synthetic object store is still in use; cleanup must be retried.",
                     ));
                 }

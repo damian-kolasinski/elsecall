@@ -1139,7 +1139,7 @@ pub(super) mod tests {
     pub fn trace() -> Trace {
         use crate::{
             load_log::buckets::Bucket,
-            reporting::fixtures,
+            scheduling::fixtures,
             scheduling::{
                 capacity::Cores,
                 record::{Outcome as End, State},

@@ -352,7 +352,7 @@ impl Trace {
 mod tests {
     use super::*;
     use crate::{
-        reporting::fixtures::{self, Run},
+        scheduling::fixtures::{self, Run},
         scheduling::placed::Side,
     };
     #[test]

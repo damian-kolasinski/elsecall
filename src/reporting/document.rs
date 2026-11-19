@@ -370,7 +370,7 @@ pub fn document(query: &Query, gathered: &Gathered) -> Document {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reporting::fixtures::{self, MINUTE, Run, T0, bucket};
+    use crate::scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
 
     fn gathered() -> Gathered {
         let mut records = vec![

@@ -102,7 +102,7 @@ pub fn trace(t: &Trace) -> Result<()> {
         ));
     }
     if let Some(r) = &t.rehearsal
-        && (!crate::rehearsal::protocol::valid_session(&r.session)
+        && (!crate::rehearsal_identity::valid_session(&r.session)
             || !(1.0..=1000.0).contains(&r.compress)
             || r.calibration.len() > 64
             || r.calibration
@@ -475,7 +475,7 @@ pub fn trace(t: &Trace) -> Result<()> {
 mod tests {
     use super::*;
     use crate::{
-        reporting::fixtures::{self, T0},
+        scheduling::fixtures::{self, T0},
         scheduling::timestamp::Timestamp,
         workload::{
             contention::{Curve, Point},
