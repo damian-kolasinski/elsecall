@@ -28,6 +28,10 @@ import module_shape as shape
 ROOT = Path(__file__).resolve().parent.parent
 PLAN = ROOT / "scripts" / "crate-graph.toml"
 LIBRARY = "elsecall"
+FEATURE_NOTES = {
+    "test-support": "Fixtures other crates' tests build with.",
+    "local-release-channel": "Follow a local release channel; the binary's feature of that name turns it on.",
+}
 
 
 def git(*args: str) -> None:
@@ -72,7 +76,7 @@ def rewrite(text: str, members: dict[str, str | None], merged: str, inside: bool
     macro = re.compile(r"::\s*\w+\s*!")
     for member, module in members.items():
         ident = f"{LIBRARY}_{member.replace('-', '_')}"
-        for match in re.finditer(rf"(?<![\w:$]){ident}\b", masked):
+        for match in re.finditer(rf"(?<![\w$])(?<!::){ident}\b", masked):
             if macro.match(masked, match.end()):
                 edits.append((match.start(), match.end(), root))
             else:
@@ -124,7 +128,12 @@ def merge_manifests(merged: str, members: list[str]) -> str:
         "license.workspace = true\npublish = false\n\n[lib]\ndoctest = false\n\n[lints]\nworkspace = true\n\n"
     )
     if features:
-        text += "[features]\n# Fixtures other crates' tests build with, and switches the binary forwards.\n" + "".join(f'{k} = [{", ".join(chr(34) + e + chr(34) for e in v)}]\n' for k, v in sorted(features.items())) + "\n"
+        text += "[features]\n"
+        for feature, enables in sorted(features.items()):
+            if feature in FEATURE_NOTES:
+                text += f"# {FEATURE_NOTES[feature]}\n"
+            text += f'{feature} = [{", ".join(chr(34) + e + chr(34) for e in enables)}]\n'
+        text += "\n"
     text += "[dependencies]\n" + "".join(render(n, s) for n, s in sorted(normal.items()))
     dev = {n: s for n, s in dev.items() if n not in normal or s.get("features")}
     if dev:
@@ -144,7 +153,7 @@ def rename_dependencies(manifest: Path, members: list[str], merged: str, own: bo
         if header:
             table = header.group(1)
         key = re.match(r"^([\w-]+)(\.workspace = true| = )", line)
-        if key and key.group(1) in names:
+        if key and key.group(1) in names and table != "workspace.dependencies":
             if own:
                 continue
             features = re.findall(r'"([^"]+)"', line) if "features" in line else []
@@ -178,6 +187,14 @@ def rename_dependencies(manifest: Path, members: list[str], merged: str, own: bo
             rendered.append(f'{name} = {{ workspace = true, features = [{", ".join(chr(34) + f + chr(34) for f in features)}] }}' if features else f"{name}.workspace = true")
         else:
             rendered.append(item)
+    # The workspace's own crates stay sorted within each run of them.
+    start = None
+    for index, line in enumerate(rendered + [""]):
+        if line.startswith(f"{LIBRARY}-"):
+            start = index if start is None else start
+        elif start is not None:
+            rendered[start:index] = sorted(rendered[start:index])
+            start = None
     manifest.write_text("\n".join(rendered))
 
 
