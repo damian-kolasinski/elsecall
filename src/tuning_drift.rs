@@ -35,9 +35,9 @@ pub async fn monitor(paths: &Paths, scheduler: &Scheduler) -> Result<()> {
         );
         let trace = crate::trace_cli::collect(paths, context, until).await?;
         let simulation = tokio::task::spawn_blocking(move || {
-            crate::simulation::simulate(
+            elsecall_simulation::simulation::simulate(
                 trace,
-                crate::simulation::Options {
+                elsecall_simulation::simulation::Options {
                     fidelity: true,
                     day: Some(since),
                     ..Default::default()

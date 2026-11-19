@@ -84,7 +84,7 @@ fn fixture(directory: &Path, offsets: &[u64]) -> std::path::PathBuf {
     let demand:Vec<_>=["alpha","bravo"].into_iter().map(|m|json!({"member":m,"family":"build *","runs":10,"fitted_runs":10,"declared_cores":0.5,"process_tree_cores":0.25,"effective_cores":0.25,"interval_cores":[0.15,0.35],"fitted_minutes":10,"idle_minutes":3,"outside_baseline_cores":0.0,"residual_rmse_cores":0.01,"status":"identified"})).collect();
     let document = json!({"trace_version":1,"incomplete":false,"since":Timestamp::from_millis(start),"until":Timestamp::from_millis(start+offsets.iter().max().unwrap()+2000),"master":"alpha","members":[{"member":"alpha","load":[],"errors":[],"scheduler_settings":[]},{"member":"bravo","load":[],"errors":[],"scheduler_settings":[]}],"requests":requests,"leftovers":[],"demand":demand,"contention":[],"limits":[]});
     let trace: Trace = serde_json::from_value(document.clone()).unwrap();
-    elsecall::simulation::validate_trace(&trace).unwrap();
+    elsecall_simulation::simulation::validate_trace(&trace).unwrap();
     let path = directory.join("input.json");
     fs::write(&path, document.to_string()).unwrap();
     path

@@ -802,7 +802,7 @@ mod tests {
     #[test]
     fn short_queue_regressions_keep_sampling_tolerance_and_gross_error_bounds() {
         let regressions: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/queue-fidelity-regressions.json"
+            "../../../../tests/fixtures/queue-fidelity-regressions.json"
         ))
         .unwrap();
         for (name, expected) in [("run8", "pass"), ("run5", "fail")] {

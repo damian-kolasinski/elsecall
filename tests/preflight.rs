@@ -93,7 +93,7 @@ fn run3_arrivals_keep_post_window_drain_load_and_reject_genuine_holes() {
     .unwrap();
     assert_eq!(selected.members[0].load.len(), 3);
     assert_eq!(selected.until, start.after(Duration::from_secs(60)));
-    elsecall::simulation::validate_trace(&selected).unwrap();
+    elsecall_simulation::simulation::validate_trace(&selected).unwrap();
     source.members[0].load.remove(1);
     let error = elsecall::rehearsal::window::explicit(
         &source,
@@ -125,7 +125,8 @@ fn run4_housekeeping_is_background_without_demand_but_history_is_unchanged() {
     .unwrap();
     assert_eq!(selected.requests.len(), 4);
     assert_eq!(source.requests.len(), 5);
-    let modeled = elsecall::simulation::simulate(selected.clone(), Default::default()).unwrap();
+    let modeled =
+        elsecall_simulation::simulation::simulate(selected.clone(), Default::default()).unwrap();
     // Measured CPU stays in the modeled minute after the unidentifiable internal
     // grant is removed: active replay plus inferred background totals 90 core-s.
     assert!(
@@ -284,10 +285,11 @@ fn load_factor_replays_closer_arrivals_through_the_production_scheduler() {
         r.fact.resources.as_mut().unwrap().ended_at =
             Some(r.fact.requested_at.after(Duration::from_secs(1)));
     }
-    let idle = elsecall::simulation::simulate(source.clone(), Default::default()).unwrap();
-    let busy = elsecall::simulation::simulate(
+    let idle =
+        elsecall_simulation::simulation::simulate(source.clone(), Default::default()).unwrap();
+    let busy = elsecall_simulation::simulation::simulate(
         source,
-        elsecall::simulation::Options {
+        elsecall_simulation::simulation::Options {
             load_factor: "4".parse().unwrap(),
             ..Default::default()
         },

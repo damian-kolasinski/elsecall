@@ -1,11 +1,8 @@
 //! Bounded file input and CLI routing for the offline tuner.
-use crate::{
-    evaluation_day::day,
-    tuning::{self, Space, TuneOptions},
-    workload_input::read as read_trace,
-};
+use crate::tuning::{self, Space, TuneOptions};
 use clap::{Args, Subcommand};
 use elsecall_failure::{Failure, Result};
+use elsecall_simulation::{evaluation_day::day, workload_input::read as read_trace};
 use std::{io::Read, path::PathBuf};
 #[derive(Subcommand, Debug)]
 pub enum TuneCommand {
@@ -19,7 +16,7 @@ pub struct TuneArgs {
     pub replay_placement: elsecall_replay::replay_placement::ReplayPlacement,
     /// Replay arrivals F times closer; preserve all command work (1–32)
     #[arg(long, default_value = "1")]
-    pub load_factor: crate::replay_load::LoadFactor,
+    pub load_factor: elsecall_simulation::replay_load::LoadFactor,
     #[command(subcommand)]
     pub command: Option<TuneCommand>,
     #[arg(long, required = true)]

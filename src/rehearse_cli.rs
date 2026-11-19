@@ -23,7 +23,7 @@ pub struct RehearseArgs {
     pub replay_placement: elsecall_replay::replay_placement::ReplayPlacement,
     /// Replay arrivals F times closer, on top of compression (1–32)
     #[arg(long, default_value = "1")]
-    pub load_factor: crate::replay_load::LoadFactor,
+    pub load_factor: elsecall_simulation::replay_load::LoadFactor,
     #[arg(long)]
     pub trace: PathBuf,
     /// Explicit RFC 3339 arrival bounds inside the trace
@@ -125,7 +125,7 @@ pub(crate) async fn single(
     let source_digest = elsecall_build_identity::build_identity::Digest::of(
         &serde_json::to_vec(&source).expect("trace serializes"),
     );
-    let candidate = crate::simulation::CandidateSettings::parse(
+    let candidate = elsecall_simulation::simulation::CandidateSettings::parse(
         source,
         &settings
             .iter()
@@ -662,9 +662,9 @@ pub(crate) async fn single(
     let replay_trace = trace.clone();
     let seed = args.seed;
     let simulation = tokio::task::spawn_blocking(move || {
-        crate::simulation::simulate(
+        elsecall_simulation::simulation::simulate(
             replay_trace,
-            crate::simulation::Options {
+            elsecall_simulation::simulation::Options {
                 seed,
                 fidelity: true,
                 ..Default::default()
@@ -698,7 +698,7 @@ pub(crate) async fn single(
         )?;
     }
     Ok(
-        json!({"placement_replay":{"mode":args.replay_placement.placement,"split":elsecall_replay::replay_placement::split(source)},"calibration":calibration,"measured_calibration":measured_calibration,"recording_complete":trace.rehearsal.as_ref().is_some_and(|r|r.complete_for(&trace)),"recording_missing":unfinished.iter().cloned().chain(trace.rehearsal.as_ref().map(|r|r.missing_evidence(&trace)).unwrap_or_default()).collect::<Vec<_>>(),"certificate":certificate,"session":session,"compress":args.compress,"load_factor":args.load_factor,"seed":seed,"limit_ms":args.limit.as_millis(),"stop_reason":stop_reason,"rehearsal_error":rehearsal_error,"submitted":submitted.len(),"planned":plan.arrivals.len(),"aggregated_nested":plan.aggregated_nested,"elapsed_ms":started.elapsed().as_millis(),"trace":output,"cleanup_complete":cleanup_errors.is_empty(),"cleanup_errors":cleanup_errors,"requests":request_mapping,"metrics":crate::simulation::observed_metrics(&trace),"simulation":simulation}),
+        json!({"placement_replay":{"mode":args.replay_placement.placement,"split":elsecall_replay::replay_placement::split(source)},"calibration":calibration,"measured_calibration":measured_calibration,"recording_complete":trace.rehearsal.as_ref().is_some_and(|r|r.complete_for(&trace)),"recording_missing":unfinished.iter().cloned().chain(trace.rehearsal.as_ref().map(|r|r.missing_evidence(&trace)).unwrap_or_default()).collect::<Vec<_>>(),"certificate":certificate,"session":session,"compress":args.compress,"load_factor":args.load_factor,"seed":seed,"limit_ms":args.limit.as_millis(),"stop_reason":stop_reason,"rehearsal_error":rehearsal_error,"submitted":submitted.len(),"planned":plan.arrivals.len(),"aggregated_nested":plan.aggregated_nested,"elapsed_ms":started.elapsed().as_millis(),"trace":output,"cleanup_complete":cleanup_errors.is_empty(),"cleanup_errors":cleanup_errors,"requests":request_mapping,"metrics":elsecall_simulation::simulation::observed_metrics(&trace),"simulation":simulation}),
     )
 }
 fn mapping(
@@ -716,7 +716,7 @@ fn mapping(
 }
 
 pub(crate) fn source(args: &RehearseArgs) -> Result<elsecall_workload::trace::Trace> {
-    let mut trace = crate::workload_input::read(&args.trace)?;
+    let mut trace = elsecall_simulation::workload_input::read(&args.trace)?;
     args.replay_placement.apply(&mut trace)?;
     let (since, until) =
         elsecall_workload::bounds::within(&trace, args.since.as_deref(), args.until.as_deref())?;

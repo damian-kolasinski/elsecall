@@ -1,7 +1,7 @@
 //! Select arrival density from complete, observed rehearsals of the same workload.
-use crate::replay_load::LoadFactor;
 use elsecall_failure::Result;
 use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_simulation::replay_load::LoadFactor;
 use elsecall_workload::trace::Trace;
 use serde::{Deserialize, Serialize};
 mod fit;
@@ -44,7 +44,7 @@ pub struct Target {
 }
 impl Target {
     pub fn observed(trace: &Trace, since: Timestamp, until: Timestamp) -> Result<Self> {
-        crate::simulation::validate_trace(trace)?;
+        elsecall_simulation::simulation::validate_trace(trace)?;
         if since >= until
             || since < trace.since
             || until > trace.until
@@ -341,7 +341,7 @@ fn calibrate_observations(
     let mut trials = Vec::new();
     let mut identity = None;
     for trace in observations {
-        crate::simulation::validate_trace(trace)?;
+        elsecall_simulation::simulation::validate_trace(trace)?;
         let recording = trace
             .rehearsal
             .as_ref()
@@ -533,7 +533,7 @@ mod tests {
             bucket.saturated_busy_seconds = 0;
             bucket.memory_pressure_seconds = 0;
         }
-        assert!(crate::simulation::validate_trace(&trace).is_ok());
+        assert!(elsecall_simulation::simulation::validate_trace(&trace).is_ok());
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
         let (workload, mut trace, target) = observed_fixture();
         let mut changed = trace.members[0].scheduler_settings[0].clone();
@@ -541,7 +541,7 @@ mod tests {
         changed.capacity.capacity = elsecall_scheduling_model::capacity::Cores::ONE;
         changed.capacity.reserved = elsecall_scheduling_model::capacity::Cores::from_millis(11_000);
         trace.members[0].scheduler_settings.push(changed);
-        assert!(crate::simulation::validate_trace(&trace).is_ok());
+        assert!(elsecall_simulation::simulation::validate_trace(&trace).is_ok());
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
     }
 
@@ -564,7 +564,7 @@ mod tests {
             resources.started_at = Some(trace.since.after(std::time::Duration::from_secs(50)));
             resources.ended_at = Some(trace.since.after(std::time::Duration::from_secs(60)));
         }
-        crate::simulation::validate_trace(&trace).unwrap();
+        elsecall_simulation::simulation::validate_trace(&trace).unwrap();
         let shape = target.rehearsal(&trace).unwrap();
         assert_eq!(shape.queue_max, 40.0);
         assert_eq!(shape.queue_p90, 0.0); // 20s * 6, not 50s * 6 of waiting
@@ -652,7 +652,7 @@ mod tests {
         let (workload, mut trace, target) = observed_fixture();
         trace.requests[0].fact.requested_at =
             elsecall_scheduling_model::timestamp::Timestamp::from_millis(trace.since.millis() - 1);
-        assert!(crate::simulation::validate_trace(&trace).is_ok());
+        assert!(elsecall_simulation::simulation::validate_trace(&trace).is_ok());
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
     }
 

@@ -226,7 +226,7 @@ fn exports_real_overrun_shape_across_load_pages_without_losing_history() {
             61
         );
     }
-    elsecall::simulation::validate_trace(&trace).unwrap();
+    elsecall_simulation::simulation::validate_trace(&trace).unwrap();
 }
 
 #[test]
@@ -438,7 +438,7 @@ fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
                 .iter()
                 .any(|s| s.at == tail_settings.at)
         );
-        elsecall::simulation::validate_trace(&exported).unwrap();
+        elsecall_simulation::simulation::validate_trace(&exported).unwrap();
     }
     let before = records.recent(100).unwrap().len();
     let response = alpha.run(&[

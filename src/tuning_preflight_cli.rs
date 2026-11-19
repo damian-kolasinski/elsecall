@@ -20,7 +20,7 @@ pub struct PreflightArgs {
     pub busy_until: Option<String>,
     /// Replay arrivals F times closer; preserve all command work (1–32)
     #[arg(long, default_value = "1")]
-    pub load_factor: crate::replay_load::LoadFactor,
+    pub load_factor: elsecall_simulation::replay_load::LoadFactor,
     /// Existing full-fleet export; when omitted, collect history read-only
     #[arg(long)]
     pub trace: Option<PathBuf>,
@@ -49,7 +49,7 @@ pub struct PreflightArgs {
 }
 pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
     let mut trace = if let Some(path) = &args.trace {
-        crate::workload_input::read(path)?
+        elsecall_simulation::workload_input::read(path)?
     } else {
         let now = Timestamp::now();
         let start =
@@ -59,7 +59,7 @@ pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
         crate::trace_cli::collect(&elsecall_local_state::paths::Paths::current()?, start, now)
             .await?
     };
-    crate::simulation::validate_trace(&trace)?;
+    elsecall_simulation::simulation::validate_trace(&trace)?;
     let placement = args.replay_placement.apply(&mut trace)?;
     let busy_hours = if args.calibrate_busy_hours {
         Some(crate::busy_hour_calibration::Target::observed(
@@ -75,7 +75,7 @@ pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
     let observed_rehearsals = args
         .busy_rehearsal
         .iter()
-        .map(|p| crate::workload_input::read(p))
+        .map(|p| elsecall_simulation::workload_input::read(p))
         .collect::<Result<Vec<_>>>()?;
     let start_text = if args.trace.is_some() {
         args.since.as_deref()

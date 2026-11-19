@@ -14,7 +14,7 @@ pub struct Noise {
     pub seed: u64,
     pub compress: f64,
     #[serde(default)]
-    pub load_factor: crate::replay_load::LoadFactor,
+    pub load_factor: elsecall_simulation::replay_load::LoadFactor,
     pub mean_overhead: f64,
     pub p90_overhead: f64,
     /// Freeze controlled work and ideal denominators for subsequent pairs.

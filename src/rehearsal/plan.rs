@@ -30,9 +30,9 @@ impl Plan {
     pub fn with_load(
         trace: &Trace,
         compress: f64,
-        load_factor: crate::replay_load::LoadFactor,
+        load_factor: elsecall_simulation::replay_load::LoadFactor,
     ) -> Result<Self> {
-        crate::simulation::validate_trace(trace)?;
+        elsecall_simulation::simulation::validate_trace(trace)?;
         if !compress.is_finite() || !(1.0..=1000.0).contains(&compress) {
             return Err(invalid(
                 "--compress must be a finite number from 1 to 1000.",

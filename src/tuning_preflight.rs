@@ -9,7 +9,7 @@ use std::time::Instant;
 pub struct Options {
     pub observed_rehearsals: Vec<Trace>,
     pub busy_hours: Option<crate::busy_hour_calibration::Target>,
-    pub load_factor: crate::replay_load::LoadFactor,
+    pub load_factor: elsecall_simulation::replay_load::LoadFactor,
     pub rehearsal_window: crate::rehearsal::window::Busiest,
     pub min_interactive: std::num::NonZeroUsize,
     pub compress: f64,
@@ -73,7 +73,7 @@ pub fn check(trace: Trace, args: Options) -> Result<Value> {
         ));
     }
     let started = Instant::now();
-    crate::simulation::validate_trace(&trace)?;
+    elsecall_simulation::simulation::validate_trace(&trace)?;
     let mut blockers = Vec::new();
     let (mut workload, selection) = match crate::rehearsal::window::select(
         &trace,

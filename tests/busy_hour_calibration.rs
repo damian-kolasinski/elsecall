@@ -55,7 +55,7 @@ fn workload() -> Trace {
             "outcome":{"kind":"exited","exit_code":0},"decision":null
         })).unwrap());
     }
-    elsecall::simulation::validate_trace(&trace).unwrap();
+    elsecall_simulation::simulation::validate_trace(&trace).unwrap();
     trace
 }
 

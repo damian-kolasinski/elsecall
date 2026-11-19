@@ -23,7 +23,7 @@ mod validation;
 mod workspace;
 mod world;
 
-pub(crate) use engine::invalid as engine_invalid;
+pub use engine::invalid as engine_invalid;
 pub use engine::{Options, simulate};
 
 /// Shared untrusted workload boundary for offline simulation and rehearsal.
@@ -31,11 +31,11 @@ pub fn validate_trace(trace: &elsecall_workload::trace::Trace) -> elsecall_failu
     validation::trace(trace)
 }
 
-pub(crate) use settings::Settings as CandidateSettings;
+pub use settings::Settings as CandidateSettings;
 
 mod observed;
 pub use observed::summarize as observed_metrics;
 
-pub(crate) use model::{freeze_reference, structural_members};
+pub use model::{freeze_reference, structural_members};
 
-pub(crate) use objective::constrain_failures;
+pub use objective::constrain_failures;

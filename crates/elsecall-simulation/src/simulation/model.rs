@@ -677,8 +677,10 @@ mod tests {
     }
     #[test]
     fn realized_rehearsal_cpu_cost_is_not_attributed_to_outside_load() {
-        let mut trace: Trace =
-            serde_json::from_str(include_str!("../../tests/fixtures/run5-rehearsal.json")).unwrap();
+        let mut trace: Trace = serde_json::from_str(include_str!(
+            "../../../../tests/fixtures/run5-rehearsal.json"
+        ))
+        .unwrap();
         let member = "mac-mini";
         // Every run has final process-tree CPU. Compute their weighted minute
         // exposure, then add a known half-core external baseline.

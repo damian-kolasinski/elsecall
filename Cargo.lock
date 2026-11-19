@@ -1100,6 +1100,7 @@ dependencies = [
  "elsecall-secure-channel",
  "elsecall-service-config",
  "elsecall-service-log",
+ "elsecall-simulation",
  "elsecall-sqlite-retention",
  "elsecall-tailnet",
  "elsecall-tools",
@@ -1676,6 +1677,33 @@ dependencies = [
  "libc",
  "serde_json",
  "tempfile",
+]
+
+[[package]]
+name = "elsecall-simulation"
+version = "0.3.0"
+dependencies = [
+ "elsecall-build-identity",
+ "elsecall-failure",
+ "elsecall-labels",
+ "elsecall-load-log",
+ "elsecall-machine",
+ "elsecall-membership",
+ "elsecall-rehearsal-identity",
+ "elsecall-remote-run",
+ "elsecall-replay",
+ "elsecall-report-facts",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-workload",
+ "elsecall-workload-config",
+ "futures-util",
+ "humantime",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "toml",
 ]
 
 [[package]]

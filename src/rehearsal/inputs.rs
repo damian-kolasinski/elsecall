@@ -25,7 +25,7 @@ impl<'a> Inputs<'a> {
             .map(|r| {
                 (
                     r.fact.run_id.as_str(),
-                    crate::simulation::freeze_reference(trace, r),
+                    elsecall_simulation::simulation::freeze_reference(trace, r),
                 )
             })
             .collect();
@@ -79,7 +79,7 @@ impl<'a> Inputs<'a> {
             .ok_or_else(|| invalid("Effective demand requires a recorded label/family."))?;
         let mut demand = BTreeMap::new();
         let mut missing = Vec::new();
-        for member in crate::simulation::structural_members(self.trace, r) {
+        for member in elsecall_simulation::simulation::structural_members(self.trace, r) {
             let profile = self.demand.get(&(member.as_str(), family)).copied();
             match profile
                 .and_then(|d| d.effective_cores)

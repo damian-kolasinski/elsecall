@@ -209,7 +209,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
                 .map_err(|e| Failure::io("Reserve A/A noise artifact", e))
         })
         .transpose()?;
-    let candidate = crate::simulation::CandidateSettings::parse(
+    let candidate = elsecall_simulation::simulation::CandidateSettings::parse(
         &trace,
         &proposed
             .iter()
@@ -370,7 +370,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
         Err(e) => (None, Some(e)),
     };
     if let Some(proposal) = &mut proposal {
-        crate::simulation::constrain_failures(
+        elsecall_simulation::simulation::constrain_failures(
             &mut proposal["metrics"],
             baseline["metrics"]["scheduling_objective"]["failures"]["count"].as_u64(),
             "measured baseline arm",

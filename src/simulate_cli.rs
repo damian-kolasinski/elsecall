@@ -1,11 +1,11 @@
 //! Offline simulation never connects to, installs or changes an Elsecall service.
-use crate::{
+use clap::Args;
+use elsecall_failure::Result;
+use elsecall_simulation::{
     evaluation_day::day,
     simulation::{self, Options},
     workload_input::read as read_trace,
 };
-use clap::Args;
-use elsecall_failure::Result;
 use std::path::PathBuf;
 #[derive(Args, Debug)]
 pub struct SimulateArgs {
@@ -16,7 +16,7 @@ pub struct SimulateArgs {
     pub rehearsal_cpu_replay: bool,
     /// Replay arrivals F times closer; preserve all command work (1–32)
     #[arg(long, default_value = "1")]
-    pub load_factor: crate::replay_load::LoadFactor,
+    pub load_factor: elsecall_simulation::replay_load::LoadFactor,
     #[arg(long)]
     pub trace: PathBuf,
     /// Override recorded scheduling parameters; repeat for multiple settings

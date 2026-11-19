@@ -241,7 +241,7 @@ pub fn simulate(trace: Trace, options: Options) -> Result<Value> {
         "The seed is reserved for future sampled work models; current envelopes contain no random draws."]}),
     )
 }
-pub(crate) fn invalid(message: impl Into<String>) -> Failure {
+pub fn invalid(message: impl Into<String>) -> Failure {
     Failure::new(
         "invalid_trace",
         message,

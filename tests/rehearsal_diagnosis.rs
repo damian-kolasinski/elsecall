@@ -1,4 +1,4 @@
-use elsecall::simulation;
+use elsecall_simulation::simulation;
 use elsecall_workload::trace::Trace;
 use serde_json::Value;
 

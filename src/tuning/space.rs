@@ -1,9 +1,9 @@
 //! Finite, explicit grids; validation delegates to the simulator's service and
 //! consumer parsers. No alternate parameter validation lives in the search.
-use crate::simulation::CandidateSettings;
 use elsecall_failure::Result;
 use elsecall_scheduling::parameters::KEYS;
 use elsecall_scheduling_model::capacity::Cores;
+use elsecall_simulation::simulation::CandidateSettings;
 use elsecall_workload::trace::Trace;
 use std::collections::{BTreeMap, BTreeSet};
 pub type Settings = BTreeMap<String, String>;

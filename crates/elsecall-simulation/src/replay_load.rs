@@ -8,12 +8,7 @@ pub use elsecall_workload::format::{LoadFactor, MAXIMUM};
 /// Freeze source physics before moving arrivals. All intervals and deadline
 /// slack move with their root; nested work stays inside the same root tree.
 /// Background observations and settings keep their original clock.
-pub(crate) fn replay(
-    factor: LoadFactor,
-    source: &Trace,
-    since: Timestamp,
-    until: Timestamp,
-) -> Trace {
+pub fn replay(factor: LoadFactor, source: &Trace, since: Timestamp, until: Timestamp) -> Trace {
     if factor == LoadFactor::default() {
         return source.clone();
     }
@@ -75,7 +70,7 @@ pub(crate) fn replay(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::replay_load::*;
     #[test]
     fn density_is_bounded_and_only_scales_arrival_offsets() {
         for f in [0.0, 0.5, 32.01, f64::INFINITY, f64::NAN] {
