@@ -345,7 +345,8 @@ TEST_MODULE = re.compile(
 
 
 def test_modules(files: dict[str, str]) -> set[tuple[str, ...]]:
-    """Library module paths declared test-only by their parent."""
+    """Module paths declared test-only by their parent; `files` are keyed by
+    their path inside one crate (`src/...`)."""
     found = set()
     for path, text in files.items():
         if not path.startswith("src/") or path == "src/main.rs" or shape.is_test_file(path):
@@ -357,14 +358,37 @@ def test_modules(files: dict[str, str]) -> set[tuple[str, ...]]:
     return found
 
 
+def extracted(plan: Plan, package: str) -> str | None:
+    """The planned crate a workspace package `elsecall-<name>` is."""
+    if package.startswith(LIBRARY + "-"):
+        name = package[len(LIBRARY) + 1 :]
+        if name in plan.crates:
+            return name
+    return None
+
+
+def crate_root(plan: Plan, segment: str) -> str | None:
+    """The planned crate a path's first segment names, as `elsecall_<name>`."""
+    if segment.startswith(LIBRARY + "_"):
+        name = segment[len(LIBRARY) + 1 :].replace("_", "-")
+        if name in plan.crates:
+            return name
+    return None
+
+
 def build(root: Path, plan: Plan, files: dict[str, str], packages: dict[str, str]) -> Graph:
     """`files`: path -> text for Rust files; `packages`: package directory
     (relative, '' for the root) -> package name."""
     graph = Graph(defaultdict(list), defaultdict(list), defaultdict(list), defaultdict(int), {})
-    test_only = test_modules({p: t for p, t in files.items() if packages.get("") == LIBRARY})
+    per_package: dict[str, dict[str, str]] = defaultdict(dict)
+    directories = sorted(packages, key=len, reverse=True)
+    for path, text in files.items():
+        directory = next((d for d in directories if d == "" or path.startswith(d + "/")), None)
+        if directory is not None:
+            per_package[directory][path[len(directory) + 1 :] if directory else path] = text
+    test_only = {directory: test_modules(inside) for directory, inside in per_package.items()}
     forbidden = {name for planned in plan.crates.values() for name in planned.band.forbid}
     extern_pattern = re.compile(r"(?<![\w:])(" + "|".join(sorted(map(re.escape, forbidden))) + r")\s*::") if forbidden else None
-    directories = sorted(packages, key=len, reverse=True)
     for path, text in sorted(files.items()):
         directory = next((d for d in directories if d == "" or path.startswith(d + "/")), None)
         if directory is None:
@@ -382,6 +406,12 @@ def build(root: Path, plan: Plan, files: dict[str, str], packages: dict[str, str
                 graph.unassigned[f"src/{here[0]}"] = f"library module `{here[0]}`"
                 continue
             library_root = "crate"
+        elif package not in plan.packages and extracted(plan, package) is not None:
+            # A crate already moved out: its own `crate::` paths stay inside it.
+            crate = extracted(plan, package)
+            here = module_path(inside[len("src/") :])
+            here = () if here == ("lib",) else here
+            library_root = None
         else:
             crate = plan.binaries.get(path) if package == LIBRARY else plan.packages.get(package)
             if crate is None:
@@ -389,7 +419,8 @@ def build(root: Path, plan: Plan, files: dict[str, str], packages: dict[str, str
                 graph.unassigned[subject] = "binary" if package == LIBRARY else f"package `{package}`"
                 continue
             here, library_root = (), LIBRARY
-        whole_file_is_test = shape.is_test_file(path) or any(here[: len(m)] == m for m in test_only)
+        test_only_here = test_only.get(directory, set())
+        whole_file_is_test = shape.is_test_file(path) or any(here[: len(m)] == m for m in test_only_here)
         numbered = list(enumerate(text.splitlines(), 1))
         production = [] if whole_file_is_test else shape.production_lines(text)
         kept = {number for number, _ in production}
@@ -401,10 +432,16 @@ def build(root: Path, plan: Plan, files: dict[str, str], packages: dict[str, str
             nested = inline_modules(blanked)
             for line, reference in references(blanked):
                 inside_module = nested[line - 1] if line - 1 < len(nested) else ()
-                target_path = resolve(reference, here + inside_module, library_root)
-                if target_path is None or not target_path:
+                named = crate_root(plan, reference.split("::")[0])
+                if named is not None:
+                    target = named
+                elif library_root is None:
                     continue
-                target = assign(plan, target_path)
+                else:
+                    target_path = resolve(reference, here + inside_module, library_root)
+                    if target_path is None or not target_path:
+                        continue
+                    target = assign(plan, target_path)
                 if target is None or target == crate:
                     continue
                 into[(crate, target)].append(Site(path, line, reference))
