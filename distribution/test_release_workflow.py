@@ -60,11 +60,28 @@ class ReleaseWorkflow(unittest.TestCase):
         # release's run never queues behind main's runs. Group names ignore
         # case, so Check's prefix must differ from the release's own group.
         group = re.search(r"\n  group: (.+)", check).group(1)
-        self.assertEqual(group, "check-${{ github.workflow }}-${{ github.ref }}")
+        self.assertEqual(group, "check-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}")
         release_group = re.search(r"\n  group: (.+)", WORKFLOW.read_text(encoding="utf-8")).group(1)
         self.assertNotEqual(group.split("$", 1)[0].lower(), release_group.split("$", 1)[0].lower())
         # A release's run must finish; it is the gate.
         self.assertIn("\n  cancel-in-progress: false", check)
+
+    def test_check_is_the_local_check_and_only_main_saves_its_cache(self):
+        check = CHECK.read_text(encoding="utf-8")
+        steps = [line.strip() for line in check.splitlines() if line.strip().startswith("- run:")]
+        self.assertEqual(steps, ["- run: mise run check"])
+        self.assertIn("save-if: ${{ github.ref == 'refs/heads/main' }}", check)
+        self.assertLess(check.index("Swatinem/rust-cache@"), check.index("- run: mise run check"))
+
+    def test_pull_requests_never_run_the_release_and_every_tag_does(self):
+        triggers = WORKFLOW.read_text(encoding="utf-8").split("\non:\n", 1)[1].split("\nconcurrency:\n", 1)[0]
+        self.assertNotIn("pull_request", triggers)
+        self.assertIn('tags: ["v*.*.*"]', triggers)
+        self.assertIn("branches: [main]", triggers)
+        # Signing and publishing stay on tags, whatever runs the workflow.
+        for job in ("tested", "sign", "publish", "verify-published"):
+            condition = next(line for line in self.jobs[job] if line.startswith("    if: "))
+            self.assertIn("github.ref_type == 'tag'", condition, job)
 
     def test_the_build_smoke_tests_and_installs_the_archive(self):
         build = "\n".join(self.jobs["build"])
