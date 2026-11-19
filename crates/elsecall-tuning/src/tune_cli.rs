@@ -149,7 +149,7 @@ fn certificate_build_matches(evidence: &serde_json::Value, build: &serde_json::V
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::tune_cli::*;
     use serde_json::json;
     #[test]
     fn newer_tuner_cannot_use_old_services_current_certificates() {

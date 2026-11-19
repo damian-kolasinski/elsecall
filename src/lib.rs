@@ -16,15 +16,5 @@ pub mod simulate_cli;
 
 pub mod rehearse_cli;
 
-pub mod tune_cli;
-pub mod tuning;
-
-pub mod tuning_drift;
-
-pub mod tuning_preflight;
-pub mod tuning_preflight_cli;
-
-pub mod busy_hour_calibration;
-
 pub mod rehearsal_compare;
 pub mod workload_observation_cli;

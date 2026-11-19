@@ -291,7 +291,7 @@ pub fn calibrate(
 /// are both valid rehearsal inputs. Keep their exact identities: selection adds
 /// diagnostic limits and trims inactive settings/leftovers, while rehearse bounds
 /// the source without that export decoration. Never rewrite recorded provenance.
-pub(crate) fn calibrate_preflight(
+pub fn calibrate_preflight(
     source: &Trace,
     selected: &Trace,
     target: &Target,
@@ -461,10 +461,11 @@ fn calibrate_observations(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::busy_hour_calibration::*;
     fn observed_fixture() -> (Trace, Trace, Target) {
         let workload: Trace =
-            serde_json::from_str(include_str!("../tests/fixtures/run5-rehearsal.json")).unwrap();
+            serde_json::from_str(include_str!("../../../tests/fixtures/run5-rehearsal.json"))
+                .unwrap();
         let mut trace = workload.clone();
         trace.rehearsal.as_mut().unwrap().source_digest =
             elsecall_build_identity::build_identity::Digest::of(

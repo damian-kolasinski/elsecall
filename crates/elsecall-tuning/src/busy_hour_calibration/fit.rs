@@ -115,7 +115,7 @@ mod tests {
     #[test]
     fn run7_arms_select_two_without_rounding_away_its_misses() {
         let fixture: serde_json::Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/run7-calibration-shapes.json"
+            "../../../../tests/fixtures/run7-calibration-shapes.json"
         ))
         .unwrap();
         let target: Shape = serde_json::from_value(fixture["target"].clone()).unwrap();

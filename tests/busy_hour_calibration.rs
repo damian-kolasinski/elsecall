@@ -3,9 +3,9 @@
 mod diagnostics;
 mod members;
 mod processes;
-use elsecall::busy_hour_calibration::{Target, calibrate};
 use elsecall_replay::replay_placement::{Mode, ReplayPlacement};
 use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_tuning::busy_hour_calibration::{Target, calibrate};
 use elsecall_workload::trace::Trace;
 use members::{TestMember, enrol};
 use serde_json::json;
@@ -183,7 +183,7 @@ fn exercise(mode: Mode) {
     eprintln!("{mode:?} offline calibration: {report}");
     // Exercise selection through preflight too: its exported workload contains
     // selection metadata absent from the source passed to the real rehearsal.
-    let preflight_options = || elsecall::tuning_preflight::Options {
+    let preflight_options = || elsecall_tuning::tuning_preflight::Options {
         observed_rehearsals: vec![observed.clone()],
         busy_hours: Some(target.clone()),
         load_factor: Default::default(),
@@ -195,7 +195,8 @@ fn exercise(mode: Mode) {
         iteration_budget: 2,
         seed: 42,
     };
-    let preflight = elsecall::tuning_preflight::check(replay.clone(), preflight_options()).unwrap();
+    let preflight =
+        elsecall_tuning::tuning_preflight::check(replay.clone(), preflight_options()).unwrap();
     assert_eq!(
         preflight["calibration"]["chosen_load_factor"], 2.0,
         "{preflight}"
@@ -214,7 +215,7 @@ fn exercise(mode: Mode) {
     .unwrap();
     let mut options = preflight_options();
     options.busy_hours = Some(nearest_target);
-    let nearest = elsecall::tuning_preflight::check(replay.clone(), options).unwrap();
+    let nearest = elsecall_tuning::tuning_preflight::check(replay.clone(), options).unwrap();
     assert_eq!(
         nearest["calibration"]["chosen_load_factor"], 2.0,
         "{nearest}"
@@ -250,8 +251,8 @@ fn exercise(mode: Mode) {
             .rules_digest = elsecall_build_identity::build_identity::Digest::of(
             b"different rules with the same placement",
         );
-        let error =
-            elsecall::tuning_preflight::check(different_rules, preflight_options()).unwrap_err();
+        let error = elsecall_tuning::tuning_preflight::check(different_rules, preflight_options())
+            .unwrap_err();
         assert!(
             error.message.contains("workload, compression or seed"),
             "{error:?}"
@@ -275,7 +276,8 @@ fn exercise(mode: Mode) {
     let mut different_work = replay.clone();
     different_work.demand[0].effective_cores = Some(0.3);
     different_work.demand[0].interval_cores = Some([0.3, 0.3]);
-    let error = elsecall::tuning_preflight::check(different_work, preflight_options()).unwrap_err();
+    let error =
+        elsecall_tuning::tuning_preflight::check(different_work, preflight_options()).unwrap_err();
     assert!(
         error.message.contains("workload, compression or seed"),
         "{error:?}"

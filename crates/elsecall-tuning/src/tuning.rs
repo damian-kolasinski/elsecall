@@ -290,7 +290,7 @@ pub fn tune(trace: Trace, held_out: Option<Trace>, options: TuneOptions) -> Resu
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::tuning::*;
     fn report(mean: f64, strongest: f64, status: &str) -> Value {
         let metric = json!({"status":status,"objective":{"overhead":{"mean":mean}},"strongest":{"fraction":strongest},"violation_vector":{"reserve_excess_core_seconds":0,"busy_rate_excess":0,"slowdown_excess":0,"extra_other_refusals":0}});
         json!({"settings":["placement.keep_local_margin=0.2"],"changed_settings":1,"metrics":metric,"sensitivity":{"lower":metric,"upper":metric}})

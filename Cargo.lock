@@ -1112,6 +1112,7 @@ dependencies = [
  "elsecall-tailnet",
  "elsecall-tools",
  "elsecall-trace",
+ "elsecall-tuning",
  "elsecall-window",
  "elsecall-wire",
  "elsecall-workload",
@@ -1980,6 +1981,36 @@ dependencies = [
  "libc",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "elsecall-tuning"
+version = "0.3.0"
+dependencies = [
+ "clap",
+ "elsecall-build-identity",
+ "elsecall-config-sync",
+ "elsecall-failure",
+ "elsecall-labels",
+ "elsecall-load-log",
+ "elsecall-local-client",
+ "elsecall-local-state",
+ "elsecall-rehearsal",
+ "elsecall-replay",
+ "elsecall-report-facts",
+ "elsecall-reporting",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-service-log",
+ "elsecall-simulation",
+ "elsecall-trace",
+ "elsecall-workload",
+ "elsecall-workload-config",
+ "humantime",
+ "serde",
+ "serde_json",
+ "tokio",
+ "toml",
 ]
 
 [[package]]

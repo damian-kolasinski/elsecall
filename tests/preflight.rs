@@ -1,6 +1,6 @@
 //! Offline readiness over the production planner, simulator and tuner.
-use elsecall::tuning_preflight::{self, Options};
 use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_tuning::tuning_preflight::{self, Options};
 use elsecall_workload::trace::Trace;
 use serde_json::{Value, json};
 use std::{num::NonZeroUsize, time::Duration};
@@ -255,9 +255,12 @@ fn calibration_cannot_select_a_factor_without_observed_rehearsals() {
     let mut source = fixture();
     source.members[0].load[0].in_use_mean = 2.0 * 4.0 / 60.0;
     source.members[0].load[0].queued_max = 3;
-    let target =
-        elsecall::busy_hour_calibration::Target::observed(&source, source.since, source.until)
-            .unwrap();
+    let target = elsecall_tuning::busy_hour_calibration::Target::observed(
+        &source,
+        source.since,
+        source.until,
+    )
+    .unwrap();
     let mut args = options();
     args.busy_hours = Some(target);
     let result = tuning_preflight::check(source, args).unwrap();
@@ -318,7 +321,7 @@ fn load_factor_replays_closer_arrivals_through_the_production_scheduler() {
 fn busy_reference_requires_minute_bounds_and_observed_coverage() {
     let mut source = fixture();
     assert!(
-        elsecall::busy_hour_calibration::Target::observed(
+        elsecall_tuning::busy_hour_calibration::Target::observed(
             &source,
             source.since,
             source.since.after(Duration::from_secs(1))
@@ -327,8 +330,12 @@ fn busy_reference_requires_minute_bounds_and_observed_coverage() {
     );
     source.members[0].load[0].cpu_mean = None;
     assert!(
-        elsecall::busy_hour_calibration::Target::observed(&source, source.since, source.until)
-            .is_err()
+        elsecall_tuning::busy_hour_calibration::Target::observed(
+            &source,
+            source.since,
+            source.until
+        )
+        .is_err()
     );
 }
 

@@ -51,6 +51,7 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 elsecall = { path = "." }
+elsecall-tuning = { path = "crates/elsecall-tuning" }
 elsecall-admission = { path = "crates/elsecall-admission" }
 elsecall-trace = { path = "crates/elsecall-trace" }
 elsecall-service-lifecycle = { path = "crates/elsecall-service-lifecycle" }
@@ -181,6 +182,7 @@ elsecall-sqlite-retention.workspace = true
 elsecall-tailnet.workspace = true
 elsecall-tools.workspace = true
 elsecall-trace.workspace = true
+elsecall-tuning.workspace = true
 elsecall-window.workspace = true
 elsecall-wire.workspace = true
 elsecall-workload.workspace = true

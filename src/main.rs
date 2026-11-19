@@ -139,7 +139,7 @@ enum Command {
     Rehearse(elsecall::rehearse_cli::RehearseArgs),
 
     /// Search scheduling settings offline and print proposals only
-    Tune(elsecall::tune_cli::TuneArgs),
+    Tune(elsecall_tuning::tune_cli::TuneArgs),
     /// Print the agent guide matching this build, or install it as a skill for the
     /// coding agents on this machine
     Skill(elsecall_agent_skill::cli::SkillArgs),
@@ -218,9 +218,10 @@ async fn main() -> ExitCode {
     };
     let cli = match cli.command {
         Command::Tune(mut args) => {
-            if let Some(elsecall::tune_cli::TuneCommand::Preflight(preflight)) = args.command.take()
+            if let Some(elsecall_tuning::tune_cli::TuneCommand::Preflight(preflight)) =
+                args.command.take()
             {
-                return match elsecall::tuning_preflight_cli::run(preflight).await {
+                return match elsecall_tuning::tuning_preflight_cli::run(preflight).await {
                     Ok(data) => {
                         let passed = data["passed"] == true;
                         output(data);
@@ -233,9 +234,11 @@ async fn main() -> ExitCode {
                     Err(error) => fail(error),
                 };
             }
-            return match tokio::task::spawn_blocking(move || elsecall::tune_cli::run(args)).await {
+            return match tokio::task::spawn_blocking(move || elsecall_tuning::tune_cli::run(args))
+                .await
+            {
                 Ok(Ok(data)) => {
-                    output(elsecall::tune_cli::current_trust(data).await);
+                    output(elsecall_tuning::tune_cli::current_trust(data).await);
                     ExitCode::SUCCESS
                 }
                 Ok(Err(error)) => fail(error),

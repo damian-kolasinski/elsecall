@@ -36,7 +36,7 @@ pub fn run(args: SimulateArgs) -> Result<serde_json::Value> {
     if args.replay_placement.placement == elsecall_replay::replay_placement::Mode::Current
         && (args.fidelity || args.rehearsal_cpu_replay)
     {
-        return Err(crate::tuning::invalid(
+        return Err(elsecall_tuning::tuning::invalid(
             "Current placement is a counterfactual; historical fidelity and CPU diagnosis require historical placement.",
         ));
     }

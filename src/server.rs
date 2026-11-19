@@ -503,7 +503,7 @@ pub async fn serve_with_updates(
             fleet_local_api::unavailable(error)
         }
     };
-    let _drift = AbortOnDrop(crate::tuning_drift::start(
+    let _drift = AbortOnDrop(elsecall_tuning::tuning_drift::start(
         paths.clone(),
         scheduler.clone(),
         configuration.housekeeping.interval,
