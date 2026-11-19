@@ -1,12 +1,13 @@
-# Keeps one issue labelled main-red open while Check fails on main, so a red
-# main is visible to the operator and to every session starting work, and one
-# of them takes the fix. A failure opens the issue or comments on it, a pass
+# Keeps one issue labelled main-red open per workflow that fails on main (the
+# full check, the module shape check and the privacy checks), so a red main is
+# visible to the operator and to every session starting work, and one of them
+# takes the fix. A failure opens the workflow's issue or comments on it, a pass
 # closes it, and a superseded (cancelled) run changes nothing. See
 # scripts/main_status.py.
 name: Main status
 on:
   workflow_run:
-    workflows: [Check]
+    workflows: [Check, Module shape, Privacy]
     types: [completed]
     branches: [main]
 permissions: {}
@@ -17,24 +18,28 @@ jobs:
     if: >-
       github.event.workflow_run.event == 'push' &&
       !contains(fromJSON('["cancelled", "skipped", "neutral", "stale"]'), github.event.workflow_run.conclusion)
+    # One queue per workflow: each workflow's results reach its issue in order.
     concurrency:
-      group: main-status
+      group: main-status-${{ github.event.workflow_run.name }}
       cancel-in-progress: false
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       issues: write
+      # To see whether a later run of the workflow has already reported.
+      actions: read
     steps:
       # The script comes from main, never from the run being reported.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Open, update or close the main-red issue
+      - name: Open, update or close the workflow's main-red issue
         env:
           GH_TOKEN: ${{ github.token }}
+          WORKFLOW: ${{ github.event.workflow_run.name }}
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
           COMMIT: ${{ github.event.workflow_run.head_sha }}
         run: >-
           python3 scripts/main_status.py --repository "$GITHUB_REPOSITORY"
-          --conclusion "$CONCLUSION" --url "$RUN_URL" --commit "$COMMIT"
+          --workflow "$WORKFLOW" --conclusion "$CONCLUSION" --url "$RUN_URL" --commit "$COMMIT"
