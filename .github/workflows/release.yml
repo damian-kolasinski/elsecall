@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - .github/workflows/release.yml
+      # A release calls Check as its gate.
+      - .github/workflows/check.yml
       - distribution/**
       - mise.toml
       - Cargo.toml
@@ -42,29 +44,19 @@ jobs:
         if: github.ref_type == 'tag'
         run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
 
-  # Check runs the full test suite on every commit pushed to main. A release
-  # waits for that run on the tagged commit instead of running the suite again;
-  # nothing is signed or published until it passed.
+  # The release's own run of the full Check suite on the tagged commit, beside
+  # the build. Nothing is signed or published until it passed. It does not rely
+  # on main's run for the commit, which a newer push may have cancelled.
   tested:
+    # Only a tag the version job accepted (on main) takes a macOS runner.
     needs: version
     if: github.ref_type == 'tag'
-    runs-on: ubuntu-24.04
-    # Covers a Check run still queued for a macOS runner when the tag arrives.
-    timeout-minutes: 150
     permissions:
       contents: read
-      actions: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Check passed on main for the release commit
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 distribution/checked_commit.py --repository "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" --summary "$GITHUB_STEP_SUMMARY"
+    uses: ./.github/workflows/check.yml
 
   # Packages, smoke-tests and installs the archive. A pull request's own Check
-  # run tests it, and a tag waits for main's in the tested job.
+  # run tests it, and a tag runs the suite in the tested job.
   build:
     needs: version
     # Ship only the native target this job runs. Elsecall supports macOS.

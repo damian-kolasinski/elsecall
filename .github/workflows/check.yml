@@ -1,15 +1,18 @@
 name: Check
 # Once per commit: a pull request tests its revisions, and main tests each
-# commit that lands there. Pushes of review branches and of tags would only
-# test the same commits again.
+# commit that lands there. Pushes of review branches would only test the same
+# commits again. A release calls this workflow on its tag and publishes only
+# after it passed there, so the release gate is this same suite.
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 concurrency:
   # A newer revision of a pull request supersedes the run of the older one.
-  # Every main commit keeps its own run, since any of them may be released.
-  group: check-${{ github.event.pull_request.number || github.sha }}
+  # Every main commit keeps its own run. A release's call is grouped under the
+  # calling workflow, so it never waits behind main's run on the same commit.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
