@@ -1,5 +1,5 @@
 //! Hold limits and deadlines of waiting requests.
-use super::{Book, Entry, Phase, Scheduler, Waiting};
+use super::{Book, Entry, OnHandover, Phase, Scheduler, Waiting, update_in_progress};
 use crate::{
     failure::Failure,
     scheduling::{
@@ -30,6 +30,21 @@ impl Scheduler {
 
     /// A waiting request reached its hold limit or deadline.
     pub(super) fn expire(&self, book: &mut Book, id: &RunId) {
+        // While an update installs, nothing queued may start, so a request's caller
+        // that asks the next service again is sent there instead of being told the
+        // member had no room.
+        if book.update_held > 0
+            && book.entries.get(id).is_some_and(|e| {
+                e.on_handover == OnHandover::AsksAgain && !matches!(e.phase, Phase::Active { .. })
+            })
+        {
+            return self.cancel_with(
+                book,
+                id,
+                "An update closed admission while the request waited; its caller asks the updated service.",
+                update_in_progress(),
+            );
+        }
         if book.internal_paused.is_some()
             && book.entries.get(id).is_some_and(|e| {
                 e.record.internal && matches!(e.record.urgency, Urgency::Deferrable { .. })

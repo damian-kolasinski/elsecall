@@ -31,7 +31,7 @@ const SETTLED: Duration = Duration::from_secs(5);
 /// directory `data`.
 pub fn interrupted(failure: &Failure, data: &Path) -> bool {
     match failure.code.as_str() {
-        // Only an update holding admission at an idle boundary answers this.
+        // Only an update that closed admission for its install answers this.
         "update_in_progress" => true,
         "service_unavailable" => installation::operation_running(data),
         _ => false,

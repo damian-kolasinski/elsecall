@@ -483,6 +483,12 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
                     return;
                 };
                 let mut book = scheduler.book();
+                // While an update installs, nothing leaves for a member: the
+                // restart would cut it short. The loop tries again after the hold.
+                if book.update_held > 0 {
+                    refused = true;
+                    break;
+                }
                 match book.entries.get_mut(id).map(|e| &mut e.phase) {
                     Some(Phase::Placing(placing))
                         if placing.target.as_deref() == Some(target.as_str()) =>

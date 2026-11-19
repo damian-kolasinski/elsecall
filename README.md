@@ -100,9 +100,17 @@ elsecall update status
 ```
 
 Checking never installs anything. Installation verifies the CLI and its companion
-window through mise's packslip backend, waits up to five minutes for running and
-queued work to finish, then restarts the service. `--wait 15m` changes that wait
-(up to one hour). Work is never killed to make room for an update; a busy machine
+window through mise's packslip backend, waits up to five minutes for the work a
+restart would cut short to finish, then restarts the service. That is runs placed
+between this machine and other members, a placement on its way to a member,
+Elsecall's own running pass, and a request queued by an `elsecall` too old to ask
+the new service again. Local runs and leases keep running through the restart, and
+the CLI's queued requests wait for the new service and ask it again (see
+"Admission and leases"), so neither holds an update back. Leftover processes of
+placed runs are stopped by the restart, earlier than their cap would have. While
+the update waits, no new placement offer leaves this machine once admission
+closes for the install. `--wait 15m` changes the wait (up to one hour). Work is
+never killed to make room for an update; if such work outlasts the wait, the update
 returns `update_deferred`. `--no-wait` returns a durable job immediately.
 
 The helper survives the restart and records download, waiting, install, selection,
@@ -1094,7 +1102,8 @@ needed. Directory entries are optional: move shared rules to the top level if yo
 want the same policy for all work. The new file is separate from `config.toml` so
 older services can still start during rollback. Run history, learned estimates,
 fleet identity and active grants are not changed by migration. Use the existing
-fleet upgrade flow to wait for running work; a timed-out upgrade is deferred.
+fleet upgrade flow, which waits for work a restart would cut short; a timed-out
+upgrade is deferred.
 
 ## Integrating a consumer
 
@@ -2123,13 +2132,16 @@ a build is running code on it. Each member, at the same time as the others:
    `manifest_expired`. Nothing changes on a refusal.
 2. **Waits for its work.** From then on the member turns away runs other members
    would place on it (it answers placement with `member_upgrading`, so placement uses
-   the others) and waits until no run or lease runs or queues there, for at most
-   `--wait` (default 5m, at most 1h). If work
-   remains, the member is `deferred`: nothing is installed, its work keeps running,
-   and the report lists the work it waited for. Running work is never stopped. A
-   request made in the second between the member falling idle and its restart is
-   a handover: a granted lease or run keeps its capacity, and a queued request waits
-   for the new service and asks it again (see "Admission and leases").
+   the others) and waits until nothing the restart would cut short is in flight, for
+   at most `--wait` (default 5m, at most 1h). That is runs placed between it and
+   other members, a placement on its way to a member, and a queued request from a
+   caller that does not say it asks again (an older `elsecall`). A member still on
+   a build from before this rule waits for all its runs and leases instead. Local runs and leases keep running through the
+   restart and the new service holds them; the CLI's queued requests wait for the
+   new service and ask it again (see "Admission and leases"). Neither is waited
+   for. If awaited work remains, the member is `deferred`: nothing is installed, its
+   work keeps running, and the report lists the work it waited for. Running work is
+   never stopped.
 
    Elsecall's own work, such as housekeeping and its fidelity drift check, is
    marked `internal: true` in the report. While the member waits, its queued
@@ -2164,7 +2176,7 @@ The command waits for every member and exits 0 only if each now runs the build.
 | `already_current` | Already ran it; nothing was sent |
 | `rolled_back` | The build did not become ready (`error`, such as `startup_failed`); the previous build runs again (`running`) |
 | `rollback_failed` | Neither build became ready; `error.hint` says how to restore the previous build by hand |
-| `deferred` | Work still ran when the wait ended (`in_flight`); run the command again later or with a longer `--wait` |
+| `deferred` | Work a restart would cut short was still in flight when the wait ended (`in_flight`); run the command again later or with a longer `--wait` |
 | `refused` | The member refused the build (`error.code`); nothing changed |
 | `interrupted` | The attempt ended before anything was installed, such as a service restart while it waited |
 | `unreachable` | The member could not be reached; nothing was sent |

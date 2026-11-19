@@ -16,7 +16,12 @@ use elsecall::{
         member::UpgradeStatus,
         protocol::{self, Manifest, Message, Os, UpgradeId},
     },
+    paths::Paths,
     peer_client,
+    scheduling::{
+        capacity::Cores,
+        request::{AdmissionRequest, Kind, Placement, Urgency},
+    },
 };
 use members::{TestMember, enrol, json};
 use serde_json::Value;
@@ -338,6 +343,41 @@ fn hold_lease(member: &TestMember, label: &str) -> std::process::Child {
     holder
 }
 
+/// A run request queued on `member` the way a caller from before callers asked the
+/// next service again at a handover makes it: the restart would fail it, so an
+/// upgrade waits for it. The member must be too busy to admit it at once.
+fn queue_as_an_older_caller(member: &TestMember, label: &str) -> Killed {
+    let request = AdmissionRequest {
+        kind: Kind::Run,
+        holder_pid: None,
+        size: Some(Cores::from_millis(1000)),
+        label: Some(label.into()),
+        workload: None,
+        placement: Placement::Pinned,
+        urgency: Urgency::Interactive {
+            hold_limit_ms: Some(600_000),
+        },
+        workspace: None,
+        settings: None,
+    };
+    let socket = Paths::for_home(member.home.path()).unwrap().socket();
+    let queued = Killed(
+        crate::processes::command("/usr/bin/curl")
+            .arg("-s")
+            .arg("--unix-socket")
+            .arg(&socket)
+            .args(["-X", "POST", "-H", "Content-Type: application/json"])
+            .arg("--data")
+            .arg(serde_json::to_string(&request).unwrap())
+            .arg("http://localhost/v1/admissions")
+            .stdout(std::process::Stdio::null())
+            .spawn()
+            .unwrap(),
+    );
+    until_recorded(member, label, "queued");
+    queued
+}
+
 /// Runs `fleet upgrade` on `master` in the background.
 fn upgrade_in_background(
     master: &TestMember,
@@ -527,7 +567,7 @@ fn a_build_that_never_becomes_ready_is_rolled_back_to_the_previous_one() {
 }
 
 #[test]
-fn a_members_runs_and_leases_are_waited_for_or_the_upgrade_is_deferred() {
+fn a_members_running_leases_outlast_its_upgrade() {
     let directory = builds();
     let older = variant(directory.path(), "older");
     let alpha = TestMember::install("alpha", Path::new(BUILD));
@@ -538,48 +578,26 @@ fn a_members_runs_and_leases_are_waited_for_or_the_upgrade_is_deferred() {
     std::fs::write(bravo.data().join("workloads.toml"), personal).unwrap();
     let mut holder = hold_lease(&bravo, "nightly-build");
 
-    // With a short wait the upgrade is deferred, and the lease is untouched.
+    // The restart leaves a local lease whole, so the member upgrades without
+    // waiting for it, and the new service holds it.
     let pid = bravo.installed_pid().unwrap();
     let (code, report) = upgrade(&alpha, &["--wait", "1s"]);
-    assert_eq!(code, 1, "{report}");
-    let deferred = outcome(&report, "bravo");
-    assert_eq!(deferred["outcome"], "deferred", "{report}");
-    assert_eq!(deferred["in_flight"][0]["kind"], "lease");
-    assert_eq!(deferred["in_flight"][0]["label"], "nightly-build");
-    assert_eq!(deferred["in_flight"][0]["state"], "running");
-    assert!(deferred["hint"].as_str().unwrap().contains("--wait"));
-    assert_eq!(bravo.installed_pid().unwrap(), pid);
-    assert_eq!(health(&bravo)["build"], build_of(&older));
+    assert_eq!(code, 0, "{report}");
+    assert_eq!(outcome(&report, "bravo")["outcome"], "upgraded", "{report}");
+    assert_ne!(bravo.installed_pid().unwrap(), pid);
+    assert_eq!(health(&bravo)["build"], build_of(Path::new(BUILD)));
+    assert_eq!(
+        std::fs::read_to_string(bravo.data().join("workloads.toml")).unwrap(),
+        personal
+    );
     let runs = bravo.ok(&["runs"]);
     assert_eq!(
         labelled(&runs, "nightly-build")["state"],
         "running",
         "{runs}"
     );
-
-    // With a longer wait the member waits for the lease, then upgrades.
-    let master = upgrade_in_background(&alpha, &["--wait", "60s"]);
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    until_draining(&runtime, &alpha, &bravo, "nightly-build");
-    // A second upgrade meanwhile is refused, and changes nothing.
-    let genuine = std::fs::read(BUILD).unwrap();
-    let signed = manifest(&bravo, &genuine).sign(&alpha.key());
-    assert_eq!(
-        refusal(offer(&runtime, &alpha, &bravo, signed, &genuine)),
-        "upgrade_in_progress"
-    );
-    assert_eq!(bravo.installed_pid().unwrap(), pid, "nothing restarted yet");
     std::fs::write(bravo.home.path().join("release"), "").unwrap();
     assert!(holder.wait().unwrap().success());
-    let output = master.join().unwrap();
-    let report = json(&output);
-    assert!(output.status.success(), "{report}");
-    assert_eq!(outcome(&report, "bravo")["outcome"], "upgraded");
-    assert_eq!(
-        std::fs::read_to_string(bravo.data().join("workloads.toml")).unwrap(),
-        personal
-    );
-    assert_eq!(health(&bravo)["build"], build_of(Path::new(BUILD)));
     let runs = bravo.ok(&["runs"]);
     assert_eq!(
         labelled(&runs, "nightly-build")["outcome"]["kind"],
@@ -630,7 +648,7 @@ fn until_recorded(member: &TestMember, label: &str, state: &str) {
 }
 
 #[test]
-fn a_member_under_pressure_is_not_held_back_by_its_own_queued_housekeeping() {
+fn a_member_waits_only_for_queued_requests_a_restart_would_fail() {
     let directory = builds();
     let older = variant(directory.path(), "older");
     let alpha = TestMember::install("alpha", Path::new(BUILD));
@@ -649,9 +667,10 @@ fn a_member_under_pressure_is_not_held_back_by_its_own_queued_housekeeping() {
     enrol(&alpha, &bravo);
     until_recorded(&bravo, "elsecall housekeeping", "queued");
 
-    // An operator's request queued behind the same gate is waited for: the upgrade
-    // defers, and lists only that request.
-    let waiting = Killed(
+    // The CLI asks the next service again, so its queued lease is not waited for;
+    // a caller from before that would fail, so its request is, and the upgrade
+    // defers listing only that one.
+    let _cli = Killed(
         crate::processes::command(BUILD)
             .env("HOME", bravo.home.path())
             .args([
@@ -667,28 +686,42 @@ fn a_member_under_pressure_is_not_held_back_by_its_own_queued_housekeeping() {
             .unwrap(),
     );
     until_recorded(&bravo, "nightly-build", "queued");
+    let older_caller = queue_as_an_older_caller(&bravo, "older-client");
     let pid = bravo.installed_pid().unwrap();
     let (code, report) = upgrade(&alpha, &["--wait", "1s"]);
     assert_eq!(code, 1, "{report}");
     let deferred = outcome(&report, "bravo");
     assert_eq!(deferred["outcome"], "deferred", "{report}");
+    assert!(deferred["hint"].as_str().unwrap().contains("--wait"));
     let in_flight = deferred["in_flight"].as_array().unwrap();
     assert_eq!(in_flight.len(), 1, "{report}");
-    assert_eq!(in_flight[0]["label"], "nightly-build");
+    assert_eq!(in_flight[0]["label"], "older-client");
     assert_eq!(in_flight[0]["state"], "queued");
     assert_eq!(in_flight[0]["internal"], false);
     assert_eq!(bravo.installed_pid().unwrap(), pid);
     assert_eq!(health(&bravo)["build"], build_of(&older));
 
-    // Once the operator gives up, only Elsecall's own queued housekeeping is left,
-    // and the member upgrades without waiting for it.
-    drop(waiting);
-    until_recorded(&bravo, "nightly-build", "ended");
-    until_recorded(&bravo, "elsecall housekeeping", "queued");
-    let (code, report) = upgrade(&alpha, &["--wait", "30s"]);
-    assert_eq!(code, 0, "{report}");
+    // With a longer wait the member waits for it; a second upgrade meanwhile is
+    // refused and changes nothing. Once that caller gives up, the member upgrades
+    // without waiting for the CLI's lease or its own housekeeping, and the CLI's
+    // request queues on the new service.
+    let master = upgrade_in_background(&alpha, &["--wait", "60s"]);
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    until_draining(&runtime, &alpha, &bravo, "older-client");
+    let genuine = std::fs::read(BUILD).unwrap();
+    let signed = manifest(&bravo, &genuine).sign(&alpha.key());
+    assert_eq!(
+        refusal(offer(&runtime, &alpha, &bravo, signed, &genuine)),
+        "upgrade_in_progress"
+    );
+    assert_eq!(bravo.installed_pid().unwrap(), pid, "nothing restarted yet");
+    drop(older_caller);
+    let output = master.join().unwrap();
+    let report = json(&output);
+    assert!(output.status.success(), "{report}");
     assert_eq!(outcome(&report, "bravo")["outcome"], "upgraded", "{report}");
     assert_eq!(health(&bravo)["build"], build_of(Path::new(BUILD)));
+    until_recorded(&bravo, "nightly-build", "queued");
 }
 
 #[test]
@@ -696,16 +729,29 @@ fn an_attempt_that_cannot_finish_is_closed_and_the_member_keeps_working() {
     let directory = builds();
     let older = variant(directory.path(), "older");
     let alpha = TestMember::install("alpha", Path::new(BUILD));
-    let mut bravo = TestMember::install("bravo", &older);
+    let load = directory.path().join("bravo-load.json");
+    let scripted = format!("file:{}", load.display());
+    let mut bravo =
+        TestMember::install_with("bravo", &older, "", &[("ELSECALL_MACHINE_LOAD", &scripted)]);
     enrol(&alpha, &bravo);
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
-    // The service restarts while it waits for a lease: the attempt is interrupted,
-    // nothing is installed, and the lease survives the restart.
+    // The service restarts while it waits for a request a restart would fail: the
+    // attempt is interrupted, nothing is installed, and a running lease survives
+    // the restart.
     let mut holder = hold_lease(&bravo, "long-test");
+    std::fs::write(&load, r#"{"memory_pressure":"warning"}"#).unwrap();
+    let deadline = Instant::now() + crate::processes::WAIT;
+    while bravo.ok(&["runs"])["member"]["gate"]["verdict"] != "memory_pressure" {
+        assert!(Instant::now() < deadline, "the gate never closed");
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    let older_caller = queue_as_an_older_caller(&bravo, "older-client");
     let master = upgrade_in_background(&alpha, &["--wait", "60s"]);
-    until_draining(&runtime, &alpha, &bravo, "long-test");
+    until_draining(&runtime, &alpha, &bravo, "older-client");
     bravo.restart();
+    drop(older_caller);
+    std::fs::write(&load, "{}").unwrap();
     let output = master.join().unwrap();
     let report = json(&output);
     assert_eq!(output.status.code(), Some(1), "{report}");

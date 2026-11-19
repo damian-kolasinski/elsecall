@@ -1,15 +1,18 @@
 //! A member receiving an upgrade from its master: it verifies the signed manifest
-//! and the content, stages the build, waits for its runs and leases to end, then
-//! hands over to a helper process that installs the build and restarts the service.
+//! and the content, stages the build, waits for the work a restart would cut short,
+//! then hands over to a helper process that installs the build and restarts the
+//! service.
 //!
 //! **In-flight work.** From the moment the build is staged the member refuses runs
 //! other members would place on it (placement sends them elsewhere), and waits until
-//! nothing runs or queues on it, up to the manifest's bound. If work remains then,
-//! the upgrade of this member is `deferred`: nothing is installed, the work keeps
-//! running, and the master reports what it waited for. Work is never stopped. A
-//! local request made in the second between the member falling idle and the
-//! restart behaves as at any handover: a granted lease or run keeps its capacity,
-//! and the CLI asks the new service again for a queued request.
+//! nothing the restart would cut short is in flight, up to the manifest's bound:
+//! runs placed between members, a placement on its way to a member, a request from
+//! a caller that would fail at the handover, and Elsecall's own running pass
+//! (`scheduling::service::upgrading` says why each). Local runs and leases keep
+//! running through the restart, and a queued request from the CLI is asked of the
+//! new service, so neither is waited for. If awaited work remains at the bound, the
+//! upgrade of this member is `deferred`: nothing is installed, the work keeps
+//! running, and the master reports what it waited for. Work is never stopped.
 //!
 //! **Elsecall's own work.** The service asks its own admission for housekeeping
 //! and similar passes on a timer. While the member drains, that work is held: a
@@ -18,9 +21,7 @@
 //! service asks again on its own timer, so nothing is lost. Waiting for it could
 //! last forever, since under sustained load or memory pressure the member admits
 //! nothing and the pass is asked for again every interval. A deferred or failed
-//! upgrade releases the hold. A pass already running is waited for like any other
-//! work: it was admitted, so it ends by itself, and it may be midway through
-//! removing copies or compacting stores, which a later pass would have to finish.
+//! upgrade releases the hold.
 use crate::{
     build_identity::{Build, Digest},
     executable_format::{self, Architecture},
@@ -72,23 +73,19 @@ pub struct WorkInFlight {
     pub internal: bool,
 }
 
-impl WorkInFlight {
-    /// Whether the upgrade waits for it: everything except Elsecall's own work that
-    /// has not started, which the restart ends harmlessly.
-    fn awaited(&self) -> bool {
-        !(self.internal && self.state == WorkState::Queued)
-    }
-}
-
 /// The member's own work, as the upgrade needs to see it.
 pub trait MemberWork: Send + Sync {
-    /// Runs and leases running or queued on this member, placed and internal ones
-    /// included.
+    /// The runs and leases running or queued on this member that restarting its
+    /// service would cut short: what the upgrade waits for.
     fn in_flight(&self) -> Vec<WorkInFlight>;
     /// Refuses runs other members would place here until the hold is dropped.
     fn hold_placed(&self) -> Box<dyn Send>;
     /// Keeps Elsecall's own queued work from starting until the hold is dropped.
     fn hold_internal(&self) -> Box<dyn Send>;
+    /// Closes admission for the install, in the same step as finding nothing in
+    /// flight that the restart would cut short, so nothing such can start between
+    /// the two. `None` while there is.
+    fn hold_install(&self) -> Option<Box<dyn Send>>;
 }
 
 /// Starts the process that installs the staged build and restarts the service. The
@@ -464,15 +461,15 @@ impl Upgrades {
 
     /// Waits for the member's work to end, then hands over to the installer.
     async fn drain(self: Arc<Self>, mut state: UpgradeState, wait: Duration, master: PublicKey) {
-        let hold = (self.work.hold_placed(), self.work.hold_internal());
+        let mut hold = (self.work.hold_placed(), self.work.hold_internal(), None);
         let deadline = Instant::now() + wait;
         let mut seen: Option<Vec<WorkInFlight>> = None;
         let ended = loop {
-            let mut in_flight = self.work.in_flight();
-            in_flight.retain(WorkInFlight::awaited);
-            if in_flight.is_empty() {
+            if let Some(install) = self.work.hold_install() {
+                hold.2 = Some(install);
                 break None;
             }
+            let in_flight = self.work.in_flight();
             if Instant::now() >= deadline {
                 log(
                     "upgrade_deferred",
@@ -548,31 +545,11 @@ fn own_architecture() -> Result<Architecture> {
 mod tests {
     use super::*;
 
-    fn work(state: WorkState, internal: bool) -> WorkInFlight {
-        WorkInFlight {
-            run_id: "r-1".into(),
-            kind: WorkKind::Run,
-            label: None,
-            state,
-            placed: false,
-            internal,
-        }
-    }
-
-    #[test]
-    fn only_elsecalls_own_queued_work_is_not_waited_for() {
-        assert!(work(WorkState::Running, false).awaited());
-        assert!(work(WorkState::Queued, false).awaited());
-        assert!(work(WorkState::Running, true).awaited());
-        assert!(!work(WorkState::Queued, true).awaited());
-    }
-
     #[test]
     fn work_recorded_before_the_internal_flag_reads_as_the_operators() {
         let recorded =
             r#"{"run_id":"r-1","kind":"lease","label":null,"state":"queued","placed":false}"#;
         let work: WorkInFlight = serde_json::from_str(recorded).unwrap();
         assert!(!work.internal);
-        assert!(work.awaited());
     }
 }

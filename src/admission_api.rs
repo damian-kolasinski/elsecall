@@ -2,7 +2,11 @@
 use crate::{
     api,
     failure::Result,
-    scheduling::{request, run_id::RunId, service::Scheduler},
+    scheduling::{
+        request,
+        run_id::RunId,
+        service::{OnHandover, Scheduler},
+    },
     server::Peer,
 };
 use axum::{
@@ -17,6 +21,26 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::sync::Arc;
 
 pub const MAXIMUM_LISTED: u32 = 500;
+
+/// The admissions route as a caller that asks the next service again, when a
+/// service handover ends its request before the decision, calls it. Services that
+/// predate the parameter ignore it. A request without it is treated as one whose
+/// caller would fail at a handover, so an update waits for it while it queues.
+pub const ADMISSIONS_ASKING_AGAIN: &str = "/v1/admissions?on_handover=ask_again";
+
+#[derive(Deserialize)]
+struct Admitting {
+    /// `ask_again`; any other value is a caller this service does not know to.
+    on_handover: Option<String>,
+}
+impl Admitting {
+    fn on_handover(&self) -> OnHandover {
+        match self.on_handover.as_deref() {
+            Some("ask_again") => OnHandover::AsksAgain,
+            _ => OnHandover::Fails,
+        }
+    }
+}
 
 pub fn routes(scheduler: Arc<Scheduler>) -> Router {
     Router::new()
@@ -62,9 +86,14 @@ fn peer(peer: &Peer) -> Result<u32> {
 async fn admit(
     State(scheduler): State<Arc<Scheduler>>,
     ConnectInfo(caller): ConnectInfo<Peer>,
+    Query(admitting): Query<Admitting>,
     body: Bytes,
 ) -> Response {
-    let result = async { scheduler.request(peer(&caller)?, parse(&body)?).await };
+    let result = async {
+        scheduler
+            .request_on_handover(peer(&caller)?, parse(&body)?, admitting.on_handover())
+            .await
+    };
     respond(result.await)
 }
 

@@ -99,13 +99,13 @@ enum FleetCommand {
     /// On the master: send its installed build to every member, which installs it,
     /// restarts and confirms it is ready, or rolls back
     #[command(
-        after_help = "Exits 0 when every member runs the build. A member with runs or leases waits for them up to --wait, then is deferred; nothing running is stopped. README \"Upgrading the fleet\" describes each outcome."
+        after_help = "Exits 0 when every member runs the build. A member waits up to --wait for the work a restart would cut short, such as placed runs, then is deferred; local runs and leases keep running through the restart, and nothing running is stopped. README \"Upgrading the fleet\" describes each outcome."
     )]
     Upgrade {
         /// Only this member
         #[arg(long)]
         member: Option<MemberName>,
-        /// How long each member waits for its runs and leases to end (at most 1h)
+        /// How long each member waits for work a restart would cut short (at most 1h)
         #[arg(long, default_value = "5m", value_parser = humantime::parse_duration)]
         wait: Duration,
         /// Distribute this build instead of the master's installed executable, for

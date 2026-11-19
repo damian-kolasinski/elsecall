@@ -76,6 +76,14 @@ the status file, request records, `runs` and `explain`.
     handover). The lock's holder is recorded by process ID and start time
     (`lifecycle_holder`) and cleared on release, so a dead holder or a reused ID
     never looks like a handover.
+  - The CLI says so on each request (`/v1/admissions?on_handover=ask_again`;
+    services that predate it ignore the parameter). An update or fleet upgrade
+    therefore waits only for work the restart would cut short
+    (`scheduling::service::upgrading`): placed runs, a placement whose offer is on
+    its way, Elsecall's own running pass, and a queued request from a caller that
+    did not say it asks again. Local grants and the CLI's queued requests outlast
+    it. Leftover processes of placed runs are not waited for: the restart stops
+    them, earlier than their cap would have.
 - **Records.**
   - Records live in `records.sqlite` (WAL, mode 0600). Each is one JSON document
     per request, with indexed columns for listing, unfinished requests and

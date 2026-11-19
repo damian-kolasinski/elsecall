@@ -3,7 +3,7 @@ pub mod environment;
 pub mod options;
 pub mod resolution;
 
-use crate::admission_api::MAXIMUM_LISTED;
+use crate::admission_api::{self, MAXIMUM_LISTED};
 use crate::{
     client::{self, Wait},
     failure::{Failure, Result},
@@ -173,7 +173,12 @@ pub async fn admit(socket: &Path, request: &AdmissionRequest) -> Result<Grant> {
 }
 
 async fn admit_once(socket: &Path, request: &AdmissionRequest) -> Result<Grant> {
-    let decision = client::post(socket, "/v1/admissions", request, Wait::Unbounded);
+    let decision = client::post(
+        socket,
+        admission_api::ADMISSIONS_ASKING_AGAIN,
+        request,
+        Wait::Unbounded,
+    );
     let limit = match request.urgency {
         Urgency::Interactive { hold_limit_ms } => hold_limit_ms
             .map(Duration::from_millis)
