@@ -51,7 +51,7 @@ fn probe(
             .env_clear()
             .envs(environment.iter().map(|(k, v)| (k, v)));
     }
-    let Ok(mut child) = crate::child_start::spawn(&mut child) else {
+    let Ok(mut child) = elsecall_process::child_start::spawn(&mut child) else {
         hasher.update(b"missing");
         return hasher.finish();
     };

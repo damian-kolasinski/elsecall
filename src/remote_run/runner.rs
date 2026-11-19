@@ -693,7 +693,7 @@ impl Command {
     fn spawn(start: &Start, prepared: &Prepared) -> Result<Self> {
         let failed = |e: std::io::Error| not_startable(&e.to_string());
         // From the command's pipes until it exists, no other child may start.
-        let starting = crate::child_start::starting();
+        let starting = elsecall_process::child_start::starting();
         let (stdout_read, stdout_write) = pipe_pair().map_err(failed)?;
         let (stderr_read, stderr_write) = if start.merged {
             (None, stdout_write.try_clone().map_err(failed)?)

@@ -125,7 +125,7 @@ impl ServiceManager for ProcessService {
                 Ok(())
             });
         }
-        let output = crate::child_start::output(&mut command)
+        let output = elsecall_process::child_start::output(&mut command)
             .map_err(|e| Failure::io("Start the service process", e))?;
         let pid = String::from_utf8_lossy(&output.stdout).trim().to_owned();
         if !output.status.success() || pid.parse::<i32>().is_err() {

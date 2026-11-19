@@ -27,7 +27,7 @@ impl Installer for HelperProcess {
                 Ok(())
             });
         }
-        let mut child = crate::child_start::spawn(&mut command)
+        let mut child = elsecall_process::child_start::spawn(&mut command)
             .map_err(|e| Failure::io("Start the upgrade helper", e))?;
         let (ended, receiver) = tokio::sync::oneshot::channel();
         // Reap it, and say so, if it ends while this service still runs.

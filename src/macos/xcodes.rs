@@ -24,13 +24,11 @@
 //! Xcodes are still listed when the executable is missing. Its version is the
 //! first token of `xcodes version` (1.6.0 on this machine prints that line).
 //! Output is not logged.
-use crate::{
-    command_capture::{self, Program},
-    tool_inventory::{
-        Detail, Executable, InstalledTool, InventoryFailure, Manager, ManagerInventory,
-        ToolManager, ToolName, ToolVersion, version_token,
-    },
+use crate::tool_inventory::{
+    Detail, Executable, InstalledTool, InventoryFailure, Manager, ManagerInventory, ToolManager,
+    ToolName, ToolVersion, version_token,
 };
+use elsecall_process::command_capture::{self, Program};
 use std::{
     ffi::OsStr,
     path::{Path, PathBuf},

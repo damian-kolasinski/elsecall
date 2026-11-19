@@ -18,12 +18,10 @@
 //! Output is not logged.
 mod listing;
 
-use crate::{
-    command_capture::{self, Program},
-    tool_inventory::{
-        Executable, InventoryFailure, Manager, ManagerInventory, ToolManager, version_token,
-    },
+use crate::tool_inventory::{
+    Executable, InventoryFailure, Manager, ManagerInventory, ToolManager, version_token,
 };
+use elsecall_process::command_capture::{self, Program};
 use std::{
     ffi::{OsStr, OsString},
     path::{Path, PathBuf},

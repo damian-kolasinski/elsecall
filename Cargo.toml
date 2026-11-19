@@ -51,6 +51,7 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 elsecall = { path = "." }
+elsecall-process = { path = "crates/elsecall-process" }
 elsecall-labels = { path = "crates/elsecall-labels" }
 elsecall-failure = { path = "crates/elsecall-failure" }
 
@@ -86,6 +87,7 @@ clap.workspace = true
 ed25519-dalek.workspace = true
 elsecall-failure.workspace = true
 elsecall-labels.workspace = true
+elsecall-process.workspace = true
 futures-util.workspace = true
 getrandom.workspace = true
 hkdf.workspace = true

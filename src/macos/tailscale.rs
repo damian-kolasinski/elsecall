@@ -36,7 +36,7 @@ impl Tailnet for TailscaleCli {
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::null());
-        let mut child = crate::child_start::spawn(&mut command)
+        let mut child = elsecall_process::child_start::spawn(&mut command)
             .map_err(|_| unavailable("the Tailscale command could not be started"))?;
         let mut stdout = child.stdout.take().expect("piped stdout");
         let reader = std::thread::spawn(move || {

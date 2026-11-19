@@ -275,7 +275,7 @@ async fn send_command_output(
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
-    let mut child = crate::child_start::spawn_async(&mut command)
+    let mut child = elsecall_process::child_start::spawn_async(&mut command)
         .map_err(|e| sync_failed(format!("git could not be started: {e}.")))?;
     let mut stdin = child.stdin.take().expect("piped");
     let writer = tokio::spawn(async move {
@@ -962,7 +962,7 @@ pub async fn receive(
 
 /// Reads one pack blob into the copy's object store.
 async fn import_pack(link: &mut impl Link, copy: &Copy, thin: bool) -> Result<u64> {
-    let mut child = crate::child_start::spawn_async(&mut copy.pack_importer(thin))
+    let mut child = elsecall_process::child_start::spawn_async(&mut copy.pack_importer(thin))
         .map_err(|e| sync_failed(format!("git index-pack could not be started: {e}.")))?;
     let mut stdin = child.stdin.take().expect("piped");
     let mut total = 0u64;

@@ -24,9 +24,9 @@ use std::{
 };
 
 /// How much stdout is kept. Anything larger is refused rather than buffered.
-pub(crate) const OUTPUT_LIMIT: u64 = 8 * 1024 * 1024;
+pub const OUTPUT_LIMIT: u64 = 8 * 1024 * 1024;
 
-pub(crate) struct Program<'a> {
+pub struct Program<'a> {
     pub program: &'a Path,
     pub arguments: &'a [&'a str],
     pub directory: &'a Path,
@@ -35,23 +35,23 @@ pub(crate) struct Program<'a> {
 }
 
 #[derive(Debug)]
-pub(crate) struct Captured {
+pub struct Captured {
     pub status: ExitStatus,
     pub stdout: Vec<u8>,
 }
 
 #[derive(Debug)]
-pub(crate) enum CaptureFailure {
+pub enum CaptureFailure {
     Start(std::io::Error),
     TimedOut,
     TooLarge,
 }
 
-pub(crate) fn run(program: Program<'_>) -> Result<Captured, CaptureFailure> {
+pub fn run(program: Program<'_>) -> Result<Captured, CaptureFailure> {
     run_with_env(program, &[])
 }
 
-pub(crate) fn run_with_env(
+pub fn run_with_env(
     program: Program<'_>,
     environment: &[(OsString, OsString)],
 ) -> Result<Captured, CaptureFailure> {
@@ -120,7 +120,7 @@ pub(crate) fn run_with_env(
 ///
 /// Honoured in every build, the same way `ELSECALL_MACHINE_LOAD` is: these are
 /// not debug-only seams.
-pub(crate) fn path_override(name: &str) -> Option<PathBuf> {
+pub fn path_override(name: &str) -> Option<PathBuf> {
     let value = std::env::var_os(name)?;
     if value.is_empty() {
         None
@@ -129,13 +129,13 @@ pub(crate) fn path_override(name: &str) -> Option<PathBuf> {
     }
 }
 
-pub(crate) enum OverridePath {
+pub enum OverridePath {
     Unset,
     Absolute(PathBuf),
     NotAbsolute,
 }
 
-pub(crate) fn classify(value: Option<PathBuf>) -> OverridePath {
+pub fn classify(value: Option<PathBuf>) -> OverridePath {
     match value {
         None => OverridePath::Unset,
         Some(path) if path.is_absolute() => OverridePath::Absolute(path),
@@ -143,7 +143,7 @@ pub(crate) fn classify(value: Option<PathBuf>) -> OverridePath {
     }
 }
 
-pub(crate) enum Located {
+pub enum Located {
     Found(PathBuf),
     Missing,
     NotAbsolute,
@@ -153,7 +153,7 @@ pub(crate) enum Located {
 /// candidate that is a file. An absolute override that is not a file hides the
 /// candidates. A non-absolute override is [`Located::NotAbsolute`] and also
 /// hides them.
-pub(crate) fn locate(override_path: Option<PathBuf>, candidates: &[PathBuf]) -> Located {
+pub fn locate(override_path: Option<PathBuf>, candidates: &[PathBuf]) -> Located {
     match classify(override_path) {
         OverridePath::NotAbsolute => Located::NotAbsolute,
         OverridePath::Absolute(path) => {
@@ -185,7 +185,7 @@ fn finish(pgid: Option<libc::pid_t>, child: &mut Child, reaped: bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::command_capture::*;
     use std::{fs, os::unix::fs::PermissionsExt, time::Instant};
 
     fn write_script(directory: &Path, name: &str, body: &str) -> PathBuf {

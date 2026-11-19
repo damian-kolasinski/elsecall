@@ -1,0 +1,17 @@
+[package]
+name = "elsecall-process"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+libc.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -53,7 +53,7 @@ impl HelperLauncher for DetachedHelper {
                 Ok(())
             });
         }
-        let mut child = crate::child_start::spawn(&mut command)
+        let mut child = elsecall_process::child_start::spawn(&mut command)
             .map_err(|e| Failure::io("Start release helper", e))?;
         std::thread::spawn(move || {
             let _ = child.wait();

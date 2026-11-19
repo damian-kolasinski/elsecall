@@ -1,9 +1,7 @@
 //! Bounded, non-interactive external tools; output never enters errors or logs.
-use crate::{
-    command_capture::{self, Program},
-    paths::Paths,
-};
+use crate::paths::Paths;
 use elsecall_failure::{Failure, Result};
+use elsecall_process::command_capture::{self, Program};
 use std::{
     ffi::OsString,
     os::unix::fs::PermissionsExt,

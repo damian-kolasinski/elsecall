@@ -1067,6 +1067,7 @@ dependencies = [
  "ed25519-dalek",
  "elsecall-failure",
  "elsecall-labels",
+ "elsecall-process",
  "futures-util",
  "getrandom 0.3.4",
  "hkdf",
@@ -1102,6 +1103,15 @@ dependencies = [
 [[package]]
 name = "elsecall-labels"
 version = "0.3.0"
+
+[[package]]
+name = "elsecall-process"
+version = "0.3.0"
+dependencies = [
+ "libc",
+ "tempfile",
+ "tokio",
+]
 
 [[package]]
 name = "elsecall-ui"
