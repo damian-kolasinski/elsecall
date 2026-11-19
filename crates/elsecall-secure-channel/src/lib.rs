@@ -25,7 +25,7 @@ const TAG: usize = 16;
 
 /// Validate an untrusted public half before consuming a remote admission or
 /// recording a successful handshake. The fixed probe carries no secret material.
-pub(crate) fn is_contributory(public: &[u8; 32]) -> bool {
+pub fn is_contributory(public: &[u8; 32]) -> bool {
     StaticSecret::from([42; 32])
         .diffie_hellman(&PublicKey::from(*public))
         .was_contributory()
@@ -273,7 +273,7 @@ impl<S: AsyncRead + Unpin> AsyncRead for SecureStream<S> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::*;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     fn pair() -> (Keys, Keys) {

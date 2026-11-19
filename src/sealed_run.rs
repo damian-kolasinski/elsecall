@@ -30,7 +30,7 @@ pub(crate) fn public_header(headers: &HeaderMap) -> Option<[u8; 32]> {
     }
     let public: [u8; 32] = URL_SAFE_NO_PAD.decode(value).ok()?.try_into().ok()?;
     // Reject noncontributory public halves before consuming a remote admission.
-    crate::secure_channel::is_contributory(&public).then_some(public)
+    elsecall_secure_channel::is_contributory(&public).then_some(public)
 }
 
 #[cfg(test)]
@@ -39,8 +39,8 @@ mod tests {
     use crate::{
         member_key::MemberKey,
         peer_auth::{self, ChannelAcceptance},
-        secure_channel::Ephemeral,
     };
+    use elsecall_secure_channel::Ephemeral;
     fn evidence(run: &str, public: [u8; 32]) -> ChannelProof {
         let requester = MemberKey::generate().unwrap().public();
         let responder = MemberKey::generate().unwrap();

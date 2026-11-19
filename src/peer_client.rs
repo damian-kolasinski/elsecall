@@ -399,7 +399,7 @@ pub async fn call_each<T: DeserializeOwned>(
 
 /// A run's channel to the member that hosts it.
 pub type RunChannel = crate::peer_transport::Observed<
-    crate::secure_channel::SecureStream<TokioIo<hyper::upgrade::Upgraded>>,
+    elsecall_secure_channel::SecureStream<TokioIo<hyper::upgrade::Upgraded>>,
 >;
 
 /// How long attaching to a member may take, including the member's own checks.
@@ -423,14 +423,15 @@ pub async fn channel(
     purpose: &str,
     protocol: &'static str,
 ) -> Result<RunChannel> {
-    let ephemeral = crate::secure_channel::Ephemeral::generate().ok_or_else(random_unavailable)?;
+    let ephemeral =
+        elsecall_secure_channel::Ephemeral::generate().ok_or_else(random_unavailable)?;
     let accepted = open_channel(key, member, path, purpose, protocol, ephemeral.public).await?;
     let keys = accepted
         .acceptance
         .keys(purpose, ephemeral)
         .ok_or_else(|| protocol_error(member))?;
     Ok(crate::peer_transport::Observed::new(
-        crate::secure_channel::SecureStream::new(accepted.stream, keys),
+        elsecall_secure_channel::SecureStream::new(accepted.stream, keys),
         member.name.as_str(),
         path,
         crate::peer_transport::stream_timeout(protocol),

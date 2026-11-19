@@ -80,7 +80,6 @@ pub mod roster;
 pub mod run_id_file;
 pub mod run_relay;
 pub mod scheduling;
-pub mod secure_channel;
 pub mod server;
 pub mod service_configuration;
 pub mod service_handover;

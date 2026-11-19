@@ -221,7 +221,7 @@ fn stream_failure(
     started: std::time::Instant,
 ) -> Failure {
     use crate::peer_diagnostics::Kind;
-    let (kind, detail) = if crate::secure_channel::is_authentication_failure(error) {
+    let (kind, detail) = if elsecall_secure_channel::is_authentication_failure(error) {
         (
             Kind::Authentication,
             "the secure channel did not authenticate".into(),

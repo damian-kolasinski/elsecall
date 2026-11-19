@@ -6,7 +6,6 @@ use crate::{
     placement_host::PlacementHost,
     remote_run::runner,
     scheduling::{placed::PlacementOffer, quote::QuoteRequest, run_id::RunId},
-    secure_channel::{Ephemeral, SecureStream},
 };
 use axum::{
     Extension, Json, Router,
@@ -18,6 +17,7 @@ use axum::{
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_failure::Failure;
+use elsecall_secure_channel::{Ephemeral, SecureStream};
 use hyper_util::rt::TokioIo;
 use serde::Deserialize;
 use std::sync::Arc;

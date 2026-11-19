@@ -1,0 +1,19 @@
+[package]
+name = "elsecall-secure-channel"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+chacha20poly1305.workspace = true
+getrandom.workspace = true
+hkdf.workspace = true
+sha2.workspace = true
+tokio.workspace = true
+x25519-dalek.workspace = true
+zeroize.workspace = true
