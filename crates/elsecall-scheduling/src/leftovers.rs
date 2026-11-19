@@ -13,6 +13,18 @@ pub const STOPPING: Duration = Duration::from_secs(8);
 /// end before it stops it and syncs the copy.
 const LEFTOVERS_WAIT: Duration = Duration::from_secs(10);
 
+/// How long processes a placed command leaves running may run after the command
+/// exits; zero stops them at once. The operator sets it in the service
+/// configuration.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Cap(pub Duration);
+
+impl Default for Cap {
+    fn default() -> Self {
+        Cap(Duration::from_secs(10 * 60))
+    }
+}
+
 /// Leave the executor's stopping budget inside the end-to-end hold limit.
 pub fn leftovers_wait_budget(remaining: Duration) -> Duration {
     LEFTOVERS_WAIT.min(remaining.saturating_sub(STOPPING))

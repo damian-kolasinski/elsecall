@@ -24,7 +24,7 @@ const KILL_WAIT: Duration = Duration::from_secs(2);
 /// At most this many of them are recorded, for a restart to find the group.
 const RECORDED: usize = 8;
 
-pub use elsecall_sync::configuration::Cap;
+pub(crate) use elsecall_scheduling::leftovers::Cap;
 
 /// Watches one run's leftovers; cloned handles share them.
 #[derive(Clone)]

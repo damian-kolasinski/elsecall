@@ -214,9 +214,9 @@ pub async fn serve_with_updates(
         ));
     }
     // Placed runs bring their member's synced configuration up to date first.
-    let pre_run = Arc::new(
-        elsecall_runs::placement_config_sync::PlacementConfigSync::new(config_sync.clone()),
-    );
+    let pre_run = Arc::new(crate::placement_config_sync::PlacementConfigSync::new(
+        config_sync.clone(),
+    ));
     let (scheduler, _scheduling) = Scheduler::start(
         &paths.records(),
         (&configuration).into(),

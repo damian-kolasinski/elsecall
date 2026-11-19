@@ -1273,7 +1273,6 @@ dependencies = [
  "elsecall-host",
  "elsecall-peers",
  "elsecall-scheduling",
- "elsecall-sync",
  "elsecall-workload-config",
  "elsecall-workspace",
  "futures-util",

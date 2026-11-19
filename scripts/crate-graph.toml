@@ -96,7 +96,7 @@ modules = ["fleet", "fleet_changes", "fleet_local_api", "fleet_view", "fleet_pla
 band = "feature"
 # Running commands on the fleet: admitting a run, placing it on a member, and
 # running it remotely.
-modules = ["admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "remote_run", "sealed_run", "placement_api", "placement_authority", "placement_host", "placement_config_sync", "service_handover"]
+modules = ["admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "remote_run", "sealed_run", "placement_api", "placement_authority", "placement_host", "service_handover"]
 
 [crates.workload-config]
 band = "feature"
@@ -157,9 +157,10 @@ modules = ["macos", "process_service", "openssh_mac"]
 band = "entry"
 # Router assembly and the peer listener: they mount routes from many slices and
 # apply enrolled-member authentication over all of them. With them, the adapters
-# that join two slices (housekeeping's callers and copies through the fleet), so
-# neither slice waits for the other to build.
-modules = ["server", "peer_api", "peer_listener", "outside_pressure_api", "ui_app", "fleet_callers", "fleet_copies", "workspace_check_api"]
+# that join two slices (housekeeping's callers and copies through the fleet,
+# placement's pre-run sync through config sync), so neither slice waits for the
+# other to build.
+modules = ["server", "peer_api", "peer_listener", "outside_pressure_api", "ui_app", "fleet_callers", "fleet_copies", "workspace_check_api", "placement_config_sync"]
 
 [crates.cli]
 band = "entry"

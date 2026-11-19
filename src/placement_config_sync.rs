@@ -12,14 +12,14 @@ use elsecall_sync::config_sync::{
 use futures_util::future::BoxFuture;
 use std::sync::Arc;
 
-pub struct PlacementConfigSync {
+pub(crate) struct PlacementConfigSync {
     /// The member's configuration sync, or why it could not be opened; then no
     /// run is placed elsewhere, since its configuration could not be ensured.
     sync: std::result::Result<Arc<ConfigSync>, Failure>,
 }
 
 impl PlacementConfigSync {
-    pub fn new(sync: std::result::Result<Arc<ConfigSync>, Failure>) -> Self {
+    pub(crate) fn new(sync: std::result::Result<Arc<ConfigSync>, Failure>) -> Self {
         Self { sync }
     }
 }

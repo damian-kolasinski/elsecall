@@ -8,6 +8,7 @@ pub mod nearby_cli;
 pub mod outside_pressure_api;
 pub mod peer_api;
 pub mod peer_listener;
+mod placement_config_sync;
 pub mod server;
 pub mod ui_app;
 pub mod uninstall;
