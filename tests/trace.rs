@@ -1,8 +1,6 @@
 #![cfg(target_os = "macos")]
 //! Real services and records; fake only machine observation and the tailnet.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 use members::{TestMember, enrol};
 use serde_json::Value;
 use std::{fs, os::unix::fs::PermissionsExt, path::Path};

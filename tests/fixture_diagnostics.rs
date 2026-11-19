@@ -1,5 +1,5 @@
 //! A failed fixture test reports its commands and logs through libtest's output.
-mod diagnostics;
+use crate::diagnostics;
 use std::process::Command;
 
 /// Run only by `failure_reports_commands_and_registered_logs`, as a subprocess.

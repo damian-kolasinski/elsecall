@@ -1,0 +1,64 @@
+//! The integration tests, as one binary: the workspace links once for all of
+//! them, and the modules they share build once. Each file in tests/ is a
+//! module here; nextest still runs every test in its own process.
+
+mod diagnostics;
+mod file_gate;
+mod members;
+mod processes;
+mod run_fragmentation;
+mod sealed_fragmentation;
+mod support;
+mod sync_gate;
+
+mod add_mac;
+mod admission;
+mod agent_skill;
+mod busy_hour_calibration;
+mod channel_handshake;
+mod config_sync;
+mod consumer_kit;
+mod entry_pattern;
+mod fixture_diagnostics;
+mod fleet_master;
+mod fleet_membership;
+mod fleet_upgrade;
+mod handover;
+mod housekeeping;
+mod housekeeping_callers;
+mod install_window;
+mod installation;
+mod local_cli;
+mod loopback_policy;
+mod nearby;
+mod openssh_mac;
+mod peer_io;
+mod placement;
+mod pre_run_sync;
+mod preflight;
+mod protocol;
+mod rehearsal_diagnosis;
+mod rehearse;
+mod release_update;
+mod release_update_install;
+mod release_update_local_channel;
+mod release_update_providers;
+mod remote_run;
+mod report;
+mod run;
+mod run_link;
+mod service_configuration;
+mod shutdown;
+mod simulate;
+mod state_retention;
+mod test_environment;
+mod tools_desired;
+mod tools_fleet_inventory;
+mod tools_inventory;
+mod trace;
+mod tune;
+mod uninstall;
+mod window_upgrade;
+mod workload_configuration;
+mod workload_metadata;
+mod workspace_copy;

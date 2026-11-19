@@ -2,9 +2,8 @@
 //! runs the real Elsecall CLI in its own temporary home on this machine, with
 //! loopback standing in for the tailnet, as the other fleet tests do.
 #![cfg(target_os = "macos")]
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
+use crate::processes;
 
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::{

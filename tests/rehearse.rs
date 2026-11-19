@@ -1,8 +1,8 @@
 #![cfg(target_os = "macos")]
 //! Real fleet services and normal run clients, with only discovery/load scripted.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::diagnostics;
+use crate::members;
+use crate::processes;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_reports::workload::trace::Trace;
 use members::{TestMember, enrol};

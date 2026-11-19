@@ -1,8 +1,7 @@
 #![cfg(target_os = "macos")]
 //! Real rehearsal services in disposable homes; only machine/discovery observations are scripted.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
+use crate::processes;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_reports::workload::trace::Trace;
 use elsecall_tuning::busy_hour_calibration::{Target, calibrate};

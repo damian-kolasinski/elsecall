@@ -3,9 +3,7 @@
 //! services in separate temporary homes on loopback: the member learns it from the
 //! copy's owner alone, over the authenticated member channel, and both sides clean
 //! up their state.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;

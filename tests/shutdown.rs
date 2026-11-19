@@ -1,8 +1,7 @@
 #![cfg(target_os = "macos")]
 //! Stopping the service while requests queue. A separate test binary, because it
 //! signals its own process the way launchd signals the service.
-mod processes;
-mod support;
+use crate::support;
 
 use support::{Fixture, queued};
 

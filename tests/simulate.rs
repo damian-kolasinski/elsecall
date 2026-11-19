@@ -1,9 +1,7 @@
 #![cfg(target_os = "macos")]
 //! Record decisions from real services, then replay them with the production
 //! scheduler and virtual adapters. Only machine observation and tailnet are fake.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use members::{TestMember, enrol};

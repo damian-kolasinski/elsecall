@@ -1,9 +1,8 @@
 #![cfg(target_os = "macos")]
 //! Prove isolation in a subprocess: never mutate a multithreaded test's environment.
-mod diagnostics;
-mod members;
-mod processes;
-mod support;
+use crate::members;
+use crate::processes;
+use crate::support;
 
 use members::TestMember;
 

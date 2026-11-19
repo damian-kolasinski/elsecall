@@ -16,7 +16,12 @@ The rules:
   every package depending on it, directly or not (nextest's `rdeps`).
 - `tests/NAME.rs` and `tests/NAME/main.rs` select that test binary. Anything
   else under `tests/DIR/` selects the binaries declaring `mod DIR;` and what
-  names it, or everything when neither does.
+  names it, or everything when neither does. In a package whose tests are one
+  binary (`autotests = false` and a `[[test]]` at `tests/main.rs`), the files
+  are its modules instead: `tests/NAME.rs` selects the tests in `NAME::`, and
+  a file of a shared module `tests/DIR/` selects that module's tests and those
+  of every module naming `crate::DIR`, directly or through another shared
+  module.
 - Files under `distribution/`, Python files under `scripts/`, and `.githooks/`
   select their Python unit tests.
 - Any other file is followed through the Rust, Python and shell sources naming
@@ -116,6 +121,9 @@ class Package:
     name: str
     directory: str  # "" for the root package
     dependents: frozenset[str]  # names of workspace packages with a path dependency on it
+    # The test target rooted at tests/main.rs, when the files in tests/ are its
+    # modules rather than test binaries of their own.
+    combined_tests: str | None = None
 
 
 class Workspace:
@@ -208,9 +216,16 @@ def read_packages(root: Path) -> list[Package]:
                 if target in dependents and target != directory:
                     dependents[target].add(names[directory])
     return [
-        Package(names[directory], directory, frozenset(dependents[directory]))
-        for directory in manifests
+        Package(names[directory], directory, frozenset(dependents[directory]), combined_tests(manifest))
+        for directory, manifest in manifests.items()
     ]
+
+
+def combined_tests(manifest: dict) -> str | None:
+    """The name of the one test binary holding every file in tests/, if any."""
+    if manifest.get("package", {}).get("autotests", True):
+        return None
+    return next((t["name"] for t in manifest.get("test", []) if t.get("path") == "tests/main.rs"), None)
 
 
 def normalize(path: str) -> str:
@@ -262,6 +277,8 @@ def affects(workspace: Workspace, path: str, visiting: set[str]) -> Everything |
             return named
         named.rust.add(f"rdeps({package.name})" if package.dependents else f"package({package.name})")
         return named
+    if relative.startswith("tests/") and package.combined_tests:
+        return combined_test_targets(workspace, package, path, relative.split("/")[1:], visiting)
     if relative.startswith("tests/"):
         parts = relative.split("/")[1:]
         # Cargo's test binaries: tests/NAME.rs and tests/NAME/main.rs.
@@ -292,6 +309,49 @@ def affects(workspace: Workspace, path: str, visiting: set[str]) -> Everything |
 
 def binary(package: Package, stem: str) -> str:
     return f"binary_id({package.name}::{stem})"
+
+
+def combined_test_targets(workspace: Workspace, package: Package, path: str, parts: list[str], visiting: set[str]) -> Everything | Targets:
+    """What a file under tests/ affects when the files there are modules of
+    one test binary."""
+    if parts == ["main.rs"]:
+        return Targets(rust={binary(package, package.combined_tests)})
+    if len(parts) == 1 and parts[0].endswith(".rs"):
+        if path not in workspace.files:
+            return Targets()
+        return Targets(rust={test_module(package, parts[0].removesuffix(".rs"))})
+    # Data or a shared module's file: whoever names it, and the modules using
+    # the shared module.
+    named = referenced(workspace, path, visiting)
+    if isinstance(named, Everything):
+        return named
+    prefix = f"{package.directory}/tests/" if package.directory else "tests/"
+    if f"{prefix}{parts[0]}/mod.rs" in workspace.files:
+        named.rust |= {test_module(package, module) for module in module_users(workspace, prefix, parts[0])}
+    if named.empty():
+        return Everything(f"no test declares or names {path}")
+    return named
+
+
+def test_module(package: Package, module: str) -> str:
+    return f"({binary(package, package.combined_tests)} & test(/^{module}::/))"
+
+
+def module_users(workspace: Workspace, prefix: str, module: str) -> set[str]:
+    """`module` and the test modules naming it as `crate::MODULE`, directly or
+    through other shared modules."""
+    found, waiting = {module}, [module]
+    while waiting:
+        pattern = re.compile(rf"(?<![\w:])crate::{re.escape(waiting.pop())}\b")
+        for name, lines in workspace.sources().items():
+            rest = name[len(prefix) :] if name.startswith(prefix) else None
+            if not rest or rest == "main.rs" or not rest.endswith(".rs"):
+                continue
+            user = rest.split("/")[0].removesuffix(".rs")
+            if user not in found and any(pattern.search(line) and not line.lstrip().startswith("//") for line in lines):
+                found.add(user)
+                waiting.append(user)
+    return found
 
 
 def declaring(workspace: Workspace, package: Package, module: str) -> set[str]:

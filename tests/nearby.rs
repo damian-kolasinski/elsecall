@@ -1,9 +1,8 @@
 //! `elsecall fleet nearby` through the system's DNS-SD against devices registered
 //! on this Mac only (DNS-SD's local-only interface), so nothing reaches the network.
 #![cfg(target_os = "macos")]
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
+use crate::processes;
 
 use members::TestMember;
 use serde_json::Value;

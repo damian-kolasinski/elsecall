@@ -1,7 +1,7 @@
 #![cfg(target_os = "macos")]
 //! Public CLI/socket lifecycle. Only machine observation is faked.
-mod processes;
-mod support;
+use crate::processes;
+use crate::support;
 use elsecall_contract::scheduling_model::{
     request::{AdmissionRequest, Kind, Placement, Urgency},
     timestamp::Timestamp,

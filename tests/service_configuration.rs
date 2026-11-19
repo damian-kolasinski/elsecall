@@ -1,9 +1,7 @@
 //! Full service configuration lifecycle with real temporary member services.
-mod diagnostics;
-mod file_gate;
-mod members;
-mod processes;
-mod sync_gate;
+use crate::file_gate;
+use crate::members;
+use crate::sync_gate;
 use elsecall_peers::peer_client;
 use elsecall_sync::config_sync::{
     manifest::{FileNode, Manifest},

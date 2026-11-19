@@ -4,9 +4,7 @@
 //! the real CLI, and real member services where admission is involved. Each mode
 //! must run the script's body exactly once, run its pre-admission check once, and
 //! let a signal to the script's original PID stop it.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
 use members::{TestMember, enrol};
 use serde_json::Value;
@@ -473,7 +471,7 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
         ("build", "granted:0:build --locked --release\n"),
         (
             "perf",
-            "clean:1:test --locked --test workspace_copy --test placement --test pre_run_sync --test remote_run --test rehearse perf_ -- --test-threads=1 --nocapture\n",
+            "clean:1:test --locked --test integration ::perf_ -- --test-threads=1 --nocapture\n",
         ),
     ] {
         let output = invoke(task, member.home.path(), None, "0");

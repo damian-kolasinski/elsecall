@@ -2,13 +2,12 @@
 //! `elsecall run --member` between real member services in separate temporary
 //! homes, with loopback standing in for the tailnet: the command runs in the
 //! member's copy of the caller's working tree and behaves as if it ran locally.
-mod diagnostics;
-mod file_gate;
-mod members;
-mod processes;
-mod run_fragmentation;
-mod sealed_fragmentation;
-mod sync_gate;
+use crate::file_gate;
+use crate::members;
+use crate::processes;
+use crate::run_fragmentation;
+use crate::sealed_fragmentation;
+use crate::sync_gate;
 
 use file_gate::FileGate as ReleaseGate;
 use members::{TestMember, enrol};

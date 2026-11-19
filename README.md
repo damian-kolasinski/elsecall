@@ -2325,15 +2325,24 @@ cannot rely on another test having run first, and ports for member services are
 reserved across test processes. nextest does not run doctests, so the check runs
 them after it with `cargo test --doc`.
 
+The files in `tests/` are modules of one test binary, `integration`, rooted at
+`tests/main.rs`: a change to the library relinks one binary instead of one per
+file, and the modules the tests share (`tests/processes/`, `tests/members/`, ...)
+build once. A new test file needs its `mod` line in `tests/main.rs`, and reaches
+a shared module as `crate::processes`. Test names start with their file's module
+(`placement::...`), so `cargo nextest run -E 'test(/^placement::/)'` runs one
+file's tests.
+
 `mise run check:affected` compares the branch with its merge base on
 `mergegate/main` (or `--base REF`), including uncommitted and untracked files, and
 runs formatting, Clippy and the module shape check (`scripts/module_shape.py`) for
 the whole workspace, then only the tests those
 paths can affect. `--dry-run` prints each changed path, what it selects and the
 commands. A change to the `elsecall` library or executable, a manifest, the lock
-file, the toolchain or the test environment runs every test. A test binary runs
-for itself; a shared test module runs the binaries declaring it; another crate
-runs its own tests; `distribution/` and `scripts/` run their Python tests. Other
+file, the toolchain or the test environment runs every test. A test file runs
+its own tests; a shared test module runs its own and those of every test file
+using it; a crate's file runs that crate's tests and those of every package
+depending on it; `distribution/` and `scripts/` run their Python tests. Other
 files are followed through the Rust, Python and shell sources naming them, down
 to one file's unit tests when only its `#[cfg(test)]` modules include them. A
 test that reads a file must name it, as `include_str!` does; one that builds the

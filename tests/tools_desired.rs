@@ -1,8 +1,6 @@
 //! Desired tool versions on a real local service: solo master, hand edits, and a fleet.
 #![cfg(target_os = "macos")]
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
 use members::{TestMember, enrol};
 use serde_json::{Value, json};

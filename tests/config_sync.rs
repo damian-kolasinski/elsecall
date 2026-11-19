@@ -1,9 +1,7 @@
 //! Configuration sync between real member services in separate temporary homes,
 //! with loopback standing in for the tailnet. Tests that need a misbehaving master
 //! act as one with a member's own key, as only that member's account could.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
 use elsecall_host::paths::Paths;
 use elsecall_peers::peer_client;

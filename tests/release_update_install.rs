@@ -425,9 +425,7 @@ async fn helper_survives_the_service_restart(mode: Mode) {
     manager.stop().unwrap();
 }
 
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn detached_production_helper_installs_a_verified_future_build_and_outlives_its_parent_service()

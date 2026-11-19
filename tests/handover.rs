@@ -1,8 +1,8 @@
 #![cfg(target_os = "macos")]
 //! Requests made while an install replaces the service. A separate test binary,
 //! because it signals its own process the way launchd signals the service.
-mod processes;
-mod support;
+use crate::processes;
+use crate::support;
 
 use std::time::Duration;
 use support::{Fixture, queued, record};

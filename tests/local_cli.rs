@@ -1,5 +1,4 @@
 #![cfg(target_os = "macos")]
-mod processes;
 use elsecall_host::paths::Paths;
 use serde_json::Value;
 use std::{

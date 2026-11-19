@@ -2,7 +2,6 @@
 //! `elsecall skill`: the guide this build carries, the stubs `setup` writes into
 //! each coding agent's skills folder, the refresh an upgrade does by itself, and
 //! what `doctor` reports. Every check runs in a scratch HOME.
-mod processes;
 use serde_json::Value;
 use std::{fs, path::Path, process::Output};
 

@@ -1,8 +1,7 @@
 #![cfg(target_os = "macos")]
 //! Admission and leases through the real CLI, service, socket and process
 //! watcher. Only machine load is faked.
-mod processes;
-mod support;
+use crate::support;
 
 use elsecall_contract::inspection::MemoryPressure;
 use std::time::{Duration, Instant};

@@ -2,7 +2,6 @@
 //! The workspace copy engine against real git repositories: a caller's dirty working
 //! tree is synced into a member's copy over the real sync protocol, and the copy must
 //! then look the same to git and to the file system.
-mod processes;
 use elsecall_workspace::{
     carried_refs::RefPattern,
     framed_link::FramedLink,

@@ -1,5 +1,4 @@
 #![cfg(target_os = "macos")]
-mod processes;
 
 use serde_json::{Value, json};
 use std::{

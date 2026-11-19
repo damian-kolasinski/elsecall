@@ -78,6 +78,8 @@ edition.workspace = true
 rust-version.workspace = true
 description = "Inspect and maintain your development machines"
 license.workspace = true
+# The files in tests/ are modules of one test binary, declared below.
+autotests = false
 
 [lints]
 workspace = true
@@ -91,6 +93,13 @@ name = "elsecall"
 path = "src/main.rs"
 # main.rs has no unit tests; integration tests run the built binary.
 test = false
+
+# Every integration test, in one binary: a change relinks it once, not once per
+# file, and the shared test modules build once. A new test file is a `mod` in
+# tests/main.rs.
+[[test]]
+name = "integration"
+path = "tests/main.rs"
 
 [features]
 # Follow a local release channel instead of the published releases, for testing

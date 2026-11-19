@@ -3,8 +3,7 @@
 //! involved, a real service: label rules from `workloads.toml`, running anyway
 //! when the service is unavailable, `ELSECALL=off`, a holder acquiring again,
 //! agent-ready failure lines and the run ID file. Only machine load is faked.
-mod processes;
-mod support;
+use crate::support;
 
 use serde_json::Value;
 use std::{

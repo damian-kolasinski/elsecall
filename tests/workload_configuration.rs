@@ -1,5 +1,5 @@
 //! Personal policy import through the real CLI and filesystem; no service needed.
-mod processes;
+use crate::processes;
 use elsecall_host::paths::Paths;
 use elsecall_runs::workload_configuration::{self, FILE_NAME};
 use serde_json::Value;
