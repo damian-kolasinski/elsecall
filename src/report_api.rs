@@ -3,13 +3,12 @@
 //! member's own requests, load, peer I/O and outside-pressure history to the
 //! member that reports.
 use crate::{
-    api,
+    api, api_response,
     failure::{Failure, Result},
     fleet::Fleet,
     load_log::buckets::Bucket,
     membership_store::Membership,
     own_history::OwnHistory,
-    peer_api,
     peer_history::PeerHistory,
     report_protocol::{Cursor, FactsPage, FactsRequest, LoadRequest},
     reporting::{
@@ -210,7 +209,7 @@ async fn answer<R: serde::de::DeserializeOwned + Send + 'static, T: Serialize + 
     work: impl FnOnce(R) -> Result<T> + Send + 'static,
 ) -> Response {
     let Ok(request) = serde_json::from_slice::<R>(body) else {
-        return peer_api::failure(
+        return api_response::failure(
             StatusCode::BAD_REQUEST,
             invalid("The report request is not valid."),
         );
@@ -227,9 +226,9 @@ async fn answer<R: serde::de::DeserializeOwned + Send + 'static, T: Serialize + 
     match result {
         Ok(data) => Json(api::Response::new(data)).into_response(),
         Err(failure) if failure.code == "invalid_request" => {
-            peer_api::failure(StatusCode::BAD_REQUEST, failure)
+            api_response::failure(StatusCode::BAD_REQUEST, failure)
         }
-        Err(failure) => peer_api::failure(StatusCode::SERVICE_UNAVAILABLE, failure),
+        Err(failure) => api_response::failure(StatusCode::SERVICE_UNAVAILABLE, failure),
     }
 }
 

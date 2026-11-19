@@ -10,6 +10,7 @@
 //!   view, members' reports and the report.
 pub mod buckets;
 pub mod minute;
+pub mod session;
 pub mod store;
 
 use crate::{failure::Result, scheduling::timestamp::Timestamp};
@@ -24,7 +25,7 @@ pub const MAXIMUM_BUCKETS: usize = 2000;
 pub struct LoadLog {
     store: LoadStore,
     accumulator: Mutex<Accumulator>,
-    rehearsal: Mutex<crate::rehearsal::load_recording::Recorder>,
+    rehearsal: Mutex<session::Recorder>,
 }
 
 impl LoadLog {
@@ -112,7 +113,7 @@ impl LoadLog {
         session: &str,
         since: Timestamp,
         until: Timestamp,
-    ) -> Result<crate::rehearsal::load_recording::Recorded> {
+    ) -> Option<session::Recorded> {
         self.rehearsal
             .lock()
             .expect("rehearsal load recorder")

@@ -6,6 +6,7 @@ pub mod admission_api;
 pub mod admission_cli;
 pub mod agent_skill;
 pub mod api;
+pub mod api_response;
 pub mod askpass;
 pub mod authorized_keys;
 pub mod build_identity;

@@ -81,7 +81,7 @@ pub struct Reply {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub settings: Option<crate::scheduling::records::SchedulerSettings>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub recorded_load: Option<crate::rehearsal::load_recording::Recorded>,
+    pub recorded_load: Option<crate::load_log::session::Recorded>,
     #[serde(default)]
     pub observations_ready: Option<bool>,
     pub production_active: usize,

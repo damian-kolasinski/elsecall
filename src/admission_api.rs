@@ -2,17 +2,17 @@
 use crate::{
     api,
     failure::Result,
+    local_access::LocalCaller,
     scheduling::{
         request,
         run_id::RunId,
         service::{OnHandover, Scheduler},
     },
-    server::Peer,
 };
 use axum::{
-    Json, Router,
+    Extension, Json, Router,
     body::Bytes,
-    extract::{ConnectInfo, Path, Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -78,14 +78,14 @@ fn parse<T: DeserializeOwned>(body: &Bytes) -> Result<T> {
 fn run_id(text: &str) -> Result<RunId> {
     RunId::parse(text).ok_or_else(|| request::invalid("Run IDs look like r-3f9a0c41d2b7."))
 }
-fn peer(peer: &Peer) -> Result<u32> {
+fn peer(peer: &LocalCaller) -> Result<u32> {
     peer.pid
         .ok_or_else(|| request::invalid("The requesting process could not be identified."))
 }
 
 async fn admit(
     State(scheduler): State<Arc<Scheduler>>,
-    ConnectInfo(caller): ConnectInfo<Peer>,
+    Extension(caller): Extension<LocalCaller>,
     Query(admitting): Query<Admitting>,
     body: Bytes,
 ) -> Response {
@@ -109,7 +109,7 @@ async fn record(State(scheduler): State<Arc<Scheduler>>, Path(id): Path<String>)
 }
 async fn command_started(
     State(scheduler): State<Arc<Scheduler>>,
-    ConnectInfo(caller): ConnectInfo<Peer>,
+    Extension(caller): Extension<LocalCaller>,
     Path(id): Path<String>,
     body: Bytes,
 ) -> Response {
@@ -119,7 +119,7 @@ async fn command_started(
 }
 async fn run_ended(
     State(scheduler): State<Arc<Scheduler>>,
-    ConnectInfo(caller): ConnectInfo<Peer>,
+    Extension(caller): Extension<LocalCaller>,
     Path(id): Path<String>,
     body: Bytes,
 ) -> Response {
@@ -129,7 +129,7 @@ async fn run_ended(
 }
 async fn placed_report(
     State(scheduler): State<Arc<Scheduler>>,
-    ConnectInfo(caller): ConnectInfo<Peer>,
+    Extension(caller): Extension<LocalCaller>,
     Path(id): Path<String>,
     body: Bytes,
 ) -> Response {
@@ -140,7 +140,7 @@ async fn placed_report(
 
 async fn release(
     State(scheduler): State<Arc<Scheduler>>,
-    ConnectInfo(caller): ConnectInfo<Peer>,
+    Extension(caller): Extension<LocalCaller>,
     body: Bytes,
 ) -> Response {
     respond((|| scheduler.release(peer(&caller)?, parse(&body)?))())
@@ -148,7 +148,7 @@ async fn release(
 
 async fn observation(
     State(scheduler): State<Arc<Scheduler>>,
-    ConnectInfo(caller): ConnectInfo<Peer>,
+    Extension(caller): Extension<LocalCaller>,
     Path(id): Path<String>,
     body: Bytes,
 ) -> Response {

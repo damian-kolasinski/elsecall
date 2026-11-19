@@ -6,7 +6,6 @@ use super::{
     settings::Settings,
 };
 use crate::{
-    configuration::ServiceConfiguration,
     failure::Result,
     load_log::LoadLog,
     scheduling::{
@@ -14,7 +13,7 @@ use crate::{
         clock::Clock,
         parameters::Parameters,
         records::SchedulerSettings,
-        service::{Adapters, Driving, Runtime, Scheduler, Tasks},
+        service::{Adapters, Driving, Runtime, Scheduler, SchedulerConfiguration, Tasks},
     },
 };
 use std::{
@@ -179,10 +178,9 @@ fn start_scheduler(
     let (_, exits) = mpsc::unbounded_channel();
     Scheduler::start_with_runtime(
         records,
-        ServiceConfiguration {
+        SchedulerConfiguration {
             reserved: capacity.reserved,
             parameters,
-            ..Default::default()
         },
         Adapters {
             machine: Arc::new(Observation {

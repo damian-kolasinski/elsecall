@@ -16,7 +16,6 @@ pub use crate::scheduling::service::invalid_rehearsal as invalid;
 
 pub mod cancellation;
 pub mod compare;
-pub mod load_recording;
 pub mod recording;
 
 /// Only known service-owned labels with internal placement are background in

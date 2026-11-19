@@ -1,9 +1,9 @@
 //! The member API routes of placement, behind the placement-authority boundary:
 //! only the recorded master may offer runs or attach to them.
 use crate::{
+    api_response::failure,
     failure::Failure,
     fleet::{AuthenticatedPeer, Fleet, PlacementAuthority},
-    peer_api::failure,
     placement_host::PlacementHost,
     remote_run::runner,
     scheduling::{placed::PlacementOffer, quote::QuoteRequest, run_id::RunId},

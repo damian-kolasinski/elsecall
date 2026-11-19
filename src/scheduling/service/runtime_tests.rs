@@ -95,7 +95,7 @@ async fn controlled_runtime_uses_real_admission_timers_records_and_supplied_ids(
     let (_, exits) = mpsc::unbounded_channel();
     let (scheduler, _tasks) = Scheduler::start_with_runtime(
         &home.path().join("records.sqlite"),
-        ServiceConfiguration::default(),
+        SchedulerConfiguration::default(),
         Adapters {
             machine: Arc::new(MachineBoundary),
             speed: Arc::new(SpeedBoundary),
@@ -122,7 +122,7 @@ async fn controlled_runtime_uses_real_admission_timers_records_and_supplied_ids(
             &holding.run_id,
             RunEnded::PeerFailed {
                 remote_failure_phase: None,
-                failure: crate::remote_run::protocol::StreamFailure {
+                failure: crate::peer_diagnostics::StreamFailure {
                     phase: crate::peer_diagnostics::Phase::Receive,
                     kind: crate::peer_diagnostics::Kind::Receive,
                     duration_ms: 1,
@@ -189,7 +189,7 @@ async fn rehearsal_defers_internal_work_extends_deadlines_and_preserves_producti
     let (_, exits) = mpsc::unbounded_channel();
     let (scheduler, _tasks) = Scheduler::start_with_runtime(
         &home.path().join("records.sqlite"),
-        ServiceConfiguration::default(),
+        SchedulerConfiguration::default(),
         Adapters {
             machine: Arc::new(MachineBoundary),
             speed: Arc::new(SpeedBoundary),
@@ -305,7 +305,7 @@ async fn promoted_internal_deadline_keeps_priority_after_pause() {
     let (_, exits) = mpsc::unbounded_channel();
     let (scheduler, _tasks) = Scheduler::start_with_runtime(
         &home.path().join("records.sqlite"),
-        ServiceConfiguration::default(),
+        SchedulerConfiguration::default(),
         Adapters {
             machine: Arc::new(MachineBoundary),
             speed: Arc::new(SpeedBoundary),
@@ -401,7 +401,7 @@ async fn draining_active_internal_work_respects_short_preparation_limit_and_neve
     let (_, exits) = mpsc::unbounded_channel();
     let (scheduler, _tasks) = Scheduler::start_with_runtime(
         &home.path().join("records.sqlite"),
-        ServiceConfiguration::default(),
+        SchedulerConfiguration::default(),
         Adapters {
             machine: Arc::new(MachineBoundary),
             speed: Arc::new(SpeedBoundary),
@@ -464,7 +464,7 @@ async fn workload_reports_obey_pending_nested_requester_barriers_and_pid_identit
     let (_, exits) = mpsc::unbounded_channel();
     let (scheduler, _tasks) = Scheduler::start_with_runtime(
         &home.path().join("records.sqlite"),
-        ServiceConfiguration::default(),
+        SchedulerConfiguration::default(),
         Adapters {
             machine: Arc::new(MachineBoundary),
             speed: Arc::new(SpeedBoundary),
@@ -570,7 +570,7 @@ async fn workload_metadata_does_not_change_learned_size_hold_or_admission_decisi
         let (_, exits) = mpsc::unbounded_channel();
         let (scheduler, _tasks) = Scheduler::start_with_runtime(
             &home.path().join("records.sqlite"),
-            ServiceConfiguration::default(),
+            SchedulerConfiguration::default(),
             Adapters {
                 machine: Arc::new(MachineBoundary),
                 speed: Arc::new(SpeedBoundary),
@@ -683,7 +683,7 @@ async fn structured_placement_requires_acknowledgement_without_retry_or_attach()
         let (_, exits) = mpsc::unbounded_channel();
         let (scheduler, _tasks) = Scheduler::start_with_runtime(
             &home.path().join("records.sqlite"),
-            ServiceConfiguration::default(),
+            SchedulerConfiguration::default(),
             Adapters {
                 machine: Arc::new(MachineBoundary),
                 speed: Arc::new(SpeedBoundary),
@@ -851,7 +851,7 @@ async fn a_peer_that_lost_its_placed_runs_keeps_short_work_and_not_long_work() {
     let (_, exits) = mpsc::unbounded_channel();
     let (scheduler, _tasks) = Scheduler::start_with_runtime(
         &path,
-        ServiceConfiguration::default(),
+        SchedulerConfiguration::default(),
         Adapters {
             machine: Arc::new(MachineBoundary),
             speed: Arc::new(SpeedBoundary),
@@ -935,7 +935,7 @@ async fn held_internal_work_does_not_start_when_room_frees_and_starts_once_relea
     let (_, exits) = mpsc::unbounded_channel();
     let (scheduler, _tasks) = Scheduler::start_with_runtime(
         &home.path().join("records.sqlite"),
-        ServiceConfiguration::default(),
+        SchedulerConfiguration::default(),
         Adapters {
             machine: Arc::new(MachineBoundary),
             speed: Arc::new(SpeedBoundary),
@@ -1059,7 +1059,7 @@ async fn an_update_waits_only_for_work_a_restart_would_cut_short() {
     let (_, exits) = mpsc::unbounded_channel();
     let (scheduler, _tasks) = Scheduler::start_with_runtime(
         &home.path().join("records.sqlite"),
-        ServiceConfiguration::default(),
+        SchedulerConfiguration::default(),
         Adapters {
             machine: Arc::new(MachineBoundary),
             speed: Arc::new(SpeedBoundary),
@@ -1238,7 +1238,7 @@ async fn no_offer_leaves_while_an_update_holds_admission() {
     let (_, exits) = mpsc::unbounded_channel();
     let (scheduler, _tasks) = Scheduler::start_with_runtime(
         &home.path().join("records.sqlite"),
-        ServiceConfiguration::default(),
+        SchedulerConfiguration::default(),
         Adapters {
             machine: Arc::new(MachineBoundary),
             speed: Arc::new(SpeedBoundary),

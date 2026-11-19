@@ -178,6 +178,11 @@ modules = ["release_update", "release_update_api", "release_update_cli"]
 band = "feature"
 modules = ["fleet_upgrade", "fleet_upgrade_api", "fleet_upgrade_local_api", "upgrade_drain", "upgrade_helper_process"]
 
+[crates.api-response]
+band = "feature"
+# The error envelope slices' HTTP routes answer with.
+modules = ["api_response"]
+
 [crates.agent-skill]
 band = "feature"
 modules = ["agent_skill"]

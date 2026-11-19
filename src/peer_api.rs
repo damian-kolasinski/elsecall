@@ -20,7 +20,7 @@ use axum::{
 };
 use std::{sync::Arc, time::Duration};
 
-pub const REQUEST_LIMIT: usize = 64 * 1024;
+pub use crate::peer_transport::REQUEST_LIMIT;
 /// How long a request body may take to arrive once its headers named an enrolled member.
 const BODY_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -48,9 +48,7 @@ pub fn routes(fleet: Arc<Fleet>, placement: Router<Arc<Fleet>>) -> Router {
         .with_state(fleet)
 }
 
-pub fn failure(status: StatusCode, error: Failure) -> Response {
-    (status, Json(api::ErrorResponse::new(error))).into_response()
-}
+pub use crate::api_response::failure;
 
 fn data<T: serde::Serialize>(value: T) -> Response {
     Json(api::Response::new(value)).into_response()

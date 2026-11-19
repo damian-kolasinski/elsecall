@@ -174,7 +174,7 @@ mod tests {
             assert!(batch.dry_run);
             let body = serde_json::to_vec(batch).unwrap();
             assert!(
-                body.len() < crate::peer_api::REQUEST_LIMIT,
+                body.len() < crate::peer_transport::REQUEST_LIMIT,
                 "{}",
                 body.len()
             );
@@ -196,7 +196,7 @@ mod tests {
         for batch in Question::batches(false, held, Vec::new()) {
             let body = serde_json::to_vec(&batch).unwrap();
             assert!(
-                body.len() < crate::peer_api::REQUEST_LIMIT,
+                body.len() < crate::peer_transport::REQUEST_LIMIT,
                 "{}",
                 body.len()
             );

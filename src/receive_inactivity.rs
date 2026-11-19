@@ -11,6 +11,9 @@ use tokio::{
     time::Sleep,
 };
 
+/// Silence longer than this on a peer connection is a lost connection.
+pub const GRACE: Duration = Duration::from_secs(10);
+
 pub(crate) struct Reader<R> {
     inner: R,
     grace: Duration,

@@ -61,3 +61,10 @@ impl std::fmt::Display for Failure {
     }
 }
 impl std::error::Error for Failure {}
+
+/// A failure code as Elsecall writes them: lowercase words joined by `_`.
+pub fn is_code(code: &str) -> bool {
+    !code.is_empty()
+        && code.len() <= 64
+        && code.bytes().all(|b| b.is_ascii_lowercase() || b == b'_')
+}

@@ -45,6 +45,15 @@ pub struct ServiceConfiguration {
     pub sync_paths: Vec<crate::config_sync::synced_path::SyncedPath>,
 }
 
+impl From<&ServiceConfiguration> for crate::scheduling::service::SchedulerConfiguration {
+    fn from(configuration: &ServiceConfiguration) -> Self {
+        Self {
+            reserved: configuration.reserved,
+            parameters: configuration.parameters.clone(),
+        }
+    }
+}
+
 impl Default for ServiceConfiguration {
     fn default() -> Self {
         Self {

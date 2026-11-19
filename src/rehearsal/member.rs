@@ -231,7 +231,13 @@ impl Member {
             Action::RecordedLoad { since, until, .. } => {
                 return Ok(Reply {
                     member: self.scheduler.name(),
-                    recorded_load: Some(self.load.rehearsal(&session.id, since, until)?),
+                    recorded_load: Some(
+                        self.load
+                            .rehearsal(&session.id, since, until)
+                            .ok_or_else(|| {
+                                super::invalid("Rehearsal load recording is unavailable.")
+                            })?,
+                    ),
                     ..Default::default()
                 });
             }

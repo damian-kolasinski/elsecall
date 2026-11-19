@@ -10,12 +10,11 @@
 //! routes use, including the refusal of a different build. Reading the managers
 //! blocks, so it runs off the async worker, and only one such read is in flight.
 use crate::{
-    api,
+    api, api_response,
     failure::Failure,
     fleet::Fleet,
     fleet_tool_inventory::{self, MemberInventories, OwnInventories, PeerInventories, Source},
     membership_store::Membership,
-    peer_api,
     roster::{MemberName, Roster},
     tool_inventory::Inventory,
 };
@@ -55,9 +54,9 @@ async fn peer_inventory() -> axum::response::Response {
     match installed().await {
         Ok(inventory) => match peer_document(&inventory) {
             Ok(bytes) => json_bytes(bytes),
-            Err(error) => peer_api::failure(StatusCode::PAYLOAD_TOO_LARGE, error),
+            Err(error) => api_response::failure(StatusCode::PAYLOAD_TOO_LARGE, error),
         },
-        Err(error) => peer_api::failure(StatusCode::INTERNAL_SERVER_ERROR, error),
+        Err(error) => api_response::failure(StatusCode::INTERNAL_SERVER_ERROR, error),
     }
 }
 

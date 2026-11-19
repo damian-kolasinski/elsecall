@@ -179,15 +179,7 @@ impl Start {
     }
 }
 
-/// Liveness failure observed by the protocol consumer, including unexpected EOF.
-/// The serving scheduler supplies member identity; callers cannot name a peer.
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct StreamFailure {
-    pub phase: crate::peer_diagnostics::Phase,
-    pub kind: crate::peer_diagnostics::Kind,
-    pub duration_ms: u64,
-}
+pub use crate::peer_diagnostics::StreamFailure;
 
 /// Metadata is less authoritative than a confirmed process exit. Reject a bad
 /// assertion independently, so it cannot erase valid exit/CPU/phase facts.

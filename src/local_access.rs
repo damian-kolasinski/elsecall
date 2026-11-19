@@ -1,5 +1,12 @@
 use crate::failure::{Failure, Result};
 
+/// The process at the other end of a local connection, as the kernel reported
+/// it; `None` when it could not be identified.
+#[derive(Clone, Copy, Debug)]
+pub struct LocalCaller {
+    pub pid: Option<u32>,
+}
+
 pub fn user_id() -> u32 {
     // SAFETY: geteuid has no preconditions and does not mutate memory.
     unsafe { libc::geteuid() }

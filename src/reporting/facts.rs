@@ -115,12 +115,7 @@ fn ms(duration: Duration) -> u64 {
     duration.as_millis().min(u128::from(u64::MAX)) as u64
 }
 
-/// A failure code as Elsecall writes them: lowercase words joined by `_`.
-pub fn is_code(code: &str) -> bool {
-    !code.is_empty()
-        && code.len() <= 64
-        && code.bytes().all(|b| b.is_ascii_lowercase() || b == b'_')
-}
+pub use crate::failure::is_code;
 
 /// Text another member sent that a report may show: bounded and printable.
 fn plausible_text(text: &str, most: usize) -> bool {

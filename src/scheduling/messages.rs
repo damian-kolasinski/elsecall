@@ -68,7 +68,7 @@ pub enum RunEnded {
         remote_failure_phase: Option<RemoteFailurePhase>,
     },
     PeerFailed {
-        failure: crate::remote_run::protocol::StreamFailure,
+        failure: crate::peer_diagnostics::StreamFailure,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         remote_failure_phase: Option<RemoteFailurePhase>,
     },

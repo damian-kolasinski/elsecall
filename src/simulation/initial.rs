@@ -256,7 +256,6 @@ pub fn restore(
 mod tests {
     use super::*;
     use crate::{
-        configuration::ServiceConfiguration,
         load_log::LoadLog,
         reporting::fixtures,
         scheduling::{
@@ -266,7 +265,7 @@ mod tests {
             placed::{OfferReply, PlacementOffer, Warmth},
             record::Outcome,
             request::{Kind, Placement},
-            service::{Adapters, Driving, Runtime},
+            service::{Adapters, Driving, Runtime, SchedulerConfiguration},
         },
         simulation::{
             adapters::{Channel, ConfigurationSync, Ids, Observation, Registry, Speed, World},
@@ -364,14 +363,13 @@ mod tests {
             let (_, exits) = mpsc::unbounded_channel();
             let (scheduler, task) = Scheduler::start_with_runtime(
                 &temp.path().join(format!("{}.sqlite", member.member)),
-                ServiceConfiguration {
+                SchedulerConfiguration {
                     reserved: if member.member == "a" {
                         Cores::from_millis(1500)
                     } else {
                         Cores::ONE
                     },
                     parameters: member.scheduler_settings[0].parameters.clone(),
-                    ..Default::default()
                 },
                 Adapters {
                     machine: Arc::new(Observation {

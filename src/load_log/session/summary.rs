@@ -6,7 +6,7 @@ use crate::{
         buckets::Bucket,
         minute::{Second, memory_rank, thermal_rank, worst},
     },
-    scheduling::{capacity::Cores, load::Gate, timestamp::Timestamp},
+    scheduling::{capacity::Cores, gate::Gate, timestamp::Timestamp},
 };
 use std::collections::BTreeMap;
 struct Fold {

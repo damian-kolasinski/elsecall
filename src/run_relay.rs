@@ -3,17 +3,16 @@
 //! Legacy callers retain the plaintext relay. Both paths carry the caller/member
 //! run protocol, including end-to-end heartbeats.
 use crate::{
-    api,
     failure::Failure,
     fleet::Fleet,
+    local_access::LocalCaller,
     peer_client,
     roster::MemberName,
     scheduling::{run_id::RunId, service::Scheduler},
-    server::Peer,
 };
 use axum::{
-    Json, Router,
-    extract::{ConnectInfo, Path, Request, State},
+    Extension, Router,
+    extract::{Path, Request, State},
     http::{HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
     routing::post,
@@ -59,13 +58,11 @@ where
     }
 }
 
-fn failure(status: StatusCode, error: Failure) -> Response {
-    (status, Json(api::ErrorResponse::new(error))).into_response()
-}
+use crate::api_response::failure;
 
 async fn attach(
     State(relay): State<Relay>,
-    ConnectInfo(caller): ConnectInfo<Peer>,
+    Extension(caller): Extension<LocalCaller>,
     Path(id): Path<String>,
     mut request: Request,
 ) -> Response {

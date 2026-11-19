@@ -20,7 +20,6 @@ mod upgrading;
 pub use upgrading::{HostingHold, OnHandover, UpdateHold, WorkInFlight};
 
 use crate::{
-    configuration::ServiceConfiguration,
     failure::{Failure, Result},
     inspection::{CoreCounts, MachineInspector},
     load_log::{LoadLog, minute::Second},
@@ -285,12 +284,21 @@ enum Route {
     Auto,
 }
 
+/// What the scheduler takes from the service configuration: the capacity kept
+/// free of Elsecall work, and what placement, the load gate and learned
+/// estimates decide with.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct SchedulerConfiguration {
+    pub reserved: Cores,
+    pub parameters: crate::scheduling::parameters::Parameters,
+}
+
 impl Scheduler {
     /// Opens the records, recovers grants whose holders survived a restart, and
     /// starts sampling load and following process exits.
     pub fn start(
         records: &Path,
-        configuration: ServiceConfiguration,
+        configuration: SchedulerConfiguration,
         adapters: Adapters,
         members: Arc<dyn Members>,
         pre_run: Arc<dyn PreRunSync>,
@@ -310,7 +318,7 @@ impl Scheduler {
     /// Starts the real scheduler with explicitly supplied time and request IDs.
     pub fn start_with_runtime(
         records: &Path,
-        configuration: ServiceConfiguration,
+        configuration: SchedulerConfiguration,
         adapters: Adapters,
         members: Arc<dyn Members>,
         pre_run: Arc<dyn PreRunSync>,
@@ -1767,25 +1775,20 @@ impl Scheduler {
     }
 }
 
-impl crate::fleet_view::PlacedRuns for Scheduler {
-    fn latest_with(&self, member: &str) -> Option<crate::fleet_view::PlacedRunSummary> {
+impl Scheduler {
+    /// The most recent of the last 200 records whose run was placed with
+    /// `member`, from either side.
+    pub fn latest_placed_with(&self, member: &str) -> Option<Record> {
         let records = self.records.recent(200).ok()?;
-        records
-            .into_iter()
-            .find(|record| {
-                record
-                    .placed
-                    .as_ref()
-                    .is_some_and(|placed| match placed.side {
-                        Side::Caller => placed.member == member,
-                        Side::Member => placed.calling_member == member,
-                    })
-            })
-            .map(|record| crate::fleet_view::PlacedRunSummary {
-                run_id: record.run_id.to_string(),
-                started_at: record.started_at,
-                warnings: record.warnings,
-            })
+        records.into_iter().find(|record| {
+            record
+                .placed
+                .as_ref()
+                .is_some_and(|placed| match placed.side {
+                    Side::Caller => placed.member == member,
+                    Side::Member => placed.calling_member == member,
+                })
+        })
     }
 }
 
@@ -1912,7 +1915,7 @@ mod pending_snapshot_tests {
             let (_, exits) = mpsc::unbounded_channel();
             let (scheduler, _tasks) = Scheduler::start_with_runtime(
                 &temp.path().join("records.sqlite"),
-                ServiceConfiguration::default(),
+                SchedulerConfiguration::default(),
                 Adapters {
                     machine: Arc::new(ObservedMachine),
                     speed: Arc::new(crate::scheduling::speed::FixedSpeed(1.0)),

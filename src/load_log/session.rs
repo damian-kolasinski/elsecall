@@ -1,7 +1,6 @@
 //! Bounded session load capture. Normal minute totals cannot prove in-window
 //! coverage because they also include observations before a rehearsal began.
 use crate::{
-    failure::Result,
     load_log::{buckets::Bucket, minute::Second},
     scheduling::timestamp::Timestamp,
 };
@@ -35,13 +34,10 @@ impl Recorder {
     pub fn begin(&mut self, session: String) {
         self.session = Some((session, self.latest.iter().cloned().collect()));
     }
-    pub fn read(&self, session: &str, since: Timestamp, until: Timestamp) -> Result<Recorded> {
-        let samples = &self
-            .session
-            .as_ref()
-            .filter(|(id, _)| id == session)
-            .ok_or_else(|| super::invalid("Rehearsal load recording is unavailable."))?
-            .1;
+    /// The load recorded in `session` between `since` and `until`, or `None`
+    /// when this recorder is not recording that session.
+    pub fn read(&self, session: &str, since: Timestamp, until: Timestamp) -> Option<Recorded> {
+        let samples = &self.session.as_ref().filter(|(id, _)| id == session)?.1;
         let initial = samples.iter().rev().find(|s| s.at <= since);
         let selected = initial
             .into_iter()
@@ -64,7 +60,7 @@ impl Recorder {
                 .last()
                 .is_some_and(|s| until.since(s.at).as_millis() <= 2000)
             && observed_ms * 10 >= until.since(since).as_millis() as u64 * 9;
-        Ok(Recorded { load, complete })
+        Some(Recorded { load, complete })
     }
 }
 
@@ -73,7 +69,7 @@ mod tests {
     use super::*;
     use crate::{
         inspection::{MemoryPressure, ThermalState},
-        scheduling::{capacity::Cores, load::Gate},
+        scheduling::{capacity::Cores, gate::Gate},
     };
     fn sample(at: u64, queued: usize) -> Second {
         Second {

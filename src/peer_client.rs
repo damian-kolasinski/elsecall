@@ -179,7 +179,7 @@ async fn exchange<T: DeserializeOwned>(
     progress: &Progress,
 ) -> Result<Exchange<T>> {
     let (stream, endpoint) = peer_transport::connect(member, progress).await?;
-    let stream = crate::socket_io::Socket::new(stream, crate::remote_run::link::GRACE);
+    let stream = crate::socket_io::Socket::new(stream, crate::receive_inactivity::GRACE);
     let (mut sender, connection) = http1::handshake(TokioIo::new(stream))
         .await
         .map_err(|_| unavailable(member))?;
@@ -521,7 +521,7 @@ async fn channel_once(
     }))
     .expect("serializable request");
     let (stream, endpoint) = peer_transport::connect(member, progress).await?;
-    let stream = crate::socket_io::Socket::new(stream, crate::remote_run::link::GRACE);
+    let stream = crate::socket_io::Socket::new(stream, crate::receive_inactivity::GRACE);
     let (mut sender, connection) = http1::handshake(TokioIo::new(stream))
         .await
         .map_err(|_| unavailable(member))?;

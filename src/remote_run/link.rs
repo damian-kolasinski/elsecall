@@ -20,7 +20,7 @@ use tokio::{
 
 pub const HEARTBEAT: Duration = Duration::from_secs(1);
 /// Silence longer than this is a lost connection.
-pub const GRACE: Duration = Duration::from_secs(10);
+pub use crate::receive_inactivity::GRACE;
 
 pub fn lost(detail: &str) -> Failure {
     Failure::new(

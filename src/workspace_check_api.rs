@@ -3,13 +3,13 @@
 //! Authentication names the asking member; the owner answers only about
 //! workspaces it pushed to that member.
 use crate::{
+    api_response::failure,
     failure::Failure,
     fleet::{AuthenticatedPeer, Fleet},
     housekeeping::{
         caller_state::CallerState,
         exchange::{Question, ROUTE},
     },
-    peer_api::failure,
 };
 use axum::{
     Extension, Json, Router,

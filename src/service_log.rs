@@ -118,20 +118,18 @@ impl Log {
 
 static LOG: OnceLock<Mutex<Log>> = OnceLock::new();
 /// Called by the service and upgrade-helper entry points only, never CLI callers.
-pub fn initialize(paths: &crate::paths::Paths) -> Result<()> {
+/// `configured` is the log settings of the service configuration, or why it
+/// could not be read.
+pub fn initialize(paths: &crate::paths::Paths, configured: Result<Settings>) -> Result<()> {
     private_files::owned_tree(&paths.home, &paths.data)?;
     private_files::directory(&paths.data)?;
     // Defaults let invalid configuration itself leave a safe diagnostic.
-    let configuration = crate::service_configuration::load(paths, None);
-    let settings = configuration
-        .as_ref()
-        .map(|c| c.logs.clone())
-        .unwrap_or_default();
+    let settings = configured.as_ref().cloned().unwrap_or_default();
     let log = Log::new(paths.log(), settings);
     log.append(b"")
         .map_err(|e| Failure::io("Open service log", e))?;
     let _ = LOG.set(Mutex::new(log));
-    if let Err(error) = configuration {
+    if let Err(error) = configured {
         write(format_args!(
             "{}",
             serde_json::json!({"event":"service_failed", "code":error.code})

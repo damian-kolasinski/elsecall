@@ -352,7 +352,10 @@ async fn run(cli: Cli) -> Result<bool> {
         &cli.command,
         Command::Serve | Command::UpgradeHelper { .. } | Command::UpdateHelper { .. }
     ) {
-        elsecall::service_log::initialize(&paths)?;
+        elsecall::service_log::initialize(
+            &paths,
+            elsecall::service_configuration::load(&paths, None).map(|c| c.logs),
+        )?;
     }
     let manager: Box<dyn ServiceManager> = if elsecall::process_service::requested()? {
         Box::new(elsecall::process_service::ProcessService::new(

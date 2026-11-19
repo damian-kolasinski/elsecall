@@ -2,7 +2,6 @@
 //! Update policy exercised with a real scheduler/API and fakes only at provider boundaries.
 use elsecall::{
     build_identity::Digest,
-    configuration::ServiceConfiguration,
     failure::Result,
     inspection::{CoreCounts, LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState},
     load_log::LoadLog,
@@ -21,7 +20,7 @@ use elsecall::{
         processes::{ProcessIdentity, ProcessInfo, ProcessTable},
         request::{AdmissionRequest, Kind, Placement, Urgency},
         run_id::{RandomRunIds, RunId},
-        service::{Adapters, Driving, HostedEnd, Runtime, Scheduler},
+        service::{Adapters, Driving, HostedEnd, Runtime, Scheduler, SchedulerConfiguration},
         speed::SpeedMeter,
     },
 };
@@ -114,7 +113,7 @@ fn fixture() -> (tempfile::TempDir, Paths, Arc<Scheduler>) {
     let (_, exits) = tokio::sync::mpsc::unbounded_channel();
     let (scheduler, _tasks) = Scheduler::start_with_runtime(
         &paths.data.join("records.sqlite"),
-        ServiceConfiguration::default(),
+        SchedulerConfiguration::default(),
         Adapters {
             machine: Arc::new(MachineBoundary),
             speed: Arc::new(Speed),

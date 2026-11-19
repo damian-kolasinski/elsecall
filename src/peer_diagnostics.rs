@@ -41,7 +41,7 @@ impl RefusalCode {
     /// A failure code as Elsecall writes them. Anything else is no code at all, so
     /// free text never enters history.
     pub fn parse(code: &str) -> Option<Self> {
-        crate::reporting::facts::is_code(code).then(|| Self(code.to_owned()))
+        crate::failure::is_code(code).then(|| Self(code.to_owned()))
     }
     pub fn as_str(&self) -> &str {
         &self.0
@@ -270,6 +270,16 @@ pub fn between(since: Timestamp, until: Timestamp) -> History {
         },
     }
 }
+/// Liveness failure observed by the protocol consumer, including unexpected EOF.
+/// The serving scheduler supplies member identity; callers cannot name a peer.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StreamFailure {
+    pub phase: Phase,
+    pub kind: Kind,
+    pub duration_ms: u64,
+}
+
 pub fn recent() -> History {
     between(
         Timestamp::from_millis(Timestamp::now().millis().saturating_sub(3600000)),

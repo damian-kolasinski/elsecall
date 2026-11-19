@@ -2,13 +2,13 @@
 //! sync-authority boundary: only the recorded master may open it. Any enrolled
 //! member may read a member's sync state, or ask the master to push.
 use crate::{
+    api_response::failure,
     config_sync::{
         protocol,
         service::{ConfigSync, PushRequest},
     },
     failure::Failure,
     fleet::{AuthenticatedPeer, Fleet, SyncAuthority},
-    peer_api::failure,
     secure_channel::{Ephemeral, SecureStream},
 };
 use axum::{

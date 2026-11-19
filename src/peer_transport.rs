@@ -15,6 +15,9 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
+
+/// The largest request body a member accepts on the peer channel.
+pub const REQUEST_LIMIT: usize = 64 * 1024;
 use tokio::{
     io::{AsyncRead, AsyncWrite, ReadBuf},
     net::TcpStream,

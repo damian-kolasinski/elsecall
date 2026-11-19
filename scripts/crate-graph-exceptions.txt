@@ -9,13 +9,11 @@ edge add-mac platform-macos 11
 edge admission fleet 1
 edge admission platform-macos 2
 edge admission remote-run 27
-edge admission service 2
 edge admission service-lifecycle 2
 edge admission workload-config 13
 edge admission workspace 13
 edge config-sync fleet 7
 edge config-sync rehearsal 13
-edge config-sync service 1
 edge config-sync service-config 31
 edge config-sync workspace 12
 edge fleet add-mac 5
@@ -25,7 +23,6 @@ edge fleet housekeeping 4
 edge fleet-upgrade fleet 6
 edge fleet-upgrade installation 2
 edge fleet-upgrade release-update 3
-edge fleet-upgrade service 1
 edge housekeeping rehearsal 7
 edge housekeeping workspace 18
 edge installation add-mac 1
@@ -34,10 +31,6 @@ edge installation fleet-upgrade 1
 edge installation platform-macos 1
 edge installation release-update 2
 edge installation window 2
-edge load-log rehearsal 2
-edge peer-diagnostics reporting 1
-edge peer-transport remote-run 2
-edge placement service 2
 edge rehearsal platform-macos 4
 edge rehearsal replay 5
 edge rehearsal reporting 4
@@ -56,12 +49,8 @@ edge replay reporting 2
 edge replay simulation 1
 edge replay workload 2
 edge reporting rehearsal 1
-edge reporting service 1
 edge reporting trace 1
 edge reporting workload 10
-edge scheduling fleet 3
-edge scheduling remote-run 1
-edge scheduling service-config 1
 edge service-config config-sync 10
 edge service-config housekeeping 2
 edge service-config rehearsal 1
@@ -70,7 +59,6 @@ edge service-config workspace 1
 edge service-lifecycle admission 1
 edge service-lifecycle config-sync 1
 edge service-lifecycle installation 1
-edge service-log service-config 1
 edge simulation rehearsal 2
 edge simulation replay 6
 edge simulation reporting 2
@@ -78,7 +66,6 @@ edge simulation tuning 1
 edge simulation workload 48
 edge tools platform-macos 1
 edge tools reporting 1
-edge tools service 1
 edge trace rehearsal 3
 edge trace reporting 10
 edge trace workload 13
@@ -97,9 +84,7 @@ edge workload simulation 3
 edge workload-config workspace 3
 edge workspace fleet 5
 edge workspace housekeeping 5
-edge workspace service 1
 testedge build-identity tools 1
-testedge housekeeping service 2
 testedge outside-pressure scheduling 3
 testedge rehearsal platform-macos 4
 testedge rehearsal reporting 16
@@ -110,7 +95,6 @@ testedge replay reporting 1
 testedge replay simulation 2
 testedge replay workload 3
 testedge scheduling outside-pressure 2
-testedge scheduling remote-run 1
 testedge scheduling reporting 2
 testedge service-config config-sync 1
 testedge service-lifecycle platform-macos 1

@@ -52,6 +52,33 @@ impl axum::extract::connect_info::Connected<axum::serve::IncomingStream<'_, Loca
     }
 }
 
+/// Hands every local request the process that made it, for the slices that
+/// identify their caller.
+async fn identify_caller(
+    axum::extract::ConnectInfo(peer): axum::extract::ConnectInfo<Peer>,
+    mut request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
+    request
+        .extensions_mut()
+        .insert(crate::local_access::LocalCaller { pid: peer.pid });
+    next.run(request).await
+}
+
+/// The scheduler's latest placed run with each member, as the fleet view shows it.
+struct PlacedRunsOf(Arc<Scheduler>);
+impl crate::fleet_view::PlacedRuns for PlacedRunsOf {
+    fn latest_with(&self, member: &str) -> Option<crate::fleet_view::PlacedRunSummary> {
+        self.0
+            .latest_placed_with(member)
+            .map(|record| crate::fleet_view::PlacedRunSummary {
+                run_id: record.run_id.to_string(),
+                started_at: record.started_at,
+                warnings: record.warnings,
+            })
+    }
+}
+
 /// Where same-path copies go: the caller's path itself, unless
 /// `ELSECALL_SAME_PATH_BASE` moves them under another directory, as tests on one
 /// machine do so a member's copy never lands on the caller's own working tree.
@@ -184,7 +211,7 @@ pub async fn serve_with_updates(
     ));
     let (scheduler, _scheduling) = Scheduler::start(
         &paths.records(),
-        configuration.clone(),
+        (&configuration).into(),
         scheduling,
         members,
         pre_run,
@@ -427,7 +454,10 @@ pub async fn serve_with_updates(
                         .clone()
                         .expect("a readable fleet has a distributor"),
                 ))
-                .merge(fleet_local_api::routes(fleet, scheduler.clone()))
+                .merge(fleet_local_api::routes(
+                    fleet,
+                    Arc::new(PlacedRunsOf(scheduler.clone())),
+                ))
         }
         Err(error) => {
             crate::service_log!(
@@ -481,7 +511,8 @@ pub async fn serve_with_updates(
     );
     let result = axum::serve(
         LocalListener(listener),
-        app.into_make_service_with_connect_info::<Peer>(),
+        app.layer(axum::middleware::from_fn(identify_caller))
+            .into_make_service_with_connect_info::<Peer>(),
     )
     .with_graceful_shutdown(async move {
         tokio::select! {
