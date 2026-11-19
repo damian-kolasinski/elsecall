@@ -1,4 +1,5 @@
-//! The fleet-upgrade crate.
+//! Bringing every member onto the master's build: staging, the helper that installs
+//! it, and draining work first.
 pub mod fleet_upgrade;
 pub mod fleet_upgrade_api;
 pub mod fleet_upgrade_local_api;

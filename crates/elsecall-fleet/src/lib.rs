@@ -1,4 +1,5 @@
-//! The fleet crate.
+//! The fleet as this member sees it: members, roles, their status, the fleet view,
+//! and who may make master-only requests.
 pub mod authority;
 pub mod fleet;
 pub mod fleet_changes;

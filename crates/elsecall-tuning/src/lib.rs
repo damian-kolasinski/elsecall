@@ -1,4 +1,5 @@
-//! The tuning crate.
+//! Searching scheduling settings offline against recorded days, with preflight
+//! checks and drift, and printing proposals only.
 pub mod busy_hour_calibration;
 pub mod tune_cli;
 pub mod tuning;

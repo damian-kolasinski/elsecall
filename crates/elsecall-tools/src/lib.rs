@@ -1,4 +1,5 @@
-//! The tools crate.
+//! Tools on each member: what mise and Xcode report as installed, and the versions
+//! the fleet wants.
 pub mod fleet_tool_inventory;
 pub mod inventory_reader;
 pub mod mise_cli;
