@@ -2,7 +2,7 @@
 //! they keep running, as they would after a local run, until they end, reach the
 //! cap, or the next run of the same copy stops them. They are not admitted work;
 //! their CPU time is measured and reported for the run's record.
-use crate::macos::process_group::{self, Member};
+use elsecall_os_processes::process_group::{self, Member};
 use elsecall_scheduling::{
     leftovers::{Ending, Leftovers},
     processes::ProcessIdentity,

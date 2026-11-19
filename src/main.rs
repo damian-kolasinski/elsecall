@@ -7,7 +7,7 @@ use elsecall::{
     installation::{self, ServiceManager},
     macos::{
         application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
-        processes::MacProcesses, tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
+        tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
     },
     peer_listener,
 };
@@ -15,6 +15,7 @@ use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::{local_access, paths::Paths};
 use elsecall_machine::inspection::{Health, Inspection, Machine};
+use elsecall_os_processes::processes::MacProcesses;
 use elsecall_scheduling as scheduling;
 use elsecall_tailnet::tailnet;
 use elsecall_wire::api;

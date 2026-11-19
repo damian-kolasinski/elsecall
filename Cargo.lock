@@ -1077,6 +1077,7 @@ dependencies = [
  "elsecall-local-state",
  "elsecall-machine",
  "elsecall-membership",
+ "elsecall-os-processes",
  "elsecall-peer-diagnostics",
  "elsecall-peer-transport",
  "elsecall-process",
@@ -1245,6 +1246,16 @@ dependencies = [
  "serde_json",
  "tempfile",
  "zeroize",
+]
+
+[[package]]
+name = "elsecall-os-processes"
+version = "0.3.0"
+dependencies = [
+ "elsecall-failure",
+ "elsecall-scheduling",
+ "libc",
+ "tokio",
 ]
 
 [[package]]

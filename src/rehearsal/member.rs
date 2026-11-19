@@ -323,17 +323,17 @@ impl Member {
                 )
                 .collect();
             let alive = || {
-                crate::macos::process_group::members(caller.pid)
+                elsecall_os_processes::process_group::members(caller.pid)
                     .iter()
                     .any(|m| witnesses.contains(&m.identity))
             };
             if alive() {
-                crate::macos::process_group::signal(caller.pid, libc::SIGTERM);
+                elsecall_os_processes::process_group::signal(caller.pid, libc::SIGTERM);
             }
             let deadline = Instant::now() + Duration::from_secs(5);
             while alive() {
                 if Instant::now() >= deadline {
-                    crate::macos::process_group::signal(caller.pid, libc::SIGKILL);
+                    elsecall_os_processes::process_group::signal(caller.pid, libc::SIGKILL);
                     break;
                 }
                 tokio::time::sleep(Duration::from_millis(20)).await;

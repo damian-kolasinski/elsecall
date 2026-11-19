@@ -162,7 +162,7 @@ impl ProcessTable for MacProcesses {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::processes::*;
     use elsecall_scheduling::processes::lineage;
     use std::process::Command;
 

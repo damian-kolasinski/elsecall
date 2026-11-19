@@ -129,7 +129,7 @@ impl Caller {
             .map_err(|e| Failure::io("Start synthetic request", e))?;
         let original_identity = child
             .id()
-            .and_then(crate::macos::processes::describe)
+            .and_then(elsecall_os_processes::processes::describe)
             .map(|p| p.identity);
         Ok(Self {
             child,

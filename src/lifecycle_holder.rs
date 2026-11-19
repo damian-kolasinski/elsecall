@@ -8,7 +8,7 @@
 //! A process is recorded by its ID and start time, so a recorded holder that died
 //! without clearing the record (killed, or a crash) is never mistaken for a later
 //! process that reuses its ID.
-use crate::macos::processes;
+use elsecall_os_processes::processes;
 use elsecall_scheduling::processes::ProcessIdentity;
 use std::{
     fs::File,

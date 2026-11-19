@@ -1,14 +1,12 @@
 //! Executes the command as a child of this process, so it inherits the caller's
 //! standard streams, environment, working directory and process group exactly.
-use crate::{
-    macos::process_usage,
-    passthrough::{
-        executor::{CommandLine, Executor, Exit, Finished, RunContext, RunResult, Running},
-        signals,
-    },
+use crate::passthrough::{
+    executor::{CommandLine, Executor, Exit, Finished, RunContext, RunResult, Running},
+    signals,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client::{self as client, Wait};
+use elsecall_os_processes::process_usage;
 use elsecall_run_admission::Admission;
 use elsecall_scheduling::messages::CommandStarted;
 use std::{
