@@ -1,0 +1,36 @@
+[package]
+name = "elsecall-remote-run"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+base64.workspace = true
+elsecall-failure.workspace = true
+elsecall-membership.workspace = true
+elsecall-os-processes.workspace = true
+elsecall-peer-diagnostics.workspace = true
+elsecall-peer-transport.workspace = true
+elsecall-process.workspace = true
+elsecall-run-admission.workspace = true
+elsecall-scheduling.workspace = true
+elsecall-scheduling-model.workspace = true
+elsecall-secure-channel.workspace = true
+elsecall-wire.workspace = true
+elsecall-workload-config.workspace = true
+elsecall-workspace.workspace = true
+futures-util.workspace = true
+getrandom.workspace = true
+hyper.workspace = true
+libc.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

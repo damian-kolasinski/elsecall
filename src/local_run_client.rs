@@ -1,9 +1,9 @@
 //! Local attach negotiation. An actual legacy 101 continues on this same
 //! connection; negotiation never repeats a peer attach or command execution.
-use crate::{remote_run::link::Link, sealed_run};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::{local_access, private_files};
+use elsecall_remote_run::{remote_run::link::Link, sealed_run};
 use elsecall_scheduling_model::run_id::RunId;
 use elsecall_secure_channel::{Ephemeral, SecureStream};
 use elsecall_wire::api::ErrorResponse;
@@ -36,7 +36,10 @@ pub(crate) async fn attach(socket: &Path, run: &RunId) -> Result<Link> {
             .uid(),
     )?;
     let (mut sender, connection) = http1::handshake(TokioIo::new(
-        elsecall_peer_transport::socket_io::Socket::new(stream, crate::remote_run::link::GRACE),
+        elsecall_peer_transport::socket_io::Socket::new(
+            stream,
+            elsecall_remote_run::remote_run::link::GRACE,
+        ),
     ))
     .await
     .map_err(|_| protocol_error())?;
@@ -80,9 +83,9 @@ pub(crate) async fn attach(socket: &Path, run: &RunId) -> Result<Link> {
                 elsecall_peer_transport::receive_inactivity::Reader::new(
                     elsecall_peer_transport::send_inactivity::Writer::new(
                         stream,
-                        crate::remote_run::link::GRACE,
+                        elsecall_remote_run::remote_run::link::GRACE,
                     ),
-                    crate::remote_run::link::GRACE,
+                    elsecall_remote_run::remote_run::link::GRACE,
                 ),
                 keys,
             )),

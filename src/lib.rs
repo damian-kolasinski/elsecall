@@ -42,7 +42,6 @@ pub mod placement_config_sync;
 pub mod placement_host;
 pub mod process_service;
 pub mod remote_mac;
-pub mod remote_run;
 pub mod replay_api;
 pub mod replay_cli;
 pub mod report_api;
@@ -101,7 +100,6 @@ pub mod busy_hour_calibration;
 pub mod replay_placement;
 
 mod local_run_client;
-mod sealed_run;
 
 pub mod workload_observation_cli;
 

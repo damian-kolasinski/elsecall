@@ -86,7 +86,7 @@ impl Link {
 
     /// The encryption owner already monitors raw receive inactivity beneath
     /// decryption. Authenticated plaintext may legitimately take longer than GRACE.
-    pub(crate) fn open_monitored<S>(stream: S) -> Self
+    pub fn open_monitored<S>(stream: S) -> Self
     where
         S: AsyncRead + AsyncWrite + Send + 'static,
     {

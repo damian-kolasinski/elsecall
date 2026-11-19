@@ -1,9 +1,7 @@
 //! The service's local configuration, written by the operator.
-use crate::{
-    housekeeping::settings::{self, Settings as Housekeeping},
-    remote_run::leftovers::Cap,
-};
+use crate::housekeeping::settings::{self, Settings as Housekeeping};
 use elsecall_failure::{Failure, Result};
+use elsecall_remote_run::remote_run::leftovers::Cap;
 use elsecall_scheduling::parameters::{
     AdmissionOverrides, EstimatesOverrides, Overrides, Parameters, PlacementOverrides,
 };

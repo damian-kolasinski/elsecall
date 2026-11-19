@@ -1,6 +1,6 @@
 //! The member API routes of placement, behind the placement-authority boundary:
 //! only the recorded master may offer runs or attach to them.
-use crate::{placement_host::PlacementHost, remote_run::runner};
+use crate::placement_host::PlacementHost;
 use axum::{
     Extension, Json, Router,
     body::{Bytes, to_bytes},
@@ -13,6 +13,7 @@ use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_api_response::failure;
 use elsecall_failure::Failure;
 use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet, PlacementAuthority};
+use elsecall_remote_run::remote_run::runner;
 use elsecall_scheduling::{placed::PlacementOffer, quote::QuoteRequest};
 use elsecall_scheduling_model::run_id::RunId;
 use elsecall_secure_channel::{Ephemeral, SecureStream};
@@ -129,9 +130,9 @@ async fn attach(
                     elsecall_peer_transport::receive_inactivity::Reader::new(
                         elsecall_peer_transport::send_inactivity::Writer::new(
                             TokioIo::new(upgraded),
-                            crate::remote_run::link::GRACE,
+                            elsecall_remote_run::remote_run::link::GRACE,
                         ),
-                        crate::remote_run::link::GRACE,
+                        elsecall_remote_run::remote_run::link::GRACE,
                     ),
                     keys,
                 );

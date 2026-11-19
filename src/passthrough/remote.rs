@@ -1,20 +1,17 @@
 //! Executes the command on the member a placed grant names: syncs the workspace,
 //! starts the command there, and passes the caller's input, output, signals and the
 //! command's exit through, as if it ran here.
-use crate::{
-    passthrough::executor::{
-        CommandLine, Executor, Exit, Finished, ResultReturn, RunContext, RunFailure, RunResult,
-        Running,
-    },
-    remote_run::{
-        consistency, environment, fingerprint,
-        link::{self, Link, Outbox, SyncOverLink},
-        protocol::{Exited, RunMessage, Start, Stream, WINDOW},
-        runner::FORWARDED,
-    },
+use crate::passthrough::executor::{
+    CommandLine, Executor, Exit, Finished, ResultReturn, RunContext, RunFailure, RunResult, Running,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client::{self as client, Wait};
+use elsecall_remote_run::remote_run::{
+    consistency, environment, fingerprint,
+    link::{self, Link, Outbox, SyncOverLink},
+    protocol::{Exited, RunMessage, Start, Stream, WINDOW},
+    runner::FORWARDED,
+};
 use elsecall_scheduling::{
     placed::{PlacedReport, Reached, SyncSummary},
     run_phases::RemoteFailurePhase,
@@ -448,7 +445,7 @@ impl RemoteRun {
                         }
                         Ok(RunMessage::InputClosed) => self.input = None,
                         Ok(RunMessage::Exited { exit, cpu_ms, plan_observation }) => {
-                            let (observation, rejected) = crate::remote_run::protocol::received_observation(plan_observation, self.workload.as_ref());
+                            let (observation, rejected) = elsecall_remote_run::remote_run::protocol::received_observation(plan_observation, self.workload.as_ref());
                             self.plan_observation = observation;
                             if rejected {
                                 self.warnings.push("The member returned invalid workload metadata; plan coverage is unknown.".into());

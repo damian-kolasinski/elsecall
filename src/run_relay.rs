@@ -50,7 +50,7 @@ where
         let _ = caller_write.shutdown().await;
     };
     tokio::pin!(up, down);
-    let grace = crate::remote_run::link::GRACE;
+    let grace = elsecall_remote_run::remote_run::link::GRACE;
     tokio::select! {
         _ = &mut up => { let _ = tokio::time::timeout(grace, &mut down).await; }
         _ = &mut down => { let _ = tokio::time::timeout(grace, &mut up).await; }
@@ -81,9 +81,12 @@ async fn attach(
     };
     // Old callers keep the plaintext mode. New callers send only a bounded public
     // header and an empty body, so old services can upgrade that same connection.
-    let sealed = match crate::sealed_run::one_header(request.headers(), header::UPGRADE.as_str()) {
-        Some(crate::sealed_run::PROTOCOL) => {
-            match crate::sealed_run::public_header(request.headers()) {
+    let sealed = match elsecall_remote_run::sealed_run::one_header(
+        request.headers(),
+        header::UPGRADE.as_str(),
+    ) {
+        Some(elsecall_remote_run::sealed_run::PROTOCOL) => {
+            match elsecall_remote_run::sealed_run::public_header(request.headers()) {
                 Some(public) => Some(public),
                 None => return failure(StatusCode::BAD_REQUEST, invalid_mode()),
             }
@@ -124,16 +127,18 @@ async fn attach(
                 Err(error) => return attach_failure(error),
             };
         response.headers_mut().insert(
-            crate::sealed_run::ACCEPTANCE,
-            HeaderValue::from_str(&crate::sealed_run::encode(&channel.acceptance))
-                .expect("public base64 metadata"),
+            elsecall_remote_run::sealed_run::ACCEPTANCE,
+            HeaderValue::from_str(&elsecall_remote_run::sealed_run::encode(
+                &channel.acceptance,
+            ))
+            .expect("public base64 metadata"),
         );
         // Preserve the service's peer-send bound below encryption. Local Unix
         // socket buffers must not hide a blocked TCP send from the CLI.
         let stream = elsecall_peer_transport::peer_transport::Observed::new(
             elsecall_peer_transport::send_inactivity::Writer::new(
                 channel.stream,
-                crate::remote_run::link::GRACE,
+                elsecall_remote_run::remote_run::link::GRACE,
             ),
             target.name.as_str(),
             &format!("/peer/v1/placements/{}/attach", id.as_str()),
@@ -143,7 +148,7 @@ async fn attach(
             let Ok(upgraded) = upgrade.await else { return };
             relay_bytes(TokioIo::new(upgraded), stream).await;
         });
-        crate::sealed_run::PROTOCOL
+        elsecall_remote_run::sealed_run::PROTOCOL
     } else {
         let channel = match peer_client::attach(fleet.key(), &target, id.as_str()).await {
             Ok(channel) => channel,
