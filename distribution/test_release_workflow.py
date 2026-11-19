@@ -4,7 +4,9 @@ import re
 import unittest
 from pathlib import Path
 
-WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "release.yml"
+WORKFLOWS = Path(__file__).resolve().parents[1] / ".github" / "workflows"
+WORKFLOW = WORKFLOWS / "release.yml"
+CHECK = WORKFLOWS / "check.yml"
 
 
 def jobs(text):
@@ -39,11 +41,24 @@ class ReleaseWorkflow(unittest.TestCase):
         self.assertLessEqual({"tested", "build"}, needs(self.jobs["sign"]))
         self.assertLessEqual({"tested", "sign"}, needs(self.jobs["publish"]))
         self.assertIn("publish", needs(self.jobs["verify-published"]))
+        # A status function in a condition would let the job run after a
+        # failed or cancelled gate.
+        for job in ("sign", "publish"):
+            condition = next(line for line in self.jobs[job] if line.startswith("    if: "))
+            self.assertNotRegex(condition, r"always\(\)|cancelled\(\)|failure\(\)", job)
 
-    def test_the_gate_waits_for_check_on_the_released_commit(self):
+    def test_the_gate_runs_check_itself_on_the_released_commit(self):
         gate = "\n".join(self.jobs["tested"])
         self.assertIn("if: github.ref_type == 'tag'", gate)
-        self.assertIn('distribution/checked_commit.py --repository "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA"', gate)
+        self.assertIn("uses: ./.github/workflows/check.yml", gate)
+
+    def test_check_can_be_called_and_never_shares_a_concurrency_group_with_its_caller(self):
+        check = CHECK.read_text(encoding="utf-8")
+        triggers = check.split("\non:\n", 1)[1].split("\nconcurrency:\n", 1)[0]
+        self.assertIn("\n  workflow_call:", "\n" + triggers)
+        # A called workflow's github.workflow is the caller's name, so the
+        # release's run never queues behind main's run on the same commit.
+        self.assertRegex(check, r"\n  group: \$\{\{ github\.workflow \}\}-")
 
     def test_the_build_smoke_tests_and_installs_the_archive(self):
         build = "\n".join(self.jobs["build"])

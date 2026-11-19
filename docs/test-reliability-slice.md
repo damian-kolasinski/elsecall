@@ -544,8 +544,9 @@ Between 2026-11-16 and 2026-11-17, nine Check attempts failed in
 `tests/rehearse.rs` and one in the library tests. A failed `TestMember::ok`
 printed only the JSON of the failed command. It showed neither the member's
 service log nor the rehearsal controller's output, so no CI failure explained
-itself. The release workflow now waits for main's Check, so each unexplained
-failure also delays a release until someone reruns it.
+itself. The release workflow then waited for main's Check (it now runs Check
+on its own tag), so each unexplained failure also delayed a release until
+someone reran it.
 
 `tests/diagnostics` keeps, per test thread, the logs a fixture owns and a
 journal of the member commands it ran. A panic hook prints them after the
