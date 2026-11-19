@@ -2,7 +2,8 @@
 # full check, the module shape check and the privacy checks), so a red main is
 # visible to the operator and to every session starting work, and one of them
 # takes the fix. A failure opens the workflow's issue or comments on it, a pass
-# closes it, and a superseded (cancelled) run changes nothing. See
+# closes it, and a superseded (cancelled) run changes nothing. A run that no
+# runner picked up runs again, up to three attempts, before it counts. See
 # scripts/main_status.py.
 name: Main status
 on:
@@ -26,8 +27,9 @@ jobs:
     permissions:
       contents: read
       issues: write
-      # To see whether a later run of the workflow has already reported.
-      actions: read
+      # To see a run's jobs and later runs of the workflow, and to run again
+      # a run that no runner picked up.
+      actions: write
     steps:
       # The script comes from main, never from the run being reported.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -40,6 +42,8 @@ jobs:
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
           COMMIT: ${{ github.event.workflow_run.head_sha }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
         run: >-
           python3 scripts/main_status.py --repository "$GITHUB_REPOSITORY"
           --workflow "$WORKFLOW" --conclusion "$CONCLUSION" --url "$RUN_URL" --commit "$COMMIT"
+          --attempt "$ATTEMPT"
