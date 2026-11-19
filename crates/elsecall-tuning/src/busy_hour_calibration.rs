@@ -1,8 +1,8 @@
 //! Select arrival density from complete, observed rehearsals of the same workload.
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
+use elsecall_reports::workload::trace::Trace;
 use elsecall_simulation::replay_load::LoadFactor;
-use elsecall_workload::trace::Trace;
 use serde::{Deserialize, Serialize};
 mod fit;
 use fit::Fit;
@@ -549,7 +549,7 @@ mod tests {
     #[test]
     fn placeable_remote_admissions_count_in_master_queue_without_sync_time() {
         use elsecall_contract::scheduling_model::request::Placement;
-        use elsecall_report_facts::facts::PlacementKind;
+        use elsecall_reports::report_facts::facts::PlacementKind;
         let (workload, mut trace, mut target) = observed_fixture();
         for demands in trace.rehearsal.as_mut().unwrap().demand.values_mut() {
             demands.insert(trace.members[1].member.clone(), 2.0);

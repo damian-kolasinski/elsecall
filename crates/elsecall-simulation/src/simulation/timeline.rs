@@ -5,7 +5,7 @@ use super::{
     member::Member,
 };
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_workload::trace::Trace;
+use elsecall_reports::workload::trace::Trace;
 use serde::Serialize;
 use std::{
     collections::{BTreeMap, BTreeSet},

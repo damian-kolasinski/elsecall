@@ -213,7 +213,7 @@ fn exports_real_overrun_shape_across_load_pages_without_losing_history() {
         output.to_str().unwrap(),
     ]);
     assert_eq!(summary["incomplete"], false, "{summary}");
-    let trace: elsecall_workload::trace::Trace =
+    let trace: elsecall_reports::workload::trace::Trace =
         serde_json::from_slice(&fs::read(output).unwrap()).unwrap();
     for at in times {
         assert_eq!(
@@ -233,9 +233,9 @@ fn exports_real_overrun_shape_across_load_pages_without_losing_history() {
 fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
     use elsecall_contract::scheduling_model::{run_id::RunId, timestamp::Timestamp};
     use elsecall_host::paths::Paths;
+    use elsecall_reports::workload::trace::Trace;
     use elsecall_scheduling::load_log::{minute::Minute, store::LoadStore};
     use elsecall_scheduling::{record::Record, records::Records};
-    use elsecall_workload::trace::Trace;
     use std::time::Duration;
     // Twelve scripted cores: overlapping runs record up to 6 cores in use.
     let load_dir = tempfile::tempdir().unwrap();

@@ -1,7 +1,7 @@
 //! Choose a synthetic rehearsal population, without hiding competing work.
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_workload::trace::Trace;
+use elsecall_reports::workload::trace::Trace;
 use serde::Serialize;
 use std::{collections::BTreeMap, num::NonZeroUsize};
 
@@ -27,8 +27,8 @@ impl std::str::FromStr for Busiest {
         }
         let duration = text.strip_prefix("busiest:")
             .and_then(|s| humantime::parse_duration(s).ok())
-            .filter(|d| d.as_millis() >= 1 && *d <= elsecall_report_facts::window::MAXIMUM_PERIOD)
-            .ok_or_else(|| elsecall_report_facts::window::invalid(
+            .filter(|d| d.as_millis() >= 1 && *d <= elsecall_reports::report_facts::window::MAXIMUM_PERIOD)
+            .ok_or_else(|| elsecall_reports::report_facts::window::invalid(
                 "--rehearsal-window must be busiest:DURATION, from 1ms to 30d (for example busiest:2h)."))?;
         Ok(Self {
             duration_ms: duration.as_millis() as u64,
@@ -348,7 +348,7 @@ pub fn explicit(
     minimum: NonZeroUsize,
 ) -> Result<(Trace, Selection)> {
     if since < source.since || until > source.until || since >= until {
-        return Err(elsecall_report_facts::window::invalid(
+        return Err(elsecall_reports::report_facts::window::invalid(
             "Explicit arrival bounds must be nonempty and inside the source history.",
         ));
     }
@@ -368,7 +368,7 @@ pub fn explicit(
 pub fn bound(source: &Trace, since: Timestamp, until: Timestamp) -> Result<Trace> {
     elsecall_simulation::simulation::validate_trace(source)?;
     if since < source.since || until > source.until || since >= until {
-        return Err(elsecall_report_facts::window::invalid(
+        return Err(elsecall_reports::report_facts::window::invalid(
             "Explicit arrival bounds must be nonempty and inside the source history.",
         ));
     }
@@ -424,15 +424,15 @@ mod tests {
         capacity::{Capacity, Cores},
         request::Urgency,
     };
+    use elsecall_reports::workload::{
+        demand::Demand,
+        trace::{Member, Request},
+    };
     use elsecall_scheduling::{
         fixtures::{T0, base, bucket},
         parameters::Parameters,
         record::{HoldBasis, HoldLimitRecord, Outcome},
         records::SchedulerSettings,
-    };
-    use elsecall_workload::{
-        demand::Demand,
-        trace::{Member, Request},
     };
     use std::time::Duration;
     fn fixture() -> Trace {
@@ -815,7 +815,7 @@ mod tests {
         refusal.fact.resources.as_mut().unwrap().started_at = None;
         refusal.fact.resources.as_mut().unwrap().ended_at = None;
         refusal.fact.completed = false;
-        refusal.outcome = Some(elsecall_workload::trace::TraceOutcome::Failed {
+        refusal.outcome = Some(elsecall_reports::workload::trace::TraceOutcome::Failed {
             code: "fleet_busy".into(),
         });
         refusal.fact.failure = Some("fleet_busy".into());

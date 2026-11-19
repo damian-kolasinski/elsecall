@@ -5,8 +5,8 @@ mod members;
 mod processes;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_replay::replay_placement::{Mode, ReplayPlacement};
+use elsecall_reports::workload::trace::Trace;
 use elsecall_tuning::busy_hour_calibration::{Target, calibrate};
-use elsecall_workload::trace::Trace;
 use members::{TestMember, enrol};
 use serde_json::json;
 use std::{

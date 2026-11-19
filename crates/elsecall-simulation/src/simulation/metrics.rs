@@ -4,11 +4,11 @@ use elsecall_contract::scheduling_model::{
     request::{Kind, Placement},
     timestamp::Timestamp,
 };
-use elsecall_scheduling::placed::Warmth;
-use elsecall_workload::{
+use elsecall_reports::workload::{
     demand::median,
     trace::{Request, Trace},
 };
+use elsecall_scheduling::placed::Warmth;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 pub(super) fn distribution(values: &[f64]) -> Value {
@@ -478,7 +478,7 @@ pub(super) fn summarize(trace: &Trace, trial: &Trial, since: Timestamp, until: T
 mod tests {
     use super::*;
     use crate::simulation::{engine::Reserve, model::Envelope};
-    use elsecall_report_facts::facts::PlacementKind;
+    use elsecall_reports::report_facts::facts::PlacementKind;
     use elsecall_scheduling::record::WorkspaceIdentity;
 
     fn fixture() -> (Trace, Trial) {

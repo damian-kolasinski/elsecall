@@ -2,7 +2,7 @@
 use super::{invalid, protocol::Launch};
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::request::Kind;
-use elsecall_workload::trace::Trace;
+use elsecall_reports::workload::trace::Trace;
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -154,13 +154,13 @@ mod tests {
         request::{AtDeadline, Placement, Urgency},
         timestamp::Timestamp,
     };
+    use elsecall_reports::workload::{
+        demand::Demand,
+        trace::{Member, Request, TraceOutcome},
+    };
     use elsecall_scheduling::{
         fixtures::{T0, base},
         record::{HoldBasis, HoldLimitRecord, Outcome, WorkspaceIdentity},
-    };
-    use elsecall_workload::{
-        demand::Demand,
-        trace::{Member, Request, TraceOutcome},
     };
     use std::time::Duration;
     fn trace() -> Trace {
@@ -298,7 +298,7 @@ mod tests {
             code: "fleet_busy".into(),
         });
         r.placement_request = Placement::Member("beta".into());
-        r.fact.placement = elsecall_report_facts::facts::PlacementKind::Required;
+        r.fact.placement = elsecall_reports::report_facts::facts::PlacementKind::Required;
         t.requests.push(r);
         let plan = Plan::new(&t, 4.0).unwrap();
         assert_eq!(plan.arrivals[1].reference_member, "beta");
@@ -311,7 +311,8 @@ mod tests {
     fn fixed_work_rejects_a_target_that_would_skip_positive_cpu_work() {
         let mut t = trace();
         t.requests[0].placement_request = Placement::Placeable;
-        t.requests[0].fact.placement = elsecall_report_facts::facts::PlacementKind::Placeable;
+        t.requests[0].fact.placement =
+            elsecall_reports::report_facts::facts::PlacementKind::Placeable;
         let mut target = t.members[0].clone();
         target.member = "beta".into();
         t.members.push(target);

@@ -2,7 +2,7 @@
 //! wall runtimes. This explains an old worker's calibration error without
 //! granting predictive trust to a model fitted on the evaluated population.
 use elsecall_contract::failure::Result;
-use elsecall_workload::trace::Trace;
+use elsecall_reports::workload::trace::Trace;
 use serde_json::{Value, json};
 
 pub fn replay(mut trace: Trace) -> Result<Value> {
@@ -41,7 +41,7 @@ pub fn replay(mut trace: Trace) -> Result<Value> {
             ));
         }
         let demand = recording.demand[r.fact.run_id.as_str()][member];
-        let workers = elsecall_workload::format::logical_demand(demand, cores).ceil();
+        let workers = elsecall_reports::workload::format::logical_demand(demand, cores).ceil();
         let cpu_ms = r
             .fact
             .resources

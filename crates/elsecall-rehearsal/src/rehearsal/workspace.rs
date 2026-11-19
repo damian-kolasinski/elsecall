@@ -1,6 +1,6 @@
 //! Stable scratch grouping for historical requests without workspace identities.
+use elsecall_reports::workload::{demand::family, trace::Request};
 use elsecall_scheduling::record::WorkspaceIdentity;
-use elsecall_workload::{demand::family, trace::Request};
 use sha2::{Digest, Sha256};
 
 pub(super) fn prepare(requests: &mut [Request]) {

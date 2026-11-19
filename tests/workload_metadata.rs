@@ -148,7 +148,7 @@ async fn declared_operations_round_trip_without_replacing_process_outcomes() {
             }
         );
         assert!(record["run_phases"]["execution_ms"].is_number());
-        let fact = elsecall_report_facts::facts::Fact::of(&typed).unwrap();
+        let fact = elsecall_reports::report_facts::facts::Fact::of(&typed).unwrap();
         assert_eq!(fact.workload, typed.workload);
         assert_eq!(fact.plan_observation, typed.plan_observation);
         assert!(fact.believable());

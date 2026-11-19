@@ -1,10 +1,10 @@
 //! Execution physics, separate from admission/placement's own estimates.
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_scheduling::placed::Warmth;
-use elsecall_workload::{
+use elsecall_reports::workload::{
     demand::{family, interval, median, overlap},
     trace::{Request, Trace},
 };
+use elsecall_scheduling::placed::Warmth;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
@@ -184,7 +184,7 @@ fn execution_interval(trace: &Trace, request: &Request) -> Option<(u64, u64)> {
 /// its retained duration, or an explicitly uncertain declared-size fallback.
 fn leftover_interval(
     trace: &Trace,
-    leftover: &elsecall_workload::trace::Leftover,
+    leftover: &elsecall_reports::workload::trace::Leftover,
 ) -> Option<(u64, u64, f64, bool)> {
     let duration = leftover
         .duration_ms
@@ -332,8 +332,8 @@ pub(super) fn reference(trace: &Trace, request: &Request) -> Option<(f64, bool)>
     }
     if let Some(reference) = &request.execution_reference {
         return match reference {
-            elsecall_workload::trace::ExecutionReference::Unknown => None,
-            elsecall_workload::trace::ExecutionReference::Known {
+            elsecall_reports::workload::trace::ExecutionReference::Unknown => None,
+            elsecall_reports::workload::trace::ExecutionReference::Known {
                 milliseconds,
                 identified,
                 ..
@@ -363,23 +363,25 @@ pub(super) fn reference(trace: &Trace, request: &Request) -> Option<(f64, bool)>
 pub fn freeze_reference(
     trace: &Trace,
     request: &Request,
-) -> elsecall_workload::trace::ExecutionReference {
+) -> elsecall_reports::workload::trace::ExecutionReference {
     match reference(trace, request) {
-        Some((milliseconds, identified)) => elsecall_workload::trace::ExecutionReference::Known {
-            milliseconds,
-            identified,
-            member_speed: reference_speed(trace, request),
-        },
-        None => elsecall_workload::trace::ExecutionReference::Unknown,
+        Some((milliseconds, identified)) => {
+            elsecall_reports::workload::trace::ExecutionReference::Known {
+                milliseconds,
+                identified,
+                member_speed: reference_speed(trace, request),
+            }
+        }
+        None => elsecall_reports::workload::trace::ExecutionReference::Unknown,
     }
 }
 pub(super) fn reference_speed(trace: &Trace, request: &Request) -> Option<f64> {
     if let Some(reference) = &request.execution_reference {
         return match reference {
-            elsecall_workload::trace::ExecutionReference::Known { member_speed, .. } => {
-                *member_speed
-            }
-            elsecall_workload::trace::ExecutionReference::Unknown => None,
+            elsecall_reports::workload::trace::ExecutionReference::Known {
+                member_speed, ..
+            } => *member_speed,
+            elsecall_reports::workload::trace::ExecutionReference::Unknown => None,
         };
     }
     let member = request
@@ -402,7 +404,7 @@ pub(super) fn reference_speed(trace: &Trace, request: &Request) -> Option<f64> {
     speed(trace, member, at)
 }
 
-pub use elsecall_workload::trace::structural_members;
+pub use elsecall_reports::workload::trace::structural_members;
 
 /// Frozen admission capability and explicit transport/workspace availability.
 /// Occupancy, saturation and hold/sync estimates do not constrain a free ideal.
@@ -660,7 +662,7 @@ mod tests {
         trace.members[0].load[0].cpu_mean = Some(0.75);
         trace.members[0].load[0].weighted_cores =
             elsecall_contract::scheduling_model::capacity::Cores::from_millis(2000);
-        trace.rehearsal = Some(elsecall_workload::recording::Recording {
+        trace.rehearsal = Some(elsecall_reports::workload::recording::Recording {
             calibration: BTreeMap::new(),
             ideal_ms: Default::default(),
             uncontended_ms: BTreeMap::new(),
@@ -784,15 +786,17 @@ mod tests {
     fn observed_leftover_cpu_is_removed_from_background_exactly_once() {
         let mut trace = single_run();
         let at = trace.since.millis();
-        trace.leftovers.push(elsecall_workload::trace::Leftover {
-            run_id: "r-000000000099".into(),
-            member: "a".into(),
-            since: trace.since,
-            cap_ms: 60_000,
-            duration_ms: Some(60_000),
-            cpu_ms: Some(60_000),
-            ending: None,
-        });
+        trace
+            .leftovers
+            .push(elsecall_reports::workload::trace::Leftover {
+                run_id: "r-000000000099".into(),
+                member: "a".into(),
+                since: trace.since,
+                cap_ms: 60_000,
+                duration_ms: Some(60_000),
+                cpu_ms: Some(60_000),
+                ending: None,
+            });
         // One full core of leftovers plus one request core for one second.
         trace.members[0].load[0].cpu_mean = Some((1.0 + 1.0 / 60.0) / 2.0);
         let external = outside(&trace, "a", at, Envelope::Point).unwrap();
@@ -812,15 +816,17 @@ mod tests {
         let mut trace = single_run();
         trace.demand[0].effective_cores = Some(1.5);
         trace.demand[0].interval_cores = Some([1.5, 1.5]);
-        trace.leftovers.push(elsecall_workload::trace::Leftover {
-            run_id: "r-000000000099".into(),
-            member: "a".into(),
-            since: trace.since,
-            cap_ms: 60_000,
-            duration_ms: Some(60_000),
-            cpu_ms: Some(60_000),
-            ending: None,
-        });
+        trace
+            .leftovers
+            .push(elsecall_reports::workload::trace::Leftover {
+                run_id: "r-000000000099".into(),
+                member: "a".into(),
+                since: trace.since,
+                cap_ms: 60_000,
+                duration_ms: Some(60_000),
+                cpu_ms: Some(60_000),
+                ending: None,
+            });
         trace.members[0].load[0].cpu_mean = Some((1.0 + 1.5 / 60.0) / 2.0);
         let (work, known) = reference(&trace, &trace.requests[0]).unwrap();
         assert!(known);

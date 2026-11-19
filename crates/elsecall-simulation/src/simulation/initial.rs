@@ -6,6 +6,7 @@ use super::{
 };
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
+use elsecall_reports::workload::trace::{Request, Trace};
 use elsecall_scheduling::{
     messages::Grant,
     placed::{PlacedRecord, Reached, Side, SyncSummary},
@@ -13,7 +14,6 @@ use elsecall_scheduling::{
     record::{Record, State},
     service::Scheduler,
 };
-use elsecall_workload::trace::{Request, Trace};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,

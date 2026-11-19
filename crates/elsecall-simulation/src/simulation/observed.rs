@@ -9,7 +9,7 @@ use super::{
     timeline::{Minute, Reserve},
 };
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_workload::trace::Trace;
+use elsecall_reports::workload::trace::Trace;
 use serde_json::Value;
 pub fn summarize(trace: &Trace) -> Value {
     let outcomes = trace
@@ -148,7 +148,7 @@ mod tests {
         request.fact.waited_ms = Some(0);
         request.hold_limit.as_mut().unwrap().seconds = std::time::Duration::from_secs(30);
         let id = request.fact.run_id.clone();
-        trace.rehearsal = Some(elsecall_workload::recording::Recording {
+        trace.rehearsal = Some(elsecall_reports::workload::recording::Recording {
             calibration: BTreeMap::new(),
             ideal_ms: Default::default(),
             uncontended_ms: BTreeMap::new(),

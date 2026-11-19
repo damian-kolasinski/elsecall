@@ -61,7 +61,7 @@ async fn identify_caller(
 
 /// Tuning trust evidence for reports, from rehearsal's certificates.
 struct TuningTrust;
-impl elsecall_reporting::report_api::TrustEvidence for TuningTrust {
+impl elsecall_reports::report_api::TrustEvidence for TuningTrust {
     fn fleet_status<'a>(
         &'a self,
         paths: &'a elsecall_host::paths::Paths,
@@ -433,9 +433,9 @@ pub async fn serve_with_updates(
         .map_err(|e| Failure::io("Inspect local socket", e))?
         .ino();
     let relay = run_relay::routes(scheduler.clone(), fleet.as_ref().ok().cloned());
-    let reporter = elsecall_reporting::report_api::Reporter {
+    let reporter = elsecall_reports::report_api::Reporter {
         paths: paths.clone(),
-        own: elsecall_reporting::own_history::OwnHistory {
+        own: elsecall_reports::own_history::OwnHistory {
             scheduler: scheduler.clone(),
             load: load_log.clone(),
             outside: outside_detector,
@@ -456,9 +456,7 @@ pub async fn serve_with_updates(
                 .merge(elsecall_workspace::workspace_check_api::routes(
                     caller_state,
                 ))
-                .merge(elsecall_reporting::report_api::peer_routes(
-                    reporter.clone(),
-                ))
+                .merge(elsecall_reports::report_api::peer_routes(reporter.clone()))
                 .merge(elsecall_trace::trace_api::peer_routes(reporter.clone()))
                 .merge(elsecall_rehearsal::rehearsal_api::peer_routes(
                     rehearsal.clone(),
@@ -526,7 +524,7 @@ pub async fn serve_with_updates(
         .merge(crate::ui_app::routes(paths.clone()))
         .merge(update_routes)
         .merge(elsecall_trace::trace_api::routes(reporter.clone()))
-        .merge(elsecall_reporting::report_api::routes(reporter))
+        .merge(elsecall_reports::report_api::routes(reporter))
         .merge(relay)
         .merge(sync_routes)
         .merge(outside_pressure_routes)

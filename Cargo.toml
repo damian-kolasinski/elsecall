@@ -61,8 +61,7 @@ elsecall-peers = { path = "crates/elsecall-peers" }
 elsecall-platform-macos = { path = "crates/elsecall-platform-macos" }
 elsecall-rehearsal = { path = "crates/elsecall-rehearsal" }
 elsecall-replay = { path = "crates/elsecall-replay" }
-elsecall-report-facts = { path = "crates/elsecall-report-facts" }
-elsecall-reporting = { path = "crates/elsecall-reporting" }
+elsecall-reports = { path = "crates/elsecall-reports" }
 elsecall-runs = { path = "crates/elsecall-runs" }
 elsecall-scheduling = { path = "crates/elsecall-scheduling" }
 elsecall-simulation = { path = "crates/elsecall-simulation" }
@@ -70,7 +69,6 @@ elsecall-sync = { path = "crates/elsecall-sync" }
 elsecall-tools = { path = "crates/elsecall-tools" }
 elsecall-trace = { path = "crates/elsecall-trace" }
 elsecall-tuning = { path = "crates/elsecall-tuning" }
-elsecall-workload = { path = "crates/elsecall-workload" }
 elsecall-workspace = { path = "crates/elsecall-workspace" }
 
 # Every crate inherits these with `[lints] workspace = true`.
@@ -121,8 +119,7 @@ elsecall-peers.workspace = true
 elsecall-platform-macos.workspace = true
 elsecall-rehearsal.workspace = true
 elsecall-replay.workspace = true
-elsecall-report-facts.workspace = true
-elsecall-reporting.workspace = true
+elsecall-reports.workspace = true
 elsecall-runs.workspace = true
 elsecall-scheduling.workspace = true
 elsecall-simulation.workspace = true
@@ -130,7 +127,6 @@ elsecall-sync.workspace = true
 elsecall-tools.workspace = true
 elsecall-trace.workspace = true
 elsecall-tuning.workspace = true
-elsecall-workload.workspace = true
 elsecall-workspace.workspace = true
 futures-util.workspace = true
 getrandom.workspace = true

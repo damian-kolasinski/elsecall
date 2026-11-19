@@ -1,5 +1,5 @@
+use elsecall_reports::workload::trace::Trace;
 use elsecall_simulation::simulation;
-use elsecall_workload::trace::Trace;
 use serde_json::Value;
 
 fn recording() -> Trace {

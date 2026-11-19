@@ -2,8 +2,8 @@
 //! write. Unrelated fleet/consumer configuration cannot enter the artifact.
 use super::space::{Settings, arguments};
 use elsecall_contract::failure::Result;
+use elsecall_reports::workload::trace::Trace;
 use elsecall_simulation::simulation::CandidateSettings;
-use elsecall_workload::trace::Trace;
 use serde_json::{Value, json};
 fn literal<T: serde::Serialize>(v: &T) -> String {
     toml::Value::try_from(v)

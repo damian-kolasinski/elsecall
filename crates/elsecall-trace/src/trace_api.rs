@@ -12,13 +12,13 @@ use elsecall_contract::api;
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_fleet::fleet::Fleet;
-use elsecall_report_facts::window::{Window, invalid};
-use elsecall_reporting::{report_api::Reporter, reporting::gathering::Source};
-use elsecall_workload::trace::Page;
+use elsecall_reports::report_facts::window::{Window, invalid};
+use elsecall_reports::workload::trace::Page;
+use elsecall_reports::{report_api::Reporter, reporting::gathering::Source};
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 
-pub use elsecall_report_facts::report_protocol::PageRequest;
+pub use elsecall_reports::report_facts::report_protocol::PageRequest;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Members {
     pub members: Vec<String>,

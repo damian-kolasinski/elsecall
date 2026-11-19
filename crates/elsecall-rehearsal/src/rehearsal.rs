@@ -15,8 +15,8 @@ mod workspace;
 pub use elsecall_scheduling::service::invalid_rehearsal as invalid;
 
 pub mod cancellation;
-pub use elsecall_workload::recording;
+pub use elsecall_reports::workload::recording;
 
 /// Only known service-owned labels with internal placement are background in
 /// synthetic workloads. Never infer ownership from a consumer label prefix.
-pub use elsecall_workload::trace::internal;
+pub use elsecall_reports::workload::trace::internal;

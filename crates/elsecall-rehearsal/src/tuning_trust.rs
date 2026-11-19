@@ -4,7 +4,7 @@ use elsecall_contract::build_identity::{Build, Digest};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_host::paths::Paths;
-use elsecall_workload::trace::Trace;
+use elsecall_reports::workload::trace::Trace;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::time::Duration;
@@ -259,7 +259,7 @@ mod tests {
     fn large_fidelity_reports_produce_bounded_certificate_writes() {
         let start = Timestamp::from_millis(elsecall_scheduling::fixtures::T0);
         let record = elsecall_scheduling::fixtures::pinned(0, "work", "a", 1.0);
-        let mut trace:Trace=serde_json::from_value(json!({"trace_version":1,"incomplete":false,"since":start,"until":start.after(Duration::from_secs(60)),"master":"a","members":[{"member":"a","errors":[],"load":[elsecall_scheduling::fixtures::bucket(0,0.1,0.0,0,0,1.0)],"scheduler_settings":[{"at":start,"capacity":{"weighted_cores":10,"reserved":0,"capacity":10},"parameters":{}}]}],"requests":[elsecall_workload::trace::Request::of(&record).unwrap()],"leftovers":[],"demand":[],"contention":[],"limits":[]})).unwrap();
+        let mut trace:Trace=serde_json::from_value(json!({"trace_version":1,"incomplete":false,"since":start,"until":start.after(Duration::from_secs(60)),"master":"a","members":[{"member":"a","errors":[],"load":[elsecall_scheduling::fixtures::bucket(0,0.1,0.0,0,0,1.0)],"scheduler_settings":[{"at":start,"capacity":{"weighted_cores":10,"reserved":0,"capacity":10},"parameters":{}}]}],"requests":[elsecall_reports::workload::trace::Request::of(&record).unwrap()],"leftovers":[],"demand":[],"contention":[],"limits":[]})).unwrap();
         let session = "a".repeat(24);
         let id = trace.requests[0].fact.run_id.clone();
         trace.requests[0].fact.synthetic = true;

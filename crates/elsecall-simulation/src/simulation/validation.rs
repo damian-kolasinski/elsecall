@@ -7,8 +7,8 @@ use elsecall_contract::scheduling_model::{
     run_id::RunId,
     speed::PLAUSIBLE,
 };
-use elsecall_report_facts::facts::{PlacementKind, is_code};
-use elsecall_workload::trace::{Trace, TraceOutcome, VERSION};
+use elsecall_reports::report_facts::facts::{PlacementKind, is_code};
+use elsecall_reports::workload::trace::{Trace, TraceOutcome, VERSION};
 use std::collections::{BTreeMap, BTreeSet};
 
 const DAY: u64 = 86_400_000;
@@ -240,8 +240,8 @@ pub(super) fn trace(t: &Trace) -> Result<()> {
         let f = &r.fact;
         if !f.believable()
             || r.execution_reference.as_ref().is_some_and(|r| match r {
-                elsecall_workload::trace::ExecutionReference::Unknown => false,
-                elsecall_workload::trace::ExecutionReference::Known {
+                elsecall_reports::workload::trace::ExecutionReference::Unknown => false,
+                elsecall_reports::workload::trace::ExecutionReference::Known {
                     milliseconds,
                     member_speed,
                     ..
@@ -484,11 +484,11 @@ pub(super) fn trace(t: &Trace) -> Result<()> {
 mod tests {
     use super::*;
     use elsecall_contract::scheduling_model::timestamp::Timestamp;
-    use elsecall_scheduling::fixtures::{self, T0};
-    use elsecall_workload::{
+    use elsecall_reports::workload::{
         contention::{Curve, Point},
         trace::{Member, Request},
     };
+    use elsecall_scheduling::fixtures::{self, T0};
     fn fixture() -> Trace {
         let mut record = fixtures::pinned(1, "work", "mini", 2.0);
         record.decision = None;
@@ -564,7 +564,7 @@ mod tests {
     }
     #[test]
     fn frozen_execution_references_validate_numbers_and_preserve_explicit_unknown() {
-        use elsecall_workload::trace::ExecutionReference;
+        use elsecall_reports::workload::trace::ExecutionReference;
         let mut t = fixture();
         t.requests[0].execution_reference = Some(ExecutionReference::Unknown);
         assert!(trace(&t).is_ok());

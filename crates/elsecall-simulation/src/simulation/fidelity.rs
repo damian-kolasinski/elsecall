@@ -4,7 +4,7 @@ use elsecall_contract::scheduling_model::{
     request::{Kind, Placement},
     timestamp::Timestamp,
 };
-use elsecall_workload::{
+use elsecall_reports::workload::{
     demand::median,
     trace::{Request, Trace},
 };
@@ -589,8 +589,8 @@ pub fn compare(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use elsecall_reports::workload::trace::{Member, VERSION};
     use elsecall_scheduling::{fixtures, record::WorkspaceIdentity, records::SchedulerSettings};
-    use elsecall_workload::trace::{Member, VERSION};
 
     fn fixture(count: usize) -> (Trace, Vec<ReplayOutcome>, Vec<ReplayMinute>) {
         let start = DAY * 20_000;
@@ -1040,7 +1040,7 @@ mod tests {
         let (mut t, mut o, m) = fixture(5);
         t.requests[0].fact.failure = Some("cancelled".into());
         t.requests[0].fact.completed = false;
-        t.requests[0].outcome = Some(elsecall_workload::trace::TraceOutcome::Cancelled);
+        t.requests[0].outcome = Some(elsecall_reports::workload::trace::TraceOutcome::Cancelled);
         o[0].failure = Some("cancelled".into());
         o[0].charged_ms = None;
         let v = check(&t, &o, &m);
@@ -1064,7 +1064,7 @@ mod tests {
     fn nonzero_command_exit_is_scored_as_admitted_work() {
         let (mut t, o, m) = fixture(5);
         t.requests[0].outcome =
-            Some(elsecall_workload::trace::TraceOutcome::Exited { exit_code: 17 });
+            Some(elsecall_reports::workload::trace::TraceOutcome::Exited { exit_code: 17 });
         let v = check(&t, &o, &m);
         assert_eq!(v["charged_mean"]["count"], 5);
         assert_eq!(v["charged_mean"]["status"], "pass");
@@ -1096,7 +1096,8 @@ mod tests {
             elsecall_contract::scheduling_model::timestamp::Timestamp::from_millis(60_000_000);
         let mut artifact = serde_json::json!({"trace_version":1,"incomplete":false,"since":start,"until":start.after(std::time::Duration::from_secs(60)),"master":"a","members":[{"member":"a","errors":[],"load":[],"scheduler_settings":[{"at":start,"capacity":{"weighted_cores":2,"reserved":0,"capacity":2},"parameters":{}}]}],"requests":[],"leftovers":[],"demand":[],"contention":[],"limits":[]});
         artifact["rehearsal"] = serde_json::json!({"session":"a".repeat(24),"compress":6.0,"seed":0,"requests":[],"aggregated_nested":[]});
-        let trace: elsecall_workload::trace::Trace = serde_json::from_value(artifact).unwrap();
+        let trace: elsecall_reports::workload::trace::Trace =
+            serde_json::from_value(artifact).unwrap();
         assert!(trace.rehearsal.is_none());
         let result = crate::simulation::simulate(
             trace,

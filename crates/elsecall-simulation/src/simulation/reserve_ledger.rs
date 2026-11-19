@@ -1,7 +1,7 @@
 //! Exact admitted grant intervals, independent of sampled host CPU.
 use super::{model, timeline::Reserve};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_workload::trace::Trace;
+use elsecall_reports::workload::trace::Trace;
 use std::collections::BTreeSet;
 
 pub(super) fn observed(trace: &Trace, reserve: &mut Reserve) {

@@ -6,7 +6,7 @@ use elsecall_contract::scheduling_model::{
     request::{Kind, Placement, Urgency},
     timestamp::Timestamp,
 };
-use elsecall_workload::{
+use elsecall_reports::workload::{
     demand::Demand,
     trace::{Request, Trace, TraceOutcome},
 };
@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 
 pub struct Inputs<'a> {
     trace: &'a Trace,
-    references: BTreeMap<&'a str, elsecall_workload::trace::ExecutionReference>,
+    references: BTreeMap<&'a str, elsecall_reports::workload::trace::ExecutionReference>,
     demand: BTreeMap<(&'a str, &'a str), &'a Demand>,
 }
 impl<'a> Inputs<'a> {
@@ -62,7 +62,10 @@ impl<'a> Inputs<'a> {
     }
     fn duration(&self, r: &Request, compress: f64) -> Result<u64> {
         match self.references.get(r.fact.run_id.as_str()) {
-            Some(elsecall_workload::trace::ExecutionReference::Known { milliseconds, .. }) => {
+            Some(elsecall_reports::workload::trace::ExecutionReference::Known {
+                milliseconds,
+                ..
+            }) => {
                 let ms = (milliseconds.round() / compress).round() as u64;
                 if ms > 3_600_000 {
                     return Err(invalid(
@@ -75,7 +78,7 @@ impl<'a> Inputs<'a> {
         }
     }
     fn demand(&self, r: &Request) -> Result<BTreeMap<String, f64>> {
-        let family = elsecall_workload::demand::family(&r.fact)
+        let family = elsecall_reports::workload::demand::family(&r.fact)
             .ok_or_else(|| invalid("Effective demand requires a recorded label/family."))?;
         let mut demand = BTreeMap::new();
         let mut missing = Vec::new();

@@ -1,9 +1,9 @@
 //! Arrival density, independent of command work and rehearsal compression.
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_workload::trace::Trace;
+use elsecall_reports::workload::trace::Trace;
 use std::{collections::BTreeMap, time::Duration};
 
-pub use elsecall_workload::format::{LoadFactor, MAXIMUM};
+pub use elsecall_reports::workload::format::{LoadFactor, MAXIMUM};
 
 /// Freeze source physics before moving arrivals. All intervals and deadline
 /// slack move with their root; nested work stays inside the same root tree.

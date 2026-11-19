@@ -234,7 +234,8 @@ fn real_service_decisions_replay_without_installing_or_contacting_services() {
 
     // Exercise the CLI's arrival boundary using records from the real fixture
     // services. The last command still owes a result after admission closes.
-    let mut cut: elsecall_workload::trace::Trace = serde_json::from_value(recorded).unwrap();
+    let mut cut: elsecall_reports::workload::trace::Trace =
+        serde_json::from_value(recorded).unwrap();
     let last = cut
         .requests
         .iter()

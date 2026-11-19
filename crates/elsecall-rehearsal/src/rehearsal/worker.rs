@@ -3,7 +3,7 @@
 //! keeps H1 CPU demand stable across core types and frequency changes. Scheduler
 //! stalls still extend completion; deadline exhaustion fails rather than truncates.
 
-pub use elsecall_workload::format::{Calibration, logical_demand};
+pub use elsecall_reports::workload::format::{Calibration, logical_demand};
 pub async fn calibrate(
     cores: elsecall_contract::inspection::CoreCounts,
 ) -> elsecall_contract::failure::Result<Calibration> {

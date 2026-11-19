@@ -1,5 +1,5 @@
 //! Minute evidence coverage for rehearsal arrival windows and their drain.
-use elsecall_workload::trace::Trace;
+use elsecall_reports::workload::trace::Trace;
 
 pub struct Gap {
     pub member: String,

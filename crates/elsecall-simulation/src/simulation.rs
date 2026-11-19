@@ -28,7 +28,7 @@ pub use engine::{Options, simulate};
 
 /// Shared untrusted workload boundary for offline simulation and rehearsal.
 pub fn validate_trace(
-    trace: &elsecall_workload::trace::Trace,
+    trace: &elsecall_reports::workload::trace::Trace,
 ) -> elsecall_contract::failure::Result<()> {
     validation::trace(trace)
 }

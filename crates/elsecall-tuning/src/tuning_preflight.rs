@@ -2,7 +2,7 @@
 //! scheduler search; never obtains trust, dispatches work or changes settings.
 use crate::tuning::{self, TuneOptions};
 use elsecall_contract::failure::Result;
-use elsecall_workload::trace::Trace;
+use elsecall_reports::workload::trace::Trace;
 use serde_json::{Value, json};
 use std::time::Instant;
 

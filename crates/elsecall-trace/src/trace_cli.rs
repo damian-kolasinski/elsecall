@@ -5,9 +5,9 @@ use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_host::client;
 use elsecall_host::paths::Paths;
-use elsecall_report_facts::window::invalid;
-use elsecall_reporting::report_cli::since;
-use elsecall_workload::trace::{self, Member, Page, Trace};
+use elsecall_reports::report_cli::since;
+use elsecall_reports::report_facts::window::invalid;
+use elsecall_reports::workload::trace::{self, Member, Page, Trace};
 use std::{collections::BTreeSet, io::Write, os::unix::fs::OpenOptionsExt, path::PathBuf};
 
 #[derive(Args, Debug)]
@@ -48,9 +48,9 @@ pub struct ExportArgs {
 pub async fn run(paths: &Paths, args: TraceArgs) -> Result<serde_json::Value> {
     let TraceCommand::Export(args) = args.command;
     let now = Timestamp::now();
-    let until = elsecall_workload::bounds::until(args.until.as_deref(), now)?;
+    let until = elsecall_reports::workload::bounds::until(args.until.as_deref(), now)?;
     let start = since(&args.since, now)?;
-    elsecall_report_facts::window::Window::new(start, until, now)?;
+    elsecall_reports::report_facts::window::Window::new(start, until, now)?;
     if args.local_history {
         let mut trace = crate::trace_snapshot::local(paths, args.member.unwrap(), start, now)?;
         trace.until = until;
@@ -101,7 +101,8 @@ pub async fn run(paths: &Paths, args: TraceArgs) -> Result<serde_json::Value> {
 
 /// Fixed-end fleet collection, shared by export and the rehearsal's own window.
 pub async fn collect(paths: &Paths, start: Timestamp, until: Timestamp) -> Result<Trace> {
-    let window = elsecall_report_facts::window::Window::new(start, until, Timestamp::now())?;
+    let window =
+        elsecall_reports::report_facts::window::Window::new(start, until, Timestamp::now())?;
     let roster: Members =
         client::post_large(&paths.socket(), "/v1/trace/members", &serde_json::json!({})).await?;
     let mut trace=Trace {placement_replay: None, rehearsal: None,
@@ -136,7 +137,12 @@ pub async fn collect(paths: &Paths, start: Timestamp, until: Timestamp) -> Resul
                 client::post_large::<Page, _>(&paths.socket(), "/v1/trace/requests", &request)
                     .await;
             let page = match page.and_then(|page| {
-                elsecall_workload::validation::page(page, window, request.before.as_ref(), &member)
+                elsecall_reports::workload::validation::page(
+                    page,
+                    window,
+                    request.before.as_ref(),
+                    &member,
+                )
             }) {
                 Ok(page) => page,
                 Err(e) => {
@@ -199,8 +205,11 @@ pub async fn collect(paths: &Paths, start: Timestamp, until: Timestamp) -> Resul
             .fold(until, std::cmp::max)
             .min(Timestamp::now());
         if load_until > until {
-            let tail_window =
-                elsecall_report_facts::window::Window::new(until, load_until, Timestamp::now())?;
+            let tail_window = elsecall_reports::report_facts::window::Window::new(
+                until,
+                load_until,
+                Timestamp::now(),
+            )?;
             let tail: Result<Page> = client::post_large(
                 &paths.socket(),
                 "/v1/trace/requests",
@@ -213,7 +222,7 @@ pub async fn collect(paths: &Paths, start: Timestamp, until: Timestamp) -> Resul
             )
             .await;
             match tail.and_then(|page| {
-                elsecall_workload::validation::page(page, tail_window, None, &member)
+                elsecall_reports::workload::validation::page(page, tail_window, None, &member)
             }) {
                 Ok(page) => entry.scheduler_settings.extend(page.scheduler_settings),
                 Err(error) => entry.errors.push(error.code),

@@ -1,9 +1,9 @@
 //! A copy is free to admit the next run while leftovers linger. That run settles
 //! them before sync, using the production executor's end-to-end hold budget.
 use super::{adapters::World, initial, model::Envelope};
+use elsecall_reports::workload::trace::{Request, Trace};
 use elsecall_runs::remote_run::{leftovers::STOPPING, runner::leftovers_wait_budget};
 use elsecall_scheduling::leftovers::Ending;
-use elsecall_workload::trace::{Request, Trace};
 use std::time::Duration;
 
 pub(super) fn observed_wait(trace: &Trace, request: &Request) -> u64 {

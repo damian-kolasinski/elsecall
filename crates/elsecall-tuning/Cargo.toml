@@ -18,12 +18,11 @@ elsecall-contract.workspace = true
 elsecall-host.workspace = true
 elsecall-rehearsal.workspace = true
 elsecall-replay.workspace = true
-elsecall-reporting.workspace = true
+elsecall-reports.workspace = true
 elsecall-runs.workspace = true
 elsecall-scheduling.workspace = true
 elsecall-simulation.workspace = true
 elsecall-trace.workspace = true
-elsecall-workload.workspace = true
 humantime.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -31,5 +30,5 @@ tokio.workspace = true
 toml.workspace = true
 
 [dev-dependencies]
-elsecall-report-facts.workspace = true
+elsecall-reports.workspace = true
 elsecall-sync.workspace = true

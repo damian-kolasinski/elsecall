@@ -2,9 +2,9 @@
 //! consumer parsers. No alternate parameter validation lives in the search.
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::capacity::Cores;
+use elsecall_reports::workload::trace::Trace;
 use elsecall_scheduling::parameters::KEYS;
 use elsecall_simulation::simulation::CandidateSettings;
-use elsecall_workload::trace::Trace;
 use std::collections::{BTreeMap, BTreeSet};
 pub(super) type Settings = BTreeMap<String, String>;
 pub type Space = BTreeMap<String, Vec<String>>;

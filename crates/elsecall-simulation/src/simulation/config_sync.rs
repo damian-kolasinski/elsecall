@@ -111,9 +111,9 @@ mod tests {
     use super::*;
     use crate::simulation::{Options, simulate};
     use elsecall_contract::scheduling_model::request::Placement;
-    use elsecall_report_facts::facts::PlacementKind;
+    use elsecall_reports::report_facts::facts::PlacementKind;
+    use elsecall_reports::workload::trace::{PreRunAttempt, Trace, TraceOutcome};
     use elsecall_scheduling::{placed::Warmth, record::WorkspaceIdentity};
-    use elsecall_workload::trace::{PreRunAttempt, Trace, TraceOutcome};
     fn trace() -> Trace {
         let mut trace = crate::simulation::engine::tests::trace();
         trace.requests.truncate(1);

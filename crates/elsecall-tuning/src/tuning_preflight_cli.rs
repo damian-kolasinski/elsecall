@@ -53,7 +53,7 @@ pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
     } else {
         let now = Timestamp::now();
         let start =
-            elsecall_reporting::report_cli::since(args.since.as_deref().unwrap_or("7d"), now)?;
+            elsecall_reports::report_cli::since(args.since.as_deref().unwrap_or("7d"), now)?;
         // Collect through now, so every historical drain and sensitivity trial
         // can use the available evidence beyond the arrival cutoff.
         elsecall_trace::trace_cli::collect(&elsecall_host::paths::Paths::current()?, start, now)
@@ -83,7 +83,7 @@ pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
         None
     };
     let (start, end) =
-        elsecall_workload::bounds::within(&trace, start_text, args.until.as_deref())?;
+        elsecall_reports::workload::bounds::within(&trace, start_text, args.until.as_deref())?;
     let trace = elsecall_rehearsal::rehearsal::window::bound(&trace, start, end)?;
     let mut result = tokio::task::spawn_blocking(move || {
         crate::tuning_preflight::check(
