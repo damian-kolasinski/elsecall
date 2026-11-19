@@ -35,10 +35,10 @@ pub struct OwnHistory {
     pub load: Arc<dyn LoadReport>,
     /// Outside pressure's detector, which keeps blocked episodes; `None` when
     /// its history could not be opened.
-    pub outside: Option<Arc<crate::outside_pressure::Detector>>,
+    pub outside: Option<Arc<elsecall_outside_pressure::outside_pressure::Detector>>,
     /// Early warnings about outside processes; `None` when their history could
     /// not be opened.
-    pub warnings: Option<Arc<dyn crate::outside_pressure::WarningReport>>,
+    pub warnings: Option<Arc<dyn elsecall_outside_pressure::outside_pressure::WarningReport>>,
 }
 
 impl OwnHistory {

@@ -60,12 +60,12 @@ pub struct MemberView {
     /// Set while outside pressure holds the member's admission gate closed: why,
     /// since when, and the outside processes behind it. Null when it admits, when
     /// unreachable, and for members whose build predates the report.
-    pub blocked: Option<crate::outside_pressure::Blocked>,
+    pub blocked: Option<elsecall_outside_pressure::outside_pressure::Blocked>,
     /// Outside processes that have spun or grown for hours, the
     /// longest-standing first. A warning, not a block: the member still admits
     /// work. Empty when there are none, when unreachable, and for members whose
     /// build predates them.
-    pub outside_warnings: Vec<crate::outside_pressure::Warning>,
+    pub outside_warnings: Vec<elsecall_outside_pressure::outside_pressure::Warning>,
 }
 
 /// Members that run another build than the master, and the repair.
@@ -116,14 +116,14 @@ pub struct FleetBuilds {
     /// cannot read is dropped.
     #[serde(
         default,
-        deserialize_with = "crate::outside_pressure::blocked::lenient_list"
+        deserialize_with = "elsecall_outside_pressure::outside_pressure::blocked::lenient_list"
     )]
     pub blocked: Vec<BlockedMember>,
     /// Early warnings per member; absent from services that predate them, and
     /// an entry this build cannot read is dropped.
     #[serde(
         default,
-        deserialize_with = "crate::outside_pressure::blocked::lenient_list"
+        deserialize_with = "elsecall_outside_pressure::outside_pressure::blocked::lenient_list"
     )]
     pub outside_warnings: Vec<MemberWarning>,
 }
@@ -133,7 +133,7 @@ pub struct FleetBuilds {
 pub struct BlockedMember {
     pub member: String,
     #[serde(flatten)]
-    pub blocked: crate::outside_pressure::Blocked,
+    pub blocked: elsecall_outside_pressure::outside_pressure::Blocked,
 }
 
 /// An early warning about an outside process on a member.
@@ -141,7 +141,7 @@ pub struct BlockedMember {
 pub struct MemberWarning {
     pub member: String,
     #[serde(flatten)]
-    pub warning: crate::outside_pressure::Warning,
+    pub warning: elsecall_outside_pressure::outside_pressure::Warning,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -368,7 +368,7 @@ fn without_roster(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::outside_pressure::{
+    use elsecall_outside_pressure::outside_pressure::{
         sampling::Owner,
         warning::{Concern, Warning},
     };

@@ -51,6 +51,7 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 elsecall = { path = "." }
+elsecall-outside-pressure = { path = "crates/elsecall-outside-pressure" }
 elsecall-os-processes = { path = "crates/elsecall-os-processes" }
 elsecall-scheduling = { path = "crates/elsecall-scheduling" }
 elsecall-peer-transport = { path = "crates/elsecall-peer-transport" }
@@ -123,6 +124,7 @@ elsecall-local-state.workspace = true
 elsecall-machine.workspace = true
 elsecall-membership.workspace = true
 elsecall-os-processes.workspace = true
+elsecall-outside-pressure.workspace = true
 elsecall-peer-diagnostics.workspace = true
 elsecall-peer-transport.workspace = true
 elsecall-process.workspace = true
@@ -162,6 +164,7 @@ x25519-dalek.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
+elsecall-outside-pressure = { workspace = true, features = ["test-support"] }
 elsecall-scheduling = { workspace = true, features = ["test-support"] }
 elsecall-machine = { workspace = true, features = ["test-support"] }
 

@@ -1,22 +1,20 @@
 //! The report's most notable problems, each a sentence an agent can act on with
 //! the metric and threshold behind it. Pure, from the metrics alone; README
 //! "Fleet reports" lists the kinds and thresholds.
-use crate::{
-    outside_pressure::{
-        blocked::OutsideProcess,
-        remedy::{self, Act},
-        trend,
-        warning::Concern,
-    },
-    reporting::{
-        accuracy::Agreement,
-        blocked::{Blocked, BlockedQueue, Pressure, QUEUED_SECONDS, QueueEnd},
-        document::{Gathered, MemberInput, MemberMetrics, Metrics},
-        leftovers::LabelLeftovers,
-        load::{BUSY_CPU, IDLE_CPU},
-        outside_warnings::PeriodWarning,
-        overload::{How, Overload},
-    },
+use crate::reporting::{
+    accuracy::Agreement,
+    blocked::{Blocked, BlockedQueue, Pressure, QUEUED_SECONDS, QueueEnd},
+    document::{Gathered, MemberInput, MemberMetrics, Metrics},
+    leftovers::LabelLeftovers,
+    load::{BUSY_CPU, IDLE_CPU},
+    outside_warnings::PeriodWarning,
+    overload::{How, Overload},
+};
+use elsecall_outside_pressure::outside_pressure::{
+    blocked::OutsideProcess,
+    remedy::{self, Act},
+    trend,
+    warning::Concern,
 };
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
@@ -924,15 +922,13 @@ pub fn findings(metrics: &Metrics, gathered: &Gathered) -> Vec<Finding> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        outside_pressure::sampling::Owner,
-        reporting::{
-            document::{Gathered, MemberInput, Query, RecordsRead, document},
-            facts::Fact,
-            leftovers::LeftoverFact,
-            window::Window,
-        },
+    use crate::reporting::{
+        document::{Gathered, MemberInput, Query, RecordsRead, document},
+        facts::Fact,
+        leftovers::LeftoverFact,
+        window::Window,
     };
+    use elsecall_outside_pressure::outside_pressure::sampling::Owner;
     use elsecall_scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
     use elsecall_scheduling::{
         placement::Source,
@@ -1088,10 +1084,8 @@ mod tests {
 
     #[test]
     fn outside_processes_that_spun_or_grew_are_findings_with_their_remedy() {
-        use crate::{
-            outside_pressure::warning::{Warning, WarningEpisode},
-            reporting::outside::OutsideHistory,
-        };
+        use crate::reporting::outside::OutsideHistory;
+        use elsecall_outside_pressure::outside_pressure::warning::{Warning, WarningEpisode};
         const HOUR: u64 = 60 * MINUTE;
         let at = |ms: u64| Timestamp::from_millis(ms);
         // An hour two days after T0.
@@ -1651,11 +1645,13 @@ mod tests {
                 MemberInput {
                     // What the member recorded: fseventsd hung at 56 GB.
                     outside: Ok(crate::reporting::outside::OutsideHistory {
-                        episodes: vec![crate::outside_pressure::fixtures::episode(
-                            incident_at(108 * 60),
-                            Some(incident_at(490 * 60)),
-                            &[("fseventsd", 56 << 30, 1.0), ("mds_stores", 2 << 30, 0.1)],
-                        )],
+                        episodes: vec![
+                            elsecall_outside_pressure::outside_pressure::fixtures::episode(
+                                incident_at(108 * 60),
+                                Some(incident_at(490 * 60)),
+                                &[("fseventsd", 56 << 30, 1.0), ("mds_stores", 2 << 30, 0.1)],
+                            ),
+                        ],
                         ..Default::default()
                     }),
                     ..input("macbook-pro", macbook)
@@ -1862,9 +1858,9 @@ mod tests {
 
     #[test]
     fn the_remedy_names_the_leading_process_and_suits_its_owner() {
-        use crate::outside_pressure::sampling::Owner;
+        use elsecall_outside_pressure::outside_pressure::sampling::Owner;
         let process = |name: &str, owner, footprint| {
-            let mut episode = crate::outside_pressure::fixtures::episode(
+            let mut episode = elsecall_outside_pressure::outside_pressure::fixtures::episode(
                 incident_start(),
                 None,
                 &[(name, 3 << 29, 2.5)],
@@ -1917,14 +1913,15 @@ mod tests {
             |m| (60..210).contains(&m).then_some(Pressure::CpuSaturation),
             |_| 0.0,
         ));
-        let mut episode = crate::outside_pressure::fixtures::episode(
+        let mut episode = elsecall_outside_pressure::outside_pressure::fixtures::episode(
             incident_at(3600),
             None,
             &[("mds_stores", 1 << 30, 7.9)],
         );
-        episode.blocked.reason = crate::outside_pressure::blocked::Reason::OutsideSaturation {
-            outside_utilization: 0.97,
-        };
+        episode.blocked.reason =
+            elsecall_outside_pressure::outside_pressure::blocked::Reason::OutsideSaturation {
+                outside_utilization: 0.97,
+            };
         saturated.members[1].outside = Ok(crate::reporting::outside::OutsideHistory {
             episodes: vec![episode],
             ..Default::default()

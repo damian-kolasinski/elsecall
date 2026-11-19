@@ -1078,6 +1078,7 @@ dependencies = [
  "elsecall-machine",
  "elsecall-membership",
  "elsecall-os-processes",
+ "elsecall-outside-pressure",
  "elsecall-peer-diagnostics",
  "elsecall-peer-transport",
  "elsecall-process",
@@ -1255,6 +1256,25 @@ dependencies = [
  "elsecall-failure",
  "elsecall-scheduling",
  "libc",
+ "tokio",
+]
+
+[[package]]
+name = "elsecall-outside-pressure"
+version = "0.3.0"
+dependencies = [
+ "elsecall-failure",
+ "elsecall-load-log",
+ "elsecall-machine",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-service-log",
+ "elsecall-sqlite-retention",
+ "libc",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
  "tokio",
 ]
 

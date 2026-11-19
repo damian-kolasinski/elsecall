@@ -343,16 +343,16 @@ mod tests {
         // The most episodes, each naming the most processes by the longest
         // names, of four-byte characters.
         // Every timestamp serializes to the same length.
-        let mut episode = crate::outside_pressure::fixtures::episode(
+        let mut episode = elsecall_outside_pressure::outside_pressure::fixtures::episode(
             Timestamp::from_millis(fixtures::T0),
             Some(Timestamp::from_millis(fixtures::T0)),
             &[],
         );
-        let process = crate::outside_pressure::blocked::OutsideProcess {
+        let process = elsecall_outside_pressure::outside_pressure::blocked::OutsideProcess {
             name: "𝄞".repeat(crate::reporting::outside::MAXIMUM_NAME),
             pid: u32::MAX,
-            owner: crate::outside_pressure::sampling::Owner::OtherUser,
-            memory: crate::outside_pressure::sampling::Memory {
+            owner: elsecall_outside_pressure::outside_pressure::sampling::Owner::OtherUser,
+            memory: elsecall_outside_pressure::outside_pressure::sampling::Memory {
                 resident_bytes: u64::MAX,
                 footprint_bytes: Some(u64::MAX),
             },

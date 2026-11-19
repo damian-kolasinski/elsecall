@@ -60,18 +60,18 @@ pub struct PeerStatus {
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::outside_pressure::blocked::lenient"
+        deserialize_with = "elsecall_outside_pressure::outside_pressure::blocked::lenient"
     )]
-    pub blocked: Option<crate::outside_pressure::Blocked>,
+    pub blocked: Option<elsecall_outside_pressure::outside_pressure::Blocked>,
     /// Early warnings about outside processes that have spun or grown for
     /// hours, the longest-standing first. Absent while there are none, from
     /// members that predate them; entries this build cannot read are dropped.
     #[serde(
         default,
         skip_serializing_if = "Vec::is_empty",
-        deserialize_with = "crate::outside_pressure::blocked::lenient_list"
+        deserialize_with = "elsecall_outside_pressure::outside_pressure::blocked::lenient_list"
     )]
-    pub outside_warnings: Vec<crate::outside_pressure::Warning>,
+    pub outside_warnings: Vec<elsecall_outside_pressure::outside_pressure::Warning>,
 }
 
 /// Where the fleet learns this member's configuration sync state.
@@ -209,8 +209,10 @@ pub struct Fleet {
     inspection: Arc<Inspection>,
     copies: std::sync::OnceLock<Arc<dyn CopiesReport>>,
     load: std::sync::OnceLock<Arc<dyn elsecall_load_log::LoadReport>>,
-    blocked: std::sync::OnceLock<Arc<dyn crate::outside_pressure::BlockedReport>>,
-    warnings: std::sync::OnceLock<Arc<dyn crate::outside_pressure::WarningReport>>,
+    blocked:
+        std::sync::OnceLock<Arc<dyn elsecall_outside_pressure::outside_pressure::BlockedReport>>,
+    warnings:
+        std::sync::OnceLock<Arc<dyn elsecall_outside_pressure::outside_pressure::WarningReport>>,
     sync: std::sync::OnceLock<Arc<dyn SyncReport>>,
     handover: std::sync::OnceLock<Arc<dyn RoleHandover>>,
     role_observer: std::sync::OnceLock<Arc<dyn RoleObserver>>,
@@ -262,13 +264,19 @@ impl Fleet {
 
     /// Reports whether outside pressure blocks this member with its status from
     /// now on.
-    pub fn report_blocked(&self, report: Arc<dyn crate::outside_pressure::BlockedReport>) {
+    pub fn report_blocked(
+        &self,
+        report: Arc<dyn elsecall_outside_pressure::outside_pressure::BlockedReport>,
+    ) {
         let _ = self.blocked.set(report);
     }
 
     /// Reports this member's early warnings about outside processes with its
     /// status from now on.
-    pub fn report_warnings(&self, report: Arc<dyn crate::outside_pressure::WarningReport>) {
+    pub fn report_warnings(
+        &self,
+        report: Arc<dyn elsecall_outside_pressure::outside_pressure::WarningReport>,
+    ) {
         let _ = self.warnings.set(report);
     }
 

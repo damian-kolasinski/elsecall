@@ -407,7 +407,7 @@ mod tests {
 
     #[tokio::test]
     async fn outside_histories_name_processes_and_a_member_without_one_is_still_complete() {
-        let episode = crate::outside_pressure::fixtures::episode(
+        let episode = elsecall_outside_pressure::outside_pressure::fixtures::episode(
             Timestamp::from_millis(T0),
             None,
             &[("fseventsd", 56 << 30, 1.0)],

@@ -7,8 +7,10 @@
 //! macOS weighs for memory pressure, wherever the kernel allows it: this user's
 //! processes. `ps` is asked for the executable's name only (`-c -o comm`), never
 //! its arguments or environment.
-use crate::outside_pressure::sampling::{Memory, Owner, ProcessSampler, ProcessUse};
 use elsecall_failure::{Failure, Result};
+use elsecall_outside_pressure::outside_pressure::sampling::{
+    Memory, Owner, ProcessSampler, ProcessUse,
+};
 use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{process::Command, time::Duration};
 
@@ -280,7 +282,7 @@ mod tests {
             println!("fseventsd: {p:?}");
         }
         // Attribution as the detector would make it, over two seconds.
-        use crate::outside_pressure::{
+        use elsecall_outside_pressure::outside_pressure::{
             attribution::attribute,
             blocked::Reason,
             sampling::{Snapshot, usage_between},
@@ -308,12 +310,12 @@ mod tests {
                 serde_json::to_string_pretty(&match attribute(
                     &reason,
                     &usage,
-                    &crate::outside_pressure::attribution::OwnWork {
+                    &elsecall_outside_pressure::outside_pressure::attribution::OwnWork {
                         roots: vec![std::process::id()],
                         granted_since: None,
                     }
                 ) {
-                    crate::outside_pressure::attribution::Attribution::Outside(outside) =>
+                    elsecall_outside_pressure::outside_pressure::attribution::Attribution::Outside(outside) =>
                         serde_json::to_value(outside).unwrap(),
                     own => serde_json::Value::String(format!("{own:?}")),
                 })

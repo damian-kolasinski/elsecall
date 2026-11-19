@@ -566,7 +566,7 @@ async fn run(cli: Cli) -> Result<bool> {
             } else if launch_agent_current == Some(false) {
                 "The LaunchAgent predates this build (a fleet upgrade installs through the build it replaces): run elsecall install here to apply it; it restarts the service.".to_owned()
             } else if let Some(first) = blocked.first() {
-                elsecall::outside_pressure::remedy::next_step(
+                elsecall_outside_pressure::outside_pressure::remedy::next_step(
                     &first.member,
                     &first.blocked,
                     elsecall_scheduling_model::timestamp::Timestamp::now(),
@@ -583,7 +583,7 @@ async fn run(cli: Cli) -> Result<bool> {
             {
                 "Service configuration needs attention: follow configuration_sync.next_step and each member's service state.".to_owned()
             } else if let Some(first) = warnings.first() {
-                elsecall::outside_pressure::remedy::warning_step(
+                elsecall_outside_pressure::outside_pressure::remedy::warning_step(
                     &first.member,
                     &first.warning,
                     elsecall_scheduling_model::timestamp::Timestamp::now(),

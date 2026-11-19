@@ -7,19 +7,17 @@
 //! held (almost) nothing: pressure its own work may have caused is not reported
 //! as outside. Time without samples, such as a sleeping laptop, proves nothing
 //! either way, so too little of it sampled is not blocked.
-use crate::{
-    outside_pressure::{blocked::OutsideProcess, store::Episode},
-    reporting::{
-        facts::{Fact, PlacementKind},
-        outside,
-        window::Window,
-    },
+use crate::reporting::{
+    facts::{Fact, PlacementKind},
+    outside,
+    window::Window,
 };
 use elsecall_load_log::{
     buckets::Bucket,
     minute::{memory_rank, worst},
 };
 use elsecall_machine::inspection::MemoryPressure;
+use elsecall_outside_pressure::outside_pressure::{blocked::OutsideProcess, store::Episode};
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};

@@ -99,7 +99,7 @@ pub async fn serve(
     paths: Paths,
     inspection: Arc<Inspection>,
     scheduling: Adapters,
-    process_sampler: Arc<dyn crate::outside_pressure::ProcessSampler>,
+    process_sampler: Arc<dyn elsecall_outside_pressure::outside_pressure::ProcessSampler>,
     members_listener: peer_listener::Settings,
 ) -> Result<()> {
     crate::release_update::rehearsal::startup()?;
@@ -121,7 +121,7 @@ pub async fn serve_with_updates(
     paths: Paths,
     inspection: Arc<Inspection>,
     scheduling: Adapters,
-    process_sampler: Arc<dyn crate::outside_pressure::ProcessSampler>,
+    process_sampler: Arc<dyn elsecall_outside_pressure::outside_pressure::ProcessSampler>,
     members_listener: peer_listener::Settings,
     updates: crate::release_update::service::UpdateAdapters,
 ) -> Result<()> {
@@ -227,14 +227,16 @@ pub async fn serve_with_updates(
         sync.report_effective_settings(scheduler.effective_settings_fingerprint());
     }
     // Broken outside pressure history must not take down admission.
-    let outside_pressure =
-        crate::outside_pressure::Detector::open(&paths.outside_pressure(), process_sampler.clone())
-            .map(Arc::new);
+    let outside_pressure = elsecall_outside_pressure::outside_pressure::Detector::open(
+        &paths.outside_pressure(),
+        process_sampler.clone(),
+    )
+    .map(Arc::new);
     // Nor must broken early warnings; they are shares of physical memory.
     let outside_processes = inspection
         .machine()
         .and_then(|machine| {
-            crate::outside_pressure::Watcher::open(
+            elsecall_outside_pressure::outside_pressure::Watcher::open(
                 &paths.outside_processes(),
                 process_sampler,
                 machine.memory.total_bytes,
@@ -243,12 +245,16 @@ pub async fn serve_with_updates(
         .map(Arc::new);
     let _outside_processes = match &outside_processes {
         Ok(watcher) => Some(AbortOnDrop(
-            tokio::spawn(crate::outside_pressure::watcher::follow(
-                watcher.clone(),
-                Arc::new(crate::outside_pressure_gate::SchedulerGate(
-                    scheduler.clone(),
-                )),
-            ))
+            tokio::spawn(
+                elsecall_outside_pressure::outside_pressure::watcher::follow(
+                    watcher.clone(),
+                    Arc::new(
+                        elsecall_outside_pressure::outside_pressure_gate::SchedulerGate(
+                            scheduler.clone(),
+                        ),
+                    ),
+                ),
+            )
             .abort_handle(),
         )),
         Err(error) => {
@@ -261,20 +267,26 @@ pub async fn serve_with_updates(
     };
     let warnings = outside_processes
         .as_ref()
-        .map(|watcher| watcher.clone() as Arc<dyn crate::outside_pressure::WarningReport>)
+        .map(|watcher| {
+            watcher.clone() as Arc<dyn elsecall_outside_pressure::outside_pressure::WarningReport>
+        })
         .map_err(Clone::clone);
     if let (Ok(fleet), Ok(warnings)) = (&fleet, &warnings) {
         fleet.report_warnings(warnings.clone());
     }
     let _outside_pressure = match &outside_pressure {
         Ok(detector) => Some(AbortOnDrop(
-            tokio::spawn(crate::outside_pressure::detector::follow(
-                detector.clone(),
-                Arc::new(crate::outside_pressure_gate::SchedulerGate(
-                    scheduler.clone(),
-                )),
-                elsecall_scheduling::service::SAMPLE_INTERVAL,
-            ))
+            tokio::spawn(
+                elsecall_outside_pressure::outside_pressure::detector::follow(
+                    detector.clone(),
+                    Arc::new(
+                        elsecall_outside_pressure::outside_pressure_gate::SchedulerGate(
+                            scheduler.clone(),
+                        ),
+                    ),
+                    elsecall_scheduling::service::SAMPLE_INTERVAL,
+                ),
+            )
             .abort_handle(),
         )),
         Err(error) => {

@@ -3,13 +3,11 @@
 //! gate closed, and its early warnings about outside processes that spun or
 //! grew before any did. Members answer `POST /peer/v1/report/outside` with it; another
 //! member's answer is untrusted and bounded by [`bounded`].
-use crate::{
-    outside_pressure::{
-        blocked::{OutsideProcess, Reason, lenient_list},
-        store::Episode,
-        warning::{Concern, WarningEpisode},
-    },
-    reporting::{blocked::Pressure, window::Window},
+use crate::reporting::{blocked::Pressure, window::Window};
+use elsecall_outside_pressure::outside_pressure::{
+    blocked::{OutsideProcess, Reason, lenient_list},
+    store::Episode,
+    warning::{Concern, WarningEpisode},
 };
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
@@ -157,11 +155,11 @@ pub fn behind(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::outside_pressure::{
+    use elsecall_machine::inspection::MemoryPressure;
+    use elsecall_outside_pressure::outside_pressure::{
         blocked::Blocked,
         sampling::{Memory, Owner},
     };
-    use elsecall_machine::inspection::MemoryPressure;
 
     fn at(minute: u64) -> Timestamp {
         Timestamp::from_millis(minute * 60_000)
@@ -283,7 +281,7 @@ mod tests {
 
     #[test]
     fn keeps_only_plausible_warnings_of_the_period() {
-        use crate::outside_pressure::warning::Warning;
+        use elsecall_outside_pressure::outside_pressure::warning::Warning;
         let warning =
             |process: &str, since: u64, observed: u64, until: Option<u64>| WarningEpisode {
                 warning: Warning {

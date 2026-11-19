@@ -1,9 +1,7 @@
 //! Early warnings about outside processes, as a report shows them per member:
 //! each warning that held in the period and how long it had held. Pure.
-use crate::{
-    outside_pressure::warning::Warning,
-    reporting::{outside::OutsideHistory, window::Window},
-};
+use crate::reporting::{outside::OutsideHistory, window::Window};
+use elsecall_outside_pressure::outside_pressure::warning::Warning;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 
@@ -45,7 +43,7 @@ pub fn in_period(history: &OutsideHistory, window: Window) -> Vec<PeriodWarning>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::outside_pressure::{
+    use elsecall_outside_pressure::outside_pressure::{
         sampling::Owner,
         warning::{Concern, WarningEpisode},
     };
