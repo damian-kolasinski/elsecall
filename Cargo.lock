@@ -1085,6 +1085,7 @@ dependencies = [
  "elsecall-outside-pressure",
  "elsecall-peer-diagnostics",
  "elsecall-peer-transport",
+ "elsecall-platform-macos",
  "elsecall-process",
  "elsecall-rehearsal-identity",
  "elsecall-remote-run",
@@ -1414,6 +1415,30 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+]
+
+[[package]]
+name = "elsecall-platform-macos"
+version = "0.3.0"
+dependencies = [
+ "base64 0.22.1",
+ "elsecall-add-mac",
+ "elsecall-failure",
+ "elsecall-installation",
+ "elsecall-local-state",
+ "elsecall-machine",
+ "elsecall-outside-pressure",
+ "elsecall-process",
+ "elsecall-scheduling-model",
+ "elsecall-service-log",
+ "elsecall-tailnet",
+ "elsecall-window",
+ "libc",
+ "plist",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "tempfile",
 ]
 
 [[package]]

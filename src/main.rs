@@ -1,12 +1,7 @@
 use clap::{Parser, Subcommand};
 use elsecall::{
     admission_cli::{self, LeaseCommand},
-    fleet_cli,
-    macos::{
-        application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
-        tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
-    },
-    peer_listener,
+    fleet_cli, peer_listener,
 };
 use elsecall_add_mac::inbound_firewall::{Inbound, InboundFirewall};
 use elsecall_failure::{Failure, Result};
@@ -15,6 +10,10 @@ use elsecall_local_client as client;
 use elsecall_local_state::{local_access, paths::Paths};
 use elsecall_machine::inspection::{Health, Inspection, Machine};
 use elsecall_os_processes::processes::MacProcesses;
+use elsecall_platform_macos::macos::{
+    application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
+    tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
+};
 use elsecall_scheduling as scheduling;
 use elsecall_tailnet::tailnet;
 use elsecall_window::install_window;
@@ -362,10 +361,9 @@ async fn run(cli: Cli) -> Result<bool> {
             elsecall::service_configuration::load(&paths, None).map(|c| c.logs),
         )?;
     }
-    let manager: Box<dyn ServiceManager> = if elsecall::process_service::requested()? {
-        Box::new(elsecall::process_service::ProcessService::new(
-            paths.clone(),
-        ))
+    let manager: Box<dyn ServiceManager> = if elsecall_platform_macos::process_service::requested()?
+    {
+        Box::new(elsecall_platform_macos::process_service::ProcessService::new(paths.clone()))
     } else {
         Box::new(LaunchAgent)
     };
@@ -450,7 +448,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 &*elsecall::release_update::helper::production_download(&paths)?,
                 &elsecall::release_update::helper::production_selection(&paths),
                 manager,
-                &elsecall::macos::window_launcher::MacWindowLauncher,
+                &elsecall_platform_macos::macos::window_launcher::MacWindowLauncher,
             )
             .await?;
         }
@@ -646,7 +644,7 @@ async fn run(cli: Cli) -> Result<bool> {
             let speed: Arc<dyn elsecall_scheduling_model::speed::SpeedMeter> =
                 match elsecall_scripted_machine::speed() {
                     Some(fixed) => Arc::new(fixed),
-                    None => Arc::new(elsecall::macos::core_benchmark::CoreBenchmark),
+                    None => Arc::new(elsecall_platform_macos::macos::core_benchmark::CoreBenchmark),
                 };
             let (processes, exits) = MacProcesses::start()?;
             elsecall::server::serve(
@@ -658,7 +656,7 @@ async fn run(cli: Cli) -> Result<bool> {
                     processes,
                     exits,
                 },
-                Arc::new(elsecall::macos::process_sampler::MacProcessSampler),
+                Arc::new(elsecall_platform_macos::macos::process_sampler::MacProcessSampler),
                 member_listener()?,
             )
             .await?;

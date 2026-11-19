@@ -102,7 +102,7 @@ pub async fn serve(
 ) -> Result<()> {
     crate::release_update::rehearsal::startup()?;
     let updates = crate::release_update::service::UpdateAdapters::production(
-        !crate::process_service::requested()?,
+        !elsecall_platform_macos::process_service::requested()?,
     )?;
     serve_with_updates(
         paths,

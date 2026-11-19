@@ -7,13 +7,13 @@
 //! later commands never prompt, so a lost connection fails instead of asking.
 //! Commands run under `/bin/sh` on the Mac; sudo reads the password on standard
 //! input.
-use crate::macos::application_firewall;
 use elsecall_add_mac::{
     askpass,
     inbound_firewall::Rule,
     remote_mac::{Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailscaleVariant},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_platform_macos::macos::application_firewall;
 use elsecall_tailnet::tailscale_bottle::Bottle;
 use serde_json::Value;
 use std::{path::Path, process::Stdio, time::Duration};
@@ -406,13 +406,12 @@ impl RemoteMac for OpensshMac {
     }
 
     async fn guard_incoming(&mut self, programs: &[String]) -> Result<bool> {
-        let configuration = crate::macos::firewall_guard::configuration(programs)?;
+        let configuration =
+            elsecall_platform_macos::macos::firewall_guard::configuration(programs)?;
         let ran = self
-            .sudo(&crate::macos::firewall_guard::install_script(
-                &configuration,
-            ))
+            .sudo(&elsecall_platform_macos::macos::firewall_guard::install_script(&configuration))
             .await?;
-        match crate::macos::firewall_guard::installed(&ran.stdout) {
+        match elsecall_platform_macos::macos::firewall_guard::installed(&ran.stdout) {
             Some(changed) if ran.success => Ok(changed),
             _ => Err(remote_failure(
                 "Installing Elsecall's firewall guard on the Mac",
@@ -705,7 +704,7 @@ fn parse_tailnet(output: &[u8]) -> RemoteTailnet {
     let Ok(json) = serde_json::from_str::<Value>(status) else {
         return RemoteTailnet::NotRunning { variant };
     };
-    if let Some(node) = crate::macos::tailscale::online_node(status.as_bytes()) {
+    if let Some(node) = elsecall_platform_macos::macos::tailscale::online_node(status.as_bytes()) {
         return RemoteTailnet::Online { variant, node };
     }
     // The tailnet it belongs to, logged out or awaiting approval.

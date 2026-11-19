@@ -112,7 +112,7 @@ fn nearby_lists_macs_whether_remote_login_is_on_and_which_are_members() {
     );
     // A member is recognised by its host name and an address it reports: this
     // Mac's own, which the test member's machine inspection reports.
-    let own = elsecall::macos::lan_addresses::lan_addresses()
+    let own = elsecall_platform_macos::macos::lan_addresses::lan_addresses()
         .into_iter()
         .find(std::net::IpAddr::is_ipv4)
         .expect("this Mac has a local network address");

@@ -2,13 +2,13 @@
 //!
 //! It browses in the CLI's own process, which macOS lets use the local network
 //! when run from a terminal, over SSH or by an app the user allowed.
-use crate::macos::dns_sd::Bonjour;
 use elsecall_add_mac::nearby_macs::{
     KnownMember, LocalNetwork, Membership, NearbyMac, RemoteLogin, nearby,
 };
 use elsecall_failure::Result;
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
+use elsecall_platform_macos::macos::dns_sd::Bonjour;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{net::IpAddr, time::Duration};

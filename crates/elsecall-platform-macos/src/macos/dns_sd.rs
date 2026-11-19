@@ -395,7 +395,7 @@ fn full_name(name: &str, kind: &CStr) -> Option<CString> {
 
 /// The value of `key` in a DNS TXT record's length-prefixed `key=value` strings.
 /// Keys compare without case, as RFC 6763 specifies.
-pub(crate) fn txt_value(record: &[u8], key: &str) -> Option<String> {
+pub fn txt_value(record: &[u8], key: &str) -> Option<String> {
     let mut rest = record;
     while let Some((&length, tail)) = rest.split_first() {
         let length = usize::from(length);
