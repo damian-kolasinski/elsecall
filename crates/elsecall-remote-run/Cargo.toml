@@ -24,6 +24,7 @@ elsecall-run-admission.workspace = true
 elsecall-scheduling.workspace = true
 elsecall-scheduling-model.workspace = true
 elsecall-secure-channel.workspace = true
+elsecall-service-config.workspace = true
 elsecall-wire.workspace = true
 elsecall-workload-config.workspace = true
 elsecall-workspace.workspace = true

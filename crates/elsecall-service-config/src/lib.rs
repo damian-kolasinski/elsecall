@@ -1,7 +1,6 @@
 //! The service's local configuration, written by the operator.
 use elsecall_failure::{Failure, Result};
 use elsecall_housekeeping::housekeeping::settings::{self, Settings as Housekeeping};
-use elsecall_remote_run::remote_run::leftovers::Cap;
 use elsecall_scheduling::parameters::{
     AdmissionOverrides, EstimatesOverrides, Overrides, Parameters, PlacementOverrides,
 };
@@ -12,6 +11,16 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
 };
+
+/// How long processes a placed command leaves running may run after the command exits; zero stops them at once.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Cap(pub std::time::Duration);
+
+impl Default for Cap {
+    fn default() -> Self {
+        Cap(std::time::Duration::from_secs(10 * 60))
+    }
+}
 
 /// Settings that belong to this member alone, independent of the fleet.
 #[derive(Debug, Clone, PartialEq)]

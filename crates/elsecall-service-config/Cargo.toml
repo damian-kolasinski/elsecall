@@ -16,7 +16,6 @@ workspace = true
 elsecall-config-sync-model.workspace = true
 elsecall-failure.workspace = true
 elsecall-housekeeping.workspace = true
-elsecall-remote-run.workspace = true
 elsecall-scheduling.workspace = true
 elsecall-scheduling-model.workspace = true
 elsecall-service-log.workspace = true

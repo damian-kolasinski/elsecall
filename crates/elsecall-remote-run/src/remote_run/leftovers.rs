@@ -28,15 +28,7 @@ const RECORDED: usize = 8;
 /// The longest stopping leftovers takes, from the request to the end of the watch.
 pub const STOPPING: Duration = Duration::from_secs(8);
 
-/// How long leftovers may run after the command exits; zero stops them at once.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Cap(pub Duration);
-
-impl Default for Cap {
-    fn default() -> Self {
-        Cap(Duration::from_secs(10 * 60))
-    }
-}
+pub use elsecall_service_config::Cap;
 
 /// Watches one run's leftovers; cloned handles share them.
 #[derive(Clone)]
