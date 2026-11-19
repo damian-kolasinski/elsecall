@@ -113,8 +113,8 @@ fn backup_retention_removes_content_and_empty_directories_and_applies_lowered_li
         replica::{Layout, Replica},
         state::{Backup, State},
         store::FileStore,
-        synced_path::SyncedPath,
     };
+    use elsecall_config_sync_model::synced_path::SyncedPath;
     use elsecall_local_state::private_files;
     let home = tempfile::tempdir().unwrap();
     let data = home.path().join("state");
@@ -181,8 +181,8 @@ fn retention_removes_recorded_cross_volume_backup_without_removing_its_neighbors
         replica::{Layout, Replica},
         state::{Backup, State},
         store::FileStore,
-        synced_path::SyncedPath,
     };
+    use elsecall_config_sync_model::synced_path::SyncedPath;
     use elsecall_local_state::private_files;
     let home = tempfile::tempdir().unwrap();
     let data = home.path().join("state");

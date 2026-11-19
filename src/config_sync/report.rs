@@ -5,12 +5,14 @@ use crate::config_sync::{
     history::{FileRecord, PathRecord},
     manifest::FileKey,
     state::Backup,
-    synced_path::SyncedPath,
 };
+use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_failure::Failure;
 use serde::{Deserialize, Serialize};
 
-pub use super::status::{BackupView, FileReport, PathState, SyncRole, SyncState, SyncSummary};
+pub use elsecall_config_sync_model::status::{
+    BackupView, FileReport, PathState, SyncRole, SyncState, SyncSummary,
+};
 
 pub fn file_name(path: &SyncedPath, key: &FileKey) -> String {
     path.display_file(key.as_ref().map(|k| k.as_str()))

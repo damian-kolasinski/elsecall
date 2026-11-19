@@ -39,7 +39,7 @@ pub struct ServiceConfiguration {
     pub parameters: Parameters,
     /// Files and directories this member may mirror to the fleet while it is
     /// master, each enabled by the operator after a plan.
-    pub sync_paths: Vec<crate::config_sync::synced_path::SyncedPath>,
+    pub sync_paths: Vec<elsecall_config_sync_model::synced_path::SyncedPath>,
 }
 
 impl From<&ServiceConfiguration> for crate::scheduling::service::SchedulerConfiguration {
@@ -55,7 +55,7 @@ impl Default for ServiceConfiguration {
     fn default() -> Self {
         Self {
             logs: Default::default(),
-            sync_backups: crate::config_sync::synced_path::BACKUPS_TOTAL,
+            sync_backups: elsecall_config_sync_model::synced_path::BACKUPS_TOTAL,
             reserved: Default::default(),
             location: Default::default(),
             workspace_root: None,
@@ -241,12 +241,12 @@ pub fn parse(text: &str, path: &Path) -> Result<ServiceConfiguration> {
         .sync
         .paths
         .iter()
-        .map(|text| crate::config_sync::synced_path::SyncedPath::parse(text))
+        .map(|text| elsecall_config_sync_model::synced_path::SyncedPath::parse(text))
         .collect::<std::result::Result<Vec<_>, _>>()
         .and_then(|paths| {
-            crate::config_sync::synced_path::check_set(
+            elsecall_config_sync_model::synced_path::check_set(
                 &paths,
-                crate::config_sync::synced_path::MAXIMUM_PATHS,
+                elsecall_config_sync_model::synced_path::MAXIMUM_PATHS,
             )
             .map(|()| paths)
         })
@@ -266,7 +266,7 @@ pub fn parse(text: &str, path: &Path) -> Result<ServiceConfiguration> {
     let sync_backups = file
         .retention
         .sync_backups
-        .unwrap_or(crate::config_sync::synced_path::BACKUPS_TOTAL);
+        .unwrap_or(elsecall_config_sync_model::synced_path::BACKUPS_TOTAL);
     if !(1..=10_000).contains(&sync_backups) {
         return Err(invalid(
             "[retention] sync_backups must be from 1 to 10000.".into(),

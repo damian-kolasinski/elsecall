@@ -86,7 +86,7 @@ pub fn issued_from(live: &Tree, overridden: &BTreeSet<FileKey>, previous: &Tree)
     Tree::Directory(entries)
 }
 
-pub use super::status::Change;
+pub use elsecall_config_sync_model::status::Change;
 
 /// How one file of a synced path differs, by fingerprints only.
 #[derive(Clone, Debug, PartialEq, Eq)]

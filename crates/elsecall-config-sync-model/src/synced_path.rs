@@ -205,7 +205,7 @@ pub fn check_set(paths: &[SyncedPath], limit: usize) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::synced_path::*;
 
     #[test]
     fn accepts_plain_paths_below_home() {

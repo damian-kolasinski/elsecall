@@ -6,8 +6,8 @@ use crate::config_sync::{
     compare::Change,
     fingerprint::{Fingerprint, SyncKey},
     manifest::{Manifest, Tree},
-    synced_path::SyncedPath,
 };
+use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::private_files;
 use elsecall_scheduling_model::timestamp::Timestamp;
@@ -21,7 +21,7 @@ use std::{
 const LIMIT: u64 = 16 << 20;
 /// Backups kept of each file; older ones are removed and counted.
 pub const BACKUPS_PER_FILE: usize = 20;
-pub use super::synced_path::BACKUPS_TOTAL;
+pub use elsecall_config_sync_model::synced_path::BACKUPS_TOTAL;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

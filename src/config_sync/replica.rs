@@ -14,8 +14,8 @@ use crate::config_sync::{
     report::{self, Applied, BackupView, PathReport, PathState, SyncRole, SyncSummary},
     state::{Backup, State},
     store::ReplicaStore,
-    synced_path::SyncedPath,
 };
+use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::private_files;
 use elsecall_membership::roster::MemberName;

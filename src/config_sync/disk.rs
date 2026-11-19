@@ -11,8 +11,8 @@ use crate::config_sync::{
     manifest::{
         FileKey, FileNode, MAXIMUM_ENTRIES, MAXIMUM_FILE_BYTES, MAXIMUM_TOTAL_BYTES, Node, Tree,
     },
-    synced_path::SyncedPath,
 };
+use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_failure::{Failure, Result};
 use elsecall_workspace::{
     confined::{self, Confined, Create, Kind, Status},

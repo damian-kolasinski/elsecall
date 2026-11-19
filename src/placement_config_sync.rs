@@ -78,10 +78,8 @@ fn pushed(applied: &Applied) -> Vec<PushedPath> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config_sync::{
-        history::{FileRecord, PathRecord},
-        synced_path::SyncedPath,
-    };
+    use crate::config_sync::history::{FileRecord, PathRecord};
+    use elsecall_config_sync_model::synced_path::SyncedPath;
 
     fn file(change: Change, size: Option<u64>) -> FileRecord {
         FileRecord {

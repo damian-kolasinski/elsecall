@@ -19,12 +19,12 @@ use crate::{
         protocol::{self, Message, Purpose},
         replica::{ApplyAs, Replica},
         report::{Applied, PathReport, SyncRole, SyncState, SyncSummary},
-        synced_path::SyncedPath,
     },
     configuration,
     fleet::{Fleet, RoleHandover, SyncReport},
     peer_client,
 };
+use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_failure::{Failure, Result};
 use elsecall_membership::roster::{Member, MemberName, Roster};
 use elsecall_workspace::digest::Digest;
