@@ -407,10 +407,10 @@ fn a_failing_mise_keeps_the_xcode_inventory() {
 #[test]
 #[ignore]
 fn live_machine_tools_inventory() {
-    let mise = elsecall::mise_cli::MiseCli;
-    let xcodes = elsecall::macos::xcodes::XcodesCli;
-    let managers: [&dyn elsecall::tool_inventory::ToolManager; 2] = [&mise, &xcodes];
-    let inventory = elsecall::tool_inventory::gather(&managers);
+    let mise = elsecall_tools::mise_cli::MiseCli;
+    let xcodes = elsecall_tools::xcodes::XcodesCli;
+    let managers: [&dyn elsecall_tools::tool_inventory::ToolManager; 2] = [&mise, &xcodes];
+    let inventory = elsecall_tools::tool_inventory::gather(&managers);
     println!("{}", serde_json::to_string_pretty(&inventory).unwrap());
     assert_eq!(inventory.managers.len(), 2);
 }

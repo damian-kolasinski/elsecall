@@ -342,7 +342,7 @@ fn exit_detail(label: &str, status: std::process::ExitStatus) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::xcodes::*;
     use std::{fs, os::unix::fs::symlink};
 
     fn plist(pairs: &[(&str, &str)]) -> String {

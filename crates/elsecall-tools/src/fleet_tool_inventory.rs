@@ -10,9 +10,9 @@
 //! machine that was asked is the first entry and the rest stay in roster order.
 //! A machine that has not joined a fleet is that roster of one.
 use crate::{
-    macos::xcodes::XcodesCli,
     mise_cli::MiseCli,
     tool_inventory::{Inventory, ToolManager},
+    xcodes::XcodesCli,
 };
 use elsecall_failure::{Failure, is_code};
 use elsecall_fleet::fleet::Fleet;
@@ -106,7 +106,7 @@ pub async fn gather(sources: &[Source]) -> FleetInventory {
 }
 
 /// This machine's managers. The same read the local inventory route serves.
-pub(crate) fn read_installed() -> Inventory {
+pub fn read_installed() -> Inventory {
     let mise = MiseCli;
     let xcodes = XcodesCli;
     let managers: [&dyn ToolManager; 2] = [&mise, &xcodes];
@@ -348,7 +348,7 @@ impl Serialize for MemberInventory {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::fleet_tool_inventory::*;
     use crate::tool_inventory::{
         Executable, InstalledTool, Manager, ManagerInventory, ToolName, ToolVersion,
     };

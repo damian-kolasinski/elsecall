@@ -64,7 +64,7 @@ fn plain_token(value: &str) -> bool {
 }
 
 /// The first whitespace-separated token of a tool manager's version line.
-pub(crate) fn version_token(stdout: &[u8], command: &str) -> Result<ToolVersion, InventoryFailure> {
+pub fn version_token(stdout: &[u8], command: &str) -> Result<ToolVersion, InventoryFailure> {
     let text = std::str::from_utf8(stdout)
         .map_err(|_| InventoryFailure::output_invalid(command, "the version was not text"))?;
     let token = text
@@ -111,7 +111,7 @@ pub struct ManagerInventory {
 /// any other segment compares as a string. When one side is numeric and the
 /// other is not, the numeric one comes first. A version that matches another
 /// and then has more segments is newer (`26.0` before `26.0.1`).
-pub(crate) fn compare_versions(left: &str, right: &str) -> std::cmp::Ordering {
+pub fn compare_versions(left: &str, right: &str) -> std::cmp::Ordering {
     let left: Vec<&str> = version_segments(left).collect();
     let right: Vec<&str> = version_segments(right).collect();
     for (left, right) in left.iter().zip(right.iter()) {
@@ -374,7 +374,7 @@ impl<'de> Deserialize<'de> for Inventory {
 /// An inventory document from another member. Unknown fields are ignored so a
 /// later build can add them; a state or code this build does not write is refused.
 mod incoming {
-    use super::{
+    use crate::tool_inventory::{
         Detail, Executable, InstalledTool, Inventory, InventoryFailure, Manager, ManagerInventory,
         ManagerReport, ToolName, ToolVersion,
     };
@@ -584,7 +584,7 @@ mod incoming {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::tool_inventory::*;
 
     fn tool(name: &str, version: &str, default: bool) -> InstalledTool {
         InstalledTool {

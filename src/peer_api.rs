@@ -87,12 +87,12 @@ async fn authenticate(State(fleet): State<Arc<Fleet>>, request: Request, next: N
     let response = match skew {
         Some(error) => failure(StatusCode::CONFLICT, error),
         None => {
-            if parts.uri.path() == crate::fleet_tool_inventory::PEER_ROUTE
+            if parts.uri.path() == elsecall_tools::fleet_tool_inventory::PEER_ROUTE
                 && let Some(budget) = &budget
             {
                 budget.extend(
-                    crate::fleet_tool_inventory::member_timeout()
-                        + crate::fleet_tool_inventory::EXCHANGE_MARGIN,
+                    elsecall_tools::fleet_tool_inventory::member_timeout()
+                        + elsecall_tools::fleet_tool_inventory::EXCHANGE_MARGIN,
                 );
             }
             let mut request = Request::from_parts(parts, Body::from(bytes));

@@ -445,8 +445,8 @@ pub async fn serve_with_updates(
         Ok(sync) => crate::config_sync_local_api::routes(sync.clone()),
         Err(error) => crate::config_sync_local_api::unavailable(error.clone()),
     };
-    let tools_routes = crate::tools_api::routes(fleet.clone());
-    let desired_routes = crate::toolset_api::routes(fleet.clone(), &paths);
+    let tools_routes = elsecall_tools::tools_api::routes(fleet.clone());
+    let desired_routes = elsecall_tools::toolset_api::routes(fleet.clone(), &paths);
     let fleet_routes = match fleet {
         Ok(fleet) => {
             let mut member_routes = placement_api::routes(host)
@@ -459,7 +459,7 @@ pub async fn serve_with_updates(
                 .merge(crate::trace_api::peer_routes(reporter.clone()))
                 .merge(crate::rehearsal_api::peer_routes(rehearsal.clone()))
                 .merge(crate::tuning_trust_api::peer_routes(paths.clone()))
-                .merge(crate::tools_api::peer_routes());
+                .merge(elsecall_tools::tools_api::peer_routes());
             if let Ok(sync) = &config_sync {
                 member_routes = member_routes.merge(crate::config_sync_api::routes(sync.clone()));
             }

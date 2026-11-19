@@ -132,8 +132,8 @@ mod tests {
 
     #[test]
     fn parses_this_machines_mise_listings() {
-        let listing = include_str!("../../tests/fixtures/mise/ls.json");
-        let global = include_str!("../../tests/fixtures/mise/ls-global.json");
+        let listing = include_str!("../../../../tests/fixtures/mise/ls.json");
+        let global = include_str!("../../../../tests/fixtures/mise/ls-global.json");
         assert!(listing.contains("/Users/me"));
         assert!(global.contains("/Users/me"));
         let inventory = inventory(listing.as_bytes(), global.as_bytes());

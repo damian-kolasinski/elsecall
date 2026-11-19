@@ -1099,6 +1099,7 @@ dependencies = [
  "elsecall-service-log",
  "elsecall-sqlite-retention",
  "elsecall-tailnet",
+ "elsecall-tools",
  "elsecall-wire",
  "elsecall-workload",
  "elsecall-workload-config",
@@ -1615,6 +1616,35 @@ version = "0.3.0"
 dependencies = [
  "elsecall-failure",
  "serde",
+]
+
+[[package]]
+name = "elsecall-tools"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "clap",
+ "elsecall-api-response",
+ "elsecall-build-identity",
+ "elsecall-failure",
+ "elsecall-fleet",
+ "elsecall-local-client",
+ "elsecall-local-state",
+ "elsecall-membership",
+ "elsecall-peer-transport",
+ "elsecall-process",
+ "elsecall-scheduling",
+ "elsecall-wire",
+ "futures-util",
+ "hyper",
+ "plist",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "tempfile",
+ "tokio",
+ "toml",
+ "toml_edit",
 ]
 
 [[package]]

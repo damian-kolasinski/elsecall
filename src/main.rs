@@ -73,7 +73,7 @@ enum Command {
     /// Read basic machine facts, memory and load averages
     Machine,
     /// Report installed tools, or show and edit the fleet's desired versions
-    Tools(elsecall::tools_cli::ToolsArgs),
+    Tools(elsecall_tools::tools_cli::ToolsArgs),
     /// Diagnose installation and API connectivity (works while the service is down)
     Doctor,
     /// Show every fleet member's reachability, role and machine state, or change membership
@@ -455,7 +455,7 @@ async fn run(cli: Cli) -> Result<bool> {
         }
         Command::Status => output(client::get::<Health>(&paths.socket(), "/v1/health").await?),
         Command::Machine => output(client::get::<Machine>(&paths.socket(), "/v1/machine").await?),
-        Command::Tools(args) => output(elsecall::tools_cli::run(&paths, args).await?),
+        Command::Tools(args) => output(elsecall_tools::tools_cli::run(&paths, args).await?),
         Command::Doctor => {
             let configuration = elsecall::service_configuration::load(&paths, None);
             let log_settings = configuration

@@ -157,7 +157,7 @@ fn exit_detail(label: &str, status: std::process::ExitStatus) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::mise_cli::*;
 
     fn home_failure(located: command_capture::Located) -> InventoryFailure {
         begin(None, located).unwrap_err()

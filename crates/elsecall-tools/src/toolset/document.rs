@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, BTreeSet};
 pub const LIMIT: usize = 64 * 1024;
 const MAX_MEMBERS: usize = 64;
 
-pub(crate) fn invalid(path: &str, rule: &str) -> Failure {
+pub fn invalid(path: &str, rule: &str) -> Failure {
     Failure::new(
         "invalid_fleet_tools",
         format!("{path}: {rule}"),
@@ -20,7 +20,7 @@ pub(crate) fn invalid(path: &str, rule: &str) -> Failure {
     )
 }
 
-pub(crate) fn version_rule(tool: &str) -> String {
+pub fn version_rule(tool: &str) -> String {
     format!("versions must be exact, e.g. 22.19.0; run `mise ls-remote {tool}` to pick one")
 }
 

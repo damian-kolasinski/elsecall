@@ -298,7 +298,7 @@ fn bad_tool(spec: &str) -> Failure {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::tools_cli::*;
 
     #[test]
     fn the_fleet_command_waits_longer_than_one_member() {

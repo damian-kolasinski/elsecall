@@ -31,8 +31,8 @@ use elsecall_wire::api;
 use serde::Deserialize;
 use std::sync::Arc;
 
-pub(crate) const LOCAL_ROUTE: &str = "/v1/tools/inventory";
-pub(crate) const FLEET_ROUTE: &str = "/v1/tools/fleet-inventory";
+pub const LOCAL_ROUTE: &str = "/v1/tools/inventory";
+pub const FLEET_ROUTE: &str = "/v1/tools/fleet-inventory";
 
 pub fn routes(fleet: Result<Arc<Fleet>, Failure>) -> Router {
     Router::new()
@@ -176,7 +176,7 @@ fn solo(fleet: &Fleet) -> (Vec<MemberName>, Vec<Source>) {
     (vec![name], sources)
 }
 
-pub(crate) fn name_from_host(host: Option<&str>) -> MemberName {
+pub fn name_from_host(host: Option<&str>) -> MemberName {
     let host = elsecall_scheduling::service::member_name(host);
     if let Ok(name) = host.parse() {
         return name;
@@ -236,10 +236,10 @@ fn error_response(status: StatusCode, error: Failure) -> axum::response::Respons
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::tool_inventory::{
         Executable, InstalledTool, Manager, ManagerInventory, ManagerReport, ToolName, ToolVersion,
     };
+    use crate::tools_api::*;
 
     fn inventory_with(version: &str) -> Inventory {
         Inventory {

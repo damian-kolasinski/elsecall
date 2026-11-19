@@ -97,7 +97,7 @@ fn reader() -> &'static SharedRead<Inventory> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::inventory_reader::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[tokio::test]
