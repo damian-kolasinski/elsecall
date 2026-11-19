@@ -26,6 +26,10 @@ reads its manifest, and fails on:
   `name.workspace = true`, or depending on a higher band; or any package's
   tests turning on a workspace crate's features, which would build that crate
   and everything above it once for `cargo build` and again for `cargo test`.
+- `public`: a `pub mod` at a crate's root that no other package names. Private,
+  `unreachable_pub` keeps its items `pub(crate)`.
+- `tests`: a file in tests/ that the package's one test binary (tests/main.rs,
+  with `autotests = false`) does not declare, which would never build or run.
 - `environment`: `CARGO_BIN_EXE_*` outside a package's own tests, or
   `CARGO_MANIFEST_DIR` in foundation or core production code, which ties shared
   build caches to one checkout.
@@ -605,6 +609,64 @@ def findings(plan: Plan, graph: Graph) -> list[Finding]:
     return sorted(found, key=lambda f: (not f.error, f.subject))
 
 
+def undeclared_tests(directory: str, manifest: dict, files: dict[str, str]) -> list[Finding]:
+    """With `autotests = false` and one test binary at tests/main.rs, Cargo
+    compiles only the test files that binary declares: an undeclared one would
+    never build or run."""
+    if manifest.get("package", {}).get("autotests", True):
+        return []
+    if not any(t.get("path") == "tests/main.rs" for t in manifest.get("test", [])):
+        return []
+    prefix = f"{directory}/tests/" if directory else "tests/"
+    main = files.get(f"{prefix}main.rs", "")
+    declared = set(re.findall(r"^\s*(?:#\[[^\]]*\]\s*)*(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;", main, re.M))
+    found = []
+    for path in sorted(files):
+        rest = path[len(prefix) :] if path.startswith(prefix) else None
+        if not rest:
+            continue
+        parts = rest.split("/")
+        if len(parts) == 1 and rest.endswith(".rs") and rest != "main.rs":
+            module = rest.removesuffix(".rs")
+        elif len(parts) == 2 and parts[1] == "mod.rs":
+            module = parts[0]
+        else:
+            continue
+        if module not in declared:
+            found.append(Finding(True, path, f"is not a module of the test binary: add `mod {module};` to {prefix}main.rs, or it never builds or runs"))
+    return found
+
+
+PUBLIC_MODULE = re.compile(r"^pub mod (\w+)\s*;", re.M)
+
+
+def public_findings(plan: Plan, files: dict[str, str]) -> list[Finding]:
+    """A crate's public top-level modules are the ones other packages name;
+    the rest stay private, so `unreachable_pub` narrows what is in them."""
+    # Top-level modules each crate's identifier is followed by, in any code
+    # outside it: production, tests and other packages' integration tests.
+    named: dict[str, set[str]] = defaultdict(set)
+    for path, text in files.items():
+        here = re.match(rf"crates/{LIBRARY}-([\w-]+)/", path)
+        code = blank(list(enumerate(text.splitlines(), 1)))
+        for _, reference in references(code):
+            parts = reference.split("::")
+            if len(parts) > 1 and parts[0].startswith(f"{LIBRARY}_"):
+                crate = parts[0][len(LIBRARY) + 1 :].replace("_", "-")
+                if not here or here.group(1) != crate:
+                    named[crate].add(parts[1])
+    found = []
+    for path, text in sorted(files.items()):
+        match = re.fullmatch(rf"crates/{LIBRARY}-([\w-]+)/src/lib\.rs", path)
+        if not match or match.group(1) not in plan.crates:
+            continue
+        crate = match.group(1)
+        for module in PUBLIC_MODULE.findall(text):
+            if module not in named[crate]:
+                found.append(Finding(True, path, f"`pub mod {module}` is named by no other package: write `mod {module};` so `unreachable_pub` keeps its items `pub(crate)`"))
+    return found
+
+
 def manifest_findings(root: Path, plan: Plan, packages: dict[str, str], files: dict[str, str]) -> list[Finding]:
     """Rules on the manifests of the crates under crates/, and on the build
     environment variables their code reads."""
@@ -632,6 +694,7 @@ def manifest_findings(root: Path, plan: Plan, packages: dict[str, str], files: d
             for name, spec in entries.items():
                 if isinstance(spec, dict) and spec.get("features") and extracted(plan, workspace_names.get(name, name)):
                     found.append(Finding(True, manifest_path, f"`{table}.{name}` turns on features only for tests: `cargo build` and `cargo test` would then build it, and every crate above it, twice. Give every build what the tests need"))
+        found += undeclared_tests(directory, manifest, files)
         if not directory:
             continue
         crate = plan.packages.get(package) or extracted(plan, package)
@@ -761,7 +824,7 @@ def main(argv: list[str]) -> int:
         print(mermaid(plan, graph, {v.key[1:] for v in violations(plan, graph) if v.key[0] == "edge"}))
         return 0
 
-    found = findings(plan, graph) + manifest_findings(root, plan, packages, files)
+    found = findings(plan, graph) + manifest_findings(root, plan, packages, files) + public_findings(plan, files)
     for finding in found:
         print(f"error  {finding.subject}: {finding.message}")
     crates = len(({c for c in graph.lines} | {extracted(plan, p) for p in packages.values()}) - {None})

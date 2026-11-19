@@ -1693,7 +1693,7 @@ command ([Adding a Mac](docs/add-mac.md)). A Mac on another tailnet is refused
 (`tailscale_offline`). A Mac without Tailscale gets Tailscale's open-source
 `tailscale` and `tailscaled` in `/usr/local/bin`, with the daemon as a root
 LaunchDaemon: Homebrew's bottle for its macOS, downloaded by root on the Mac and
-checked against the SHA-256 pinned in this build (`crates/elsecall-tailnet/src/tailscale_bottle.rs`); Homebrew
+checked against the SHA-256 pinned in this build (`crates/elsecall-peers/src/tailscale_bottle.rs`); Homebrew
 itself is not installed. A Tailscale that remembers another tailnet is refused
 (`tailnet_mismatch`), another daemon that does not run is refused
 (`tailscale_stopped`), and Add Mac's own is installed again. There is no bottle for macOS 14 (`tailscale_unavailable`). Tailscale then
@@ -2330,8 +2330,9 @@ The files in `tests/` are modules of one test binary, `integration`, rooted at
 file, and the modules the tests share (`tests/processes/`, `tests/members/`, ...)
 build once. A new test file needs its `mod` line in `tests/main.rs`, and reaches
 a shared module as `crate::processes`. Test names start with their file's module
-(`placement::...`), so `cargo nextest run -E 'test(/^placement::/)'` runs one
-file's tests.
+(`placement::...`), so
+`cargo nextest run -E 'binary_id(elsecall::integration) & test(/^placement::/)'`
+runs one file's tests.
 
 `mise run check:affected` compares the branch with its merge base on
 `mergegate/main` (or `--base REF`), including uncommitted and untracked files, and

@@ -477,7 +477,7 @@ changes it.
 ### Automated evidence
 
 `mise run check` passes. Unit tests compute every metric on fixed records and load
-buckets (`reporting/fixtures.rs`):
+buckets (`crates/elsecall-scheduling/src/fixtures.rs`):
 - `facts`: what was predicted where the run ran, the sync taken out of the run,
   the member side dropped, old host names attributed, implausible facts refused;
 - `requests`: counts by kind and end, `fleet_busy` and its denominator, the

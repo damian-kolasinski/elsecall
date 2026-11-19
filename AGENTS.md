@@ -36,7 +36,7 @@ Agents using the CLI are the primary consumers. Humans using the web interface a
   - Dependencies point down the bands, never up, and crates in one band form no cycle. Test code follows the same rules: a crate shares fixtures as an ordinary `pub mod fixtures`, built in every build. Never gate them behind a feature that tests turn on: `cargo build` and `cargo test` would then each build that crate and every crate above it. Foundation crates stay under their line budget and free of frameworks such as axum and rusqlite; core stays free of axum and clap.
   - Fix a violation by moving the shared item down to a crate both sides can use, or by declaring a port (a trait) in the lower crate and implementing it above. `--why FROM TO` lists every reference behind an edge; `--cycles` suggests which edges to cut.
   - Manifests inherit the workspace (`version`, `edition`, `rust-version`, `license`, `[lints]`), say `publish = false`, and name every dependency as `name.workspace = true`, declared once in `[workspace.dependencies]`.
-  - `pub` means another crate uses the item (`unreachable_pub` is denied); inside a crate, write `pub(crate)`.
+  - `pub` means another crate uses the item; inside a crate, write `pub(crate)`. A crate's root declares `pub mod` only for modules other packages name (the guard checks), and `unreachable_pub`, denied, narrows the items in the rest.
   - Code written against the single library crate: rebase it, and Git follows the moved files; `modules` in `scripts/crate-graph.toml` says where each library module went.
   - The files in `tests/` are modules of one test binary, `tests/main.rs`: a new test file needs its `mod` line there.
 

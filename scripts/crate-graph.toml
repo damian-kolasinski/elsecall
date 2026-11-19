@@ -79,7 +79,9 @@ modules = ["scheduling", "load_log", "outside_pressure", "outside_pressure_gate"
 
 [crates.api-response]
 band = "feature"
-# The error envelope slices' HTTP routes answer with.
+# The error envelope slices' HTTP routes answer with. A crate of its own, small
+# as it is, because it needs axum, which `contract` may not use, and every
+# feature crate answers with it.
 modules = ["api_response"]
 
 [crates.fleet]
@@ -159,6 +161,8 @@ modules = ["workload_observation_cli", "state_sizes", "add_mac_cli", "nearby_cli
 [crates.ui]
 band = "entry"
 packages = ["elsecall-ui"]
-# The desktop app talks to the service through its contract, never through the
-# service's internals.
+# The desktop app talks to the service through the local client and the wire
+# forms in `contract`, and reuses the few slices it shows or drives (adding a
+# Mac, updates, the window, workload settings); never the service, scheduling
+# or tuning.
 may_depend_on = ["contract", "host", "peers", "fleet", "lifecycle", "runs"]

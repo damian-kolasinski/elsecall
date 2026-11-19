@@ -210,6 +210,31 @@ class Manifests(unittest.TestCase):
         messages = self.check({"crates/elsecall-failure": manifest})
         self.assertTrue(any("higher feature band" in m for m in messages), messages)
 
+    def test_a_public_module_is_one_another_package_names(self):
+        files = {
+            "crates/elsecall-scheduling/src/lib.rs": "pub mod named;\npub mod lonely;\nmod private;\n",
+            "tests/fleet.rs": "use elsecall_scheduling::{\n    named::A,\n    other,\n};\n// elsecall_scheduling::lonely::B\n",
+            "crates/elsecall-scheduling/src/named.rs": "use elsecall_scheduling::lonely::C;\n",
+        }
+        found = [f.message for f in graph.public_findings(graph.read_plan(PLAN), files)]
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("`pub mod lonely`", found[0])
+
+    def test_every_test_file_is_a_module_of_the_one_test_binary(self):
+        manifest = {"package": {"autotests": False}, "test": [{"name": "integration", "path": "tests/main.rs"}]}
+        files = {
+            "tests/main.rs": "mod members;\n\nmod fleet;\n",
+            "tests/fleet.rs": "",
+            "tests/forgotten.rs": "",
+            "tests/members/mod.rs": "",
+            "tests/helpers/mod.rs": "",
+            "tests/fixtures/data.rs": "",
+        }
+        found = sorted(f.subject for f in graph.undeclared_tests("", manifest, files))
+        self.assertEqual(found, ["tests/forgotten.rs", "tests/helpers/mod.rs"])
+        # Cargo's own discovery builds every file: nothing to declare.
+        self.assertEqual(graph.undeclared_tests("", {"package": {}}, files), [])
+
     def test_tests_may_not_turn_on_a_workspace_crates_features(self):
         manifest = self.GOOD + '\n[dev-dependencies]\nelsecall-scheduling = { workspace = true, features = ["fixtures"] }\n'
         messages = self.check({"crates/elsecall-failure": manifest})
