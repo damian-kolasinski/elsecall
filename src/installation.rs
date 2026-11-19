@@ -5,6 +5,10 @@ use crate::{
     paths::Paths,
     private_files,
 };
+
+/// The file a service started as a plain process records its PID in, under the
+/// data directory; installation removes it with the service.
+pub const PID_FILE: &str = "process-service.pid";
 use serde::Serialize;
 use std::{fs, os::unix::fs::symlink, path::Path};
 
@@ -397,7 +401,7 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
         "installation.lock",
         "member.key",
         "fleet.json",
-        crate::process_service::PID_FILE,
+        PID_FILE,
     ] {
         private_files::remove_file(&paths.data.join(name))?;
     }

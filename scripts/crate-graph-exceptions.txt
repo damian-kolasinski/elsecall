@@ -5,20 +5,15 @@
 # non-test lines over the band's budget. Counts are exact and only go down:
 # scripts/crate_graph.py --shrink lowers them after a fix.
 edge add-mac fleet 1
-edge add-mac platform-macos 11
 edge admission fleet 1
-edge admission platform-macos 2
 edge admission remote-run 27
 edge admission service-lifecycle 2
 edge admission workload-config 13
 edge admission workspace 13
 edge config-sync fleet 7
-edge config-sync rehearsal 1
 edge config-sync service-config 31
 edge config-sync workspace 12
-edge fleet add-mac 5
 edge fleet config-sync 3
-edge fleet fleet-upgrade 1
 edge fleet housekeeping 4
 edge fleet-upgrade fleet 6
 edge fleet-upgrade installation 2
@@ -27,10 +22,8 @@ edge housekeeping workspace 18
 edge installation add-mac 1
 edge installation admission 1
 edge installation fleet-upgrade 1
-edge installation platform-macos 1
 edge installation release-update 2
 edge installation window 2
-edge rehearsal platform-macos 4
 edge rehearsal replay 5
 edge rehearsal reporting 4
 edge rehearsal simulation 10
@@ -40,7 +33,6 @@ edge release-update fleet-upgrade 2
 edge release-update installation 4
 edge release-update window 2
 edge remote-run admission 2
-edge remote-run platform-macos 3
 edge remote-run workload-config 6
 edge remote-run workspace 30
 edge replay rehearsal 2
@@ -62,7 +54,6 @@ edge simulation replay 6
 edge simulation reporting 2
 edge simulation tuning 1
 edge simulation workload 48
-edge tools platform-macos 1
 edge trace rehearsal 3
 edge trace reporting 10
 edge trace workload 13
@@ -73,7 +64,6 @@ edge tuning simulation 11
 edge tuning trace 2
 edge tuning workload 9
 edge window installation 7
-edge window platform-macos 1
 edge workload rehearsal 1
 edge workload replay 1
 edge workload reporting 11
@@ -82,16 +72,13 @@ edge workload-config workspace 3
 edge workspace fleet 5
 edge workspace housekeeping 5
 testedge outside-pressure scheduling 3
-testedge rehearsal platform-macos 4
 testedge rehearsal reporting 2
 testedge rehearsal simulation 4
 testedge rehearsal workload 9
-testedge remote-run platform-macos 1
 testedge replay simulation 2
 testedge replay workload 3
 testedge scheduling outside-pressure 2
 testedge service-config config-sync 1
-testedge service-lifecycle platform-macos 1
 testedge simulation rehearsal 3
 testedge simulation replay 1
 testedge simulation reporting 3

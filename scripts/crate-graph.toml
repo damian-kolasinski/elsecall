@@ -91,6 +91,13 @@ modules = ["inspection", "idle_load"]
 band = "core"
 modules = ["sqlite_retention"]
 
+[crates.os-processes]
+band = "core"
+# The operating system's processes: identity and exit notification, process
+# groups and their signals, and the CPU time a command used. A second platform
+# adds its implementation here.
+modules = ["macos::process_group", "macos::process_usage", "macos::processes"]
+
 [crates.service-log]
 band = "core"
 modules = ["service_log"]
@@ -140,11 +147,11 @@ modules = ["placement_api", "placement_authority", "placement_host", "placement_
 
 [crates.fleet]
 band = "feature"
-modules = ["fleet", "fleet_changes", "fleet_cli", "fleet_local_api", "fleet_view", "fleet_callers", "fleet_placement"]
+modules = ["fleet", "fleet_changes", "fleet_local_api", "fleet_view", "fleet_callers", "fleet_placement"]
 
 [crates.add-mac]
 band = "feature"
-modules = ["add_mac", "add_mac_cli", "nearby_macs", "nearby_cli", "remote_mac", "openssh_mac", "askpass", "authorized_keys"]
+modules = ["add_mac", "nearby_macs", "remote_mac", "askpass", "authorized_keys", "inbound_firewall", "lan_address"]
 
 [crates.service-config]
 band = "feature"
@@ -156,7 +163,7 @@ modules = ["config_sync", "config_sync_api", "config_sync_cli", "config_sync_loc
 
 [crates.tools]
 band = "feature"
-modules = ["toolset", "toolset_api", "tools_api", "tools_cli", "tool_inventory", "fleet_tool_inventory", "mise_cli", "inventory_reader"]
+modules = ["toolset", "toolset_api", "tools_api", "tools_cli", "tool_inventory", "fleet_tool_inventory", "mise_cli", "macos::xcodes", "inventory_reader"]
 
 [crates.workspace]
 band = "feature"
@@ -172,7 +179,7 @@ modules = ["installation", "uninstall"]
 
 [crates.window]
 band = "feature"
-modules = ["window_app", "window_release", "window_startup", "ui_app", "install_window"]
+modules = ["window_app", "window_release", "window_startup", "install_window"]
 
 [crates.release-update]
 band = "feature"
@@ -232,7 +239,12 @@ modules = ["tuning", "tune_cli", "tuning_drift", "tuning_preflight", "tuning_pre
 
 [crates.platform-macos]
 band = "adapter"
-modules = ["macos", "lan_address", "inbound_firewall", "process_service"]
+modules = ["macos", "process_service"]
+
+[crates.openssh-mac]
+band = "adapter"
+# Adding a Mac over Remote Login: the remote side of add-mac.
+modules = ["openssh_mac"]
 
 [crates.scripted-machine]
 band = "adapter"
@@ -245,14 +257,14 @@ modules = ["machine_script"]
 band = "entry"
 # Router assembly and the peer listener: they mount routes from many slices and
 # apply enrolled-member authentication over all of them.
-modules = ["server", "peer_api", "peer_listener", "outside_pressure_api"]
+modules = ["server", "peer_api", "peer_listener", "outside_pressure_api", "ui_app"]
 
 [crates.cli]
 band = "entry"
 # The `elsecall` binary, src/main.rs, and subcommands of slices that may not
 # use clap themselves.
 binary = "src/main.rs"
-modules = ["workload_observation_cli", "state_sizes"]
+modules = ["workload_observation_cli", "state_sizes", "add_mac_cli", "nearby_cli", "fleet_cli"]
 
 [crates.ui]
 band = "entry"

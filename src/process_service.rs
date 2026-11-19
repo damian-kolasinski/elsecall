@@ -18,7 +18,7 @@ use std::{
 
 pub const ENVIRONMENT: &str = "ELSECALL_SERVICE_MANAGER";
 /// The process ID of the running service, in the state directory.
-pub const PID_FILE: &str = "process-service.pid";
+pub use crate::installation::PID_FILE;
 
 /// Whether the environment asks for this manager instead of launchd. A release
 /// build refuses rather than falling back to launchd, which would register real

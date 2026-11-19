@@ -265,7 +265,7 @@ impl ConfigSync {
                                 .unwrap_or(settings.reserved),
                             parameters: overrides
                                 .apply(&settings.parameters)
-                                .map_err(crate::rehearsal::invalid)?,
+                                .map_err(crate::scheduling::service::invalid_rehearsal)?,
                         },
                     );
                 }
