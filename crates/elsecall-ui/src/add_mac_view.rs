@@ -2,7 +2,7 @@
 //! add as it happens, with looping illustrations of the two things a person does:
 //! turning on Remote Login there, and approving it in the browser here.
 
-use elsecall::add_mac::Approval;
+use elsecall_add_mac::add_mac::Approval;
 use rune::tok::TextStyle;
 use rune::{Color, El, Icon, col, icon, row, text};
 use rune_kit::{Button, ButtonVariant, Dialog, Kit, Spinner, TextInput};
@@ -12,9 +12,9 @@ use crate::add_mac_flow::{
 };
 use crate::app::AppState;
 use crate::theme;
-use elsecall::add_mac::AddReport;
-use elsecall::nearby_macs::NearbyMac;
-use elsecall::remote_mac::LoginLink;
+use elsecall_add_mac::add_mac::AddReport;
+use elsecall_add_mac::nearby_macs::NearbyMac;
+use elsecall_add_mac::remote_mac::LoginLink;
 use elsecall_failure::Failure;
 use elsecall_membership::roster::Readiness;
 
@@ -603,8 +603,8 @@ fn sign_in(state: &AppState, target: &Target, k: &Kit, l: &Look) -> El {
 
 fn adding(
     name: &str,
-    current: Option<elsecall::add_mac::Step>,
-    approval: Option<&(elsecall::remote_mac::LoginLink, Approval)>,
+    current: Option<elsecall_add_mac::add_mac::Step>,
+    approval: Option<&(elsecall_add_mac::remote_mac::LoginLink, Approval)>,
     clock: f64,
     k: &Kit,
     l: &Look,
@@ -649,7 +649,7 @@ fn adding(
 
 fn approve(
     name: &str,
-    link: &elsecall::remote_mac::LoginLink,
+    link: &elsecall_add_mac::remote_mac::LoginLink,
     approval: Approval,
     clock: f64,
     k: &Kit,

@@ -60,7 +60,7 @@ fn uninstall_removes_everything_a_running_service_created() {
     // The master's key that Add Mac authorized goes; the account's own stay.
     let ssh = member.home.path().join(".ssh");
     fs::create_dir_all(&ssh).unwrap();
-    let ours = elsecall::authorized_keys::line(
+    let ours = elsecall_add_mac::authorized_keys::line(
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleMasterKey me@example.com",
         "mac-mini",
     )

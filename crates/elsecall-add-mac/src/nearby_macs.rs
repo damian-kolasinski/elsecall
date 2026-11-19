@@ -226,7 +226,7 @@ fn membership(members: &[KnownMember], host: &str, addresses: &[IpAddr]) -> Memb
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::nearby_macs::*;
 
     fn seen(offer: Offer, name: &str, host: &str, model: Option<&str>) -> Advertisement {
         Advertisement {

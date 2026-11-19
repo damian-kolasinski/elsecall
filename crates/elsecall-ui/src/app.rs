@@ -98,8 +98,9 @@ pub struct AppState {
     bundle: Arc<dyn Bundle>,
     add_mac: AddMac,
     add_source: Arc<dyn AddMacSource>,
-    nearby_feed:
-        Arc<Latest<Result<Vec<elsecall::nearby_macs::NearbyMac>, elsecall_failure::Failure>>>,
+    nearby_feed: Arc<
+        Latest<Result<Vec<elsecall_add_mac::nearby_macs::NearbyMac>, elsecall_failure::Failure>>,
+    >,
     add_inbox: Arc<Inbox<RunUpdate>>,
     /// When the sheet last asked for the Macs nearby, on the window's clock.
     last_look: Option<f64>,
@@ -944,13 +945,15 @@ fn scene_add_mac_adding(state: &mut AppState) {
     scene_add_mac_sign_in(state);
     state.add_mac.start();
     for step in [
-        elsecall::add_mac::Step::Check,
-        elsecall::add_mac::Step::Tailnet,
-        elsecall::add_mac::Step::Install,
+        elsecall_add_mac::add_mac::Step::Check,
+        elsecall_add_mac::add_mac::Step::Tailnet,
+        elsecall_add_mac::add_mac::Step::Install,
     ] {
         state
             .add_mac
-            .apply_current(AddUpdate::Event(elsecall::add_mac::Event::Step { step }));
+            .apply_current(AddUpdate::Event(elsecall_add_mac::add_mac::Event::Step {
+                step,
+            }));
     }
 }
 
@@ -958,16 +961,18 @@ fn scene_add_mac_approve(state: &mut AppState) {
     scene_add_mac_sign_in(state);
     state.add_mac.start();
     for event in [
-        elsecall::add_mac::Event::Step {
-            step: elsecall::add_mac::Step::Check,
+        elsecall_add_mac::add_mac::Event::Step {
+            step: elsecall_add_mac::add_mac::Step::Check,
         },
-        elsecall::add_mac::Event::Step {
-            step: elsecall::add_mac::Step::Tailnet,
+        elsecall_add_mac::add_mac::Event::Step {
+            step: elsecall_add_mac::add_mac::Step::Tailnet,
         },
-        elsecall::add_mac::Event::Approve {
-            link: elsecall::remote_mac::LoginLink::parse("https://login.tailscale.com/a/example")
-                .expect("a Tailscale link"),
-            approval: elsecall::add_mac::Approval::Login,
+        elsecall_add_mac::add_mac::Event::Approve {
+            link: elsecall_add_mac::remote_mac::LoginLink::parse(
+                "https://login.tailscale.com/a/example",
+            )
+            .expect("a Tailscale link"),
+            approval: elsecall_add_mac::add_mac::Approval::Login,
         },
     ] {
         state.add_mac.apply_current(AddUpdate::Event(event));

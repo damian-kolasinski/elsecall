@@ -91,7 +91,7 @@ pub fn answer(socket: &Path) -> u8 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::askpass::*;
 
     #[tokio::test]
     async fn the_password_is_served_a_few_times_then_no_more() {

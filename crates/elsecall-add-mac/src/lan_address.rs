@@ -17,7 +17,7 @@ pub fn is_lan(address: IpAddr) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::lan_address::*;
 
     #[test]
     fn only_local_network_addresses_count() {

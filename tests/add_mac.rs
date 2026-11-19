@@ -6,7 +6,7 @@ mod diagnostics;
 mod members;
 mod processes;
 
-use elsecall::{
+use elsecall_add_mac::{
     add_mac::{self, Approval, Event, Master, Outcome, Step},
     inbound_firewall::Rule,
     remote_mac::{
@@ -247,7 +247,7 @@ impl RemoteMac for FakeMac {
     }
     async fn authorize_key(&mut self, line: &str) -> Result<bool> {
         let existing = self.authorized_keys();
-        let key = elsecall::authorized_keys::key_of(line).unwrap();
+        let key = elsecall_add_mac::authorized_keys::key_of(line).unwrap();
         if existing.contains(key) {
             return Ok(false);
         }

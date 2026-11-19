@@ -7,8 +7,8 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 
-use elsecall::add_mac::{AddReport, Event};
-use elsecall::nearby_macs::NearbyMac;
+use elsecall_add_mac::add_mac::{AddReport, Event};
+use elsecall_add_mac::nearby_macs::NearbyMac;
 use elsecall_failure::Failure;
 use rune::Waker;
 

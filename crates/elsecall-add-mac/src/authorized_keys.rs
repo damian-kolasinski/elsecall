@@ -94,7 +94,7 @@ pub fn remove_ours(home: &Path) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::authorized_keys::*;
 
     const KEY: &str = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyBlob me@example.com\n";
 

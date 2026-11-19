@@ -2,9 +2,9 @@
 //!
 //! It browses in the CLI's own process, which macOS lets use the local network
 //! when run from a terminal, over SSH or by an app the user allowed.
-use crate::{
-    macos::dns_sd::Bonjour,
-    nearby_macs::{KnownMember, LocalNetwork, Membership, NearbyMac, RemoteLogin, nearby},
+use crate::macos::dns_sd::Bonjour;
+use elsecall_add_mac::nearby_macs::{
+    KnownMember, LocalNetwork, Membership, NearbyMac, RemoteLogin, nearby,
 };
 use elsecall_failure::Result;
 use elsecall_local_client as client;

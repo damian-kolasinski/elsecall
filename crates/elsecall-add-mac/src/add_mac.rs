@@ -694,7 +694,7 @@ async fn verify(socket: &Path, member: &str) -> Result<Readiness> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::add_mac::*;
 
     fn facts() -> MacFacts {
         MacFacts {
