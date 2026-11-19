@@ -5,7 +5,7 @@ use super::{capacity::Capacity, parameters::Parameters};
 pub fn fingerprint(parameters: &Parameters, capacity: Capacity) -> String {
     let bytes = serde_json::to_vec(&("elsecall/scheduling-settings/v1", parameters, capacity))
         .expect("scheduling settings serialize");
-    crate::build_identity::Digest::of(&bytes)
+    elsecall_build_identity::build_identity::Digest::of(&bytes)
         .build_id()
         .as_str()
         .to_owned()

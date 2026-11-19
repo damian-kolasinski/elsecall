@@ -1,11 +1,7 @@
 //! Whether a freshly installed service came up: it answers its local API with
 //! the build that was installed, and keeps running as the same process.
-use crate::{
-    build_identity::{Build, BuildId},
-    client,
-    inspection::Health,
-    paths::Paths,
-};
+use crate::{client, inspection::Health, paths::Paths};
+use elsecall_build_identity::build_identity::{Build, BuildId};
 use elsecall_failure::{Failure, Result};
 use std::time::{Duration, Instant};
 

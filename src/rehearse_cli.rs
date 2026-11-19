@@ -122,8 +122,9 @@ pub(crate) async fn single(
     if args.limit.is_zero() || args.limit > Duration::from_secs(3600) {
         return Err(invalid("--limit must be positive and at most 1h."));
     }
-    let source_digest =
-        crate::build_identity::Digest::of(&serde_json::to_vec(&source).expect("trace serializes"));
+    let source_digest = elsecall_build_identity::build_identity::Digest::of(
+        &serde_json::to_vec(&source).expect("trace serializes"),
+    );
     let candidate = crate::simulation::CandidateSettings::parse(
         source,
         &settings
@@ -639,7 +640,7 @@ pub(crate) async fn single(
             .collect(),
         session: session.clone(),
         source_digest,
-        build: crate::build_identity::this_build()?,
+        build: elsecall_build_identity::build_identity::this_build()?,
         compress: args.compress,
         load_factor: args.load_factor,
         seed: args.seed,

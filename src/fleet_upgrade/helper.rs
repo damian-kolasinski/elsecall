@@ -6,7 +6,6 @@
 //! so the member is not left without a working service. It records the outcome in
 //! the upgrade journal, where the restarted service reports it to the master.
 use crate::{
-    build_identity::{Build, BuildId, Digest},
     client,
     fleet_upgrade::{
         journal::{Journal, Phase},
@@ -16,6 +15,7 @@ use crate::{
     installation::{ServiceManager, Transaction, ready::confirm},
     paths::Paths,
 };
+use elsecall_build_identity::build_identity::{Build, BuildId, Digest};
 use elsecall_failure::{Failure, Result};
 use std::path::Path;
 

@@ -101,7 +101,7 @@ pub struct Health {
     pub version: String,
     /// The running build's ID; absent from services that predate upgrades.
     #[serde(default)]
-    pub build: Option<crate::build_identity::BuildId>,
+    pub build: Option<elsecall_build_identity::build_identity::BuildId>,
     pub pid: u32,
     pub uptime_seconds: u64,
 }
@@ -120,8 +120,10 @@ impl Inspection {
     pub fn health(&self) -> Health {
         Health {
             status: "ready".into(),
-            version: crate::build_identity::VERSION.into(),
-            build: crate::build_identity::this_build().ok().map(|b| b.build),
+            version: elsecall_build_identity::build_identity::VERSION.into(),
+            build: elsecall_build_identity::build_identity::this_build()
+                .ok()
+                .map(|b| b.build),
             pid: std::process::id(),
             uptime_seconds: self.started.elapsed().as_secs(),
         }

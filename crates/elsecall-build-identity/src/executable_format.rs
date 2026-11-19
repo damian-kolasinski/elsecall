@@ -139,7 +139,7 @@ pub fn require(bytes: &[u8], architecture: Architecture) -> Result<()> {
 
 #[cfg(test)]
 pub mod fixtures {
-    use super::*;
+    use crate::executable_format::*;
 
     /// A minimal thin Mach-O executable header for `architecture`.
     pub fn thin_header(architecture: Architecture, filetype: u32) -> Vec<u8> {
@@ -177,7 +177,7 @@ pub mod fixtures {
 
 #[cfg(test)]
 mod tests {
-    use super::{fixtures::*, *};
+    use crate::executable_format::{fixtures::*, *};
     use Architecture::*;
 
     #[test]

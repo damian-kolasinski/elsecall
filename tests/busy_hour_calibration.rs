@@ -248,8 +248,9 @@ fn exercise(mode: Mode) {
             .placement_replay
             .as_mut()
             .unwrap()
-            .rules_digest =
-            elsecall::build_identity::Digest::of(b"different rules with the same placement");
+            .rules_digest = elsecall_build_identity::build_identity::Digest::of(
+            b"different rules with the same placement",
+        );
         let error =
             elsecall::tuning_preflight::check(different_rules, preflight_options()).unwrap_err();
         assert!(

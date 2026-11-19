@@ -208,8 +208,11 @@ async fn exchange<T: DeserializeOwned>(
     for (name, value) in proof.headers() {
         request = request.header(name, value);
     }
-    if let Some(build) = crate::build_identity::announced() {
-        request = request.header(crate::version_skew::BUILD_HEADER, build.as_str());
+    if let Some(build) = elsecall_build_identity::build_identity::announced() {
+        request = request.header(
+            elsecall_build_identity::version_skew::BUILD_HEADER,
+            build.as_str(),
+        );
     }
     let request = request
         .body(Full::new(Bytes::from(body)))
@@ -547,8 +550,11 @@ async fn channel_once(
     for (name, value) in proof.headers() {
         request = request.header(name, value);
     }
-    if let Some(build) = crate::build_identity::announced() {
-        request = request.header(crate::version_skew::BUILD_HEADER, build.as_str());
+    if let Some(build) = elsecall_build_identity::build_identity::announced() {
+        request = request.header(
+            elsecall_build_identity::version_skew::BUILD_HEADER,
+            build.as_str(),
+        );
     }
     let request = request
         .body(Full::new(Bytes::from(body)))

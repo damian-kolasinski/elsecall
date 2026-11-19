@@ -5,12 +5,12 @@
 //! master learns the outcome across the restart. Its format is frozen with the
 //! upgrade protocol.
 use crate::{
-    build_identity::{Build, BuildId, Digest},
     fleet_upgrade::{member::WorkInFlight, protocol::UpgradeId},
     private_files,
     roster::MemberName,
     scheduling::timestamp::Timestamp,
 };
+use elsecall_build_identity::build_identity::{Build, BuildId, Digest};
 use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::{

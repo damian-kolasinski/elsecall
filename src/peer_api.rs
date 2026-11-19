@@ -79,10 +79,10 @@ async fn authenticate(State(fleet): State<Arc<Fleet>>, request: Request, next: N
     let Some(peer) = fleet.authenticate(&proof, parts.method.as_str(), path, &bytes) else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
-    let skew = crate::version_skew::refusal(
+    let skew = elsecall_build_identity::version_skew::refusal(
         parts.uri.path(),
-        crate::build_identity::announced().as_ref(),
-        header(crate::version_skew::BUILD_HEADER).as_deref(),
+        elsecall_build_identity::build_identity::announced().as_ref(),
+        header(elsecall_build_identity::version_skew::BUILD_HEADER).as_deref(),
     );
     let response = match skew {
         Some(error) => failure(StatusCode::CONFLICT, error),

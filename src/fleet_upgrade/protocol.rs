@@ -15,12 +15,14 @@
 //! later build must still accept them, since they are how members on older builds
 //! are brought forward.
 use crate::{
-    build_identity::{Build, Digest},
-    executable_format::Architecture,
     member_key::{MemberKey, PublicKey},
     wire::{self, Frame},
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use elsecall_build_identity::{
+    build_identity::{Build, Digest},
+    executable_format::Architecture,
+};
 use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};

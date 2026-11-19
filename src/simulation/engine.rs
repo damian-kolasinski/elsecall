@@ -58,10 +58,10 @@ pub struct Trial {
 }
 pub fn simulate(trace: Trace, options: Options) -> Result<Value> {
     validation::trace(&trace)?;
-    let trace_digest = crate::build_identity::Digest::of(
+    let trace_digest = elsecall_build_identity::build_identity::Digest::of(
         &serde_json::to_vec(&trace).expect("validated trace serializes"),
     );
-    let code_build = crate::build_identity::this_build().ok();
+    let code_build = elsecall_build_identity::build_identity::this_build().ok();
     let overrides = CandidateSettings::parse(&trace, &options.settings)?;
     if options.fidelity
         && (!options.settings.is_empty() || options.load_factor != Default::default())

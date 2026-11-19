@@ -49,7 +49,7 @@ pub fn skewed(own: &str, sender: &str) -> Failure {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::version_skew::*;
 
     #[test]
     fn work_routes_refuse_other_builds_and_repair_routes_never_do() {

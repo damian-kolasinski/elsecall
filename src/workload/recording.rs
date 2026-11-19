@@ -1,8 +1,6 @@
 //! Controlled rehearsal provenance, distinct from observational production models.
-use crate::{
-    build_identity::Build,
-    workload::trace::{Request, Trace},
-};
+use crate::workload::trace::{Request, Trace};
+use elsecall_build_identity::build_identity::Build;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -18,7 +16,7 @@ pub struct Recording {
     #[serde(default)]
     pub work_iterations: BTreeMap<String, u64>,
     pub session: String,
-    pub source_digest: crate::build_identity::Digest,
+    pub source_digest: elsecall_build_identity::build_identity::Digest,
     pub build: Build,
     pub compress: f64,
     #[serde(default)]
@@ -222,8 +220,8 @@ mod tests {
             uncontended_ms: BTreeMap::from([(id.clone(), BTreeMap::from([("a".into(), 1000.0)]))]),
             work_iterations: BTreeMap::from([(id.clone(), 1000)]),
             session,
-            source_digest: crate::build_identity::Digest::of(b"source"),
-            build: crate::build_identity::this_build().unwrap(),
+            source_digest: elsecall_build_identity::build_identity::Digest::of(b"source"),
+            build: elsecall_build_identity::build_identity::this_build().unwrap(),
             load_factor: Default::default(),
             compress: 2.0,
             seed: 0,

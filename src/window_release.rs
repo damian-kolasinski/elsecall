@@ -1,5 +1,6 @@
 //! The companion window shipped beside a CLI release and staged by installation.
-use crate::{build_identity::Digest, paths::Paths, private_files};
+use crate::{paths::Paths, private_files};
+use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::Failure;
 use std::{fs, path::Path};
 
@@ -21,7 +22,7 @@ pub fn store_companion(paths: &Paths, source: &Path) -> elsecall_failure::Result
 
 pub fn installed_build(
     paths: &Paths,
-) -> elsecall_failure::Result<Option<crate::build_identity::BuildId>> {
+) -> elsecall_failure::Result<Option<elsecall_build_identity::build_identity::BuildId>> {
     let path = paths.window_executable();
     if !path.is_file() {
         return Ok(None);

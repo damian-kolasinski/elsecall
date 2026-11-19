@@ -166,7 +166,7 @@ pub fn announced() -> Option<BuildId> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::build_identity::*;
 
     #[test]
     fn build_ids_are_the_digest_prefix_and_round_trip() {

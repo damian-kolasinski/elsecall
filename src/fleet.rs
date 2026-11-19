@@ -30,7 +30,7 @@ pub struct PeerStatus {
     pub version: String,
     /// The member's build ID; absent from members that predate upgrades.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub build: Option<crate::build_identity::BuildId>,
+    pub build: Option<elsecall_build_identity::build_identity::BuildId>,
     /// The roster this member records, so others can tell whether they agree.
     pub roster: Roster,
     /// The member's own machine inspection, passed through as reported so newer
@@ -529,8 +529,10 @@ impl Fleet {
         Ok(PeerStatus {
             peer_io: crate::peer_diagnostics::recent(),
             member: self.own_name(&roster),
-            version: crate::build_identity::VERSION.into(),
-            build: crate::build_identity::this_build().ok().map(|b| b.build),
+            version: elsecall_build_identity::build_identity::VERSION.into(),
+            build: elsecall_build_identity::build_identity::this_build()
+                .ok()
+                .map(|b| b.build),
             roster,
             machine,
             machine_error,

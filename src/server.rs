@@ -150,7 +150,7 @@ pub async fn serve_with_updates(
     }
     // Identify the build before anything could replace this executable, and name
     // it on every member request from now on.
-    let build = crate::build_identity::announce()?;
+    let build = elsecall_build_identity::build_identity::announce()?;
     // Fail before binding, so an invalid setting is never silently ignored.
     // Broken fleet state must not take down the local API: status, machine and the
     // fleet commands' diagnosis keep working, and the member listener stays closed.

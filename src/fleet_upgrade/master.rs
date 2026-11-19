@@ -4,8 +4,6 @@
 //! Members are upgraded at the same time; each one installs, confirms and, if
 //! needed, rolls back on its own.
 use crate::{
-    build_identity::{Build, BuildId, Digest},
-    executable_format::{self, Architecture},
     fleet::Fleet,
     fleet_upgrade::{
         journal::{Phase, UpgradeState},
@@ -14,6 +12,10 @@ use crate::{
     },
     peer_client,
     roster::{Member, MemberName},
+};
+use elsecall_build_identity::{
+    build_identity::{Build, BuildId, Digest},
+    executable_format::{self, Architecture},
 };
 use elsecall_failure::{Failure, Result};
 use hyper::Method;

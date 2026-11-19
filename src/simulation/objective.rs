@@ -190,8 +190,8 @@ mod tests {
         }
         trace.rehearsal = Some(Recording {
             session: "a".repeat(24),
-            source_digest: crate::build_identity::Digest::of(b"fixture"),
-            build: crate::build_identity::this_build().unwrap(),
+            source_digest: elsecall_build_identity::build_identity::Digest::of(b"fixture"),
+            build: elsecall_build_identity::build_identity::this_build().unwrap(),
             load_factor: Default::default(),
             compress: 1.0,
             seed: 0,

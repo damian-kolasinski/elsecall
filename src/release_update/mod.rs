@@ -11,7 +11,7 @@ pub mod service;
 pub mod store;
 mod tools;
 
-use crate::build_identity::Digest;
+use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -26,7 +26,10 @@ pub const ISSUER: &str = "https://token.actions.githubusercontent.com";
 pub struct ReleaseVersion(semver::Version);
 impl ReleaseVersion {
     pub fn running() -> Self {
-        Self(semver::Version::parse(crate::build_identity::VERSION).expect("Cargo version"))
+        Self(
+            semver::Version::parse(elsecall_build_identity::build_identity::VERSION)
+                .expect("Cargo version"),
+        )
     }
     pub fn as_version(&self) -> &semver::Version {
         &self.0
@@ -141,7 +144,7 @@ impl Phase {
 pub struct Job {
     pub id: JobId,
     pub release: Release,
-    pub from_build: crate::build_identity::BuildId,
+    pub from_build: elsecall_build_identity::build_identity::BuildId,
     #[serde(default)]
     pub started_at_ms: u64,
     pub reopen: bool,

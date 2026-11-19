@@ -4,11 +4,11 @@ use super::{
     ReleaseVersion, Status, invalid, now, store::Store,
 };
 use crate::{
-    build_identity::BuildId,
     paths::Paths,
     private_files,
     scheduling::service::{Scheduler, UpdateHold},
 };
+use elsecall_build_identity::build_identity::BuildId;
 use elsecall_failure::{Failure, Result};
 use std::{
     fs,
@@ -31,7 +31,8 @@ impl HelperLauncher for DetachedHelper {
         let worker = store.worker(&job.id);
         let bytes =
             fs::read(paths.executable()).map_err(|e| Failure::io("Read update helper", e))?;
-        if crate::build_identity::Digest::of(&bytes).build_id() != job.from_build {
+        if elsecall_build_identity::build_identity::Digest::of(&bytes).build_id() != job.from_build
+        {
             return Err(invalid(
                 "The installed CLI changed while preparing the update; retry.",
             ));

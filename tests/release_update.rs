@@ -1,36 +1,32 @@
 #![cfg(target_os = "macos")]
 //! Update policy exercised with a real scheduler/API and fakes only at provider boundaries.
+use elsecall::{
+    inspection::{CoreCounts, LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState},
+    load_log::LoadLog,
+    paths::Paths,
+    private_files,
+    release_update::{
+        self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
+        service::{HelperLauncher, UpdateService},
+        store::Store,
+    },
+    scheduling::{
+        capacity::Cores,
+        clock::SystemClock,
+        placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},
+        pre_run_sync::{PreRunSync, Synced},
+        processes::{ProcessIdentity, ProcessInfo, ProcessTable},
+        request::{AdmissionRequest, Kind, Placement, Urgency},
+        run_id::{RandomRunIds, RunId},
+        service::{Adapters, Driving, HostedEnd, Runtime, Scheduler, SchedulerConfiguration},
+        speed::SpeedMeter,
+    },
+};
+use elsecall_build_identity::build_identity::Digest;
+use elsecall_failure::Result;
 use std::{
     future::IntoFuture,
     sync::{Arc, Mutex},
-};
-use {
-    elsecall::{
-        build_identity::Digest,
-        inspection::{
-            CoreCounts, LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState,
-        },
-        load_log::LoadLog,
-        paths::Paths,
-        private_files,
-        release_update::{
-            self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
-            service::{HelperLauncher, UpdateService},
-            store::Store,
-        },
-        scheduling::{
-            capacity::Cores,
-            clock::SystemClock,
-            placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},
-            pre_run_sync::{PreRunSync, Synced},
-            processes::{ProcessIdentity, ProcessInfo, ProcessTable},
-            request::{AdmissionRequest, Kind, Placement, Urgency},
-            run_id::{RandomRunIds, RunId},
-            service::{Adapters, Driving, HostedEnd, Runtime, Scheduler, SchedulerConfiguration},
-            speed::SpeedMeter,
-        },
-    },
-    elsecall_failure::Result,
 };
 
 struct MachineBoundary;

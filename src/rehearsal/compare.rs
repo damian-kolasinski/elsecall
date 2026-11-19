@@ -180,14 +180,15 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
         .map(crate::tuning_objective::Noise::read)
         .transpose()?;
     let trace = crate::rehearse_cli::source(&args)?;
-    let source_digest =
-        crate::build_identity::Digest::of(&serde_json::to_vec(&trace).expect("trace serializes"));
+    let source_digest = elsecall_build_identity::build_identity::Digest::of(
+        &serde_json::to_vec(&trace).expect("trace serializes"),
+    );
     if let Some(noise) = &noise
         && (noise.source_digest != source_digest
             || noise.seed != args.seed
             || noise.compress != args.compress
             || noise.load_factor != args.load_factor
-            || noise.build != crate::build_identity::this_build()?)
+            || noise.build != elsecall_build_identity::build_identity::this_build()?)
     {
         return Err(invalid(
             "A/A noise must match the source trace, build, seed, compression and load factor.",
@@ -389,7 +390,8 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
             .map(|((am, bm), (ap, bp))| crate::tuning_objective::Noise {
                 noise_version: 1,
                 source_digest,
-                build: crate::build_identity::this_build().expect("rehearsal build"),
+                build: elsecall_build_identity::build_identity::this_build()
+                    .expect("rehearsal build"),
                 seed: baseline["seed"].as_u64().expect("seed"),
                 compress: baseline["compress"].as_f64().expect("compress"),
                 load_factor: serde_json::from_value(baseline["load_factor"].clone())

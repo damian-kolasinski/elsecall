@@ -37,7 +37,7 @@ pub struct Target {
     master: String,
     since: Timestamp,
     until: Timestamp,
-    source_digest: crate::build_identity::Digest,
+    source_digest: elsecall_build_identity::build_identity::Digest,
     shape: Shape,
 }
 impl Target {
@@ -100,7 +100,7 @@ impl Target {
             observed_seconds: seconds,
             wait_p90_ms: waits(trace, since, until, 1.0)?,
         };
-        let source_digest = crate::build_identity::Digest::of(
+        let source_digest = elsecall_build_identity::build_identity::Digest::of(
             &serde_json::to_vec(&(&rows, &shape)).expect("reference serializes"),
         );
         Ok(Self {
@@ -307,12 +307,14 @@ pub(crate) fn calibrate_preflight(
     )
 }
 
-fn workload_digest(workload: &Trace) -> crate::build_identity::Digest {
-    crate::build_identity::Digest::of(&serde_json::to_vec(workload).expect("trace serializes"))
+fn workload_digest(workload: &Trace) -> elsecall_build_identity::build_identity::Digest {
+    elsecall_build_identity::build_identity::Digest::of(
+        &serde_json::to_vec(workload).expect("trace serializes"),
+    )
 }
 
 fn calibrate_observations(
-    workload_digests: &[crate::build_identity::Digest],
+    workload_digests: &[elsecall_build_identity::build_identity::Digest],
     target: &Target,
     observations: &[Trace],
     compress: f64,
@@ -462,12 +464,14 @@ mod tests {
             serde_json::from_str(include_str!("../tests/fixtures/run5-rehearsal.json")).unwrap();
         let mut trace = workload.clone();
         trace.rehearsal.as_mut().unwrap().source_digest =
-            crate::build_identity::Digest::of(&serde_json::to_vec(&workload).unwrap());
+            elsecall_build_identity::build_identity::Digest::of(
+                &serde_json::to_vec(&workload).unwrap(),
+            );
         let mut target = Target {
             master: trace.master.clone().unwrap(),
             since: trace.since,
             until: trace.until,
-            source_digest: crate::build_identity::Digest::of(b"busy reference"),
+            source_digest: elsecall_build_identity::build_identity::Digest::of(b"busy reference"),
             shape: Shape {
                 admitted_capacity_share: 0.0,
                 member_admitted_capacity_share: BTreeMap::new(),
@@ -513,7 +517,7 @@ mod tests {
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
         let (workload, mut trace, target) = observed_fixture();
         trace.rehearsal.as_mut().unwrap().source_digest =
-            crate::build_identity::Digest::of(b"other workload");
+            elsecall_build_identity::build_identity::Digest::of(b"other workload");
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
     }
 

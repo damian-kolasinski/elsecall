@@ -244,7 +244,7 @@ pub async fn add<M: RemoteMac>(
     progress(Event::Step {
         step: Step::Install,
     });
-    let wanted = crate::build_identity::Digest::of_file(&master.build.executable)
+    let wanted = elsecall_build_identity::build_identity::Digest::of_file(&master.build.executable)
         .map_err(|error| Failure::io("Read the master's build", error))?
         .build_id()
         .to_string();

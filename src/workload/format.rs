@@ -17,7 +17,7 @@ pub enum Mode {
 #[serde(deny_unknown_fields)]
 pub struct Provenance {
     pub mode: Mode,
-    pub rules_digest: crate::build_identity::Digest,
+    pub rules_digest: elsecall_build_identity::build_identity::Digest,
 }
 
 /// Bound both manual replay density and the automatic calibration search.

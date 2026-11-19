@@ -924,7 +924,8 @@ mod tests {
 
     #[test]
     fn a_member_on_another_build_is_left_out_with_the_upgrade_that_fixes_it() {
-        let skewed = crate::version_skew::skewed("0123456789abcdef", "fedcba9876543210");
+        let skewed =
+            elsecall_build_identity::version_skew::skewed("0123456789abcdef", "fedcba9876543210");
         let why = unreachable_why(&skewed);
         assert!(
             why.contains("(version_skew)") && why.contains("elsecall fleet upgrade"),

@@ -1,6 +1,7 @@
 //! Align only Elsecall's existing global mise request, preserving unrelated settings.
 use super::{ISSUER, Release, StagedRelease, TOOL, invalid};
-use crate::{build_identity::Digest, installation::cli_request::Selection, paths::Paths};
+use crate::{installation::cli_request::Selection, paths::Paths};
+use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::{

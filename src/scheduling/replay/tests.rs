@@ -1007,7 +1007,7 @@ fn stored_records_keep_their_exact_bytes() {
         let per_form = actual.len() / expected.len();
         format!(
             "{:?}",
-            crate::build_identity::Digest::of(
+            elsecall_build_identity::build_identity::Digest::of(
                 &actual[form * per_form..(form + 1) * per_form].concat()
             )
         )

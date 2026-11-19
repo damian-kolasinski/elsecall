@@ -10,8 +10,6 @@ mod members;
 mod processes;
 
 use elsecall::{
-    build_identity::Digest,
-    executable_format::Architecture,
     fleet_upgrade::{
         member::UpgradeStatus,
         protocol::{self, Manifest, Message, Os, UpgradeId},
@@ -23,6 +21,7 @@ use elsecall::{
         request::{AdmissionRequest, Kind, Placement, Urgency},
     },
 };
+use elsecall_build_identity::{build_identity::Digest, executable_format::Architecture};
 use members::{TestMember, enrol, json};
 use serde_json::Value;
 use std::{

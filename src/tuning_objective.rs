@@ -1,8 +1,6 @@
 //! Acceptance arithmetic shared by measured comparisons and offline proposals.
-use crate::{
-    build_identity::{Build, Digest},
-    rehearsal::worker::Calibration,
-};
+use crate::rehearsal::worker::Calibration;
+use elsecall_build_identity::build_identity::{Build, Digest};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -129,7 +127,7 @@ mod tests {
         let noise = Noise {
             noise_version: 1,
             source_digest: Digest::of(b"fixture"),
-            build: crate::build_identity::this_build().unwrap(),
+            build: elsecall_build_identity::build_identity::this_build().unwrap(),
             seed: 0,
             compress: 1.0,
             load_factor: Default::default(),
