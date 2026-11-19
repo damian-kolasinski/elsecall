@@ -172,6 +172,11 @@ edit to a crate there compiles that crate in full once; later edits are incremen
 `target` becomes a link to a build directory in that cache, which mbx removes when
 its checkout is gone, after 30 days unused, over the disk budget, or when the disk
 runs low. Elsecall admits the builds itself, so mbx's own build scheduler is off.
+That directory keeps the outputs of every crate layout, feature set and profile
+setting it has built, and every compilation searches them: once a checkout has
+built many such variants (switching between branches that move crates, or
+trying build settings), run `mbx clean` there. Its next build is a full one;
+warm edits after it are often twice as fast as before it.
 `MBX_DISABLE=1` runs one command with plain Cargo, as CI does; release packaging
 always uses plain Cargo.
 

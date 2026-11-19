@@ -159,9 +159,16 @@ strip = true
 # Backtraces keep file and line; full debug info is opt-in (`--profile debugging`).
 [profile.dev]
 debug = "line-tables-only"
+# The workspace's crates in 16 parts, not 256: an edit rebuilds the crates
+# above it, and each rebuild rewrites every part of the crate's library and
+# incremental state even when little changed. Fewer, larger parts cut core edits
+# by about a third (README, "Build and install").
+codegen-units = 16
 
 [profile.dev.package."*"]
 debug = false
+# Dependencies keep the default: they build once, and in parallel.
+codegen-units = 256
 
 [profile.debugging]
 inherits = "dev"
