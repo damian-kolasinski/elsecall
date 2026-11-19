@@ -21,7 +21,7 @@ SEMVER = re.compile(
 )
 # Builds made with the local-release-channel feature carry this. They follow a
 # developer's own release channel and must never be published; see
-# src/release_update/channel.rs.
+# crates/elsecall-release-update/src/release_update/channel.rs.
 LOCAL_CHANNEL_MARKER = b"ELSECALL-LOCAL-RELEASE-CHANNEL-BUILD"
 
 

@@ -1693,7 +1693,7 @@ command ([Adding a Mac](docs/add-mac.md)). A Mac on another tailnet is refused
 (`tailscale_offline`). A Mac without Tailscale gets Tailscale's open-source
 `tailscale` and `tailscaled` in `/usr/local/bin`, with the daemon as a root
 LaunchDaemon: Homebrew's bottle for its macOS, downloaded by root on the Mac and
-checked against the SHA-256 pinned in this build (`src/tailscale_bottle.rs`); Homebrew
+checked against the SHA-256 pinned in this build (`crates/elsecall-tailnet/src/tailscale_bottle.rs`); Homebrew
 itself is not installed. A Tailscale that remembers another tailnet is refused
 (`tailnet_mismatch`), another daemon that does not run is refused
 (`tailscale_stopped`), and Add Mac's own is installed again. There is no bottle for macOS 14 (`tailscale_unavailable`). Tailscale then

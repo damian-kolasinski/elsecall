@@ -126,8 +126,8 @@ test = false
 [features]
 # Follow a local release channel instead of the published releases, for testing
 # the update path against local builds. scripts/local-release.sh builds with it;
-# the release workflow never does. See src/release_update/channel.rs.
-local-release-channel = []
+# the release workflow never does. See crates/elsecall-release-update/src/release_update/channel.rs.
+local-release-channel = ["elsecall-release-update/local-release-channel"]
 
 [dependencies]
 axum.workspace = true

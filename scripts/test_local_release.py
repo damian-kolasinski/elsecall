@@ -63,7 +63,7 @@ class LocalRelease(unittest.TestCase):
     def test_installer_pins_the_packslip_the_service_verifies_with(self):
         template = (local_release.ROOT / "scripts" / "local-release-install.sh").read_text()
         self.assertIn(f'packslip="{local_release.PACKSLIP}"', template)
-        channel = (local_release.ROOT / "src/release_update/local_channel/mod.rs").read_text()
+        channel = (local_release.ROOT / "crates/elsecall-release-update/src/release_update/local_channel/mod.rs").read_text()
         self.assertIn(f'pub const PACKSLIP: &str = "{local_release.PACKSLIP}";', channel)
         self.assertIn(f'pub const PROJECT: &str = "{local_release.PROJECT}";', channel)
 
