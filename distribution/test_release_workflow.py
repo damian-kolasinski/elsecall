@@ -91,6 +91,10 @@ class ReleaseWorkflow(unittest.TestCase):
         self.assertLess(smoke, upload)
         self.assertLess(install, upload)
         self.assertNotIn("if:", build.split("steps:", 1)[0])
+        # Every step but the upload, which only a tag's signing needs, runs on main too.
+        conditions = re.findall(r"\n        if: (.+)", build)
+        self.assertEqual(conditions, ["github.ref_type == 'tag'"])
+        self.assertLess(upload, build.index("if: github.ref_type == 'tag'"))
 
 
 if __name__ == "__main__":

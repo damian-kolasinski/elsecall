@@ -2495,8 +2495,8 @@ one run, and on a release's tag, which publishes nothing until that run passed.
 `gh workflow run check.yml --ref BRANCH` runs it on a branch, to try a change to the
 check itself before it lands. A packaging change that lands on `main` also builds,
 smoke-tests and installs the archive (`.github/workflows/release.yml`), so a
-packaging mistake shows before the next release. While Check, Module shape or
-Privacy fails on `main`, that workflow's issue, `main is red: <workflow>` labelled
+packaging mistake shows before the next release. While Check, Module shape,
+Privacy or that packaging build (Release) fails on `main`, that workflow's issue, `main is red: <workflow>` labelled
 `main-red`, stays open (`.github/workflows/main-status.yml`): each failed run
 comments on it, and the workflow's next passing run closes it. A run that GitHub
 found no runner for says nothing about the code: it runs again, up to three
