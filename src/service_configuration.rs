@@ -126,7 +126,7 @@ impl Configuration {
                     return Err(invalid("Rehearsal baseline does not match its document."));
                 }
             }
-            if !crate::rehearsal::identity::valid_session(&temporary.session)
+            if !elsecall_rehearsal_identity::identity::valid_session(&temporary.session)
                 || temporary.members.len() > 64
                 || temporary.members.is_empty()
                 || temporary.until

@@ -141,7 +141,7 @@ impl Housekeeper {
     /// Remove only this synthetic session's copies and now-unreferenced stores.
     /// Uses the same identity checks, reservations and confined trash as a pass.
     pub async fn clean_rehearsal(self: &Arc<Self>, session: String) -> Result<()> {
-        if !crate::rehearsal::identity::valid_session(&session) {
+        if !elsecall_rehearsal_identity::identity::valid_session(&session) {
             return Err(crate::scheduling::service::invalid_rehearsal(
                 "Invalid rehearsal cleanup identity.",
             ));
@@ -156,7 +156,10 @@ impl Housekeeper {
             };
             let mut stores = BTreeMap::new();
             for entry in this.catalog.entries()? {
-                if crate::rehearsal::identity::scratch_of(&session, &entry.location.caller_root) {
+                if elsecall_rehearsal_identity::identity::scratch_of(
+                    &session,
+                    &entry.location.caller_root,
+                ) {
                     stores.insert(
                         entry.location.store.clone(),
                         entry.location.calling_member.clone(),
@@ -176,7 +179,7 @@ impl Housekeeper {
                     caller_path,
                     ..
                 } = removed.removed
-                    && crate::rehearsal::identity::scratch_of(&session, &caller_path)
+                    && elsecall_rehearsal_identity::identity::scratch_of(&session, &caller_path)
                 {
                     let location = this.locations.locate(
                         &calling_member,

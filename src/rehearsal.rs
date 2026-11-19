@@ -1,7 +1,6 @@
 //! Controlled synthetic fleet execution. Scheduling remains in normal `run`.
 mod caller;
 pub(crate) mod coverage;
-pub mod identity;
 pub(crate) mod inputs;
 mod journal;
 pub mod member;

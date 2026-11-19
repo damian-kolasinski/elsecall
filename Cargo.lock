@@ -1068,6 +1068,7 @@ dependencies = [
  "elsecall-failure",
  "elsecall-labels",
  "elsecall-process",
+ "elsecall-rehearsal-identity",
  "futures-util",
  "getrandom 0.3.4",
  "hkdf",
@@ -1112,6 +1113,10 @@ dependencies = [
  "tempfile",
  "tokio",
 ]
+
+[[package]]
+name = "elsecall-rehearsal-identity"
+version = "0.3.0"
 
 [[package]]
 name = "elsecall-ui"

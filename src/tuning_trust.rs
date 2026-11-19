@@ -89,7 +89,7 @@ fn error(e: rusqlite::Error) -> Failure {
 pub fn certify(paths: &Paths, certificate: &Certificate) -> Result<()> {
     if certificate.build != crate::build_identity::this_build()?
         || certificate.fidelity["trusted_for_tuning"] != true
-        || !crate::rehearsal::identity::valid_session(&certificate.rehearsal)
+        || !elsecall_rehearsal_identity::identity::valid_session(&certificate.rehearsal)
         || certificate.expires_at.since(certificate.issued_at) > MAX_AGE
     {
         return Err(crate::rehearsal::invalid(

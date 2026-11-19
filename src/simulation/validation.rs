@@ -102,7 +102,7 @@ pub fn trace(t: &Trace) -> Result<()> {
         ));
     }
     if let Some(r) = &t.rehearsal
-        && (!crate::rehearsal::identity::valid_session(&r.session)
+        && (!elsecall_rehearsal_identity::identity::valid_session(&r.session)
             || !(1.0..=1000.0).contains(&r.compress)
             || r.calibration.len() > 64
             || r.calibration

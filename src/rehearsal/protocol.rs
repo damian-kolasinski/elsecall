@@ -90,4 +90,4 @@ pub struct Reply {
     pub scratch: Option<String>,
     pub clean: bool,
 }
-pub use crate::rehearsal::identity::{scratch_of, valid_session, valid_workspace};
+pub use elsecall_rehearsal_identity::identity::{scratch_of, valid_session, valid_workspace};
