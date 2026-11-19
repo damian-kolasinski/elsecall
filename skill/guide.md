@@ -4,7 +4,7 @@ Elsecall admits heavy work onto this Mac only when it has room, and can place it
 
 ## Rules
 
-- Every command except `run` prints one JSON document on stdout, failures included. Exit 0 is success, 1 a failed operation, 2 an invalid command. Branch on `error.code`, never on message text, and follow `error.hint`.
+- Every command except `run` and `skill show` prints one JSON document on stdout, failures included. Exit 0 is success, 1 a failed operation, 2 an invalid command. Branch on `error.code`, never on message text, and follow `error.hint`.
 - `elsecall run [options] -- COMMAND...` passes the command's output, signals and exit code through. Exit 125 is Elsecall's own failure: the stderr line before the JSON envelope says what happened and what to do. Pass that line on unchanged.
 - Never retry a `fleet_busy` or `service_unavailable` failure in a loop. Wait as the failure line says, then run the same command once more.
 - A script that re-executes itself through `elsecall run` (its entry line) is admitted as a whole. Call it by its path, as `Scripts/build.sh`, not through `elsecall run` and not as `sh Scripts/build.sh`.

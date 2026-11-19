@@ -88,12 +88,13 @@ What consumers no longer write:
   `service_unavailable`. It applies whenever the request ends with
   `service_unavailable`, including when the service stops while the request
   waits, but never to `--member` work, which is bound to that member. During a
-  handover to another build the request first waits for the new service (see the
-  README's "Admission and leases"), so it runs managed, not unmanaged.
+  handover to another build the request first waits for the new service (see
+  ["Admission and leases"](https://github.com/damian-kolasinski/elsecall#admission-and-leases) in the README), so it runs managed, not unmanaged.
 - **Formatting failures.** On exit 125 the stderr line before the envelope already
   tells the agent what to do (see "Failure lines"); pass it on unchanged.
 - **Re-exec retries.** A script that re-execs itself and acquires again gets its
-  own lease back instead of queueing (see the README's "Acquiring again").
+  own lease back instead of queueing (see "Acquiring again" under
+  ["Admission and leases"](https://github.com/damian-kolasinski/elsecall#admission-and-leases) in the README).
 - **Sizes and deadlines per operation.** They live in the label rules.
 - **Private re-exec guards.** Every command `run` starts, in every mode, sees
   `ELSECALL_ADMISSION` (see "Wrapping a whole script").
@@ -216,8 +217,9 @@ admission). Commands that `run` admits also see `ELSECALL_RUN_ID`. Correlate wit
 ## Outputs of placed work
 
 A placed run executes in a copy of the working tree on another member and brings
-back only the paths `workloads.toml` declares under `[outputs] paths` (see the
-README's "Running on another member" and "Workload configuration"). Declare the
+back only the paths `workloads.toml` declares under `[outputs] paths` (see
+["Running on another member"](https://github.com/damian-kolasinski/elsecall#running-on-another-member) and
+["Workload configuration"](https://github.com/damian-kolasinski/elsecall#workload-configuration) in the README). Declare the
 files the caller needs afterwards, such as test reports and logs, as paths inside
 the working tree.
 

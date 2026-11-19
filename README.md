@@ -1131,13 +1131,18 @@ finds: Claude Code in `~/.claude/skills/elsecall`, and Codex and OpenCode in
 them instead. The skill holds only a `SKILL.md` that tells the agent to run
 `elsecall skill show`, so the guide it reads always matches the installed build,
 and running `setup` again after an update refreshes the skill itself.
-`elsecall skill status` reports `missing`, `current`, `outdated` or `foreign` (a
-skill named `elsecall` that Elsecall did not write) for each agent. `setup` leaves
-a foreign skill alone unless `--force` is given, and `--dry-run` reports what it
-would change. `elsecall skill remove` deletes only what `setup` wrote. For any
+`elsecall skill status` reports each agent's skill as `missing`, `current`,
+`outdated`, `foreign` (a skill named `elsecall` that Elsecall did not write) or
+`linked` (the folder or its `SKILL.md` is a link to somewhere else). `setup`
+replaces a foreign `SKILL.md` only with `--force`, never writes through a link,
+and `--dry-run` reports what it would change. When it leaves a skill alone, that
+agent's entry says `skipped` (`foreign` or `linked`), the document carries a
+`hint`, and the command exits 1; with no agent found and none named it fails with
+`no_agents_found`. `elsecall skill remove` deletes only what `setup` wrote. For any
 other agent, `elsecall skill install [--dir PATH]` writes the folder (by default
-under `~/Library/Application Support/Elsecall/skill`) and prints its path.
-Installing Elsecall does not set the skill up; run `elsecall skill setup` once.
+under `~/Library/Application Support/Elsecall/skill`) and prints its absolute path.
+Installing Elsecall does not set the skill up; run `elsecall skill setup` once, and
+`elsecall skill remove` before uninstalling.
 
 ## Integrating a consumer
 

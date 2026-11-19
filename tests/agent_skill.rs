@@ -144,11 +144,22 @@ fn a_skill_elsecall_did_not_write_is_kept_unless_forced_and_never_removed() {
     fs::create_dir_all(&theirs).unwrap();
     fs::write(theirs.join("SKILL.md"), "---\nname: elsecall\n---\nmine\n").unwrap();
 
+    let dry = skill(root, &["setup", "--agent", "codex", "--dry-run"]);
+    assert_eq!(dry.status.code(), Some(1), "{dry:?}");
+    assert_eq!(json(&dry)["data"]["agents"][0]["skipped"], "foreign");
+
     let refused = skill(root, &["setup", "--agent", "codex", "--agent", "claude"]);
     assert_eq!(refused.status.code(), Some(1), "{refused:?}");
     let document = json(&refused);
     assert_eq!(document["data"]["agents"][0]["skill"]["state"], "foreign");
     assert_eq!(document["data"]["agents"][0]["changed"], false);
+    assert_eq!(document["data"]["agents"][0]["skipped"], "foreign");
+    assert!(
+        document["data"]["hint"]
+            .as_str()
+            .unwrap()
+            .contains("--force")
+    );
     assert_eq!(
         document["data"]["agents"][1]["changed"], true,
         "claude still set up"
@@ -200,4 +211,89 @@ fn setup_with_no_agent_found_says_how_to_name_one_and_install_writes_a_folder() 
         elsewhere.join("elsecall").to_str().unwrap()
     );
     assert!(elsewhere.join("elsecall/SKILL.md").exists());
+}
+
+#[test]
+fn a_linked_skills_folder_is_written_and_removed_once() {
+    let home = home();
+    let root = home.path();
+    fs::create_dir_all(root.join(".claude/skills")).unwrap();
+    fs::create_dir(root.join(".codex")).unwrap();
+    fs::create_dir(root.join(".agents")).unwrap();
+    std::os::unix::fs::symlink(root.join(".claude/skills"), root.join(".agents/skills")).unwrap();
+
+    let setup = skill(root, &["setup"]);
+    assert!(setup.status.success(), "{setup:?}");
+    assert_eq!(
+        states(&json(&skill(root, &["status"]))),
+        [
+            pair("claude", "current"),
+            pair("codex", "current"),
+            pair("opencode", "current")
+        ]
+    );
+
+    let removed = skill(root, &["remove"]);
+    assert!(removed.status.success(), "{removed:?}");
+    assert!(!root.join(".claude/skills/elsecall").exists());
+}
+
+#[test]
+fn a_linked_skill_folder_is_never_written_through_or_removed() {
+    let home = home();
+    let root = home.path();
+    let kept = root.join("project/skills/elsecall");
+    fs::create_dir_all(&kept).unwrap();
+    fs::write(
+        kept.join("SKILL.md"),
+        "---\nname: elsecall\n---\nkept here\n",
+    )
+    .unwrap();
+    fs::create_dir_all(root.join(".claude/skills")).unwrap();
+    std::os::unix::fs::symlink(&kept, root.join(".claude/skills/elsecall")).unwrap();
+
+    let forced = skill(root, &["setup", "--agent", "claude", "--force"]);
+    assert_eq!(forced.status.code(), Some(1), "{forced:?}");
+    let document = json(&forced);
+    assert_eq!(document["data"]["agents"][0]["skill"]["state"], "linked");
+    assert_eq!(document["data"]["agents"][0]["skipped"], "linked");
+    assert!(
+        document["data"]["hint"]
+            .as_str()
+            .unwrap()
+            .contains("Remove the link")
+    );
+
+    assert!(skill(root, &["remove"]).status.success());
+    assert_eq!(
+        fs::read_to_string(kept.join("SKILL.md")).unwrap(),
+        "---\nname: elsecall\n---\nkept here\n"
+    );
+    assert!(root.join(".claude/skills/elsecall").is_symlink());
+}
+
+#[test]
+fn install_refuses_a_foreign_folder_and_prints_an_absolute_path() {
+    let home = home();
+    let theirs = home.path().join("taken/elsecall");
+    fs::create_dir_all(&theirs).unwrap();
+    fs::write(theirs.join("SKILL.md"), "mine\n").unwrap();
+    let refused = skill(home.path(), &["install", "--dir", "taken"]);
+    assert_eq!(refused.status.code(), Some(1));
+    assert_eq!(json(&refused)["error"]["code"], "skill_foreign");
+    assert_eq!(
+        fs::read_to_string(theirs.join("SKILL.md")).unwrap(),
+        "mine\n"
+    );
+
+    let installed = json(&skill(home.path(), &["install", "--dir", "fresh"]));
+    assert_eq!(
+        installed["data"]["path"],
+        home.path()
+            .canonicalize()
+            .unwrap()
+            .join("fresh/elsecall")
+            .to_str()
+            .unwrap()
+    );
 }

@@ -5,3 +5,4 @@ mod agents;
 pub mod cli;
 mod folder;
 mod guide;
+mod targets;

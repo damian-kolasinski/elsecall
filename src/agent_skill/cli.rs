@@ -3,6 +3,7 @@ use super::{
     agents::{self, Agent},
     folder::{self, State},
     guide,
+    targets::{self, Failed, Outcome, Target},
 };
 use crate::{
     failure::{Failure, Result},
@@ -74,23 +75,36 @@ pub fn run(args: SkillArgs) -> Result<Printed> {
         } => setup(&Paths::current()?.home, &agents, dry_run, force),
         SkillCommand::Status => {
             let home = Paths::current()?.home;
-            let agents = agents::ALL
-                .iter()
-                .map(|&agent| Ok(entry(&home, agent, inspect(&folder_of(&home, agent))?)))
-                .collect::<Result<Vec<_>>>()?;
+            let targets = targets::inspect(&home, &agents::ALL).map_err(unreadable)?;
+            let agents: Vec<Value> = targets.iter().map(|t| entry(&home, t)).collect();
             Ok(Printed::Json(json!({ "agents": agents }), true))
         }
-        SkillCommand::Remove { agents } => remove(&Paths::current()?.home, &agents),
+        SkillCommand::Remove { agents } => {
+            let home = Paths::current()?.home;
+            let chosen = if agents.is_empty() {
+                agents::ALL.to_vec()
+            } else {
+                agents
+            };
+            let targets = targets::inspect(&home, &chosen).map_err(unreadable)?;
+            let outcomes =
+                targets::remove(&targets).map_err(|failed| unwritable(failed, "removed"))?;
+            let agents = described(&home, &targets, &outcomes);
+            Ok(Printed::Json(json!({ "agents": agents }), true))
+        }
         SkillCommand::Install { dir } => {
             let root = match dir {
-                Some(dir) => dir,
+                Some(dir) => {
+                    std::path::absolute(&dir).map_err(|e| unwritable((dir, e), "written"))?
+                }
                 None => Paths::current()?.data.join("skill"),
             };
             let target = root.join(folder::NAME);
-            match inspect(&target)? {
-                State::Foreign => return Err(foreign(&target)),
+            match folder::state(&target).map_err(|e| unreadable((target.clone(), e)))? {
+                State::Foreign | State::Linked => return Err(foreign(&target)),
                 State::Current => {}
-                State::Missing | State::Outdated => written(folder::write(&target), &target)?,
+                State::Missing | State::Outdated => folder::write(&target)
+                    .map_err(|e| unwritable((target.clone(), e), "written"))?,
             }
             Ok(Printed::Json(json!({ "path": target }), true))
         }
@@ -136,108 +150,71 @@ fn setup(home: &Path, named: &[Agent], dry_run: bool, force: bool) -> Result<Pri
             "Name one with --agent claude, codex or opencode, or run elsecall skill install and point your agent at the folder it prints.",
         ));
     }
-    let mut complete = true;
-    let mut done: Vec<PathBuf> = Vec::new();
-    let mut entries = Vec::new();
-    // Every state before any change: Codex and OpenCode share a folder.
-    for (agent, before) in inspected(home, &chosen)? {
-        let target = folder_of(home, agent);
-        let wanted = match before {
-            State::Current => false,
-            State::Missing | State::Outdated => true,
-            State::Foreign => {
-                complete &= force;
-                force
-            }
-        };
-        // Codex and OpenCode share a folder: write it once.
-        if wanted && !dry_run && !done.contains(&target) {
-            written(folder::write(&target), &target)?;
-            done.push(target.clone());
-        }
-        let mut item = entry(home, agent, before);
-        item["changed"] = json!(wanted);
-        entries.push(item);
+    let targets = targets::inspect(home, &chosen).map_err(unreadable)?;
+    let outcomes =
+        targets::setup(&targets, dry_run, force).map_err(|failed| unwritable(failed, "written"))?;
+    let skipped = |o: &Outcome| matches!(o, Outcome::SkippedForeign | Outcome::SkippedLinked);
+    let complete = !outcomes.iter().any(skipped);
+    let mut data = json!({ "dry_run": dry_run, "agents": described(home, &targets, &outcomes) });
+    if outcomes.contains(&Outcome::SkippedForeign) {
+        data["hint"] = json!(
+            "A skill named elsecall that Elsecall did not write was left alone. Run elsecall skill setup --force to replace its SKILL.md."
+        );
+    } else if !complete {
+        data["hint"] = json!(
+            "A linked skill folder was left alone. Remove the link, then run elsecall skill setup again."
+        );
     }
-    let data = json!({ "dry_run": dry_run, "agents": entries });
     Ok(Printed::Json(data, complete))
 }
 
-fn remove(home: &Path, named: &[Agent]) -> Result<Printed> {
-    let chosen = if named.is_empty() {
-        agents::ALL.to_vec()
-    } else {
-        named.to_vec()
-    };
-    let mut entries = Vec::new();
-    let mut done: Vec<PathBuf> = Vec::new();
-    for (agent, before) in inspected(home, &chosen)? {
-        let target = folder_of(home, agent);
-        let wanted = before.ours();
-        if wanted && !done.contains(&target) {
-            folder::remove(&target).map_err(|e| {
-                Failure::new(
-                    "skill_write_failed",
-                    format!(
-                        "The skill at {} could not be removed: {e}.",
-                        target.display()
-                    ),
-                    "Check the folder's permissions, then run elsecall skill remove again.",
-                )
-            })?;
-            done.push(target.clone());
-        }
-        let mut item = entry(home, agent, before);
-        item["changed"] = json!(wanted);
-        entries.push(item);
-    }
-    Ok(Printed::Json(json!({ "agents": entries }), true))
+fn entry(home: &Path, target: &Target) -> Value {
+    json!({
+        "agent": target.agent,
+        "label": target.agent.label(),
+        "found": target.agent.found(home),
+        "skill": { "path": target.folder, "state": target.before },
+    })
 }
 
-fn inspected(home: &Path, chosen: &[Agent]) -> Result<Vec<(Agent, State)>> {
-    chosen
+/// Each agent's entry, what was done to it, and why it was skipped if it was.
+fn described(home: &Path, targets: &[Target], outcomes: &[Outcome]) -> Vec<Value> {
+    targets
         .iter()
-        .map(|&agent| Ok((agent, inspect(&folder_of(home, agent))?)))
+        .zip(outcomes)
+        .map(|(target, outcome)| {
+            let mut item = entry(home, target);
+            item["changed"] = json!(*outcome == Outcome::Changed);
+            match outcome {
+                Outcome::SkippedForeign => item["skipped"] = json!("foreign"),
+                Outcome::SkippedLinked => item["skipped"] = json!("linked"),
+                Outcome::Unchanged | Outcome::Changed => {}
+            }
+            item
+        })
         .collect()
 }
 
-fn folder_of(home: &Path, agent: Agent) -> PathBuf {
-    agent.skills(home).join(folder::NAME)
+fn unreadable((folder, e): Failed) -> Failure {
+    Failure::new(
+        "skill_unreadable",
+        format!(
+            "The skill folder {} could not be read: {e}.",
+            folder.display()
+        ),
+        "Check the folder's permissions, then run the command again.",
+    )
 }
 
-fn entry(home: &Path, agent: Agent, state: State) -> Value {
-    json!({
-        "agent": agent,
-        "label": agent.label(),
-        "found": agent.found(home),
-        "skill": { "path": folder_of(home, agent), "state": state },
-    })
-}
-
-fn inspect(target: &Path) -> Result<State> {
-    folder::state(target).map_err(|e| {
-        Failure::new(
-            "skill_unreadable",
-            format!(
-                "The skill folder {} could not be read: {e}.",
-                target.display()
-            ),
-            "Check the folder's permissions, then run the command again.",
-        )
-    })
-}
-
-fn written(result: std::io::Result<()>, target: &Path) -> Result<()> {
-    result.map_err(|e| {
-        Failure::new(
-            "skill_write_failed",
-            format!(
-                "The skill could not be written to {}: {e}.",
-                target.display()
-            ),
-            "Check the folder's permissions, then run the command again.",
-        )
-    })
+fn unwritable((folder, e): Failed, what: &str) -> Failure {
+    Failure::new(
+        "skill_write_failed",
+        format!(
+            "The skill in {} could not be {what}: {e}.",
+            folder.display()
+        ),
+        "Check the folder's permissions, then run the command again.",
+    )
 }
 
 fn foreign(target: &Path) -> Failure {
