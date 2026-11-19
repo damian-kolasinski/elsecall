@@ -2,7 +2,7 @@
 //! Without a configured presence, loopback never stands in for the tailnet. This test
 //! binary is its own process, which never enables the override.
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use elsecall_membership::{member_code, member_key::MemberKey, roster::Member};
+use elsecall_peers::{member_code, member_key::MemberKey, roster::Member};
 
 #[test]
 fn production_members_refuse_loopback_endpoints() {

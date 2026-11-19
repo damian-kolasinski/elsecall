@@ -30,7 +30,7 @@ pub struct Record {
     pub internal: bool,
     /// Contextual outgoing peer failures during this request (not causal attribution).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub peer_io: Option<elsecall_peer_diagnostics::History>,
+    pub peer_io: Option<elsecall_peers::peer_diagnostics::History>,
     pub placement: Placement,
     pub urgency: Urgency,
     pub size: Cores,

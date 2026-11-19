@@ -11,7 +11,7 @@ use axum::{
 };
 use elsecall_contract::api;
 use elsecall_contract::failure::Failure;
-use elsecall_membership::roster::{MemberName, Readiness};
+use elsecall_peers::roster::{MemberName, Readiness};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::sync::Arc;
 

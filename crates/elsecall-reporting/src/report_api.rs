@@ -24,7 +24,7 @@ use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_fleet::fleet::Fleet;
 use elsecall_load_log::buckets::Bucket;
-use elsecall_membership::membership_store::Membership;
+use elsecall_peers::membership_store::Membership;
 use elsecall_report_facts::{
     report_protocol::{Cursor, FactsPage, FactsRequest, LoadRequest},
     window::{Window, invalid},
@@ -272,7 +272,7 @@ async fn peer_io(body: Bytes) -> Response {
         &body,
         |request: elsecall_report_facts::report_protocol::PeerIoRequest| {
             let window = asked_window(request.since_ms, request.until_ms)?;
-            Ok(elsecall_peer_diagnostics::between(
+            Ok(elsecall_peers::peer_diagnostics::between(
                 window.since,
                 window.until,
             ))
@@ -285,7 +285,7 @@ async fn peer_io(body: Bytes) -> Response {
 mod tests {
     use crate::report_api::*;
     use elsecall_contract::inspection::{MemoryPressure, ThermalState};
-    use elsecall_peer_transport::peer_client::RESPONSE_LIMIT;
+    use elsecall_peers::peer_client::RESPONSE_LIMIT;
     use elsecall_report_facts::{
         facts::{Estimator, Fact, Predicted},
         report_protocol::PAGE,

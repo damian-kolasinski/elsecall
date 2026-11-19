@@ -290,7 +290,7 @@ pub fn recent() -> History {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::peer_diagnostics::*;
     use std::os::unix::fs::PermissionsExt;
     #[test]
     fn failure_kinds_and_durations_survive_reopen_in_private_bounded_history() {

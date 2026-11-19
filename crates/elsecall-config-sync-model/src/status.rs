@@ -4,7 +4,7 @@
 use crate::synced_path::SyncedPath;
 use elsecall_contract::failure::Failure;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_membership::roster::MemberName;
+use elsecall_peers::roster::MemberName;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 

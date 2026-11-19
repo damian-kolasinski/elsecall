@@ -4,8 +4,8 @@ mod diagnostics;
 mod members;
 mod processes;
 use elsecall_fleet::fleet::PeerStatus;
-use elsecall_membership::{member_key::MemberKey, peer_auth, roster::Member};
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
+use elsecall_peers::{member_key::MemberKey, peer_auth, roster::Member};
 use hyper::Method;
 use members::{TestMember, enrol, enrol_awaiting};
 use std::time::Duration;
@@ -232,7 +232,7 @@ async fn responses_not_signed_by_the_enrolled_key_are_rejected() {
     // Something else answers at an enrolled member's address with valid-looking data.
     // Its loopback endpoint is valid only once this process lets loopback stand in
     // for the tailnet, which no other test may be relied on to have done first.
-    elsecall_tailnet::tailnet::allow_loopback_members();
+    elsecall_peers::tailnet::allow_loopback_members();
     let impostor = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = impostor.local_addr().unwrap().port();
     let app = axum::Router::new().fallback(|| async {
@@ -247,7 +247,7 @@ async fn responses_not_signed_by_the_enrolled_key_are_rejected() {
     .unwrap();
     let a = TestMember::start("alpha");
     let b = TestMember::start("bravo");
-    let code = elsecall_membership::member_code::encode(&claimed);
+    let code = elsecall_peers::member_code::encode(&claimed);
     assert_eq!(b.fails(&["fleet", "join", &code]), "member_unverified");
     // Enrolling it succeeds locally, but the fleet view never trusts its answers.
     a.ok(&["fleet", "enroll", &code]);

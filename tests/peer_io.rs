@@ -8,9 +8,9 @@ use axum::{
     routing::any,
 };
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_membership::{member_key::MemberKey, peer_auth, roster::Member};
-use elsecall_peer_diagnostics::{self as peer_diagnostics, Kind, Phase};
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
+use elsecall_peers::peer_diagnostics::{self as peer_diagnostics, Kind, Phase};
+use elsecall_peers::{member_key::MemberKey, peer_auth, roster::Member};
 use hyper::Method;
 use serde_json::{Value, json};
 use std::{
@@ -92,7 +92,7 @@ async fn answer(
     (status, [(peer_auth::SIGNATURE_HEADER, signature)], bytes).into_response()
 }
 async fn server(fault: &'static str) -> (Member, Peer, tokio::task::JoinHandle<()>) {
-    elsecall_tailnet::tailnet::allow_loopback_members();
+    elsecall_peers::tailnet::allow_loopback_members();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let peer = Peer {
         key: Arc::new(MemberKey::generate().unwrap()),
@@ -378,7 +378,7 @@ async fn dropping_member(
     reset: bool,
 ) -> (Member, Arc<AtomicUsize>, tokio::task::JoinHandle<()>) {
     use tokio::io::AsyncReadExt;
-    elsecall_tailnet::tailnet::allow_loopback_members();
+    elsecall_peers::tailnet::allow_loopback_members();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let member = Member::new(
         "macbook-pro".parse().unwrap(),

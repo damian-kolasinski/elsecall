@@ -22,8 +22,8 @@ use crate::config_sync::{
 use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::fleet::{Fleet, RoleHandover, SyncReport};
-use elsecall_membership::roster::{Member, MemberName, Roster};
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
+use elsecall_peers::roster::{Member, MemberName, Roster};
 use elsecall_service_config as configuration;
 use elsecall_workspace::digest::Digest;
 use hyper::Method;
@@ -427,7 +427,7 @@ impl ConfigSync {
         let result = tokio::time::timeout(EXCHANGE_TIMEOUT, self.exchange_push(member, manifest))
             .await
             .unwrap_or_else(|_| {
-                Err(elsecall_peer_transport::peer_client::operation_timeout(
+                Err(elsecall_peers::peer_client::operation_timeout(
                     member,
                     protocol::ROUTE,
                     started,
@@ -531,7 +531,7 @@ impl ConfigSync {
         tokio::time::timeout(EXCHANGE_TIMEOUT, exchange)
             .await
             .unwrap_or_else(|_| {
-                Err(elsecall_peer_transport::peer_client::operation_timeout(
+                Err(elsecall_peers::peer_client::operation_timeout(
                     member,
                     protocol::ROUTE,
                     started,
@@ -560,7 +560,7 @@ impl ConfigSync {
         let target = roster
             .member(member)
             .cloned()
-            .ok_or_else(|| elsecall_membership::roster::not_a_member(member))?;
+            .ok_or_else(|| elsecall_peers::roster::not_a_member(member))?;
         let _exchange = self.exchanges.lock(&target.name).await;
         let (manifest, _pin) = {
             let _issuing = self.issuing.lock().await;
@@ -925,7 +925,7 @@ impl ConfigSync {
         &self,
         mut channel: S,
         master: MemberName,
-        sender: elsecall_membership::member_key::PublicKey,
+        sender: elsecall_peers::member_key::PublicKey,
     ) {
         let Ok(_activity) = self.activity.enter() else {
             let _ = protocol::send(
@@ -962,7 +962,7 @@ impl ConfigSync {
         &self,
         channel: &mut S,
         master: &MemberName,
-        sender: &elsecall_membership::member_key::PublicKey,
+        sender: &elsecall_peers::member_key::PublicKey,
     ) -> Result<()> {
         let (purpose, manifest) = match protocol::receive(channel).await? {
             Message::Offer { purpose, manifest } => (purpose, manifest),

@@ -9,7 +9,7 @@ use elsecall_config_sync::config_sync::{
     protocol::{self, Message, Purpose},
     state::State,
 };
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
 use members::{TestMember, enrol};
 use serde_json::Value;
 use std::{

@@ -1,9 +1,9 @@
 //! TCP connection and HTTP I/O progress. Tailnet roster endpoints are numeric
 //! addresses, so this transport does not do DNS or TLS. Identity is signed above it.
 use crate::peer_client::unavailable;
+use crate::peer_diagnostics::{Kind, Phase};
+use crate::roster::Member;
 use elsecall_contract::failure::Result;
-use elsecall_membership::roster::Member;
-use elsecall_peer_diagnostics::{Kind, Phase};
 use std::{
     pin::Pin,
     sync::{
@@ -193,7 +193,7 @@ impl<S> Observed<S> {
                 _ => Kind::Receive,
             },
         };
-        let attempt = elsecall_peer_diagnostics::Attempt::new(
+        let attempt = crate::peer_diagnostics::Attempt::new(
             &self.member,
             &self.path,
             1,
@@ -201,7 +201,7 @@ impl<S> Observed<S> {
             Some(kind),
             self.started,
         );
-        elsecall_peer_diagnostics::record(&attempt);
+        crate::peer_diagnostics::record(&attempt);
     }
     fn progress(&mut self, phase: Phase) {
         if let StreamTimeout::Inactivity(duration) = self.timeout {

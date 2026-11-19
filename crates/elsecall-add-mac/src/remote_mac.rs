@@ -2,7 +2,7 @@
 //! changes Add Mac makes there. The production adapter is SSH (`openssh_mac`).
 use crate::inbound_firewall::Rule;
 use elsecall_contract::failure::Result;
-use elsecall_tailnet::tailscale_bottle::Bottle;
+use elsecall_peers::tailscale_bottle::Bottle;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 

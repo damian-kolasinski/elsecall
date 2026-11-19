@@ -24,7 +24,7 @@ use elsecall_api_response as api_response;
 use elsecall_contract::api;
 use elsecall_contract::failure::Failure;
 use elsecall_fleet::fleet::Fleet;
-use elsecall_membership::{
+use elsecall_peers::{
     membership_store::Membership,
     roster::{MemberName, Roster},
 };

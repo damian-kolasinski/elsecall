@@ -7,7 +7,7 @@ use elsecall_config_sync::config_sync::{
     service::{ConfigSync, MemberSync},
 };
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_membership::roster::MemberName;
+use elsecall_peers::roster::MemberName;
 use elsecall_scheduling::pre_run_sync::{PreRunSync, PushedPath, Synced};
 use futures_util::future::BoxFuture;
 use std::sync::Arc;

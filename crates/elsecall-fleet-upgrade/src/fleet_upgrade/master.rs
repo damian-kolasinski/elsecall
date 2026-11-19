@@ -14,8 +14,8 @@ use elsecall_contract::{
     executable_format::{self, Architecture},
 };
 use elsecall_fleet::fleet::Fleet;
-use elsecall_membership::roster::{Member, MemberName};
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
+use elsecall_peers::roster::{Member, MemberName};
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -166,7 +166,7 @@ pub async fn upgrade(
             roster
                 .member(name)
                 .cloned()
-                .ok_or_else(|| elsecall_membership::roster::not_a_member(name))?,
+                .ok_or_else(|| elsecall_peers::roster::not_a_member(name))?,
         ],
         None => roster
             .members()
@@ -314,7 +314,7 @@ async fn upgrade_member(
         os: Os::Macos,
         architectures: distributed.architectures.clone(),
         wait_seconds,
-        issued_at: elsecall_membership::peer_auth::now(),
+        issued_at: elsecall_peers::peer_auth::now(),
     };
     let signed = manifest.sign(fleet.member_key());
     let from = match send(fleet, member, signed, bytes).await {

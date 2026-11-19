@@ -84,7 +84,7 @@ async fn the_adapter_reads_installs_and_authorizes_on_a_real_mac() {
     if std::env::var_os("ELSECALL_E2E_TAILSCALE").is_some() {
         assert_eq!(tailnet, elsecall_add_mac::remote_mac::RemoteTailnet::Absent);
         let bottle =
-            elsecall_tailnet::tailscale_bottle::for_macos(facts.macos_major().unwrap()).unwrap();
+            elsecall_peers::tailscale_bottle::for_macos(facts.macos_major().unwrap()).unwrap();
         mac.install_tailscale(&bottle).await.unwrap();
         assert_eq!(
             mac.tailnet().await.unwrap(),

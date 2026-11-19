@@ -425,8 +425,7 @@ fn validate(r: &Launch) -> Result<()> {
         || r.demand.is_empty()
         || r.demand.len() > 64
         || r.demand.iter().any(|(m, c)| {
-            m.parse::<elsecall_membership::roster::MemberName>()
-                .is_err()
+            m.parse::<elsecall_peers::roster::MemberName>().is_err()
                 || !c.is_finite()
                 || !(0.0..=256.0).contains(c)
         })

@@ -5,12 +5,12 @@
 //! unreachable unless forced, recorded locally, then delivered to every other member.
 use crate::fleet::{Fleet, OfferOutcome, PeerStatus, PlacementAccepted};
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_membership::{
+use elsecall_peers::peer_client::{self, PEER_TIMEOUT};
+use elsecall_peers::{
     member_code,
     membership_store::Membership,
     roster::{Change, Member, MemberName, Offer, Readiness, Roster, not_a_member},
 };
-use elsecall_peer_transport::peer_client::{self, PEER_TIMEOUT};
 use hyper::Method;
 use serde::Serialize;
 

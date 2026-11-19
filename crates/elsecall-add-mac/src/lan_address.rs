@@ -1,6 +1,6 @@
 //! Which addresses are a Mac's addresses on a local network: what members report
 //! about themselves and what `nearby` compares them with.
-use elsecall_tailnet::tailnet::is_tailnet_address;
+use elsecall_peers::tailnet::is_tailnet_address;
 use std::net::IpAddr;
 
 /// Whether `address` is one other Macs on a local network reach a Mac at: not

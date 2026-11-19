@@ -35,7 +35,7 @@ use elsecall_contract::{
     executable_format::{self, Architecture},
 };
 use elsecall_fleet::fleet::Fleet;
-use elsecall_membership::{member_key::PublicKey, roster::MemberName};
+use elsecall_peers::{member_key::PublicKey, roster::MemberName};
 use serde::{Deserialize, Serialize};
 use std::{
     path::PathBuf,
@@ -407,7 +407,7 @@ impl Upgrades {
                 "Run elsecall fleet upgrade on the master.",
             ));
         }
-        let now = elsecall_membership::peer_auth::now();
+        let now = elsecall_peers::peer_auth::now();
         if manifest.issued_at.abs_diff(now) > protocol::MANIFEST_WINDOW_SECONDS {
             return Err(Failure::new(
                 "manifest_expired",

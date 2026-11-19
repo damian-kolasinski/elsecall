@@ -70,7 +70,7 @@ pub enum RunEnded {
         remote_failure_phase: Option<RemoteFailurePhase>,
     },
     PeerFailed {
-        failure: elsecall_peer_diagnostics::StreamFailure,
+        failure: elsecall_peers::peer_diagnostics::StreamFailure,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         remote_failure_phase: Option<RemoteFailurePhase>,
     },

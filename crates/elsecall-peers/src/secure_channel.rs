@@ -273,7 +273,7 @@ impl<S: AsyncRead + Unpin> AsyncRead for SecureStream<S> {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::secure_channel::*;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     fn pair() -> (Keys, Keys) {

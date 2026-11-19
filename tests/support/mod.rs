@@ -9,8 +9,8 @@ use elsecall_contract::inspection::{
 };
 use elsecall_host::{paths::Paths, private_files};
 use elsecall_os_processes::processes::MacProcesses;
+use elsecall_peers::tailnet::{Presence, Tailnet};
 use elsecall_scheduling::service::Adapters;
-use elsecall_tailnet::tailnet::{Presence, Tailnet};
 use serde_json::Value;
 use std::{
     path::{Path, PathBuf},
@@ -24,7 +24,7 @@ use tokio::process::Child;
 struct NoTailnet;
 impl Tailnet for NoTailnet {
     fn discover(&self) -> Result<Presence> {
-        Err(elsecall_tailnet::tailnet::unavailable("not connected"))
+        Err(elsecall_peers::tailnet::unavailable("not connected"))
     }
 }
 

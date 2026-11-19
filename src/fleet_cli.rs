@@ -7,7 +7,7 @@ use elsecall_fleet::fleet_local_api::{
 };
 use elsecall_host::client;
 use elsecall_host::paths::Paths;
-use elsecall_membership::roster::{MemberName, Readiness};
+use elsecall_peers::roster::{MemberName, Readiness};
 use hyper::Method;
 use serde_json::Value;
 use std::time::Duration;

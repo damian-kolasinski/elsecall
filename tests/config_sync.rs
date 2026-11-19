@@ -11,7 +11,7 @@ use elsecall_config_sync::config_sync::{
     state::State,
 };
 use elsecall_host::paths::Paths;
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
 use elsecall_workspace::path::WorkspacePath;
 use members::{TestMember, enrol};
 use serde_json::Value;

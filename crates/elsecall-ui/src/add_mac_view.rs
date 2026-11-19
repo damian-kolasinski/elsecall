@@ -16,7 +16,7 @@ use elsecall_add_mac::add_mac::AddReport;
 use elsecall_add_mac::nearby_macs::NearbyMac;
 use elsecall_add_mac::remote_mac::LoginLink;
 use elsecall_contract::failure::Failure;
-use elsecall_membership::roster::Readiness;
+use elsecall_peers::roster::Readiness;
 
 const SHEET_WIDTH: f32 = 680.0;
 const ART_WIDTH: f32 = 300.0;

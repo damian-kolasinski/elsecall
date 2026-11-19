@@ -13,14 +13,14 @@ use axum::{
 use elsecall_contract::api;
 use elsecall_contract::failure::Failure;
 use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet};
-use elsecall_membership::{
+use elsecall_peers::peer_client::RESPONSE_LIMIT;
+use elsecall_peers::{
     peer_auth::{RequestProof, SIGNATURE_HEADER},
     roster::Roster,
 };
-use elsecall_peer_transport::peer_client::RESPONSE_LIMIT;
 use std::{sync::Arc, time::Duration};
 
-pub use elsecall_peer_transport::peer_transport::REQUEST_LIMIT;
+pub use elsecall_peers::peer_transport::REQUEST_LIMIT;
 /// How long a request body may take to arrive once its headers named an enrolled member.
 const BODY_TIMEOUT: Duration = Duration::from_secs(5);
 

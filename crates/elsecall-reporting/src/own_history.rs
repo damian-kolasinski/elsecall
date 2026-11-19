@@ -142,9 +142,9 @@ impl MemberHistory for OwnHistory {
     fn peer_io(
         &self,
         window: Window,
-    ) -> BoxFuture<'static, Result<elsecall_peer_diagnostics::History>> {
+    ) -> BoxFuture<'static, Result<elsecall_peers::peer_diagnostics::History>> {
         blocking(move || {
-            Ok(elsecall_peer_diagnostics::between(
+            Ok(elsecall_peers::peer_diagnostics::between(
                 window.since,
                 window.until,
             ))

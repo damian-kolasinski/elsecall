@@ -41,32 +41,12 @@ band = "foundation"
 # configuration names and config sync enforces.
 modules = ["config_sync::synced_path", "config_sync::status"]
 
-[crates.secure-channel]
-band = "foundation"
-modules = ["secure_channel"]
-
-[crates.tailnet]
-band = "foundation"
-modules = ["tailnet", "tailscale_bottle"]
-
-[crates.membership]
-band = "foundation"
-modules = ["roster", "member_key", "member_code", "membership_store", "peer_auth"]
-
 [crates.os-processes]
 band = "core"
 # The operating system's processes: identity and exit notification, process
 # groups and their signals, and the CPU time a command used. A second platform
 # adds its implementation here.
 modules = ["macos::process_group", "macos::process_usage", "macos::processes"]
-
-[crates.peer-transport]
-band = "core"
-modules = ["peer_client", "peer_transport", "socket_io", "send_inactivity", "receive_inactivity"]
-
-[crates.peer-diagnostics]
-band = "core"
-modules = ["peer_diagnostics"]
 
 [crates.scheduling]
 band = "core"
@@ -229,7 +209,7 @@ band = "entry"
 packages = ["elsecall-ui"]
 # The desktop app talks to the service through its contract, never through the
 # service's internals.
-may_depend_on = ["contract", "host", "membership", "add-mac", "release-update", "installation", "window", "workload-config"]
+may_depend_on = ["contract", "host", "peers", "add-mac", "release-update", "installation", "window", "workload-config"]
 
 [crates.contract]
 band = "foundation"
@@ -240,3 +220,8 @@ modules = ["failure", "api", "wire", "guidance", "run_admission", "labels", "reh
 band = "core"
 # This machine's local plumbing: starting child processes, the state directory and its private files, SQLite retention, the service log, the client for the local service, and scripted machine observations for tests.
 modules = ["child_start", "command_capture", "paths", "private_files", "local_access", "state_temps", "run_id_file", "sqlite_retention", "service_log", "client", "machine_script"]
+
+[crates.peers]
+band = "core"
+# Talking to the other members: the tailnet, the secure channel between members, membership and its keys, peer transport and its diagnostics.
+modules = ["tailnet", "tailscale_bottle", "secure_channel", "roster", "member_key", "member_code", "membership_store", "peer_auth", "peer_client", "peer_transport", "socket_io", "send_inactivity", "receive_inactivity", "peer_diagnostics"]

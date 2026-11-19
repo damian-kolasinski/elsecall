@@ -14,7 +14,7 @@ use elsecall_contract::scheduling_model::{
     capacity::{Capacity, Cores},
     request::{MAXIMUM_HOLD_LIMIT, Urgency},
 };
-use elsecall_membership::roster::MemberName;
+use elsecall_peers::roster::MemberName;
 use elsecall_scheduling::parameters::{Overrides, Parameters};
 use elsecall_workload::trace::{Request, Trace};
 use elsecall_workload_config::workload_settings::WorkloadSettings;

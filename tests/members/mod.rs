@@ -3,7 +3,7 @@
 //! "discovers" loopback and its own port, with scripted load and speed.
 #![allow(dead_code)]
 use elsecall_host::paths::Paths;
-use elsecall_membership::{member_key::MemberKey, roster::Member};
+use elsecall_peers::{member_key::MemberKey, roster::Member};
 use serde_json::Value;
 use std::{
     io::{Read, Write},
@@ -152,7 +152,7 @@ impl TestMember {
         tailnet: bool,
     ) -> Self {
         // This process talks to members over loopback too.
-        elsecall_tailnet::tailnet::allow_loopback_members();
+        elsecall_peers::tailnet::allow_loopback_members();
         let home = tempfile::Builder::new()
             .prefix("ec-")
             .tempdir_in("/tmp")
@@ -199,7 +199,7 @@ impl TestMember {
         configuration: &str,
         environment: &[(&str, &str)],
     ) -> Self {
-        elsecall_tailnet::tailnet::allow_loopback_members();
+        elsecall_peers::tailnet::allow_loopback_members();
         let home = tempfile::Builder::new()
             .prefix("ec-")
             .tempdir_in("/tmp")
@@ -482,7 +482,7 @@ impl TestMember {
     }
 
     pub(crate) fn as_member(&self) -> Member {
-        elsecall_membership::member_code::decode(&self.code()).unwrap()
+        elsecall_peers::member_code::decode(&self.code()).unwrap()
     }
 
     /// The fleet as this member sees it, keyed by member name.

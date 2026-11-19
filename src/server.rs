@@ -22,7 +22,7 @@ use elsecall_housekeeping::{
         pass::{Housekeeper, Parts},
     },
 };
-use elsecall_membership::{member_key::MemberKey, membership_store::MembershipStore};
+use elsecall_peers::{member_key::MemberKey, membership_store::MembershipStore};
 use elsecall_placement::{placement_api, placement_host::PlacementHost};
 use elsecall_scheduling::service::{Adapters, Scheduler};
 use elsecall_workspace::{copies::Copies, location::Locations, object_sources::ObjectSources};
@@ -136,7 +136,7 @@ pub async fn serve_with_updates(
             "Use elsecall service restart for the installed service, or stop the other foreground serve process.",
         ));
     };
-    elsecall_peer_diagnostics::initialize(&paths)?;
+    elsecall_peers::peer_diagnostics::initialize(&paths)?;
     if let Err(error) = elsecall_host::state_temps::prune(&paths) {
         // Optional sync/upgrade state must not take down local admission.
         elsecall_host::service_log!(

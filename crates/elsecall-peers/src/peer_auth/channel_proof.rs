@@ -1,9 +1,9 @@
 //! Verification and derivation of an existing signed channel transcript.
+use crate::secure_channel::{Ephemeral, Keys};
 use crate::{
     member_key::PublicKey,
     peer_auth::{self, ChannelAcceptance},
 };
-use elsecall_secure_channel::{Ephemeral, Keys};
 use serde::{Deserialize, Serialize};
 /// Signed evidence for an ephemeral channel, independent of its transport and
 /// the adapter that will own decryption. Only public values are serialized.
@@ -65,7 +65,7 @@ impl ChannelProof {
             run,
             public,
         )?;
-        if !elsecall_secure_channel::is_contributory(&peer) {
+        if !crate::secure_channel::is_contributory(&peer) {
             return None;
         }
         let context = ChannelAcceptance {

@@ -11,7 +11,7 @@ use clap::{Args, Subcommand};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_host::client;
 use elsecall_host::paths::Paths;
-use elsecall_membership::roster::MemberName;
+use elsecall_peers::roster::MemberName;
 use hyper::Method;
 use serde_json::Value;
 use std::time::Duration;

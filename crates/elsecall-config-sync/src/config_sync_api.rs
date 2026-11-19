@@ -17,7 +17,7 @@ use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_api_response::failure;
 use elsecall_contract::failure::Failure;
 use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet, SyncAuthority};
-use elsecall_secure_channel::{Ephemeral, SecureStream};
+use elsecall_peers::secure_channel::{Ephemeral, SecureStream};
 use hyper_util::rt::TokioIo;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -101,7 +101,7 @@ async fn attach(
         HeaderValue::from_static(protocol::PROTOCOL),
     );
     headers.insert(
-        elsecall_membership::peer_auth::CHANNEL_HEADER,
+        elsecall_peers::peer_auth::CHANNEL_HEADER,
         HeaderValue::from_str(&accepted).expect("base64 header value"),
     );
     response

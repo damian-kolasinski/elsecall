@@ -14,9 +14,9 @@ use elsecall_api_response::failure;
 use elsecall_contract::failure::Failure;
 use elsecall_contract::scheduling_model::run_id::RunId;
 use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet, PlacementAuthority};
+use elsecall_peers::secure_channel::{Ephemeral, SecureStream};
 use elsecall_remote_run::remote_run::runner;
 use elsecall_scheduling::{placed::PlacementOffer, quote::QuoteRequest};
-use elsecall_secure_channel::{Ephemeral, SecureStream};
 use hyper_util::rt::TokioIo;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -127,8 +127,8 @@ async fn attach(
         match upgrade.await {
             Ok(upgraded) => {
                 let stream = SecureStream::new(
-                    elsecall_peer_transport::receive_inactivity::Reader::new(
-                        elsecall_peer_transport::send_inactivity::Writer::new(
+                    elsecall_peers::receive_inactivity::Reader::new(
+                        elsecall_peers::send_inactivity::Writer::new(
                             TokioIo::new(upgraded),
                             elsecall_remote_run::remote_run::link::GRACE,
                         ),
@@ -146,7 +146,7 @@ async fn attach(
     headers.insert(header::CONNECTION, HeaderValue::from_static("upgrade"));
     headers.insert(header::UPGRADE, HeaderValue::from_static("elsecall-run/1"));
     headers.insert(
-        elsecall_membership::peer_auth::CHANNEL_HEADER,
+        elsecall_peers::peer_auth::CHANNEL_HEADER,
         HeaderValue::from_str(&accepted).expect("base64 header value"),
     );
     response

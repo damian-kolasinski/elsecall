@@ -10,7 +10,7 @@ use elsecall_contract::api;
 use elsecall_contract::failure::Result;
 use elsecall_fleet::fleet::Fleet;
 use elsecall_host::paths::Paths;
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
 use serde_json::{Value, json};
 use std::{sync::Arc, time::Duration};
 pub async fn fleet_status(paths: &Paths, fleet: &Result<Arc<Fleet>>) -> Value {

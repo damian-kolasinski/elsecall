@@ -15,8 +15,8 @@ workspace = true
 [dependencies]
 elsecall-add-mac.workspace = true
 elsecall-contract.workspace = true
+elsecall-peers.workspace = true
 elsecall-platform-macos.workspace = true
-elsecall-tailnet.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 tokio.workspace = true

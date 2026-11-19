@@ -1648,7 +1648,7 @@ impl Scheduler {
                 "List recent work with elsecall runs.",
             )
         })?;
-        record.peer_io = Some(elsecall_peer_diagnostics::between(
+        record.peer_io = Some(elsecall_peers::peer_diagnostics::between(
             record.requested_at,
             record.ended_at.unwrap_or_else(|| self.clock.now()),
         ));

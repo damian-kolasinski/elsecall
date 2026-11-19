@@ -120,7 +120,7 @@ async fn bounded_delivery_backpressure_does_not_spend_the_next_read_budget() {
 
 #[tokio::test]
 async fn a_read_failure_wakes_blocked_producers_without_receiving_and_keeps_its_origin() {
-    use elsecall_secure_channel::{Ephemeral, SecureStream};
+    use elsecall_peers::secure_channel::{Ephemeral, SecureStream};
     for kind in ["protocol", "authentication", "receive"] {
         let (stream, mut peer) = tokio::io::duplex(64);
         let link = if kind == "authentication" {

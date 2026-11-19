@@ -15,7 +15,7 @@ use elsecall_add_mac::{
 };
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_host::paths::Paths;
-use elsecall_tailnet::tailscale_bottle::Bottle;
+use elsecall_peers::tailscale_bottle::Bottle;
 use members::{TestMember, free_port};
 use serde_json::Value;
 use std::{path::Path, process::Output, time::Duration};

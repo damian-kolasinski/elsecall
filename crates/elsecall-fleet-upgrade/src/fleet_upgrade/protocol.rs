@@ -21,7 +21,7 @@ use elsecall_contract::{
     build_identity::{Build, Digest},
     executable_format::Architecture,
 };
-use elsecall_membership::member_key::{MemberKey, PublicKey};
+use elsecall_peers::member_key::{MemberKey, PublicKey};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
@@ -120,7 +120,7 @@ impl Manifest {
             .map(|a| a.name())
             .collect::<Vec<_>>()
             .join(",");
-        elsecall_membership::peer_auth::transcript(
+        elsecall_peers::peer_auth::transcript(
             "elsecall/upgrade-manifest/v1",
             &[
                 master.as_bytes(),

@@ -1,13 +1,13 @@
 //! Signed requests to another member over the tailnet, with verified responses.
+use crate::peer_diagnostics::{self as peer_diagnostics, Attempt, Kind, Phase};
 use crate::peer_transport::{self, Progress};
-use elsecall_contract::api::{ErrorResponse, Response, SCHEMA_VERSION};
-use elsecall_contract::failure::{Failure, Result};
-use elsecall_membership::{
+use crate::{
     member_key::MemberKey,
     peer_auth::{self, SIGNATURE_HEADER},
     roster::Member,
 };
-use elsecall_peer_diagnostics::{self as peer_diagnostics, Attempt, Kind, Phase};
+use elsecall_contract::api::{ErrorResponse, Response, SCHEMA_VERSION};
+use elsecall_contract::failure::{Failure, Result};
 use http_body_util::{BodyExt, Full, Limited};
 use hyper::{Method, Request, body::Bytes, client::conn::http1};
 use hyper_util::rt::TokioIo;
@@ -302,15 +302,15 @@ pub fn unavailable(member: &Member) -> Failure {
 
 /// An outer whole-operation bound, rather than a timeout in a known socket phase.
 pub fn operation_timeout(member: &Member, path: &str, started: std::time::Instant) -> Failure {
-    let attempt = elsecall_peer_diagnostics::Attempt::new(
+    let attempt = crate::peer_diagnostics::Attempt::new(
         member.name.as_str(),
         path,
         1,
-        elsecall_peer_diagnostics::Phase::Request,
-        Some(elsecall_peer_diagnostics::Kind::Timeout),
+        crate::peer_diagnostics::Phase::Request,
+        Some(crate::peer_diagnostics::Kind::Timeout),
         started,
     );
-    elsecall_peer_diagnostics::record(&attempt);
+    crate::peer_diagnostics::record(&attempt);
     unavailable(member).with_details(serde_json::json!({"peer_io":attempt}))
 }
 
@@ -400,7 +400,7 @@ pub async fn call_each<T: DeserializeOwned>(
 
 /// A run's channel to the member that hosts it.
 pub type RunChannel = crate::peer_transport::Observed<
-    elsecall_secure_channel::SecureStream<TokioIo<hyper::upgrade::Upgraded>>,
+    crate::secure_channel::SecureStream<TokioIo<hyper::upgrade::Upgraded>>,
 >;
 
 /// How long attaching to a member may take, including the member's own checks.
@@ -424,15 +424,14 @@ pub async fn channel(
     purpose: &str,
     protocol: &'static str,
 ) -> Result<RunChannel> {
-    let ephemeral =
-        elsecall_secure_channel::Ephemeral::generate().ok_or_else(random_unavailable)?;
+    let ephemeral = crate::secure_channel::Ephemeral::generate().ok_or_else(random_unavailable)?;
     let accepted = open_channel(key, member, path, purpose, protocol, ephemeral.public).await?;
     let keys = accepted
         .acceptance
         .keys(purpose, ephemeral)
         .ok_or_else(|| protocol_error(member))?;
     Ok(crate::peer_transport::Observed::new(
-        elsecall_secure_channel::SecureStream::new(accepted.stream, keys),
+        crate::secure_channel::SecureStream::new(accepted.stream, keys),
         member.name.as_str(),
         path,
         crate::peer_transport::stream_timeout(protocol),
@@ -449,7 +448,7 @@ fn random_unavailable() -> Failure {
 
 pub struct AcceptedChannel {
     pub stream: TokioIo<hyper::upgrade::Upgraded>,
-    pub acceptance: elsecall_membership::peer_auth::ChannelProof,
+    pub acceptance: crate::peer_auth::ChannelProof,
 }
 
 /// Run-only local relay: the service authenticates its roster-selected peer but
@@ -621,7 +620,7 @@ async fn channel_once(
             "Something else answers at that member's address, or its key changed. Check the member, then remove and enrol it again.",
         )
     };
-    let acceptance = elsecall_membership::peer_auth::ChannelProof::new(
+    let acceptance = crate::peer_auth::ChannelProof::new(
         run,
         key.public(),
         member.key,

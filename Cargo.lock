@@ -1078,12 +1078,10 @@ dependencies = [
  "elsecall-housekeeping",
  "elsecall-installation",
  "elsecall-load-log",
- "elsecall-membership",
  "elsecall-openssh-mac",
  "elsecall-os-processes",
  "elsecall-outside-pressure",
- "elsecall-peer-diagnostics",
- "elsecall-peer-transport",
+ "elsecall-peers",
  "elsecall-placement",
  "elsecall-platform-macos",
  "elsecall-rehearsal",
@@ -1093,11 +1091,9 @@ dependencies = [
  "elsecall-report-facts",
  "elsecall-reporting",
  "elsecall-scheduling",
- "elsecall-secure-channel",
  "elsecall-service-config",
  "elsecall-service-lifecycle",
  "elsecall-simulation",
- "elsecall-tailnet",
  "elsecall-tools",
  "elsecall-trace",
  "elsecall-tuning",
@@ -1136,8 +1132,7 @@ dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
- "elsecall-membership",
- "elsecall-tailnet",
+ "elsecall-peers",
  "hyper",
  "libc",
  "serde",
@@ -1158,12 +1153,10 @@ dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
- "elsecall-membership",
  "elsecall-os-processes",
- "elsecall-peer-transport",
+ "elsecall-peers",
  "elsecall-remote-run",
  "elsecall-scheduling",
- "elsecall-secure-channel",
  "elsecall-service-lifecycle",
  "elsecall-workload-config",
  "elsecall-workspace",
@@ -1212,10 +1205,8 @@ dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
- "elsecall-membership",
- "elsecall-peer-transport",
+ "elsecall-peers",
  "elsecall-scheduling",
- "elsecall-secure-channel",
  "elsecall-service-config",
  "elsecall-workspace",
  "futures-util",
@@ -1237,7 +1228,7 @@ name = "elsecall-config-sync-model"
 version = "0.3.0"
 dependencies = [
  "elsecall-contract",
- "elsecall-membership",
+ "elsecall-peers",
  "serde",
  "serde_json",
 ]
@@ -1264,12 +1255,9 @@ dependencies = [
  "elsecall-config-sync-model",
  "elsecall-contract",
  "elsecall-load-log",
- "elsecall-membership",
  "elsecall-outside-pressure",
- "elsecall-peer-diagnostics",
- "elsecall-peer-transport",
+ "elsecall-peers",
  "elsecall-scheduling",
- "elsecall-tailnet",
  "futures-util",
  "hyper",
  "serde",
@@ -1288,11 +1276,9 @@ dependencies = [
  "elsecall-fleet",
  "elsecall-host",
  "elsecall-installation",
- "elsecall-membership",
- "elsecall-peer-transport",
+ "elsecall-peers",
  "elsecall-release-update",
  "elsecall-scheduling",
- "elsecall-secure-channel",
  "futures-util",
  "getrandom 0.3.4",
  "hyper",
@@ -1331,7 +1317,7 @@ dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
- "elsecall-peer-transport",
+ "elsecall-peers",
  "elsecall-scheduling",
  "elsecall-workspace",
  "futures-util",
@@ -1372,31 +1358,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-membership"
-version = "0.3.0"
-dependencies = [
- "base64 0.22.1",
- "ed25519-dalek",
- "elsecall-contract",
- "elsecall-host",
- "elsecall-secure-channel",
- "elsecall-tailnet",
- "getrandom 0.3.4",
- "libc",
- "serde",
- "serde_json",
- "tempfile",
- "zeroize",
-]
-
-[[package]]
 name = "elsecall-openssh-mac"
 version = "0.3.0"
 dependencies = [
  "elsecall-add-mac",
  "elsecall-contract",
+ "elsecall-peers",
  "elsecall-platform-macos",
- "elsecall-tailnet",
  "serde_json",
  "tempfile",
  "tokio",
@@ -1430,35 +1398,29 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-peer-diagnostics"
-version = "0.3.0"
-dependencies = [
- "elsecall-contract",
- "elsecall-host",
- "libc",
- "rusqlite",
- "serde",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "elsecall-peer-transport"
+name = "elsecall-peers"
 version = "0.3.0"
 dependencies = [
  "base64 0.22.1",
+ "chacha20poly1305",
+ "ed25519-dalek",
  "elsecall-contract",
- "elsecall-membership",
- "elsecall-peer-diagnostics",
- "elsecall-secure-channel",
+ "elsecall-host",
  "futures-util",
+ "getrandom 0.3.4",
+ "hkdf",
  "http-body-util",
  "hyper",
  "hyper-util",
  "libc",
+ "rusqlite",
  "serde",
  "serde_json",
+ "sha2",
+ "tempfile",
  "tokio",
+ "x25519-dalek",
+ "zeroize",
 ]
 
 [[package]]
@@ -1473,11 +1435,9 @@ dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
- "elsecall-membership",
- "elsecall-peer-transport",
+ "elsecall-peers",
  "elsecall-remote-run",
  "elsecall-scheduling",
- "elsecall-secure-channel",
  "elsecall-workspace",
  "futures-util",
  "hyper",
@@ -1497,7 +1457,7 @@ dependencies = [
  "elsecall-host",
  "elsecall-installation",
  "elsecall-outside-pressure",
- "elsecall-tailnet",
+ "elsecall-peers",
  "elsecall-window",
  "libc",
  "plist",
@@ -1517,9 +1477,8 @@ dependencies = [
  "elsecall-host",
  "elsecall-housekeeping",
  "elsecall-load-log",
- "elsecall-membership",
  "elsecall-os-processes",
- "elsecall-peer-transport",
+ "elsecall-peers",
  "elsecall-report-facts",
  "elsecall-scheduling",
  "elsecall-simulation",
@@ -1568,12 +1527,9 @@ dependencies = [
  "base64 0.22.1",
  "elsecall-contract",
  "elsecall-host",
- "elsecall-membership",
  "elsecall-os-processes",
- "elsecall-peer-diagnostics",
- "elsecall-peer-transport",
+ "elsecall-peers",
  "elsecall-scheduling",
- "elsecall-secure-channel",
  "elsecall-service-config",
  "elsecall-workload-config",
  "elsecall-workspace",
@@ -1626,10 +1582,8 @@ dependencies = [
  "elsecall-fleet",
  "elsecall-host",
  "elsecall-load-log",
- "elsecall-membership",
  "elsecall-outside-pressure",
- "elsecall-peer-diagnostics",
- "elsecall-peer-transport",
+ "elsecall-peers",
  "elsecall-report-facts",
  "elsecall-scheduling",
  "elsecall-workload",
@@ -1648,8 +1602,7 @@ dependencies = [
  "elsecall-contract",
  "elsecall-host",
  "elsecall-load-log",
- "elsecall-peer-diagnostics",
- "elsecall-peer-transport",
+ "elsecall-peers",
  "futures-util",
  "humantime",
  "libc",
@@ -1660,19 +1613,6 @@ dependencies = [
  "tempfile",
  "tokio",
  "toml",
-]
-
-[[package]]
-name = "elsecall-secure-channel"
-version = "0.3.0"
-dependencies = [
- "chacha20poly1305",
- "getrandom 0.3.4",
- "hkdf",
- "sha2",
- "tokio",
- "x25519-dalek",
- "zeroize",
 ]
 
 [[package]]
@@ -1710,7 +1650,7 @@ version = "0.3.0"
 dependencies = [
  "elsecall-contract",
  "elsecall-load-log",
- "elsecall-membership",
+ "elsecall-peers",
  "elsecall-remote-run",
  "elsecall-replay",
  "elsecall-report-facts",
@@ -1727,14 +1667,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-tailnet"
-version = "0.3.0"
-dependencies = [
- "elsecall-contract",
- "serde",
-]
-
-[[package]]
 name = "elsecall-tools"
 version = "0.3.0"
 dependencies = [
@@ -1744,8 +1676,7 @@ dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
- "elsecall-membership",
- "elsecall-peer-transport",
+ "elsecall-peers",
  "elsecall-scheduling",
  "futures-util",
  "hyper",
@@ -1811,7 +1742,7 @@ dependencies = [
  "elsecall-add-mac",
  "elsecall-contract",
  "elsecall-host",
- "elsecall-membership",
+ "elsecall-peers",
  "elsecall-release-update",
  "elsecall-window",
  "elsecall-workload-config",

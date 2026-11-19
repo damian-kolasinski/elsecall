@@ -81,7 +81,7 @@ impl SyncGate {
         master.ok(&[
             "fleet",
             "enroll",
-            &elsecall_membership::member_code::encode(&advertised),
+            &elsecall_peers::member_code::encode(&advertised),
         ]);
     }
     pub(crate) fn exchanges(&self) -> usize {

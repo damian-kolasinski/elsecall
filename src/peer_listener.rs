@@ -2,8 +2,8 @@
 //! bounds what an unauthenticated connection can cost.
 use axum::Router;
 use elsecall_fleet::fleet::Fleet;
-use elsecall_membership::roster::MemberName;
-use elsecall_tailnet::tailnet::{Tailnet, is_member_address};
+use elsecall_peers::roster::MemberName;
+use elsecall_peers::tailnet::{Tailnet, is_member_address};
 use hyper_util::{
     rt::{TokioIo, TokioTimer},
     service::TowerToHyperService,
@@ -187,7 +187,7 @@ async fn accept(listener: TcpListener, app: Router, limit: Arc<Semaphore>) {
             // their runner. `drive` bounds the exchange itself.
             let connection = builder
                 .serve_connection(
-                    TokioIo::new(elsecall_peer_transport::socket_io::Socket::new(
+                    TokioIo::new(elsecall_peers::socket_io::Socket::new(
                         stream,
                         elsecall_remote_run::remote_run::link::GRACE,
                     )),

@@ -3,8 +3,8 @@
 //! authenticated member API.
 use crate::fleet::Fleet;
 use elsecall_contract::failure::Result;
-use elsecall_membership::roster::Readiness;
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
+use elsecall_peers::roster::Readiness;
 use elsecall_scheduling::{
     placed::{Members, OfferReply, PlacementOffer, Standing},
     quote::{Quote, QuoteRequest},

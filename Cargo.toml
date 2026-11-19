@@ -64,12 +64,10 @@ elsecall-host = { path = "crates/elsecall-host" }
 elsecall-housekeeping = { path = "crates/elsecall-housekeeping" }
 elsecall-installation = { path = "crates/elsecall-installation" }
 elsecall-load-log = { path = "crates/elsecall-load-log" }
-elsecall-membership = { path = "crates/elsecall-membership" }
 elsecall-openssh-mac = { path = "crates/elsecall-openssh-mac" }
 elsecall-os-processes = { path = "crates/elsecall-os-processes" }
 elsecall-outside-pressure = { path = "crates/elsecall-outside-pressure" }
-elsecall-peer-diagnostics = { path = "crates/elsecall-peer-diagnostics" }
-elsecall-peer-transport = { path = "crates/elsecall-peer-transport" }
+elsecall-peers = { path = "crates/elsecall-peers" }
 elsecall-placement = { path = "crates/elsecall-placement" }
 elsecall-platform-macos = { path = "crates/elsecall-platform-macos" }
 elsecall-rehearsal = { path = "crates/elsecall-rehearsal" }
@@ -79,11 +77,9 @@ elsecall-replay = { path = "crates/elsecall-replay" }
 elsecall-report-facts = { path = "crates/elsecall-report-facts" }
 elsecall-reporting = { path = "crates/elsecall-reporting" }
 elsecall-scheduling = { path = "crates/elsecall-scheduling" }
-elsecall-secure-channel = { path = "crates/elsecall-secure-channel" }
 elsecall-service-config = { path = "crates/elsecall-service-config" }
 elsecall-service-lifecycle = { path = "crates/elsecall-service-lifecycle" }
 elsecall-simulation = { path = "crates/elsecall-simulation" }
-elsecall-tailnet = { path = "crates/elsecall-tailnet" }
 elsecall-tools = { path = "crates/elsecall-tools" }
 elsecall-trace = { path = "crates/elsecall-trace" }
 elsecall-tuning = { path = "crates/elsecall-tuning" }
@@ -143,12 +139,10 @@ elsecall-host.workspace = true
 elsecall-housekeeping.workspace = true
 elsecall-installation.workspace = true
 elsecall-load-log.workspace = true
-elsecall-membership.workspace = true
 elsecall-openssh-mac.workspace = true
 elsecall-os-processes.workspace = true
 elsecall-outside-pressure.workspace = true
-elsecall-peer-diagnostics.workspace = true
-elsecall-peer-transport.workspace = true
+elsecall-peers.workspace = true
 elsecall-placement.workspace = true
 elsecall-platform-macos.workspace = true
 elsecall-rehearsal.workspace = true
@@ -158,11 +152,9 @@ elsecall-replay.workspace = true
 elsecall-report-facts.workspace = true
 elsecall-reporting.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-secure-channel.workspace = true
 elsecall-service-config.workspace = true
 elsecall-service-lifecycle.workspace = true
 elsecall-simulation.workspace = true
-elsecall-tailnet.workspace = true
 elsecall-tools.workspace = true
 elsecall-trace.workspace = true
 elsecall-tuning.workspace = true

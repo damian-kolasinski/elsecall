@@ -35,7 +35,7 @@ pub struct PathRequest {
 pub struct PushRequest {
     /// Only this member, pushing only if it differs.
     #[serde(default)]
-    pub member: Option<elsecall_membership::roster::MemberName>,
+    pub member: Option<elsecall_peers::roster::MemberName>,
 }
 
 #[derive(Serialize, Deserialize)]

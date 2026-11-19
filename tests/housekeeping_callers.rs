@@ -20,7 +20,7 @@ use elsecall_housekeeping::housekeeping::{
     settings::Settings,
     volumes::Statfs,
 };
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
 use elsecall_workspace::{
     copies::Copies,
     location::{CopyLocation, Locations, Setting},

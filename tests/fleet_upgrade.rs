@@ -19,7 +19,7 @@ use elsecall_fleet_upgrade::fleet_upgrade::{
     protocol::{self, Manifest, Message, Os, UpgradeId},
 };
 use elsecall_host::paths::Paths;
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
 use members::{TestMember, enrol, json};
 use serde_json::Value;
 use std::{
@@ -266,7 +266,7 @@ fn manifest(member: &TestMember, content: &[u8]) -> Manifest {
         os: Os::Macos,
         architectures: vec![Architecture::this().unwrap()],
         wait_seconds: 0,
-        issued_at: elsecall_membership::peer_auth::now(),
+        issued_at: elsecall_peers::peer_auth::now(),
     }
 }
 

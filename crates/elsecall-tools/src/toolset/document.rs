@@ -5,7 +5,7 @@
 //! entry that wants nothing is dropped from the resolved map.
 use crate::tool_inventory::{Manager, ToolName, ToolVersion};
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_membership::roster::MemberName;
+use elsecall_peers::roster::MemberName;
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 

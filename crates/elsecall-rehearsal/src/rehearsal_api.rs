@@ -15,7 +15,7 @@ use axum::{
 use elsecall_contract::api;
 use elsecall_contract::failure::Result;
 use elsecall_fleet::fleet::{Fleet, PlacementAuthority};
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};
 #[derive(Clone)]

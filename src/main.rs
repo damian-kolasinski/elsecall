@@ -9,12 +9,12 @@ use elsecall_host::client;
 use elsecall_host::{local_access, paths::Paths};
 use elsecall_installation::installation::{self, ServiceManager};
 use elsecall_os_processes::processes::MacProcesses;
+use elsecall_peers::tailnet;
 use elsecall_platform_macos::macos::{
     application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
     tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
 };
 use elsecall_scheduling as scheduling;
-use elsecall_tailnet::tailnet;
 use elsecall_window::install_window;
 use serde::Serialize;
 use std::{process::ExitCode, sync::Arc, time::Duration};

@@ -13,8 +13,8 @@ use elsecall_contract::failure::Failure;
 use elsecall_contract::scheduling_model::run_id::RunId;
 use elsecall_fleet::fleet::Fleet;
 use elsecall_host::local_access::LocalCaller;
-use elsecall_membership::roster::MemberName;
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
+use elsecall_peers::roster::MemberName;
 use elsecall_scheduling::service::Scheduler;
 use hyper_util::rt::TokioIo;
 use std::sync::Arc;
@@ -135,14 +135,14 @@ async fn attach(
         );
         // Preserve the service's peer-send bound below encryption. Local Unix
         // socket buffers must not hide a blocked TCP send from the CLI.
-        let stream = elsecall_peer_transport::peer_transport::Observed::new(
-            elsecall_peer_transport::send_inactivity::Writer::new(
+        let stream = elsecall_peers::peer_transport::Observed::new(
+            elsecall_peers::send_inactivity::Writer::new(
                 channel.stream,
                 elsecall_remote_run::remote_run::link::GRACE,
             ),
             target.name.as_str(),
             &format!("/peer/v1/placements/{}/attach", id.as_str()),
-            elsecall_peer_transport::peer_transport::StreamTimeout::Caller,
+            elsecall_peers::peer_transport::StreamTimeout::Caller,
         );
         tokio::spawn(async move {
             let Ok(upgraded) = upgrade.await else { return };

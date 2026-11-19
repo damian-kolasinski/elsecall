@@ -3,12 +3,12 @@
 use crate::fleet::{Fleet, PeerStatus};
 use elsecall_contract::build_identity::{Build, BuildId};
 use elsecall_contract::failure::Failure;
-use elsecall_membership::{
+use elsecall_peers::peer_client;
+use elsecall_peers::{
     member_key::PublicKey,
     membership_store::Membership,
     roster::{MemberName, Readiness},
 };
-use elsecall_peer_transport::peer_client;
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -333,7 +333,7 @@ async fn members(fleet: &Fleet) -> FleetView {
 fn without_roster(
     enrolled: bool,
     presence: Option<(MemberName, Vec<SocketAddr>)>,
-    key: elsecall_membership::member_key::PublicKey,
+    key: elsecall_peers::member_key::PublicKey,
     error: Failure,
 ) -> FleetView {
     FleetView {
@@ -390,7 +390,7 @@ mod tests {
     fn member(name: &str, warnings: Vec<Warning>) -> MemberView {
         MemberView {
             name: name.parse().unwrap(),
-            key: elsecall_membership::member_key::MemberKey::generate()
+            key: elsecall_peers::member_key::MemberKey::generate()
                 .unwrap()
                 .public(),
             endpoints: Vec::new(),
@@ -411,10 +411,10 @@ mod tests {
 
     #[test]
     fn a_member_without_a_roster_says_why_and_lists_no_one() {
-        let key = elsecall_membership::member_key::MemberKey::generate()
+        let key = elsecall_peers::member_key::MemberKey::generate()
             .unwrap()
             .public();
-        let error = elsecall_tailnet::tailnet::unavailable("Tailscale is not installed");
+        let error = elsecall_peers::tailnet::unavailable("Tailscale is not installed");
         let rendered = serde_json::to_value(without_roster(false, None, key, error)).unwrap();
         assert_eq!(rendered["members"], json!([]));
         assert_eq!(rendered["master"], json!(null));

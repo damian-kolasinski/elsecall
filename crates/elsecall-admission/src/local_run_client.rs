@@ -5,8 +5,8 @@ use elsecall_contract::api::ErrorResponse;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::run_id::RunId;
 use elsecall_host::{local_access, private_files};
+use elsecall_peers::secure_channel::{Ephemeral, SecureStream};
 use elsecall_remote_run::{remote_run::link::Link, sealed_run};
-use elsecall_secure_channel::{Ephemeral, SecureStream};
 use http_body_util::{BodyExt, Full, Limited};
 use hyper::{Method, Request, body::Bytes, client::conn::http1, header};
 use hyper_util::rt::TokioIo;
@@ -35,14 +35,13 @@ pub async fn attach(socket: &Path, run: &RunId) -> Result<Link> {
             .map_err(|e| Failure::io("Identify local service", e))?
             .uid(),
     )?;
-    let (mut sender, connection) = http1::handshake(TokioIo::new(
-        elsecall_peer_transport::socket_io::Socket::new(
+    let (mut sender, connection) =
+        http1::handshake(TokioIo::new(elsecall_peers::socket_io::Socket::new(
             stream,
             elsecall_remote_run::remote_run::link::GRACE,
-        ),
-    ))
-    .await
-    .map_err(|_| protocol_error())?;
+        )))
+        .await
+        .map_err(|_| protocol_error())?;
     tokio::spawn(async move {
         let _ = connection.with_upgrades().await;
     });
@@ -80,8 +79,8 @@ pub async fn attach(socket: &Path, run: &RunId) -> Result<Link> {
         let stream = TokioIo::new(upgraded);
         return Ok(match keys {
             Some(keys) => Link::open_monitored(SecureStream::new(
-                elsecall_peer_transport::receive_inactivity::Reader::new(
-                    elsecall_peer_transport::send_inactivity::Writer::new(
+                elsecall_peers::receive_inactivity::Reader::new(
+                    elsecall_peers::send_inactivity::Writer::new(
                         stream,
                         elsecall_remote_run::remote_run::link::GRACE,
                     ),

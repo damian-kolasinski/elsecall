@@ -6,7 +6,7 @@
 //! `Manifest` value always respects the limits and shapes below.
 use crate::config_sync::fingerprint::{Fingerprint, SyncKey};
 use elsecall_config_sync_model::synced_path::{self, SyncedPath};
-use elsecall_membership::roster::MemberName;
+use elsecall_peers::roster::MemberName;
 use elsecall_workspace::path::WorkspacePath;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};

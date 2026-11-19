@@ -8,8 +8,8 @@ use elsecall_add_mac::{
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_host::paths::Paths;
 use elsecall_openssh_mac::OpensshMac;
+use elsecall_peers::tailnet::{Configured, Tailnet};
 use elsecall_platform_macos::macos::tailscale::TailscaleCli;
-use elsecall_tailnet::tailnet::{Configured, Tailnet};
 use serde_json::Value;
 use std::{
     io::{BufRead, IsTerminal, Read, Write},

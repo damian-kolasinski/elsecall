@@ -15,7 +15,7 @@ workspace = true
 [dependencies]
 elsecall-contract.workspace = true
 elsecall-load-log.workspace = true
-elsecall-membership.workspace = true
+elsecall-peers.workspace = true
 elsecall-remote-run.workspace = true
 elsecall-replay.workspace = true
 elsecall-report-facts.workspace = true

@@ -120,9 +120,9 @@ async fn controlled_runtime_uses_real_admission_timers_records_and_supplied_ids(
             &holding.run_id,
             RunEnded::PeerFailed {
                 remote_failure_phase: None,
-                failure: elsecall_peer_diagnostics::StreamFailure {
-                    phase: elsecall_peer_diagnostics::Phase::Receive,
-                    kind: elsecall_peer_diagnostics::Kind::Receive,
+                failure: elsecall_peers::peer_diagnostics::StreamFailure {
+                    phase: elsecall_peers::peer_diagnostics::Phase::Receive,
+                    kind: elsecall_peers::peer_diagnostics::Kind::Receive,
                     duration_ms: 1,
                 },
             },

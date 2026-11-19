@@ -7,7 +7,7 @@ use crate::{
     toolset::document::{Toolset, invalid},
 };
 use elsecall_contract::failure::Result;
-use elsecall_membership::roster::MemberName;
+use elsecall_peers::roster::MemberName;
 use toml_edit::{DocumentMut, Entry, Item, Table, Value, value};
 
 /// Where an edit is written. A member scope replaces defaults for that member only.

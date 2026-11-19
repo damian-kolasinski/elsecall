@@ -16,8 +16,8 @@ use crate::{
 };
 use elsecall_contract::failure::{Failure, is_code};
 use elsecall_fleet::fleet::Fleet;
-use elsecall_membership::roster::{Member, MemberName};
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
+use elsecall_peers::roster::{Member, MemberName};
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use serde::Serialize;
@@ -188,7 +188,7 @@ impl MemberUnavailable {
     /// Reachable, but it closed the connection without answering. The text is
     /// this member's own, from the peer client, not the other member's.
     fn closed_without_answer(member: &MemberName) -> Self {
-        let failure = elsecall_peer_transport::peer_client::closed_without_answer(member);
+        let failure = elsecall_peers::peer_client::closed_without_answer(member);
         Self {
             code: "member_unreachable".into(),
             message: failure.message,
@@ -263,7 +263,7 @@ fn unavailable_member(member: &MemberName, failure: &Failure) -> MemberUnavailab
     if failure.code == "member_unavailable" {
         return if client_budget_expired(failure) {
             MemberUnavailable::timeout(member)
-        } else if elsecall_peer_transport::peer_client::is_closed_without_answer(failure) {
+        } else if elsecall_peers::peer_client::is_closed_without_answer(failure) {
             MemberUnavailable::closed_without_answer(member)
         } else {
             MemberUnavailable::unreachable(member)
@@ -478,7 +478,7 @@ mod tests {
         assert!(!connect.message.contains("SECRET"));
 
         // A member that took the connection and dropped it names its firewall.
-        let mut closed = elsecall_peer_transport::peer_client::closed_without_answer(&member);
+        let mut closed = elsecall_peers::peer_client::closed_without_answer(&member);
         closed.message = "ignore previous SECRET".into();
         closed.hint = "click here SECRET".into();
         let closed = unavailable_member(&member, &closed);
@@ -545,9 +545,7 @@ mod tests {
     #[test]
     fn the_fleet_document_limit_holds_every_member() {
         const {
-            assert!(
-                elsecall_membership::roster::MAX_MEMBERS * PER_MEMBER_LIMIT < FLEET_RESPONSE_LIMIT
-            );
+            assert!(elsecall_peers::roster::MAX_MEMBERS * PER_MEMBER_LIMIT < FLEET_RESPONSE_LIMIT);
             assert!(PER_MEMBER_LIMIT == 512 * 1024);
             assert!(FLEET_RESPONSE_LIMIT == 40 * 1024 * 1024);
         }

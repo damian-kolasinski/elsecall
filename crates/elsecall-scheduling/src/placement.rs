@@ -364,7 +364,7 @@ impl Observation {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Unreachable {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub peer_io: Option<elsecall_peer_diagnostics::Attempt>,
+    pub peer_io: Option<elsecall_peers::peer_diagnostics::Attempt>,
     pub member: String,
     pub why: String,
 }

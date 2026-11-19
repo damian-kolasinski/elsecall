@@ -18,7 +18,7 @@ use tokio::{
 
 pub const HEARTBEAT: Duration = Duration::from_secs(1);
 /// Silence longer than this is a lost connection.
-pub use elsecall_peer_transport::receive_inactivity::GRACE;
+pub use elsecall_peers::receive_inactivity::GRACE;
 
 pub fn lost(detail: &str) -> Failure {
     Failure::new(
@@ -78,7 +78,7 @@ impl Link {
     where
         S: AsyncRead + AsyncWrite + Send + 'static,
     {
-        Self::open_monitored(elsecall_peer_transport::receive_inactivity::Reader::new(
+        Self::open_monitored(elsecall_peers::receive_inactivity::Reader::new(
             Box::pin(stream),
             GRACE,
         ))
@@ -115,8 +115,11 @@ impl Link {
                     writer.flush().await
                 };
                 if let Err(error) = sent.await {
-                    let failure =
-                        stream_failure(&error, elsecall_peer_diagnostics::Phase::Send, started);
+                    let failure = stream_failure(
+                        &error,
+                        elsecall_peers::peer_diagnostics::Phase::Send,
+                        started,
+                    );
                     remember(&failure_slot, failure);
                     // Closing the sender queue wakes blocked producers even when
                     // delivery of this failure waits behind bounded received data.
@@ -139,7 +142,7 @@ impl Link {
                 let next = tokio::select! {
                     biased;
                     frame = wire::read(&mut reader) => frame.map_err(|error|
-                        stream_failure(&error, elsecall_peer_diagnostics::Phase::Receive, started)),
+                        stream_failure(&error, elsecall_peers::peer_diagnostics::Phase::Receive, started)),
                     _ = send_failed.notified() => Err(read_failure.lock().expect("terminal failure lock").clone().expect("notified failure")),
                 };
                 let frame = match next {
@@ -147,7 +150,7 @@ impl Link {
                     Ok(Some(frame)) => Ok(frame),
                     Ok(None) => Err(stream_failure(
                         &std::io::ErrorKind::UnexpectedEof.into(),
-                        elsecall_peer_diagnostics::Phase::Receive,
+                        elsecall_peers::peer_diagnostics::Phase::Receive,
                         started,
                     )),
                     Err(error) => Err(error),
@@ -215,11 +218,11 @@ fn remember(slot: &Mutex<Option<Failure>>, failure: Failure) -> Failure {
 
 fn stream_failure(
     error: &std::io::Error,
-    phase: elsecall_peer_diagnostics::Phase,
+    phase: elsecall_peers::peer_diagnostics::Phase,
     started: std::time::Instant,
 ) -> Failure {
-    use elsecall_peer_diagnostics::Kind;
-    let (kind, detail) = if elsecall_secure_channel::is_authentication_failure(error) {
+    use elsecall_peers::peer_diagnostics::Kind;
+    let (kind, detail) = if elsecall_peers::secure_channel::is_authentication_failure(error) {
         (
             Kind::Authentication,
             "the secure channel did not authenticate".into(),
@@ -228,7 +231,7 @@ fn stream_failure(
         match error.kind() {
             std::io::ErrorKind::TimedOut => (
                 Kind::Timeout,
-                if phase == elsecall_peer_diagnostics::Phase::Send {
+                if phase == elsecall_peers::peer_diagnostics::Phase::Send {
                     format!("nothing could be sent for {} seconds", GRACE.as_secs())
                 } else {
                     format!("nothing arrived for {} seconds", GRACE.as_secs())
@@ -237,7 +240,7 @@ fn stream_failure(
             std::io::ErrorKind::UnexpectedEof => (Kind::Receive, "the connection closed".into()),
             std::io::ErrorKind::InvalidData => (Kind::Protocol, "invalid stream framing".into()),
             _ => (
-                if phase == elsecall_peer_diagnostics::Phase::Send {
+                if phase == elsecall_peers::peer_diagnostics::Phase::Send {
                     Kind::Send
                 } else {
                     Kind::Receive

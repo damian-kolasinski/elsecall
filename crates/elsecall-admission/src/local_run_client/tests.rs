@@ -1,6 +1,6 @@
 use super::*;
 use elsecall_contract::wire::{self, Frame};
-use elsecall_membership::{member_key::MemberKey, peer_auth};
+use elsecall_peers::{member_key::MemberKey, peer_auth};
 use hyper::{Response, service::service_fn};
 use std::sync::{
     Arc,

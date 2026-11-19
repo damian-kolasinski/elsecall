@@ -177,7 +177,7 @@ impl Start {
     }
 }
 
-pub use elsecall_peer_diagnostics::StreamFailure;
+pub use elsecall_peers::peer_diagnostics::StreamFailure;
 
 /// Metadata is less authoritative than a confirmed process exit. Reject a bad
 /// assertion independently, so it cannot erase valid exit/CPU/phase facts.

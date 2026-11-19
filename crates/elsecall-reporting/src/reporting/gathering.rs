@@ -31,7 +31,7 @@ pub trait MemberHistory: Send + Sync {
     fn peer_io(
         &self,
         _window: Window,
-    ) -> BoxFuture<'static, Result<elsecall_peer_diagnostics::History>> {
+    ) -> BoxFuture<'static, Result<elsecall_peers::peer_diagnostics::History>> {
         Box::pin(async { Err(invalid("This member does not support peer I/O history.")) })
     }
 

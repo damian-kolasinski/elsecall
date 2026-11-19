@@ -7,8 +7,8 @@ use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::speed::PLAUSIBLE;
 use elsecall_fleet::fleet::Fleet;
 use elsecall_load_log::buckets::Bucket;
-use elsecall_membership::roster::Member;
-use elsecall_peer_transport::peer_client;
+use elsecall_peers::peer_client;
+use elsecall_peers::roster::Member;
 use elsecall_report_facts::{
     facts::is_code,
     report_protocol::{FactsPage, FactsRequest, LoadRequest, PAGE},
@@ -182,10 +182,10 @@ impl MemberHistory for PeerHistory {
     fn peer_io(
         &self,
         window: Window,
-    ) -> BoxFuture<'static, Result<elsecall_peer_diagnostics::History>> {
+    ) -> BoxFuture<'static, Result<elsecall_peers::peer_diagnostics::History>> {
         let history = self.clone();
         Box::pin(async move {
-            let result: elsecall_peer_diagnostics::History = history
+            let result: elsecall_peers::peer_diagnostics::History = history
                 .call(
                     "/peer/v1/report/peer-io",
                     &elsecall_report_facts::report_protocol::PeerIoRequest {
@@ -209,7 +209,7 @@ impl MemberHistory for PeerHistory {
                         || a.attempt == 0
                         || a.attempt > 2
                         || a.member
-                            .parse::<elsecall_membership::roster::MemberName>()
+                            .parse::<elsecall_peers::roster::MemberName>()
                             .is_err()
                         || !matches!(
                             a.operation.as_str(),

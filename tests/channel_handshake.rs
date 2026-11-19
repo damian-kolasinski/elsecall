@@ -9,9 +9,9 @@ use axum::{
     routing::post,
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use elsecall_membership::{member_key::MemberKey, peer_auth, roster::Member};
-use elsecall_peer_transport::peer_client;
-use elsecall_secure_channel::Ephemeral;
+use elsecall_peers::peer_client;
+use elsecall_peers::secure_channel::Ephemeral;
+use elsecall_peers::{member_key::MemberKey, peer_auth, roster::Member};
 use std::sync::Arc;
 #[derive(Clone)]
 struct Peer {
@@ -121,7 +121,7 @@ async fn answer(
 }
 #[tokio::test]
 async fn signed_noncontributory_or_missing_proofs_remain_authentication_failures() {
-    elsecall_tailnet::tailnet::allow_loopback_members();
+    elsecall_peers::tailnet::allow_loopback_members();
     for protocol in ["elsecall-run/1", "elsecall-sync/1", "elsecall-upgrade/1"] {
         for fault in [
             "noncontributory",
@@ -165,7 +165,7 @@ async fn signed_noncontributory_or_missing_proofs_remain_authentication_failures
 }
 #[tokio::test]
 async fn a_verified_channel_refusal_is_recorded_as_the_members_refusal() {
-    elsecall_tailnet::tailnet::allow_loopback_members();
+    elsecall_peers::tailnet::allow_loopback_members();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let peer = Peer {
         key: Arc::new(MemberKey::generate().unwrap()),
