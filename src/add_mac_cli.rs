@@ -6,10 +6,10 @@ use crate::{
     macos::tailscale::TailscaleCli,
     openssh_mac::OpensshMac,
     remote_mac::Build,
-    tailnet::{Configured, Tailnet},
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::paths::Paths;
+use elsecall_tailnet::tailnet::{Configured, Tailnet};
 use serde_json::Value;
 use std::{
     io::{BufRead, IsTerminal, Read, Write},

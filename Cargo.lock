@@ -1075,6 +1075,7 @@ dependencies = [
  "elsecall-run-admission",
  "elsecall-secure-channel",
  "elsecall-sqlite-retention",
+ "elsecall-tailnet",
  "futures-util",
  "getrandom 0.3.4",
  "hkdf",
@@ -1178,6 +1179,14 @@ name = "elsecall-sqlite-retention"
 version = "0.3.0"
 dependencies = [
  "rusqlite",
+]
+
+[[package]]
+name = "elsecall-tailnet"
+version = "0.3.0"
+dependencies = [
+ "elsecall-failure",
+ "serde",
 ]
 
 [[package]]

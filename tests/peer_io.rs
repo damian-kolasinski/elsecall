@@ -95,7 +95,7 @@ async fn answer(
     (status, [(peer_auth::SIGNATURE_HEADER, signature)], bytes).into_response()
 }
 async fn server(fault: &'static str) -> (Member, Peer, tokio::task::JoinHandle<()>) {
-    elsecall::tailnet::allow_loopback_members();
+    elsecall_tailnet::tailnet::allow_loopback_members();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let peer = Peer {
         key: Arc::new(MemberKey::generate().unwrap()),
@@ -381,7 +381,7 @@ async fn dropping_member(
     reset: bool,
 ) -> (Member, Arc<AtomicUsize>, tokio::task::JoinHandle<()>) {
     use tokio::io::AsyncReadExt;
-    elsecall::tailnet::allow_loopback_members();
+    elsecall_tailnet::tailnet::allow_loopback_members();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let member = Member::new(
         "macbook-pro".parse().unwrap(),

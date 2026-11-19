@@ -3,8 +3,9 @@
 //! A `Roster` can only be built through validation, so every roster in memory has
 //! unique names and keys, at least one endpoint per member, and a master that is a
 //! member. Changes produce a new roster with a higher epoch.
-use crate::{member_key::PublicKey, tailnet::is_member_address};
+use crate::member_key::PublicKey;
 use elsecall_failure::{Failure, Result};
+use elsecall_tailnet::tailnet::is_member_address;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, net::SocketAddr};
 
@@ -418,7 +419,7 @@ pub mod tests {
     use crate::member_key::MemberKey;
 
     pub fn member(name: &str, port: u16) -> Member {
-        crate::tailnet::allow_loopback_members();
+        elsecall_tailnet::tailnet::allow_loopback_members();
         Member::new(
             name.parse().unwrap(),
             MemberKey::generate().unwrap().public(),

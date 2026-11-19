@@ -154,7 +154,7 @@ impl TestMember {
         tailnet: bool,
     ) -> Self {
         // This process talks to members over loopback too.
-        elsecall::tailnet::allow_loopback_members();
+        elsecall_tailnet::tailnet::allow_loopback_members();
         let home = tempfile::Builder::new()
             .prefix("ec-")
             .tempdir_in("/tmp")
@@ -201,7 +201,7 @@ impl TestMember {
         configuration: &str,
         environment: &[(&str, &str)],
     ) -> Self {
-        elsecall::tailnet::allow_loopback_members();
+        elsecall_tailnet::tailnet::allow_loopback_members();
         let home = tempfile::Builder::new()
             .prefix("ec-")
             .tempdir_in("/tmp")

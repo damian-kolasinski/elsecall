@@ -122,7 +122,7 @@ impl Tailnet for Configured {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::tailnet::*;
 
     #[test]
     fn recognises_only_tailnet_ranges() {

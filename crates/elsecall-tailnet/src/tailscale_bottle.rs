@@ -58,7 +58,7 @@ impl Bottle {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::tailscale_bottle::*;
 
     #[test]
     fn the_newest_bottle_a_mac_can_run_is_chosen() {

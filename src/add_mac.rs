@@ -14,10 +14,10 @@ use crate::{
         Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant,
     },
     roster::Readiness,
-    tailscale_bottle,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::paths::Paths;
+use elsecall_tailnet::tailscale_bottle;
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

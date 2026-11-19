@@ -1,11 +1,8 @@
 //! TCP transport for the member API: binds only this machine's tailnet addresses and
 //! bounds what an unauthenticated connection can cost.
-use crate::{
-    fleet::Fleet,
-    roster::MemberName,
-    tailnet::{Tailnet, is_member_address},
-};
+use crate::{fleet::Fleet, roster::MemberName};
 use axum::Router;
+use elsecall_tailnet::tailnet::{Tailnet, is_member_address};
 use hyper_util::{
     rt::{TokioIo, TokioTimer},
     service::TowerToHyperService,

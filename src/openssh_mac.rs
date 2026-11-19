@@ -12,9 +12,9 @@ use crate::{
     inbound_firewall::Rule,
     macos::application_firewall,
     remote_mac::{Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailscaleVariant},
-    tailscale_bottle::Bottle,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_tailnet::tailscale_bottle::Bottle;
 use serde_json::Value;
 use std::{path::Path, process::Stdio, time::Duration};
 use tokio::{
@@ -831,7 +831,7 @@ mod tests {
 
     #[test]
     fn the_install_checks_the_pinned_digest_before_unpacking_as_root() {
-        let bottle = crate::tailscale_bottle::for_macos(26).unwrap();
+        let bottle = elsecall_tailnet::tailscale_bottle::for_macos(26).unwrap();
         let script = install_script(&bottle);
         assert!(script.starts_with("set -eu\n"), "{script}");
         let check = script

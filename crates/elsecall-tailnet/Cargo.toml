@@ -1,0 +1,14 @@
+[package]
+name = "elsecall-tailnet"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+elsecall-failure.workspace = true
+serde.workspace = true

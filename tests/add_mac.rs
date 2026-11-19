@@ -12,10 +12,10 @@ use elsecall::{
     remote_mac::{
         Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant,
     },
-    tailscale_bottle::Bottle,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::paths::Paths;
+use elsecall_tailnet::tailscale_bottle::Bottle;
 use members::{TestMember, free_port};
 use serde_json::Value;
 use std::{path::Path, process::Output, time::Duration};

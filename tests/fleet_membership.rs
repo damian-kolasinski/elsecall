@@ -230,7 +230,7 @@ async fn responses_not_signed_by_the_enrolled_key_are_rejected() {
     // Something else answers at an enrolled member's address with valid-looking data.
     // Its loopback endpoint is valid only once this process lets loopback stand in
     // for the tailnet, which no other test may be relied on to have done first.
-    elsecall::tailnet::allow_loopback_members();
+    elsecall_tailnet::tailnet::allow_loopback_members();
     let impostor = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = impostor.local_addr().unwrap().port();
     let app = axum::Router::new().fallback(|| async {

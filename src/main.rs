@@ -10,10 +10,11 @@ use elsecall::{
         application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
         processes::MacProcesses, tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
     },
-    peer_listener, scheduling, tailnet,
+    peer_listener, scheduling,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::{local_access, paths::Paths};
+use elsecall_tailnet::tailnet;
 use serde::Serialize;
 use std::{process::ExitCode, sync::Arc, time::Duration};
 

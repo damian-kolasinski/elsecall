@@ -412,7 +412,7 @@ mod tests {
     #[test]
     fn a_member_without_a_roster_says_why_and_lists_no_one() {
         let key = crate::member_key::MemberKey::generate().unwrap().public();
-        let error = crate::tailnet::unavailable("Tailscale is not installed");
+        let error = elsecall_tailnet::tailnet::unavailable("Tailscale is not installed");
         let rendered = serde_json::to_value(without_roster(false, None, key, error)).unwrap();
         assert_eq!(rendered["members"], json!([]));
         assert_eq!(rendered["master"], json!(null));

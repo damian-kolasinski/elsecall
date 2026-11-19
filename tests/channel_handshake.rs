@@ -120,7 +120,7 @@ async fn answer(
 }
 #[tokio::test]
 async fn signed_noncontributory_or_missing_proofs_remain_authentication_failures() {
-    elsecall::tailnet::allow_loopback_members();
+    elsecall_tailnet::tailnet::allow_loopback_members();
     for protocol in ["elsecall-run/1", "elsecall-sync/1", "elsecall-upgrade/1"] {
         for fault in [
             "noncontributory",
@@ -164,7 +164,7 @@ async fn signed_noncontributory_or_missing_proofs_remain_authentication_failures
 }
 #[tokio::test]
 async fn a_verified_channel_refusal_is_recorded_as_the_members_refusal() {
-    elsecall::tailnet::allow_loopback_members();
+    elsecall_tailnet::tailnet::allow_loopback_members();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let peer = Peer {
         key: Arc::new(MemberKey::generate().unwrap()),

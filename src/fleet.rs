@@ -330,7 +330,7 @@ impl Fleet {
     /// This member as it presents itself to others, from its live presence.
     pub(crate) fn own_member(&self) -> Result<Member> {
         match self.presence() {
-            None => Err(crate::tailnet::unavailable(
+            None => Err(elsecall_tailnet::tailnet::unavailable(
                 "no tailnet address is bound yet",
             )),
             // Tailscale answered, but the listener could not bind any of its addresses.

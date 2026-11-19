@@ -7,10 +7,10 @@ use elsecall::{
     peer_listener,
     scheduling::service::Adapters,
     server,
-    tailnet::{Presence, Tailnet},
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_tailnet::tailnet::{Presence, Tailnet};
 use std::{future::IntoFuture, sync::Arc};
 
 struct UnavailableMachine;
@@ -33,7 +33,7 @@ impl MachineInspector for UnavailableMachine {
 struct NoTailnet;
 impl Tailnet for NoTailnet {
     fn discover(&self) -> Result<Presence> {
-        Err(elsecall::tailnet::unavailable("not connected"))
+        Err(elsecall_tailnet::tailnet::unavailable("not connected"))
     }
 }
 fn fixture() -> (tempfile::TempDir, Paths) {
