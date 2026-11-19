@@ -171,17 +171,15 @@ pub(super) fn integrate(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        scheduling::clock::{Clock, VirtualClock},
-        simulation::{
-            adapters::{Registry, World},
-            engine::Trial,
-            member::FleetAdapters,
-            metrics,
-            model::Envelope,
-            settings::Settings,
-        },
+    use crate::simulation::{
+        adapters::{Registry, World},
+        engine::Trial,
+        member::FleetAdapters,
+        metrics,
+        model::Envelope,
+        settings::Settings,
     };
+    use elsecall_scheduling::clock::{Clock, VirtualClock};
 
     #[tokio::test(start_paused = true)]
     async fn reserve_follows_admitted_work_after_midnight_while_day_timelines_stop() {

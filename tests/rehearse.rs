@@ -334,10 +334,9 @@ fn perf_rehearses_timing_members_outcomes_real_cold_warm_copies_and_own_fidelity
     );
     let report = alpha.ok(&["report", "--since", "1h"]);
     assert_eq!(report["fleet"]["requests"]["total"], 0, "{report}");
-    let records = elsecall::scheduling::records::Records::open_read_only(
-        &alpha.data().join("records.sqlite"),
-    )
-    .unwrap();
+    let records =
+        elsecall_scheduling::records::Records::open_read_only(&alpha.data().join("records.sqlite"))
+            .unwrap();
     assert!(
         records
             .labelled_since(Timestamp::from_millis(0), 2000)
@@ -433,10 +432,9 @@ probe = ["/bin/sh", "-c", "touch \"$HOME/personal-policy-probe\"; printf stable"
         ]);
         assert!(run.status.success(), "{run:?}");
     }
-    let records = elsecall::scheduling::records::Records::open_read_only(
-        &alpha.data().join("records.sqlite"),
-    )
-    .unwrap();
+    let records =
+        elsecall_scheduling::records::Records::open_read_only(&alpha.data().join("records.sqlite"))
+            .unwrap();
     let history = records
         .labelled_since(Timestamp::from_millis(0), 2000)
         .unwrap();
@@ -747,10 +745,9 @@ fn service_restart_cleans_workers_even_after_their_caller_was_killed() {
         serde_json::from_slice(&fs::read(alpha.data().join("rehearsal-session.json")).unwrap())
             .unwrap();
     let session = journal["session"].as_str().unwrap().to_owned();
-    let records = elsecall::scheduling::records::Records::open_read_only(
-        &alpha.data().join("records.sqlite"),
-    )
-    .unwrap();
+    let records =
+        elsecall_scheduling::records::Records::open_read_only(&alpha.data().join("records.sqlite"))
+            .unwrap();
     let mut workers = Vec::new();
     let until = Instant::now() + processes::WAIT;
     while workers.is_empty() {
@@ -888,10 +885,9 @@ fn live_cleanup_stops_a_worker_after_only_its_caller_is_killed() {
     ]);
     let replay = Controller::spawn(command, temp.path());
     wait_running(&alpha, "rehearsal:build fixture");
-    let records = elsecall::scheduling::records::Records::open_read_only(
-        &alpha.data().join("records.sqlite"),
-    )
-    .unwrap();
+    let records =
+        elsecall_scheduling::records::Records::open_read_only(&alpha.data().join("records.sqlite"))
+            .unwrap();
     let until = Instant::now() + processes::WAIT;
     let record = loop {
         if let Some(r) = records
@@ -1064,7 +1060,7 @@ fn assert_restored_snapshots(
     }
 }
 fn latest_margin(member: &TestMember) -> Option<f64> {
-    elsecall::scheduling::records::Records::open_read_only(&member.data().join("records.sqlite"))
+    elsecall_scheduling::records::Records::open_read_only(&member.data().join("records.sqlite"))
         .unwrap()
         .scheduler_settings(
             Timestamp::from_millis(0),
@@ -1379,12 +1375,12 @@ fn compare_restores_after_forced_controller_loss_without_contacting_installed_se
 
 fn seed_recorded_day(
     member: &TestMember,
-    template: &elsecall::scheduling::record::Record,
+    template: &elsecall_scheduling::record::Record,
     day: Timestamp,
     complete: bool,
 ) {
-    use elsecall::scheduling::records::{Records, SchedulerSettings};
     use elsecall_load_log::{minute::Minute, store::LoadStore};
+    use elsecall_scheduling::records::{Records, SchedulerSettings};
     use elsecall_scheduling_model::capacity::Cores;
     let records = Records::open(&member.data().join("records.sqlite")).unwrap();
     let current = records
@@ -1458,15 +1454,14 @@ fn automatically_monitored_failing_day_revokes_trust_and_incomplete_day_is_not_c
             .status
             .success()
     );
-    let template = elsecall::scheduling::records::Records::open_read_only(
-        &alpha.data().join("records.sqlite"),
-    )
-    .unwrap()
-    .recent(10)
-    .unwrap()
-    .into_iter()
-    .find(|r| r.label.as_deref() == Some("drift fixture"))
-    .unwrap();
+    let template =
+        elsecall_scheduling::records::Records::open_read_only(&alpha.data().join("records.sqlite"))
+            .unwrap()
+            .recent(10)
+            .unwrap()
+            .into_iter()
+            .find(|r| r.label.as_deref() == Some("drift fixture"))
+            .unwrap();
     let today = Timestamp::now().millis() / 86_400_000 * 86_400_000;
     alpha.stop();
     bravo.stop();
@@ -1813,10 +1808,9 @@ fn cpu_contention_in_a_real_rehearsal_reports_overhead_slowdown_and_zero_admissi
             "20s",
         ]);
     let replay = Controller::spawn(command, temp.path());
-    let records = elsecall::scheduling::records::Records::open_read_only(
-        &alpha.data().join("records.sqlite"),
-    )
-    .unwrap();
+    let records =
+        elsecall_scheduling::records::Records::open_read_only(&alpha.data().join("records.sqlite"))
+            .unwrap();
     let deadline = Instant::now() + processes::WAIT;
     let command = loop {
         let found = records

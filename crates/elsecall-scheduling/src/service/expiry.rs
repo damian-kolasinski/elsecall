@@ -1,6 +1,6 @@
 //! Hold limits and deadlines of waiting requests.
 use super::{Book, Entry, OnHandover, Phase, Scheduler, Waiting, update_in_progress};
-use crate::scheduling::record::Verdict;
+use crate::record::Verdict;
 use elsecall_failure::Failure;
 use elsecall_scheduling_model::{
     request::{AtDeadline, Urgency},

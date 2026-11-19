@@ -10,7 +10,7 @@
 //! (see `placement`). The calling member itself never loses contact with its own
 //! runs, and runs its own service restart ended say nothing about the member:
 //! they count neither as losses nor as placed work.
-use crate::scheduling::{
+use crate::{
     placed::{Interruption, Side},
     record::{Outcome, Record},
 };

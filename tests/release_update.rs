@@ -1,19 +1,5 @@
 #![cfg(target_os = "macos")]
 //! Update policy exercised with a real scheduler/API and fakes only at provider boundaries.
-use elsecall::{
-    release_update::{
-        self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
-        service::{HelperLauncher, UpdateService},
-        store::Store,
-    },
-    scheduling::{
-        clock::SystemClock,
-        placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},
-        pre_run_sync::{PreRunSync, Synced},
-        processes::{ProcessIdentity, ProcessInfo, ProcessTable},
-        service::{Adapters, Driving, HostedEnd, Runtime, Scheduler, SchedulerConfiguration},
-    },
-};
 use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::Result;
 use elsecall_load_log::LoadLog;
@@ -30,6 +16,20 @@ use elsecall_scheduling_model::{
 use std::{
     future::IntoFuture,
     sync::{Arc, Mutex},
+};
+use {
+    elsecall::release_update::{
+        self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
+        service::{HelperLauncher, UpdateService},
+        store::Store,
+    },
+    elsecall_scheduling::{
+        clock::SystemClock,
+        placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},
+        pre_run_sync::{PreRunSync, Synced},
+        processes::{ProcessIdentity, ProcessInfo, ProcessTable},
+        service::{Adapters, Driving, HostedEnd, Runtime, Scheduler, SchedulerConfiguration},
+    },
 };
 
 struct MachineBoundary;

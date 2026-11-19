@@ -4,7 +4,6 @@ use crate::{
     fleet::{AuthenticatedPeer, Fleet, PlacementAuthority},
     placement_host::PlacementHost,
     remote_run::runner,
-    scheduling::{placed::PlacementOffer, quote::QuoteRequest},
 };
 use axum::{
     Extension, Json, Router,
@@ -17,6 +16,7 @@ use axum::{
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_api_response::failure;
 use elsecall_failure::Failure;
+use elsecall_scheduling::{placed::PlacementOffer, quote::QuoteRequest};
 use elsecall_scheduling_model::run_id::RunId;
 use elsecall_secure_channel::{Ephemeral, SecureStream};
 use hyper_util::rt::TokioIo;

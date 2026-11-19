@@ -231,12 +231,10 @@ fn exports_real_overrun_shape_across_load_pages_without_losing_history() {
 
 #[test]
 fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
-    use elsecall::{
-        scheduling::{record::Record, records::Records},
-        workload::trace::Trace,
-    };
+    use elsecall::workload::trace::Trace;
     use elsecall_load_log::{minute::Minute, store::LoadStore};
     use elsecall_local_state::paths::Paths;
+    use elsecall_scheduling::{record::Record, records::Records};
     use elsecall_scheduling_model::{run_id::RunId, timestamp::Timestamp};
     use std::time::Duration;
     // Twelve scripted cores: overlapping runs record up to 6 cores in use.
@@ -505,7 +503,7 @@ fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
     for r in &mut history {
         r.workspace = None;
         r.workspace_recorded = false;
-        r.outcome = Some(elsecall::scheduling::record::Outcome::Signaled { signal: 9 });
+        r.outcome = Some(elsecall_scheduling::record::Outcome::Signaled { signal: 9 });
     }
     write_history(&history);
     let (response, path) = export("no-window.json");

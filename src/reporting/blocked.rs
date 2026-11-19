@@ -302,8 +302,8 @@ pub fn queues(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::fixtures::{self, MINUTE, T0, bucket};
-    use crate::scheduling::record::{Outcome, Record};
+    use elsecall_scheduling::fixtures::{self, MINUTE, T0, bucket};
+    use elsecall_scheduling::record::{Outcome, Record};
 
     /// The 2 hours from `T0`, in minute buckets.
     fn window() -> Window {

@@ -209,7 +209,7 @@ pub async fn peer_io(fleet: &Fleet, window: Window, member: Option<&str>) -> ser
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
+    use elsecall_scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
     use elsecall_scheduling_model::timestamp::Timestamp;
 
     struct Fake {

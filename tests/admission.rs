@@ -364,8 +364,8 @@ async fn without_a_handover_an_unreachable_service_fails_the_request_at_once() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_caller_that_disconnects_while_waiting_is_withdrawn() {
-    use elsecall::scheduling::messages::Grant;
     use elsecall_local_client::{self as client, Wait};
+    use elsecall_scheduling::messages::Grant;
     use elsecall_scheduling_model::request::{AdmissionRequest, Kind, Placement, Urgency};
     let mut fx = Fixture::start(1).await;
     fx.script(&holder("holding", ""));
@@ -406,8 +406,8 @@ async fn a_caller_that_disconnects_while_waiting_is_withdrawn() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_run_is_bound_to_its_caller_and_command_until_it_reports_the_end() {
-    use elsecall::scheduling::messages::{CommandStarted, Grant, RunEnded};
     use elsecall_local_client::{self as client, Wait};
+    use elsecall_scheduling::messages::{CommandStarted, Grant, RunEnded};
     use elsecall_scheduling_model::request::{AdmissionRequest, Kind, Placement, Urgency};
     let fx = Fixture::start(1).await;
     let socket = fx.paths.socket();

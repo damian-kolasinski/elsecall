@@ -1,5 +1,5 @@
 //! Opaque recorded workspace identities in the virtual address space.
-use crate::scheduling::placed::WorkspaceRef;
+use elsecall_scheduling::placed::WorkspaceRef;
 
 /// Paths exist only inside the simulator's address space and never touch disk.
 pub(super) fn workspace(request: &crate::workload::trace::Request) -> Option<WorkspaceRef> {

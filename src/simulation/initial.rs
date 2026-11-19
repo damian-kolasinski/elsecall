@@ -4,17 +4,15 @@ use super::{
     adapters::{Processes, workspace},
     engine::settings,
 };
-use crate::{
-    scheduling::{
-        messages::Grant,
-        placed::{PlacedRecord, Reached, Side, SyncSummary},
-        processes::ProcessIdentity,
-        record::{Record, State},
-        service::Scheduler,
-    },
-    workload::trace::{Request, Trace},
-};
+use crate::workload::trace::{Request, Trace};
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling::{
+    messages::Grant,
+    placed::{PlacedRecord, Reached, Side, SyncSummary},
+    processes::ProcessIdentity,
+    record::{Record, State},
+    service::Scheduler,
+};
 use elsecall_scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -253,21 +251,19 @@ pub fn restore(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        scheduling::{
-            clock::{Clock, VirtualClock},
-            fixtures,
-            load::Gate,
-            placed::{OfferReply, PlacementOffer, Warmth},
-            record::Outcome,
-            service::{Adapters, Driving, Runtime, SchedulerConfiguration},
-        },
-        simulation::{
-            adapters::{Channel, ConfigurationSync, Ids, Observation, Registry, Speed, World},
-            model::Envelope,
-        },
+    use crate::simulation::{
+        adapters::{Channel, ConfigurationSync, Ids, Observation, Registry, Speed, World},
+        model::Envelope,
     };
     use elsecall_load_log::LoadLog;
+    use elsecall_scheduling::{
+        clock::{Clock, VirtualClock},
+        fixtures,
+        load::Gate,
+        placed::{OfferReply, PlacementOffer, Warmth},
+        record::Outcome,
+        service::{Adapters, Driving, Runtime, SchedulerConfiguration},
+    };
     use elsecall_scheduling_model::{
         capacity::Cores,
         request::{Kind, Placement},
@@ -296,7 +292,7 @@ mod tests {
         let at = trace.since.after(Duration::from_secs(5));
         let mut remote = active(1, "a", "b", at);
         remote.placement = Placement::Member("b".into());
-        remote.workspace = Some(crate::scheduling::record::WorkspaceIdentity {
+        remote.workspace = Some(elsecall_scheduling::record::WorkspaceIdentity {
             workspace: "a".repeat(64),
             repository: "b".repeat(64),
         });
@@ -474,7 +470,7 @@ mod tests {
             run_id: RunId::parse("r-000000000099").unwrap(),
             size: Cores::ONE,
             label: None,
-            workspace: crate::scheduling::placed::WorkspaceRef {
+            workspace: elsecall_scheduling::placed::WorkspaceRef {
                 root: "/virtual/new".into(),
                 common_dir: "/virtual/new/.git".into(),
             },

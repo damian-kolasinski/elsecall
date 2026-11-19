@@ -1,12 +1,10 @@
 //! Distributions of observed run boundaries. Legacy grant durations cannot
 //! stand in for phases that were never measured.
-use crate::{
-    reporting::{
-        facts::Fact,
-        statistics::{Distribution, seconds},
-    },
-    scheduling::run_phases::RemoteFailurePhase,
+use crate::reporting::{
+    facts::Fact,
+    statistics::{Distribution, seconds},
 };
+use elsecall_scheduling::run_phases::RemoteFailurePhase;
 use elsecall_scheduling_model::request::Kind;
 use serde::Serialize;
 use std::collections::BTreeMap;

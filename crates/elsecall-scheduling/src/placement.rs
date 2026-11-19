@@ -47,7 +47,7 @@
 //! **Inputs are exact.** Scoring first rounds every duration it was given to whole
 //! milliseconds, and records exactly what it scored with (`Inputs`), so the same
 //! inputs and parameters always score the same, also when read back from a record.
-use crate::scheduling::{
+use crate::{
     learning::{self, Conversions, RunHistory},
     load::Gate,
     loss_history::{LossHistory, Losses},
@@ -1225,7 +1225,7 @@ fn score(observation: Observation, wanted: &Wanted, typical: f64) -> Scored {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::{
+    use crate::{
         admission::QueueCounts, learning::RunSample, parameters::Parameters,
         sync_history::SyncSample,
     };
@@ -1376,10 +1376,7 @@ mod tests {
         );
     }
     /// The history of the label "build", without a family.
-    fn label_history(
-        runs: Vec<RunSample>,
-        trust: &crate::scheduling::parameters::Estimates,
-    ) -> RunHistory {
+    fn label_history(runs: Vec<RunSample>, trust: &crate::parameters::Estimates) -> RunHistory {
         RunHistory::new(
             "build",
             None,

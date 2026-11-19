@@ -1,5 +1,5 @@
 //! Fixed records and load buckets the report's tests compute from.
-use crate::scheduling::{
+use crate::{
     load::Gate,
     placed::{PlacedRecord, Reached, Side, SyncSummary, Warmth},
     placement::{CopyState, Estimate, Source, Start},

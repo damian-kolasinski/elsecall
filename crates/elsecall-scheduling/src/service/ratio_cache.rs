@@ -2,7 +2,7 @@
 //! completed runs of every label, which is too much to read for every
 //! placeable request, and a ratio between two members moves far more slowly
 //! than requests arrive.
-use crate::scheduling::learning::ratios::SpeedRatios;
+use crate::learning::ratios::SpeedRatios;
 use std::{sync::Mutex, time::Duration};
 use tokio::time::Instant;
 
@@ -32,7 +32,7 @@ impl RatioCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::learning::tests::{defaults, labelled};
+    use crate::learning::tests::{defaults, labelled};
 
     #[test]
     fn ratios_are_learned_again_once_a_minute() {

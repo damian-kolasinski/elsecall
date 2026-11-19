@@ -1082,6 +1082,7 @@ dependencies = [
  "elsecall-process",
  "elsecall-rehearsal-identity",
  "elsecall-run-admission",
+ "elsecall-scheduling",
  "elsecall-scheduling-model",
  "elsecall-scripted-machine",
  "elsecall-secure-channel",
@@ -1301,6 +1302,32 @@ version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "elsecall-scheduling"
+version = "0.3.0"
+dependencies = [
+ "elsecall-build-identity",
+ "elsecall-failure",
+ "elsecall-labels",
+ "elsecall-load-log",
+ "elsecall-machine",
+ "elsecall-peer-diagnostics",
+ "elsecall-peer-transport",
+ "elsecall-scheduling-model",
+ "elsecall-service-log",
+ "elsecall-sqlite-retention",
+ "futures-util",
+ "humantime",
+ "libc",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "toml",
 ]
 
 [[package]]

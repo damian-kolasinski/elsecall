@@ -3,10 +3,10 @@ use super::{
     Discovery, FleetDistribution, FleetFollowUp, FollowUpState, Job, JobId, Phase, ReleaseCatalog,
     ReleaseVersion, Status, invalid, now, store::Store,
 };
-use crate::scheduling::service::{Scheduler, UpdateHold};
 use elsecall_build_identity::build_identity::BuildId;
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_scheduling::service::{Scheduler, UpdateHold};
 use std::{
     fs,
     os::unix::process::CommandExt,

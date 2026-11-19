@@ -1,5 +1,4 @@
 //! The local HTTP interface of admission, a driving adapter of the scheduler.
-use crate::scheduling::service::{OnHandover, Scheduler};
 use axum::{
     Extension, Json, Router,
     body::Bytes,
@@ -10,6 +9,7 @@ use axum::{
 };
 use elsecall_failure::Result;
 use elsecall_local_state::local_access::LocalCaller;
+use elsecall_scheduling::service::{OnHandover, Scheduler};
 use elsecall_scheduling_model::{request, run_id::RunId};
 use elsecall_wire::api;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};

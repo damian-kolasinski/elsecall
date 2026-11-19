@@ -279,7 +279,7 @@ pub fn trace(t: &Trace) -> Result<()> {
                     attempts.iter().any(|attempt| attempt.started_at.is_none())
                 })
             || r.pre_run_attempts.as_ref().is_some_and(|attempts| {
-                attempts.len() > crate::scheduling::pre_run_sync::History::MAXIMUM_ATTEMPTS
+                attempts.len() > elsecall_scheduling::pre_run_sync::History::MAXIMUM_ATTEMPTS
                     || attempts.iter().any(|attempt| {
                         !attempt.believable()
                             || attempt.started_at.is_some_and(|at| at < f.requested_at)
@@ -408,8 +408,8 @@ pub fn trace(t: &Trace) -> Result<()> {
             || l.cap_ms > DAY
             || l.duration_ms.is_some_and(|ms| ms > MAXIMUM_SPAN)
             || l.cpu_ms
-                .is_some_and(|ms| ms > crate::scheduling::record::MAXIMUM_CPU_MS)
-            || matches!(&l.ending,Some(crate::scheduling::leftovers::Ending::NextRun{run_id}) if !id(run_id))
+                .is_some_and(|ms| ms > elsecall_scheduling::record::MAXIMUM_CPU_MS)
+            || matches!(&l.ending,Some(elsecall_scheduling::leftovers::Ending::NextRun{run_id}) if !id(run_id))
         {
             return Err(bad("invalid leftover interval"));
         }
@@ -474,13 +474,11 @@ pub fn trace(t: &Trace) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        scheduling::fixtures::{self, T0},
-        workload::{
-            contention::{Curve, Point},
-            trace::{Member, Request},
-        },
+    use crate::workload::{
+        contention::{Curve, Point},
+        trace::{Member, Request},
     };
+    use elsecall_scheduling::fixtures::{self, T0};
     use elsecall_scheduling_model::timestamp::Timestamp;
     fn fixture() -> Trace {
         let mut record = fixtures::pinned(1, "work", "mini", 2.0);

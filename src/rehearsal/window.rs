@@ -419,17 +419,15 @@ fn slice(source: &Trace, window: &Candidate) -> Trace {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        scheduling::{
-            fixtures::{T0, base, bucket},
-            parameters::Parameters,
-            record::{HoldBasis, HoldLimitRecord, Outcome},
-            records::SchedulerSettings,
-        },
-        workload::{
-            demand::Demand,
-            trace::{Member, Request},
-        },
+    use crate::workload::{
+        demand::Demand,
+        trace::{Member, Request},
+    };
+    use elsecall_scheduling::{
+        fixtures::{T0, base, bucket},
+        parameters::Parameters,
+        record::{HoldBasis, HoldLimitRecord, Outcome},
+        records::SchedulerSettings,
     };
     use elsecall_scheduling_model::{
         capacity::{Capacity, Cores},
@@ -820,8 +818,8 @@ mod tests {
             code: "fleet_busy".into(),
         });
         refusal.fact.failure = Some("fleet_busy".into());
-        let mut decision = crate::scheduling::fixtures::decision(
-            crate::scheduling::record::Verdict::FleetBusy,
+        let mut decision = elsecall_scheduling::fixtures::decision(
+            elsecall_scheduling::record::Verdict::FleetBusy,
             vec![],
             None,
         );

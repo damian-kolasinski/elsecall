@@ -10,10 +10,10 @@ use crate::{
         outside::OutsideHistory,
         window::Window,
     },
-    scheduling::service::Scheduler,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_load_log::{LoadReport, buckets::Bucket};
+use elsecall_scheduling::service::Scheduler;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use futures_util::future::BoxFuture;
 use std::{sync::Arc, time::Duration};

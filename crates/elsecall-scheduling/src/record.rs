@@ -1,6 +1,6 @@
 //! What Elsecall remembers about each request: the request, the decision and its
 //! inputs, and the outcome. Never arguments, environment values or secrets.
-use crate::scheduling::{
+use crate::{
     admission::QueueCounts, load::Gate, parameters::Parameters, processes::ProcessIdentity,
 };
 use elsecall_machine::inspection::LoadSample;
@@ -63,7 +63,7 @@ pub struct Record {
     /// Additional run boundaries. Admission wait and workspace sync are
     /// already recorded as `waited_ms` and `placed.sync.duration_ms`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub run_phases: Option<crate::scheduling::run_phases::RunPhases>,
+    pub run_phases: Option<crate::run_phases::RunPhases>,
     /// CPU time the command and the descendants it waited for used, when measured.
     #[serde(default)]
     pub cpu_ms: Option<u64>,
@@ -77,7 +77,7 @@ pub struct Record {
     pub processes: Vec<ProcessIdentity>,
     /// Set for a run placed on another member, on both members.
     #[serde(default)]
-    pub placed: Option<crate::scheduling::placed::PlacedRecord>,
+    pub placed: Option<crate::placed::PlacedRecord>,
     /// Where the request's properties came from, including the label rule that
     /// applied; absent in records from before label rules and for hosted work.
     #[serde(default)]
@@ -89,15 +89,15 @@ pub struct Record {
     /// On the master, for a run placed on another member: the configuration sync
     /// that brought the member up to date before the run, or failed it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub config_sync: Option<crate::scheduling::pre_run_sync::PreRunSyncRecord>,
+    pub config_sync: Option<crate::pre_run_sync::PreRunSyncRecord>,
     /// Every completed or hold-censored pre-run attempt. Missing in older records.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub pre_run_history: Option<crate::scheduling::pre_run_sync::History>,
+    pub pre_run_history: Option<crate::pre_run_sync::History>,
     /// On the master, for a placeable run: each member whose pre-run
     /// configuration sync failed, and where placement sent the request instead,
     /// oldest first.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub fallbacks: Vec<crate::scheduling::pre_run_sync::Fallback>,
+    pub fallbacks: Vec<crate::pre_run_sync::Fallback>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -107,7 +107,7 @@ pub struct WorkspaceIdentity {
 }
 
 impl WorkspaceIdentity {
-    pub fn of(member: &str, workspace: &crate::scheduling::placed::WorkspaceRef) -> Self {
+    pub fn of(member: &str, workspace: &crate::placed::WorkspaceRef) -> Self {
         use sha2::{Digest, Sha256};
         let identity = |path: &str| {
             let mut hash = Sha256::new();
@@ -198,7 +198,7 @@ pub struct Decision {
     pub candidates: Vec<Candidate>,
     /// Members placement could not ask, and why.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub unreachable: Vec<crate::scheduling::placement::Unreachable>,
+    pub unreachable: Vec<crate::placement::Unreachable>,
     /// The parameters this member decided with; absent in records from before
     /// they were tunable, which used the defaults.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -265,16 +265,16 @@ pub struct ArrivalEstimate {
     pub eligible: bool,
     /// The member's admission state as the scoring saw it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub state: Option<crate::scheduling::messages::MemberState>,
+    pub state: Option<crate::messages::MemberState>,
     /// What the scoring used beyond `state`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub inputs: Option<crate::scheduling::placement::Inputs>,
+    pub inputs: Option<crate::placement::Inputs>,
 }
 
 impl Arrival {
     /// What `scoring`, the first, expected of each candidate, with what it
     /// scored them with.
-    pub fn of(verdict: &crate::scheduling::placement::Verdict, scoring: &Scoring) -> Self {
+    pub fn of(verdict: &crate::placement::Verdict, scoring: &Scoring) -> Self {
         Self {
             scored_at: scoring.scored_at,
             winner: verdict.winner.clone(),
@@ -287,7 +287,7 @@ impl Arrival {
 
 impl ArrivalEstimate {
     /// What a scoring expected of one candidate, with what it scored it with.
-    pub fn of(scored: &crate::scheduling::placement::Scored) -> Self {
+    pub fn of(scored: &crate::placement::Scored) -> Self {
         Self {
             member: scored.observation.state.member.clone(),
             wait_seconds: scored.estimate.wait_seconds,
@@ -333,20 +333,16 @@ pub struct Candidate {
     pub expected_completion: Option<Timestamp>,
     /// The components of its expected completion, for placeable requests.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub estimate: Option<crate::scheduling::placement::Estimate>,
+    pub estimate: Option<crate::placement::Estimate>,
     /// What placement scored it with beyond the state above, for placeable
     /// requests; absent in records from before they were recorded.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub inputs: Option<crate::scheduling::placement::Inputs>,
+    pub inputs: Option<crate::placement::Inputs>,
 }
 
 impl Candidate {
     /// A placeable request's candidate as its decision, made `now`, records it.
-    pub fn scored(
-        scored: &crate::scheduling::placement::Scored,
-        chosen: bool,
-        now: Timestamp,
-    ) -> Self {
+    pub fn scored(scored: &crate::placement::Scored, chosen: bool, now: Timestamp) -> Self {
         let state = &scored.observation.state;
         Self {
             member: state.member.clone(),

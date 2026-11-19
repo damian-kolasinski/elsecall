@@ -3,11 +3,9 @@
 //! has room beyond its reserve and no interactive work waits. A pass that cannot
 //! start within its interval does what `at_deadline` says, and the next interval
 //! tries again. Each attempt leaves a record labelled `elsecall housekeeping`.
-use crate::{
-    housekeeping::pass::Housekeeper,
-    scheduling::{messages::RunEnded, service::Scheduler},
-};
+use crate::housekeeping::pass::Housekeeper;
 use elsecall_failure::Result;
+use elsecall_scheduling::{messages::RunEnded, service::Scheduler};
 use elsecall_scheduling_model::{
     capacity::Cores,
     request::{AdmissionRequest, Kind, Placement, Urgency},

@@ -5,10 +5,10 @@ use crate::{
         facts::is_code,
         window::{Window, invalid},
     },
-    scheduling::record::MAXIMUM_CPU_MS,
     workload::trace::{PAGE, Page, TraceOutcome, sanitize_decision},
 };
 use elsecall_failure::Result;
+use elsecall_scheduling::record::MAXIMUM_CPU_MS;
 use elsecall_scheduling_model::{
     request::{MAXIMUM_HOLD_LIMIT, Placement, Urgency},
     run_id::RunId,
@@ -81,7 +81,7 @@ pub fn page(mut page: Page, window: Window, before: Option<&Cursor>, member: &st
                     attempts.iter().any(|attempt| attempt.started_at.is_none())
                 })
             || r.pre_run_attempts.as_ref().is_some_and(|attempts| {
-                attempts.len() > crate::scheduling::pre_run_sync::History::MAXIMUM_ATTEMPTS
+                attempts.len() > elsecall_scheduling::pre_run_sync::History::MAXIMUM_ATTEMPTS
                     || attempts.iter().any(|attempt| {
                         !attempt.believable()
                             || attempt.started_at.is_some_and(|at| at < f.requested_at)
@@ -137,7 +137,7 @@ pub fn page(mut page: Page, window: Window, before: Option<&Cursor>, member: &st
                     .after(std::time::Duration::from_secs(60))
             || l.cap_ms > 86_400_000
             || l.cpu_ms.is_some_and(|ms| ms > MAXIMUM_CPU_MS)
-            || matches!(&l.ending,Some(crate::scheduling::leftovers::Ending::NextRun{run_id}) if !id(run_id))
+            || matches!(&l.ending,Some(elsecall_scheduling::leftovers::Ending::NextRun{run_id}) if !id(run_id))
         {
             return Err(bad());
         }
@@ -152,10 +152,8 @@ pub fn page(mut page: Page, window: Window, before: Option<&Cursor>, member: &st
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        scheduling::fixtures::{self, Run, T0},
-        workload::trace::Request,
-    };
+    use crate::workload::trace::Request;
+    use elsecall_scheduling::fixtures::{self, Run, T0};
     use elsecall_scheduling_model::timestamp::Timestamp;
     #[test]
     fn rejects_peer_measurements_and_codes_and_strips_diagnostics() {
@@ -196,7 +194,7 @@ mod tests {
 
     #[test]
     fn settings_and_workspace_identities_are_validated_at_the_peer_boundary() {
-        use crate::scheduling::{parameters::Parameters, records::SchedulerSettings};
+        use elsecall_scheduling::{parameters::Parameters, records::SchedulerSettings};
         use elsecall_scheduling_model::capacity::{Capacity, Cores};
         let window = Window::new(
             Timestamp::from_millis(T0),
@@ -237,7 +235,7 @@ mod tests {
             .is_err()
         );
         let mut request = Request::of(&fixtures::placed(Run::default())).unwrap();
-        request.workspace = Some(crate::scheduling::record::WorkspaceIdentity {
+        request.workspace = Some(elsecall_scheduling::record::WorkspaceIdentity {
             workspace: "/private/raw/path".into(),
             repository: "a".repeat(64),
         });
@@ -267,7 +265,7 @@ mod tests {
                 cap_ms: 60_000,
                 duration_ms: Some(1000),
                 cpu_ms: Some(100),
-                ending: Some(crate::scheduling::leftovers::Ending::Finished),
+                ending: Some(elsecall_scheduling::leftovers::Ending::Finished),
             }],
             ..Page::default()
         };

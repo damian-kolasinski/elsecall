@@ -4,7 +4,7 @@
 //! interactive work, never keeps placed work out. An admitted run keeps its
 //! capacity until its runner ends it.
 use super::{Entry, OnHandover, Phase, Scheduler};
-use crate::scheduling::{
+use crate::{
     leftovers::Leftovers,
     placed::{OfferReply, PlacedRecord, PlacementOffer, Reached, Side, SyncSummary, Warmth},
     processes::ProcessIdentity,
@@ -142,10 +142,7 @@ impl Scheduler {
                 size_basis: Some(basis),
                 calling_member: from.into(),
                 workspace_recorded: true,
-                workspace: Some(crate::scheduling::record::WorkspaceIdentity::of(
-                    from,
-                    &offer.workspace,
-                )),
+                workspace: Some(crate::record::WorkspaceIdentity::of(from, &offer.workspace)),
                 member: Some(member.clone()),
                 placement_note: Some(format!("Placed here by {from}, the master.")),
                 nested_in: None,

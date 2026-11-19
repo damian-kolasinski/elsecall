@@ -15,15 +15,13 @@ use super::{
     timeline::{integrate, record_queues},
     validation,
 };
-use crate::{
-    scheduling::{
-        clock::{Clock, VirtualClock},
-        parameters::Parameters,
-        record::SizeBasis,
-    },
-    workload::trace::{Request, Trace},
-};
+use crate::workload::trace::{Request, Trace};
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling::{
+    clock::{Clock, VirtualClock},
+    parameters::Parameters,
+    record::SizeBasis,
+};
 use elsecall_scheduling_model::{
     capacity::Capacity,
     request::{AdmissionRequest, Urgency},
@@ -565,7 +563,7 @@ async fn trial(
                             members[*name]
                                 .scheduler
                                 .record(&a.grant.run_id)
-                                .is_ok_and(|r| r.state == crate::scheduling::record::State::Ended)
+                                .is_ok_and(|r| r.state == elsecall_scheduling::record::State::Ended)
                         })
                 {
                     a.execution_failure = Some("connection_lost".into());
@@ -819,7 +817,7 @@ async fn trial(
                 let mut work = request.clone().validate(r.fact.requested_at)?;
                 work.size = r.fact.size;
                 work.size_declared = matches!(basis, SizeBasis::Declared);
-                Some(crate::scheduling::service::AdmissionSnapshot {
+                Some(elsecall_scheduling::service::AdmissionSnapshot {
                     request: work,
                     received_at: r.fact.requested_at,
                     size_basis: basis,
@@ -1116,7 +1114,7 @@ fn seed_copies(trace: &Trace, world: &Arc<Mutex<World>>) {
         if let Some(d) = &r.decision {
             for c in &d.candidates {
                 if let Some(inputs) = &c.inputs
-                    && let crate::scheduling::placement::Copy::Remote { warmth, .. } = inputs.copy
+                    && let elsecall_scheduling::placement::Copy::Remote { warmth, .. } = inputs.copy
                 {
                     w.copies
                         .entry((c.member.clone(), s.root.clone()))
@@ -1144,19 +1142,17 @@ pub(super) mod tests {
     use super::*;
     use crate::workload::trace::TraceOutcome;
     pub fn trace() -> Trace {
-        use crate::{
-            scheduling::{
-                fixtures,
-                record::{Outcome as End, State},
-                records::SchedulerSettings,
-            },
-            workload::{
-                contention::{Curve, Point},
-                demand::Demand,
-                trace::Member as TraceMember,
-            },
+        use crate::workload::{
+            contention::{Curve, Point},
+            demand::Demand,
+            trace::Member as TraceMember,
         };
         use elsecall_load_log::buckets::Bucket;
+        use elsecall_scheduling::{
+            fixtures,
+            record::{Outcome as End, State},
+            records::SchedulerSettings,
+        };
         use elsecall_scheduling_model::capacity::Cores;
         let start = Timestamp::parse_rfc3339("2026-11-03T00:00:00Z").unwrap();
         let mut trace:Trace=serde_json::from_value(json!({"trace_version":1,"since":start,"until":start.after(Duration::from_secs(60)),"incomplete":false,"master":"a","members":[],"requests":[],"leftovers":[],"demand":[],"contention":[],"limits":[]})).unwrap();
@@ -1229,9 +1225,9 @@ pub(super) mod tests {
             r.urgency = Urgency::Interactive {
                 hold_limit_ms: Some(5000),
             };
-            r.hold_limit = Some(crate::scheduling::record::HoldLimitRecord {
+            r.hold_limit = Some(elsecall_scheduling::record::HoldLimitRecord {
                 seconds: Duration::from_secs(5),
-                basis: crate::scheduling::record::HoldBasis::Requested,
+                basis: elsecall_scheduling::record::HoldBasis::Requested,
                 expected_run_seconds: None,
             });
             r.decision = None;
@@ -1528,11 +1524,8 @@ pub(super) mod tests {
     }
     #[test]
     fn next_remote_run_is_admitted_then_settles_leftovers_before_sync() {
-        use crate::{
-            reporting::facts::PlacementKind,
-            scheduling::{leftovers::Ending, placed::Warmth, record::WorkspaceIdentity},
-            workload::trace::Leftover,
-        };
+        use crate::{reporting::facts::PlacementKind, workload::trace::Leftover};
+        use elsecall_scheduling::{leftovers::Ending, placed::Warmth, record::WorkspaceIdentity};
         use elsecall_scheduling_model::request::Placement;
         let mut trace = trace();
         trace.requests.truncate(2);
@@ -1582,7 +1575,7 @@ pub(super) mod tests {
     }
     #[test]
     fn idle_jumps_preserve_the_production_three_second_gate_window() {
-        use crate::scheduling::record::Verdict;
+        use elsecall_scheduling::record::Verdict;
         let mut trace = trace();
         let start = trace.since;
         trace.until = start.after(Duration::from_secs(120));

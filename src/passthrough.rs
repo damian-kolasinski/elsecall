@@ -8,18 +8,11 @@ pub mod remote;
 mod signals;
 pub mod status_file;
 
-use crate::{
-    admission_cli::{
-        self,
-        environment::{CallerEnvironment, Mode},
-        options::{CallerOptions, RequestOptions},
-        resolution::{Layers, resolve},
-    },
-    scheduling::{
-        messages::{Grant, RunEnded},
-        placed::WorkspaceRef,
-        run_phases::{RemoteFailurePhase, RunPhases},
-    },
+use crate::admission_cli::{
+    self,
+    environment::{CallerEnvironment, Mode},
+    options::{CallerOptions, RequestOptions},
+    resolution::{Layers, resolve},
 };
 use clap::Args;
 use elsecall_failure::{Failure, Result};
@@ -27,6 +20,11 @@ use elsecall_guidance::{self as guidance, Unmanaged};
 use elsecall_local_client::{self as client, Wait};
 use elsecall_local_state::{local_access, paths::Paths, run_id_file::RunIdFile};
 use elsecall_run_admission::Admission;
+use elsecall_scheduling::{
+    messages::{Grant, RunEnded},
+    placed::WorkspaceRef,
+    run_phases::{RemoteFailurePhase, RunPhases},
+};
 use elsecall_scheduling_model::{
     request::{Kind, Placement},
     timestamp::Timestamp,

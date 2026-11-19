@@ -2,7 +2,7 @@
 //! runs left some, how much CPU time they used afterwards and how often the cap
 //! stopped them. That work is not admitted, so a label that leaves heavy work
 //! behind loads members outside admission's view; reports make it visible.
-use crate::scheduling::{
+use elsecall_scheduling::{
     leftovers::{Ending, Leftovers},
     placed::Side,
     record::Record,
@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// The longest leftovers can have run: as long as records are kept.
-const MOST_MS: u64 = crate::scheduling::records::RETENTION.as_millis() as u64;
+const MOST_MS: u64 = elsecall_scheduling::records::RETENTION.as_millis() as u64;
 /// More cores than any member has, to bound the CPU time a member reports.
 pub const MOST_CORES: u64 = 1024;
 
@@ -149,7 +149,7 @@ pub fn leftovers(facts: &[LeftoverFact]) -> LeftoverMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::fixtures::{self, Run};
+    use elsecall_scheduling::fixtures::{self, Run};
 
     fn hosted(n: u64, label: &'static str, ending: Ending, cpu_ms: u64) -> Record {
         let mut record = fixtures::placed(Run {

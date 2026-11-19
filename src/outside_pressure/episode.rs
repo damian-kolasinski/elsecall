@@ -6,13 +6,11 @@
 //! it has lasted [`SUSTAINED`] without the gate staying open for [`REOPENED`],
 //! and a blocked state ends only once the gate has stayed open for [`CLEARED`],
 //! so neither a spike nor a moment's relief flips the status.
-use crate::{
-    outside_pressure::{
-        attribution::Attribution,
-        blocked::{Blocked, Reason},
-    },
-    scheduling::load::Gate,
+use crate::outside_pressure::{
+    attribution::Attribution,
+    blocked::{Blocked, Reason},
 };
+use elsecall_scheduling::load::Gate;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use std::time::Duration;
 

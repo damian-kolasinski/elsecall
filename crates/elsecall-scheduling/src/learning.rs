@@ -25,7 +25,7 @@ pub mod run_time;
 
 pub use run_time::{Basis, Conversions, RunEstimate, RunEstimates, RunHistory};
 
-use crate::scheduling::{
+use crate::{
     parameters::Estimates,
     placed::Side,
     record::{Outcome, Record},
@@ -167,19 +167,13 @@ pub fn size(samples: &[RunSample], estimates: &Estimates) -> Option<LearnedSize>
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+pub mod tests {
     use super::*;
 
-    pub(crate) fn sample(
-        member: &str,
-        at: u64,
-        run: f64,
-        cpu: Option<f64>,
-        cold: bool,
-    ) -> RunSample {
+    pub fn sample(member: &str, at: u64, run: f64, cpu: Option<f64>, cold: bool) -> RunSample {
         labelled("build", None, member, at, run, cold, cpu)
     }
-    pub(crate) fn labelled(
+    pub fn labelled(
         label: &str,
         family: Option<&str>,
         member: &str,
@@ -199,8 +193,8 @@ pub(crate) mod tests {
             units: None,
         }
     }
-    pub(crate) fn defaults() -> Estimates {
-        crate::scheduling::parameters::Parameters::default().estimates
+    pub fn defaults() -> Estimates {
+        crate::parameters::Parameters::default().estimates
     }
 
     #[test]
@@ -236,7 +230,7 @@ pub(crate) mod tests {
 
     #[test]
     fn samples_take_out_the_sync_and_skip_old_or_unfinished_runs() {
-        use crate::scheduling::{
+        use crate::{
             placed::{PlacedRecord, Reached, SyncSummary},
             processes::ProcessIdentity,
             record::{Outcome, State},

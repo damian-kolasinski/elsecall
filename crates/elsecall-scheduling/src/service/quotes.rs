@@ -2,7 +2,7 @@
 //! reported, kept apart so that answers about different workspaces, asked at
 //! different times, merge rather than erase one another. An answer older than
 //! the one kept is ignored.
-use crate::scheduling::{
+use crate::{
     messages::MemberState,
     quote::{CopyQuote, HeldWork, Quote},
 };
@@ -128,7 +128,7 @@ impl Quotes {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::{admission::QueueCounts, load::Gate, placed::Warmth};
+    use crate::{admission::QueueCounts, load::Gate, placed::Warmth};
     use elsecall_scheduling_model::capacity::{Capacity, Cores};
 
     fn quote(free: u32, copies: &[(&str, Warmth)]) -> Quote {

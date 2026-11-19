@@ -1,10 +1,8 @@
 //! Virtual fleet resource state: family charges, copies, leftovers and fixed
 //! observations. Scheduling policy remains in the real member services.
 use super::model::{self, Envelope};
-use crate::{
-    scheduling::{clock::Clock, placed::Warmth},
-    workload::trace::Trace,
-};
+use crate::workload::trace::Trace;
+use elsecall_scheduling::{clock::Clock, placed::Warmth};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
@@ -178,7 +176,7 @@ impl World {
 #[cfg(test)]
 mod family_tests {
     use super::*;
-    use crate::scheduling::clock::VirtualClock;
+    use elsecall_scheduling::clock::VirtualClock;
 
     #[test]
     fn finished_root_retains_one_family_resource_charge_until_last_nested_member_ends() {

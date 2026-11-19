@@ -1,13 +1,13 @@
 //! Explicit projections: never serialize a Record wholesale into a trace.
 use crate::{
     reporting::facts::Fact,
-    scheduling::{
-        leftovers::{Ending, Leftovers},
-        record::{Decision, HoldLimitRecord, Outcome, Record},
-    },
     workload::{contention::Curve, demand::Demand},
 };
 use elsecall_load_log::buckets::Bucket;
+use elsecall_scheduling::{
+    leftovers::{Ending, Leftovers},
+    record::{Decision, HoldLimitRecord, Outcome, Record},
+};
 use elsecall_scheduling_model::{
     request::{Placement, Urgency},
     timestamp::Timestamp,
@@ -42,7 +42,7 @@ pub struct Request {
     pub nested_in: Option<String>,
     pub shares_capacity_of: Option<String>,
     #[serde(default)]
-    pub workspace: Option<crate::scheduling::record::WorkspaceIdentity>,
+    pub workspace: Option<elsecall_scheduling::record::WorkspaceIdentity>,
     /// Known absence is distinct from historical missing workspace evidence.
     #[serde(default)]
     pub workspace_recorded: bool,
@@ -72,13 +72,15 @@ pub struct PreRunAttempt {
     pub cause: Option<String>,
 }
 impl PreRunAttempt {
-    fn of(record: &crate::scheduling::pre_run_sync::PreRunSyncRecord) -> Self {
+    fn of(record: &elsecall_scheduling::pre_run_sync::PreRunSyncRecord) -> Self {
         Self {
             member: record.member.clone(),
             started_at: None,
             duration_ms: record.duration_ms,
             cause: match &record.outcome {
-                crate::scheduling::pre_run_sync::Recorded::Failed { cause } => Some(cause.clone()),
+                elsecall_scheduling::pre_run_sync::Recorded::Failed { cause } => {
+                    Some(cause.clone())
+                }
                 _ => None,
             },
         }
@@ -126,7 +128,7 @@ impl Request {
                     .filter(|d| {
                         !self.fact.unfinished
                             && self.fact.member.is_none()
-                            && d.verdict != crate::scheduling::record::Verdict::Started
+                            && d.verdict != elsecall_scheduling::record::Verdict::Started
                             && matches!(
                                 self.outcome,
                                 Some(TraceOutcome::Failed { .. } | TraceOutcome::Cancelled)
@@ -245,7 +247,7 @@ pub struct Page {
     pub next: Option<crate::report_protocol::Cursor>,
     /// First-page member settings, independent of whether any requests exist.
     #[serde(default)]
-    pub scheduler_settings: Vec<crate::scheduling::records::SchedulerSettings>,
+    pub scheduler_settings: Vec<elsecall_scheduling::records::SchedulerSettings>,
 }
 
 impl Page {
@@ -296,7 +298,7 @@ pub struct Member {
     pub load: Vec<Bucket>,
     pub errors: Vec<String>,
     #[serde(default)]
-    pub scheduler_settings: Vec<crate::scheduling::records::SchedulerSettings>,
+    pub scheduler_settings: Vec<elsecall_scheduling::records::SchedulerSettings>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Trace {
@@ -383,9 +385,9 @@ pub fn structural_members(trace: &Trace, request: &Request) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        scheduling::fixtures::{self, Run},
-        scheduling::placed::Side,
+    use elsecall_scheduling::{
+        fixtures::{self, Run},
+        placed::Side,
     };
     #[test]
     fn projection_covers_replay_fields_and_excludes_paths_processes_and_free_text() {
@@ -394,11 +396,11 @@ mod tests {
             ..Run::default()
         });
         record.warnings.push("SECRET_SENTINEL".into());
-        let workspace = crate::scheduling::placed::WorkspaceRef {
+        let workspace = elsecall_scheduling::placed::WorkspaceRef {
             root: "/private/SECRET_SENTINEL/tree".into(),
             common_dir: "/private/SECRET_SENTINEL/repository".into(),
         };
-        record.workspace = Some(crate::scheduling::record::WorkspaceIdentity::of(
+        record.workspace = Some(elsecall_scheduling::record::WorkspaceIdentity::of(
             "mini", &workspace,
         ));
         let placed = record.placed.as_mut().unwrap();
@@ -420,13 +422,13 @@ mod tests {
         assert_eq!(reread.workspace, record.workspace);
         assert_eq!(
             record.workspace,
-            Some(crate::scheduling::record::WorkspaceIdentity::of(
+            Some(elsecall_scheduling::record::WorkspaceIdentity::of(
                 "mini", &workspace
             ))
         );
         assert_ne!(
             record.workspace,
-            Some(crate::scheduling::record::WorkspaceIdentity::of(
+            Some(elsecall_scheduling::record::WorkspaceIdentity::of(
                 "other", &workspace
             ))
         );
@@ -435,7 +437,7 @@ mod tests {
     }
     #[test]
     fn pre_run_projection_keeps_timings_and_causes_without_synced_paths_or_reasons() {
-        use crate::scheduling::pre_run_sync::{Fallback, PreRunSyncRecord, Recorded};
+        use elsecall_scheduling::pre_run_sync::{Fallback, PreRunSyncRecord, Recorded};
         let mut record = fixtures::placed(Run::default());
         record.pre_run_history = None;
         record.config_sync = Some(PreRunSyncRecord {
@@ -469,7 +471,7 @@ mod tests {
 
     #[test]
     fn large_attempt_histories_paginate_by_bytes_without_losing_rows() {
-        use crate::scheduling::pre_run_sync::{Attempt, History};
+        use elsecall_scheduling::pre_run_sync::{Attempt, History};
         let mut records = Vec::new();
         for n in [2, 1] {
             let mut record = fixtures::pinned(n, "large", "mini", 1.0);
@@ -501,7 +503,7 @@ mod tests {
 
     #[test]
     fn command_ended_before_window_keeps_its_overlapping_leftovers() {
-        use crate::scheduling::{
+        use elsecall_scheduling::{
             leftovers::{Ending, Leftovers},
             records::Records,
         };
@@ -549,7 +551,7 @@ mod tests {
 
     #[test]
     fn carry_in_and_equal_time_pagination_read_without_mutating_history() {
-        use crate::scheduling::records::Records;
+        use elsecall_scheduling::records::Records;
         use elsecall_scheduling_model::timestamp::Timestamp;
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("records.sqlite");

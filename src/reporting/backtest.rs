@@ -18,16 +18,14 @@
 //!   converted between members by measured speed: what placement estimated
 //!   before families and learned speed ratios.
 //! - At most the latest [`MAXIMUM_RUNS`] runs of the period are estimated.
-use crate::{
-    reporting::{
-        facts::Fact,
-        statistics::{mean, nearest_rank, sorted},
-    },
-    scheduling::{
-        learning::{self, RunHistory, RunSample, ratios::SpeedRatios},
-        parameters::Parameters,
-        placement::{Level, Source},
-    },
+use crate::reporting::{
+    facts::Fact,
+    statistics::{mean, nearest_rank, sorted},
+};
+use elsecall_scheduling::{
+    learning::{self, RunHistory, RunSample, ratios::SpeedRatios},
+    parameters::Parameters,
+    placement::{Level, Source},
 };
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -223,7 +221,7 @@ pub fn backtest(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::fixtures;
+    use elsecall_scheduling::fixtures;
 
     fn close(a: Option<f64>, b: f64) -> bool {
         a.is_some_and(|a| (a - b).abs() < 1e-9)
@@ -331,7 +329,7 @@ mod tests {
     fn a_cold_run_without_cold_history_is_the_warm_estimate_times_the_cold_factor() {
         let mut facts = history();
         let mut cold = run(20, "test a", Some("test *"), "mini", 30.0);
-        cold.warmth = Some(crate::scheduling::placed::Warmth::Cold);
+        cold.warmth = Some(elsecall_scheduling::placed::Warmth::Cold);
         facts.push(cold);
         let only_cold: Vec<Fact> = facts[facts.len() - 1..].to_vec();
         let backtest = backtest(

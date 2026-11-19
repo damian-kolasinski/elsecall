@@ -1,10 +1,8 @@
 //! The processes of one process group: who is in it, what CPU time each has used,
 //! and signals to all of them. A placed command leads its own group, so what it
 //! leaves running after it exits is found here.
-use crate::{
-    macos::{process_usage, processes},
-    scheduling::processes::ProcessIdentity,
-};
+use crate::macos::{process_usage, processes};
+use elsecall_scheduling::processes::ProcessIdentity;
 use std::time::Duration;
 
 /// A live process of the group.

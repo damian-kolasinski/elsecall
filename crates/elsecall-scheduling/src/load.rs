@@ -1,5 +1,5 @@
 //! Whether outside load lets a member admit new work.
-use crate::scheduling::parameters::Admission;
+use crate::parameters::Admission;
 use elsecall_machine::inspection::{LoadSample, MemoryPressure};
 use elsecall_scheduling_model::capacity::Cores;
 use std::collections::VecDeque;
@@ -116,7 +116,7 @@ pub fn gate(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::parameters::{BlockingPressure, Parameters};
+    use crate::parameters::{BlockingPressure, Parameters};
     use elsecall_machine::inspection::{CoreCounts, ThermalState};
 
     fn sample(cpu: Option<f64>, memory: MemoryPressure) -> LoadSample {

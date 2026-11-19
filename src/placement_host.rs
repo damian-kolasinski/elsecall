@@ -1,21 +1,19 @@
 //! A member hosting runs its master places on it: it claims the run's copy, asks
 //! its scheduler to admit the run at once, holds the admission until the caller
 //! attaches, and reports the runner's progress back to its records.
-use crate::{
-    remote_run::{
-        leftovers::Cap,
-        protocol::Exited,
-        runner::{Assignment, Ending, Host, Reached as RunnerReached},
-    },
-    scheduling::{
-        leftovers::Leftovers,
-        placed::{OfferReply, PlacementOffer, Reached, SyncSummary, Warmth},
-        quote::{CopyQuote, MAXIMUM_WORKSPACES, Quote, QuoteRequest},
-        run_phases::RemoteFailurePhase,
-        service::{HostedEnd, HostedExit, Scheduler},
-    },
+use crate::remote_run::{
+    leftovers::Cap,
+    protocol::Exited,
+    runner::{Assignment, Ending, Host, Reached as RunnerReached},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling::{
+    leftovers::Leftovers,
+    placed::{OfferReply, PlacementOffer, Reached, SyncSummary, Warmth},
+    quote::{CopyQuote, MAXIMUM_WORKSPACES, Quote, QuoteRequest},
+    run_phases::RemoteFailurePhase,
+    service::{HostedEnd, HostedExit, Scheduler},
+};
 use elsecall_scheduling_model::run_id::RunId;
 use elsecall_workspace::{
     copies::Copies,

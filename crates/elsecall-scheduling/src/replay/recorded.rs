@@ -5,7 +5,7 @@
 //! `placement::pick`, from the recorded estimates. Either way, scoring under
 //! the recorded parameters must first reproduce the recorded verdict exactly.
 use super::Change;
-use crate::scheduling::{
+use crate::{
     load::{self, Gate},
     messages::MemberState,
     parameters::{Admission, Parameters},

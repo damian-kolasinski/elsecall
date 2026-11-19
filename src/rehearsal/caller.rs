@@ -3,9 +3,9 @@ use super::{
     invalid,
     protocol::{Job, Launch},
 };
-use crate::scheduling::processes::ProcessIdentity;
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling::processes::ProcessIdentity;
 use elsecall_scheduling_model::{
     request::{AtDeadline, Placement, Urgency},
     timestamp::Timestamp,

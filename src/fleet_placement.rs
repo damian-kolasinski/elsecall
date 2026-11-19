@@ -1,16 +1,14 @@
 //! Placement's view of the fleet: which members exist, who is master, and how an
 //! offer reaches a member. The adapter of `scheduling::placed::Members` over the
 //! authenticated member API.
-use crate::{
-    fleet::Fleet,
-    scheduling::{
-        placed::{Members, OfferReply, PlacementOffer, Standing},
-        quote::{Quote, QuoteRequest},
-    },
-};
+use crate::fleet::Fleet;
 use elsecall_failure::Result;
 use elsecall_membership::roster::Readiness;
 use elsecall_peer_transport::peer_client;
+use elsecall_scheduling::{
+    placed::{Members, OfferReply, PlacementOffer, Standing},
+    quote::{Quote, QuoteRequest},
+};
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};
@@ -89,13 +87,13 @@ impl FleetMembers {
         let fleet = self.fleet.clone();
         let member = member.to_owned();
         Box::pin(async move {
-            let fleet = fleet.ok_or_else(|| crate::scheduling::placed::not_in_fleet(&member))?;
+            let fleet = fleet.ok_or_else(|| elsecall_scheduling::placed::not_in_fleet(&member))?;
             let roster = fleet.roster()?;
             let target = roster
                 .members()
                 .iter()
                 .find(|m| m.name.as_str() == member)
-                .ok_or_else(|| crate::scheduling::placed::not_in_fleet(&member))?
+                .ok_or_else(|| elsecall_scheduling::placed::not_in_fleet(&member))?
                 .clone();
             peer_client::call(
                 fleet.key(),

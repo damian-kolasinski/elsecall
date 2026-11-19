@@ -1,16 +1,14 @@
 //! Placement's way to bring a member's synced configuration up to date before a
 //! run starts there: the adapter of `scheduling::pre_run_sync::PreRunSync` over
 //! configuration sync.
-use crate::{
-    config_sync::{
-        compare::Change,
-        report::Applied,
-        service::{ConfigSync, MemberSync},
-    },
-    scheduling::pre_run_sync::{PreRunSync, PushedPath, Synced},
+use crate::config_sync::{
+    compare::Change,
+    report::Applied,
+    service::{ConfigSync, MemberSync},
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_membership::roster::MemberName;
+use elsecall_scheduling::pre_run_sync::{PreRunSync, PushedPath, Synced};
 use futures_util::future::BoxFuture;
 use std::sync::Arc;
 
@@ -34,7 +32,7 @@ impl PreRunSync for PlacementConfigSync {
             let sync = sync?;
             let name: MemberName = member
                 .parse()
-                .map_err(|_| crate::scheduling::placed::not_in_fleet(&member))?;
+                .map_err(|_| elsecall_scheduling::placed::not_in_fleet(&member))?;
             Ok(synced(sync.bring_up_to_date(&name).await?))
         })
     }

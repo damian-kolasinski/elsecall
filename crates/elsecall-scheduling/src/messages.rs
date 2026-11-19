@@ -1,5 +1,5 @@
 //! Messages between the CLI and the service about admitted work.
-use crate::scheduling::{
+use crate::{
     admission::QueueCounts,
     load::Gate,
     record::Record,
@@ -25,7 +25,7 @@ pub struct Grant {
     pub placement_note: Option<String>,
     /// Set when the work runs on another member.
     #[serde(default)]
-    pub placed: Option<crate::scheduling::placed::PlacedGrant>,
+    pub placed: Option<crate::placed::PlacedGrant>,
     /// The holder already held this lease, so acquiring again returned it.
     #[serde(default)]
     pub reused: bool,
@@ -160,8 +160,8 @@ pub struct RunSummary {
     pub plan_observation: Option<elsecall_scheduling_model::workload_metadata::Observation>,
     pub size: Cores,
     pub urgency: String,
-    pub state: crate::scheduling::record::State,
-    pub outcome: Option<crate::scheduling::record::Outcome>,
+    pub state: crate::record::State,
+    pub outcome: Option<crate::record::Outcome>,
     pub member: Option<String>,
     pub nested_in: Option<RunId>,
     pub requested_at: elsecall_scheduling_model::timestamp::Timestamp,
@@ -193,11 +193,11 @@ fn pinned() -> elsecall_scheduling_model::request::Placement {
 /// A placed run in `elsecall runs`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PlacedSummary {
-    pub side: crate::scheduling::placed::Side,
+    pub side: crate::placed::Side,
     pub calling_member: String,
     pub member: String,
-    pub warmth: Option<crate::scheduling::placed::Warmth>,
-    pub reached: crate::scheduling::placed::Reached,
+    pub warmth: Option<crate::placed::Warmth>,
+    pub reached: crate::placed::Reached,
     pub sync_ms: Option<u64>,
     /// How long bringing the member's synced configuration up to date took.
     #[serde(default, skip_serializing_if = "Option::is_none")]

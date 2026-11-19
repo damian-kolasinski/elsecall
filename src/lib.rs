@@ -59,7 +59,6 @@ pub mod report_cli;
 pub mod report_protocol;
 pub mod reporting;
 pub mod run_relay;
-pub mod scheduling;
 pub mod server;
 pub mod service_configuration;
 pub mod service_handover;

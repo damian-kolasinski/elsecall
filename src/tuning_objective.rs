@@ -20,7 +20,7 @@ pub struct Noise {
     /// Freeze controlled work and ideal denominators for subsequent pairs.
     pub calibration: BTreeMap<String, Calibration>,
     pub ideals: BTreeMap<String, Option<f64>>,
-    pub baseline_settings: BTreeMap<String, crate::scheduling::records::SchedulerSettings>,
+    pub baseline_settings: BTreeMap<String, elsecall_scheduling::records::SchedulerSettings>,
 }
 impl Noise {
     pub fn valid(&self) -> bool {

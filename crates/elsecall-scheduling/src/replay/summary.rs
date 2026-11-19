@@ -4,7 +4,7 @@ use super::{
     Change,
     recorded::{Origin, Rescored, Unreplayable},
 };
-use crate::scheduling::{
+use crate::{
     placement::Level,
     record::{Record, Verdict},
 };

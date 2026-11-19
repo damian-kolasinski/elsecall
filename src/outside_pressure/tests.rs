@@ -5,12 +5,10 @@ use super::{
     detector::{BlockedReport, Detector, Observation},
     sampling::{Memory, Owner, ProcessSampler, ProcessUse},
 };
-use crate::{
-    outside_pressure::Reason,
-    scheduling::{load, parameters::Parameters},
-};
+use crate::outside_pressure::Reason;
 use elsecall_failure::Result;
 use elsecall_machine::inspection::MemoryPressure;
+use elsecall_scheduling::{load, parameters::Parameters};
 use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{
     sync::{Arc, Mutex},
@@ -272,7 +270,7 @@ fn a_restart_during_a_block_keeps_its_onset() {
     for second_at in 421..424 {
         second.detector.observe(Observation {
             at: at(second_at),
-            gate: crate::scheduling::load::Gate::Unknown,
+            gate: elsecall_scheduling::load::Gate::Unknown,
             own: OwnWork::default(),
         });
     }

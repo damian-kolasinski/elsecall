@@ -35,7 +35,7 @@
 //! Without a family (no rule matched) or enough of its runs, there is no
 //! estimate, and placement uses its prior.
 use super::{RunSample, median, plan_fit::PlanFit, ratios::SpeedRatios};
-use crate::scheduling::parameters::Estimates;
+use crate::parameters::Estimates;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -137,7 +137,7 @@ impl Default for RunHistory {
             plan: None,
             plans: Vec::new(),
             ratios: SpeedRatios::default(),
-            estimates: crate::scheduling::parameters::Parameters::default().estimates,
+            estimates: crate::parameters::Parameters::default().estimates,
         }
     }
 }
@@ -417,7 +417,7 @@ impl RunHistory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::learning::tests::{defaults, labelled, sample};
+    use crate::learning::tests::{defaults, labelled, sample};
 
     fn speeds(member: &str) -> Option<f64> {
         match member {

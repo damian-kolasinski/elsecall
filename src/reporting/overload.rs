@@ -190,7 +190,7 @@ pub fn overload(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::{
+    use elsecall_scheduling::{
         fixtures::{self, MINUTE, T0, bucket},
         record::Record,
     };

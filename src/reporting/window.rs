@@ -1,6 +1,6 @@
 //! The period a report covers, and the widths it compares members' load in.
-use crate::scheduling::records::RETENTION;
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling::records::RETENTION;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use std::time::Duration;
 

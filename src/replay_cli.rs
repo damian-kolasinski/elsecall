@@ -1,13 +1,11 @@
 //! `elsecall replay`: this member's recorded placement decisions scored again
 //! under changed parameters.
-use crate::{
-    replay_api::{ReplayRequest, invalid},
-    scheduling::replay::Change,
-};
+use crate::replay_api::{ReplayRequest, invalid};
 use clap::Args;
 use elsecall_failure::Result;
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling::replay::Change;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde_json::Value;
 

@@ -6,18 +6,16 @@ use super::{
     member::Member,
     model,
 };
-use crate::{
-    scheduling::{
-        messages::{Grant, Release, RunEnded},
-        placed::{PlacedReport, Reached, SyncSummary, Warmth},
-        service::HostedEnd,
-    },
-    workload::{
-        demand::family,
-        trace::{Request, Trace, TraceOutcome},
-    },
+use crate::workload::{
+    demand::family,
+    trace::{Request, Trace, TraceOutcome},
 };
 use elsecall_failure::Result;
+use elsecall_scheduling::{
+    messages::{Grant, Release, RunEnded},
+    placed::{PlacedReport, Reached, SyncSummary, Warmth},
+    service::HostedEnd,
+};
 use elsecall_scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
 use serde::Serialize;
 use std::{
@@ -443,7 +441,7 @@ pub(super) fn begin_command(
         local.scheduler.command_started(
             a.pid,
             &a.grant.run_id,
-            crate::scheduling::messages::CommandStarted { pid: command },
+            elsecall_scheduling::messages::CommandStarted { pid: command },
         )?;
     }
     Ok(())
@@ -483,7 +481,7 @@ pub(super) fn finish(
     let caller = &members[&r.fact.calling_member].scheduler;
     let caller_live = caller
         .record(id)
-        .is_ok_and(|r| r.state == crate::scheduling::record::State::Running);
+        .is_ok_and(|r| r.state == elsecall_scheduling::record::State::Running);
     let cpu = a.cpu_ms;
     if a.grant.placed.is_some() {
         let host = &members[&a.grant.member].scheduler;
@@ -652,18 +650,18 @@ pub(super) fn advance(
 
 #[cfg(test)]
 mod family_tests {
-    use crate::scheduling::{
-        clock::VirtualClock,
-        messages::{CommandStarted, RunEnded},
-        parameters::Parameters,
-        record::State,
-    };
     use crate::simulation::{Options, simulate};
     use crate::simulation::{
         adapters::{Processes, World},
         member::{FleetAdapters, Member},
         model::Envelope,
         settings::Settings,
+    };
+    use elsecall_scheduling::{
+        clock::VirtualClock,
+        messages::{CommandStarted, RunEnded},
+        parameters::Parameters,
+        record::State,
     };
     use elsecall_scheduling_model::{
         capacity::{Capacity, Cores},

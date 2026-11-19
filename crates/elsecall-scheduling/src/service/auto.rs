@@ -15,7 +15,7 @@
 //! placement from then on, and the request is placed again at once, within the
 //! same hold limit. The caller needs no sync, so it always remains a candidate.
 use super::{Book, Entry, Phase, Scheduler, Waiting, placing::Placing, running_estimates};
-use crate::scheduling::{
+use crate::{
     admission::Class,
     busy::{self, MemberSituation, RunningOn},
     estimates,
@@ -118,13 +118,11 @@ impl Scheduler {
                 .saturating_sub(trust.recency.as_millis() as u64),
         );
         let samples =
-            |kind: Kind, read: elsecall_failure::Result<Vec<crate::scheduling::record::Record>>| {
-                match read {
-                    Ok(records) => learning::samples_of(kind, &records, now, trust.recency),
-                    Err(error) => {
-                        super::log("run_history_unavailable", &error);
-                        Vec::new()
-                    }
+            |kind: Kind, read: elsecall_failure::Result<Vec<crate::record::Record>>| match read {
+                Ok(records) => learning::samples_of(kind, &records, now, trust.recency),
+                Err(error) => {
+                    super::log("run_history_unavailable", &error);
+                    Vec::new()
                 }
             };
         let own = samples(
@@ -657,7 +655,7 @@ impl Scheduler {
                 },
                 // Not asked about yet: assume the worst.
                 None => Copy::Remote {
-                    warmth: crate::scheduling::placed::Warmth::Cold,
+                    warmth: crate::placed::Warmth::Cold,
                     busy: false,
                 },
             },
@@ -751,7 +749,7 @@ impl Scheduler {
         decision: Decision,
     ) {
         let failure = failure.for_run(id);
-        let outcome = crate::scheduling::record::Outcome::Failed {
+        let outcome = crate::record::Outcome::Failed {
             code: failure.code.clone(),
         };
         if let Some(responder) = self
@@ -852,7 +850,7 @@ pub(super) async fn reconsider(scheduler: Weak<Scheduler>) {
 /// Why a failed pre-run sync left its member out, by its cause code only.
 fn sync_failed(sync: &PreRunSyncRecord) -> String {
     match &sync.outcome {
-        crate::scheduling::pre_run_sync::Recorded::Failed { cause } => {
+        crate::pre_run_sync::Recorded::Failed { cause } => {
             format!("its synced configuration could not be brought up to date ({cause}).")
         }
         _ => "its synced configuration could not be brought up to date.".into(),

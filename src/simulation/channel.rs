@@ -3,12 +3,12 @@ use super::{
     model,
     world::{CopyState, World},
 };
-use crate::scheduling::{
+use elsecall_failure::{Failure, Result};
+use elsecall_scheduling::{
     placed::{Members, OfferReply, PlacementOffer, Standing, Warmth},
     quote::{CopyQuote, Quote, QuoteRequest},
     service::Scheduler,
 };
-use elsecall_failure::{Failure, Result};
 use futures_util::future::BoxFuture;
 use std::{
     collections::BTreeMap,
@@ -39,7 +39,7 @@ impl Channel {
             .unwrap()
             .get(member)
             .and_then(Weak::upgrade)
-            .ok_or_else(|| crate::scheduling::placed::not_in_fleet(member))
+            .ok_or_else(|| elsecall_scheduling::placed::not_in_fleet(member))
     }
 }
 impl Members for Channel {

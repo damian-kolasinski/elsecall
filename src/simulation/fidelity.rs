@@ -123,7 +123,7 @@ pub(super) fn charge(r: &Request, replay: Option<&ReplayOutcome>) -> Option<f64>
                 r.decision
                     .as_ref()
                     .filter(|decision| {
-                        decision.verdict == crate::scheduling::record::Verdict::FleetBusy
+                        decision.verdict == elsecall_scheduling::record::Verdict::FleetBusy
                     })
                     .map(|decision| decision.decided_at)
             });
@@ -589,11 +589,8 @@ pub fn compare(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        scheduling::fixtures,
-        scheduling::{record::WorkspaceIdentity, records::SchedulerSettings},
-        workload::trace::{Member, VERSION},
-    };
+    use crate::workload::trace::{Member, VERSION};
+    use elsecall_scheduling::{fixtures, record::WorkspaceIdentity, records::SchedulerSettings};
 
     fn fixture(count: usize) -> (Trace, Vec<ReplayOutcome>, Vec<ReplayMinute>) {
         let start = DAY * 20_000;
@@ -904,7 +901,7 @@ mod tests {
     }
     #[test]
     fn busy_charge_keeps_recorded_hold_floor_and_refusal_codes_are_exact() {
-        use crate::scheduling::record::{HoldBasis, HoldLimitRecord};
+        use elsecall_scheduling::record::{HoldBasis, HoldLimitRecord};
         let (mut t, mut o, m) = fixture(5);
         let r = &mut t.requests[0];
         r.fact.member = None;
@@ -929,7 +926,7 @@ mod tests {
     }
     #[test]
     fn busy_charge_uses_refusal_terminal_time_without_an_admission_wait() {
-        use crate::scheduling::record::{HoldBasis, HoldLimitRecord, Verdict};
+        use elsecall_scheduling::record::{HoldBasis, HoldLimitRecord, Verdict};
         let (mut trace, mut outcomes, minutes) = fixture(5);
         let request = &mut trace.requests[0];
         request.fact.member = None;
@@ -973,7 +970,7 @@ mod tests {
     }
     #[test]
     fn sync_deadline_busy_charge_includes_time_after_admission() {
-        use crate::scheduling::record::{HoldBasis, HoldLimitRecord};
+        use elsecall_scheduling::record::{HoldBasis, HoldLimitRecord};
         let (mut trace, mut outcomes, minutes) = fixture(5);
         let request = &mut trace.requests[0];
         request.fact.failure = Some("fleet_busy".into());

@@ -177,7 +177,7 @@ fn solo(fleet: &Fleet) -> (Vec<MemberName>, Vec<Source>) {
 }
 
 pub(crate) fn name_from_host(host: Option<&str>) -> MemberName {
-    let host = crate::scheduling::service::member_name(host);
+    let host = elsecall_scheduling::service::member_name(host);
     if let Ok(name) = host.parse() {
         return name;
     }

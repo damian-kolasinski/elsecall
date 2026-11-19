@@ -4,9 +4,9 @@
 //! machine. A grant that names another member gets an executor for that member
 //! (S3), which starts asynchronously, copies the workspace within the hold limit,
 //! and forwards streams and signals over its connection.
-use crate::scheduling::run_phases::RemoteFailurePhase;
 use elsecall_failure::{Failure, Result};
 use elsecall_run_admission::Admission;
+use elsecall_scheduling::run_phases::RemoteFailurePhase;
 use elsecall_scheduling_model::run_id::RunId;
 use std::{
     ffi::OsString,

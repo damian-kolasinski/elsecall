@@ -12,13 +12,13 @@ use crate::{
         protocol::{Exited, RunMessage, Start, Stream, WINDOW},
         runner::FORWARDED,
     },
-    scheduling::{
-        placed::{PlacedReport, Reached, SyncSummary},
-        run_phases::RemoteFailurePhase,
-    },
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client::{self as client, Wait};
+use elsecall_scheduling::{
+    placed::{PlacedReport, Reached, SyncSummary},
+    run_phases::RemoteFailurePhase,
+};
 use elsecall_scheduling_model::{run_id::RunId, timestamp::Timestamp};
 use elsecall_wire::wire::Frame;
 use elsecall_workload_config::workload_settings::WorkloadSettings;
@@ -454,7 +454,7 @@ impl RemoteRun {
                                 self.warnings.push("The member returned invalid workload metadata; plan coverage is unknown.".into());
                             }
                             // A member's measurement is believed only within reason.
-                            self.report.data.cpu_ms = cpu_ms.filter(|ms| *ms < crate::scheduling::record::MAXIMUM_CPU_MS);
+                            self.report.data.cpu_ms = cpu_ms.filter(|ms| *ms < elsecall_scheduling::record::MAXIMUM_CPU_MS);
                             break valid_exit(exit);
                         }
                         Ok(RunMessage::Failed { failure }) => break Err(untrusted(failure)),

@@ -1,7 +1,7 @@
 //! Work placed on another member: what the master offers, what the member answers,
 //! and what both record. The master holds placed requests; the member it names
 //! either admits one at once or refuses it.
-use crate::scheduling::{
+use crate::{
     leftovers::Leftovers,
     messages::MemberState,
     quote::{Quote, QuoteRequest},
@@ -90,7 +90,7 @@ impl Standing {
             .iter()
             .filter(|m| *m != own)
             .map(|member| {
-                crate::scheduling::placement::left_out(
+                crate::placement::left_out(
                     member,
                     &format!(
                         "It is awaiting provisioning; elsecall fleet ready {member} lets placement use it."

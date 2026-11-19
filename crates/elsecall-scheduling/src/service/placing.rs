@@ -5,7 +5,7 @@
 //! on stale configuration. When that fails, a placeable request is placed again
 //! without the member, and a request required there fails.
 use super::{Book, Entry, Phase, Scheduler};
-use crate::scheduling::{
+use crate::{
     messages::{Grant, MemberState},
     placed::{
         OfferReply, PlacedGrant, PlacedRecord, PlacementOffer, Reached, Side, Warmth, WorkspaceRef,
@@ -412,7 +412,7 @@ fn decision(
     reason: &str,
     state: &MemberState,
     chosen: bool,
-    parameters: &crate::scheduling::parameters::Parameters,
+    parameters: &crate::parameters::Parameters,
     now: Timestamp,
 ) -> Decision {
     Decision {

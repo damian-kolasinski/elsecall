@@ -2,7 +2,7 @@
 //! and load, the work holding and waiting for its capacity, and the state of its
 //! copies of the workspaces being placed. A quote crosses members, so the master
 //! bounds what it believes.
-use crate::scheduling::{
+use crate::{
     messages::MemberState,
     placed::{Warmth, WorkspaceRef},
 };
@@ -64,7 +64,7 @@ pub struct Quote {
     pub copies: Vec<CopyQuote>,
     /// The thresholds the member's gate uses; absent from earlier versions.
     #[serde(default)]
-    pub admission: Option<crate::scheduling::parameters::Admission>,
+    pub admission: Option<crate::parameters::Admission>,
 }
 
 fn label_ok(label: &str) -> bool {
@@ -106,7 +106,7 @@ pub fn millis(duration: Duration) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::{admission::QueueCounts, load::Gate};
+    use crate::{admission::QueueCounts, load::Gate};
     use elsecall_scheduling_model::capacity::Capacity;
 
     #[test]

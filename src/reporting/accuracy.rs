@@ -2,21 +2,19 @@
 //! request ran on against what happened there, how run times compared between
 //! members against how placement converts them, and how today's run estimates
 //! would have done (`backtest`).
-use crate::{
-    reporting::{
-        backtest::{self, Backtest},
-        facts::{Estimator, Fact},
-        statistics::{mean, nearest_rank, seconds, sorted},
+use crate::reporting::{
+    backtest::{self, Backtest},
+    facts::{Estimator, Fact},
+    statistics::{mean, nearest_rank, seconds, sorted},
+};
+use elsecall_scheduling::{
+    learning::{
+        RunSample,
+        ratios::{RatioScope, SpeedRatios},
     },
-    scheduling::{
-        learning::{
-            RunSample,
-            ratios::{RatioScope, SpeedRatios},
-        },
-        parameters::Parameters,
-        placed::Warmth,
-        placement::Level,
-    },
+    parameters::Parameters,
+    placed::Warmth,
+    placement::Level,
 };
 use elsecall_scheduling_model::request::Kind;
 use serde::Serialize;
@@ -395,9 +393,9 @@ fn speed_conversion(facts: &[Fact], context: &Context) -> Vec<SpeedConversion> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        scheduling::fixtures::{self, Run},
-        scheduling::placement::Source,
+    use elsecall_scheduling::{
+        fixtures::{self, Run},
+        placement::Source,
     };
 
     fn close(a: f64, b: f64) -> bool {

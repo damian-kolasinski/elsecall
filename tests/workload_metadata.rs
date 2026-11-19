@@ -2,11 +2,11 @@
 //! Public CLI/socket lifecycle. Only machine observation is faked.
 mod processes;
 mod support;
-use elsecall::scheduling::{
+use elsecall_local_client::{self as client, Wait};
+use elsecall_scheduling::{
     messages::{CommandStarted, Grant, RunEnded},
     record::Record,
 };
-use elsecall_local_client::{self as client, Wait};
 use elsecall_scheduling_model::{
     request::{AdmissionRequest, Kind, Placement, Urgency},
     timestamp::Timestamp,

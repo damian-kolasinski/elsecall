@@ -3,9 +3,9 @@
 use super::{adapters::World, initial, model::Envelope};
 use crate::{
     remote_run::{leftovers::STOPPING, runner::leftovers_wait_budget},
-    scheduling::leftovers::Ending,
     workload::trace::{Request, Trace},
 };
+use elsecall_scheduling::leftovers::Ending;
 use std::time::Duration;
 
 pub fn observed_wait(trace: &Trace, request: &Request) -> u64 {
@@ -98,7 +98,7 @@ pub fn settle(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::clock::VirtualClock;
+    use elsecall_scheduling::clock::VirtualClock;
     use elsecall_scheduling_model::timestamp::Timestamp;
     use std::sync::Arc;
     #[tokio::test(start_paused = true)]

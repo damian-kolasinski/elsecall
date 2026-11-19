@@ -158,7 +158,7 @@ impl History {
 
 /// A failure's code as Elsecall may repeat it. Codes can come from the member,
 /// so anything but a short snake_case identifier is not repeated.
-pub(crate) fn cause_code(cause: &Failure) -> String {
+pub fn cause_code(cause: &Failure) -> String {
     let code = cause.code.as_str();
     let plain = !code.is_empty()
         && code.len() <= 48

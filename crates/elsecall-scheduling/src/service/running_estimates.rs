@@ -10,7 +10,7 @@
 //! history knew nothing about is asked again after [`RELEARN_AFTER`], since its
 //! label's or family's first runs may have ended meanwhile.
 use super::{Book, Scheduler};
-use crate::scheduling::{
+use crate::{
     learning::RunEstimate,
     placed::{Reached, Side},
     placement::{LearnedRun, LearnedTime, Source},

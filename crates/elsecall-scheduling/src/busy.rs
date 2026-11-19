@@ -1,6 +1,6 @@
 //! The `fleet_busy` failure: why a request did not start, what holds the member,
 //! and when trying again is likely to succeed.
-use crate::scheduling::{
+use crate::{
     estimates::{self, Holding},
     load::Gate,
 };

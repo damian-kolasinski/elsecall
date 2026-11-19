@@ -7,9 +7,10 @@ use super::{
     protocol::{Action, Job, Launch, Reply, valid_session, valid_workspace},
     scratch,
 };
-use crate::{housekeeping::pass::Housekeeper, scheduling::service::Scheduler};
+use crate::housekeeping::pass::Housekeeper;
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling::service::Scheduler;
 use elsecall_scheduling_model::request::{Placement, Urgency};
 use std::{
     fs,
@@ -31,7 +32,7 @@ struct Session {
     stopped: bool,
     jobs: Vec<Caller>,
     cleaned: bool,
-    internal_pause: Option<crate::scheduling::service::InternalPause>,
+    internal_pause: Option<elsecall_scheduling::service::InternalPause>,
 }
 pub struct Member {
     paths: Paths,
@@ -289,7 +290,7 @@ impl Member {
     async fn settle_groups(
         &self,
         id: &str,
-        callers: &[crate::scheduling::processes::ProcessIdentity],
+        callers: &[elsecall_scheduling::processes::ProcessIdentity],
     ) -> Result<()> {
         let records = self.scheduler.active_records()?;
         let mut groups = callers.to_vec();
@@ -301,7 +302,7 @@ impl Member {
                         && r.calling_member == self.scheduler.name()
                         && r.placed
                             .as_ref()
-                            .is_none_or(|p| p.side != crate::scheduling::placed::Side::Member)
+                            .is_none_or(|p| p.side != elsecall_scheduling::placed::Side::Member)
                 })
                 .map(|r| r.requested_by),
         );

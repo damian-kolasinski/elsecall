@@ -1,7 +1,7 @@
 //! What a report needs of one request, projected from its record. Members send
 //! these to the member that reports, so they carry no paths, processes or
 //! warnings: only labels, member names, times, outcomes and estimates.
-use crate::scheduling::{
+use elsecall_scheduling::{
     learning::RunSample,
     placed::{Side, Warmth},
     placement::{Level, Source},
@@ -83,7 +83,7 @@ pub struct ResourceUse {
     pub started_at: Option<Timestamp>,
     pub ended_at: Option<Timestamp>,
     pub cpu_ms: Option<u64>,
-    pub size_basis: Option<crate::scheduling::record::SizeBasis>,
+    pub size_basis: Option<elsecall_scheduling::record::SizeBasis>,
 }
 
 /// Which estimate a prediction comes from.
@@ -136,7 +136,7 @@ impl Fact {
             && elsecall_scheduling_model::run_id::RunId::parse(&self.run_id).is_some()
             && self.resources.as_ref().is_none_or(|r| {
                 r.cpu_ms
-                    .is_none_or(|ms| ms <= crate::scheduling::record::MAXIMUM_CPU_MS)
+                    .is_none_or(|ms| ms <= elsecall_scheduling::record::MAXIMUM_CPU_MS)
                     && r.started_at.is_none_or(|start| start >= self.requested_at)
                     && r.ended_at
                         .zip(r.started_at)
@@ -305,7 +305,7 @@ impl Fact {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::fixtures::{self, Run};
+    use elsecall_scheduling::fixtures::{self, Run};
 
     #[test]
     fn a_placed_run_carries_what_was_predicted_where_it_ran() {

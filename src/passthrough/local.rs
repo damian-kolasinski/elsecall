@@ -6,11 +6,11 @@ use crate::{
         executor::{CommandLine, Executor, Exit, Finished, RunContext, RunResult, Running},
         signals,
     },
-    scheduling::messages::CommandStarted,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client::{self as client, Wait};
 use elsecall_run_admission::Admission;
+use elsecall_scheduling::messages::CommandStarted;
 use std::{
     ffi::OsStr,
     os::unix::{ffi::OsStrExt, fs::PermissionsExt, process::ExitStatusExt},

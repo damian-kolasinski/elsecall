@@ -1,9 +1,5 @@
 //! The local HTTP interface of replay, a driving adapter: reads this member's
 //! placeable records and replays their decisions under changed parameters.
-use crate::scheduling::{
-    replay::{self, Change, Replay},
-    service::Scheduler,
-};
 use axum::{
     Json, Router,
     body::Bytes,
@@ -13,6 +9,10 @@ use axum::{
     routing::post,
 };
 use elsecall_failure::Failure;
+use elsecall_scheduling::{
+    replay::{self, Change, Replay},
+    service::Scheduler,
+};
 use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_wire::api;
 use serde::{Deserialize, Serialize};

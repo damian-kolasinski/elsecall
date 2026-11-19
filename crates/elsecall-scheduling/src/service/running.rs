@@ -1,6 +1,6 @@
 //! Work that is running: a run's command and end, releasing leases, shutdown.
 use super::{Book, Entry, Phase, Scheduler, not_found, stopping};
-use crate::scheduling::{
+use crate::{
     messages::{CommandStarted, Release, Released, RunEnded},
     placed::{PlacedReport, Reached, Side},
     processes,

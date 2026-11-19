@@ -15,7 +15,7 @@
 //!   does, from the same minimum. Below it, there is no learned ratio and
 //!   conversion falls back to measured speeds.
 use super::RunSample;
-use crate::scheduling::parameters::Estimates;
+use crate::parameters::Estimates;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -142,7 +142,7 @@ fn log_median(ratios: &[f64]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::learning::tests::{defaults, labelled};
+    use crate::learning::tests::{defaults, labelled};
 
     fn close(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-9

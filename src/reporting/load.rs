@@ -341,7 +341,7 @@ pub fn balance(loads: &[(&str, &[Bucket])]) -> Balance {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::fixtures::{MINUTE, T0, bucket};
+    use elsecall_scheduling::fixtures::{MINUTE, T0, bucket};
 
     fn close(a: f64, b: f64) -> bool {
         (a - b).abs() < 1e-9

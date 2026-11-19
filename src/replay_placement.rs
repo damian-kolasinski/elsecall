@@ -117,12 +117,13 @@ pub fn split(trace: &Trace) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{scheduling::fixtures, workload::trace::Request};
+    use crate::workload::trace::Request;
+    use elsecall_scheduling::fixtures;
     use elsecall_scheduling_model::timestamp::Timestamp;
     fn trace() -> Trace {
         let mut r = Request::of(&fixtures::pinned(1, "acme test Checkout", "master", 1.0)).unwrap();
         r.fact.family = Some("acme test *".into());
-        r.workspace = Some(crate::scheduling::record::WorkspaceIdentity {
+        r.workspace = Some(elsecall_scheduling::record::WorkspaceIdentity {
             workspace: "a".repeat(64),
             repository: "b".repeat(64),
         });

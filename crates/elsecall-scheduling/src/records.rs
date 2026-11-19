@@ -1,5 +1,5 @@
 //! Durable request records in SQLite.
-use crate::scheduling::{
+use crate::{
     estimates,
     record::{Record, State},
 };
@@ -24,7 +24,7 @@ pub use elsecall_sqlite_retention::RETENTION;
 pub struct SchedulerSettings {
     pub at: Timestamp,
     pub capacity: elsecall_scheduling_model::capacity::Capacity,
-    pub parameters: crate::scheduling::parameters::Parameters,
+    pub parameters: crate::parameters::Parameters,
 }
 
 pub struct Records {
@@ -486,7 +486,7 @@ mod tests {
     use super::*;
     #[test]
     fn settings_history_preserves_baseline_changes_and_retention() {
-        use crate::scheduling::parameters::Parameters;
+        use crate::parameters::Parameters;
         use elsecall_scheduling_model::capacity::{Capacity, Cores};
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("settings.sqlite");
@@ -562,7 +562,7 @@ mod tests {
             0
         );
     }
-    use crate::scheduling::record::Outcome;
+    use crate::record::Outcome;
     use elsecall_scheduling_model::{
         capacity::Cores,
         request::{Kind, Placement, Urgency},
@@ -612,7 +612,7 @@ mod tests {
             hold_limit: None,
             decision: None,
             warnings: Vec::new(),
-            requested_by: crate::scheduling::processes::ProcessIdentity {
+            requested_by: crate::processes::ProcessIdentity {
                 pid: 1,
                 started_us: 1,
             },
@@ -670,7 +670,7 @@ mod tests {
 
     #[test]
     fn learning_reads_families_and_every_label_without_decisions() {
-        use crate::scheduling::record::{Decision, Verdict};
+        use crate::record::{Decision, Verdict};
         use elsecall_scheduling_model::settings::{AppliedRule, Settings, Source};
         let dir = tempfile::tempdir().unwrap();
         let records = Records::open(&dir.path().join("records.sqlite")).unwrap();
@@ -841,7 +841,7 @@ mod tests {
     }
     #[test]
     fn synthetic_rows_cannot_displace_bounded_production_learning() {
-        use crate::scheduling::fixtures::{Run, placed};
+        use crate::fixtures::{Run, placed};
         let temp = tempfile::tempdir().unwrap();
         let records = Records::open(&temp.path().join("records.sqlite")).unwrap();
         let production = placed(Run {

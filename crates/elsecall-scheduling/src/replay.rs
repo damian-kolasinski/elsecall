@@ -27,7 +27,7 @@ mod summary;
 pub use change::Change;
 pub use summary::Replay;
 
-use crate::scheduling::record::Record;
+use crate::record::Record;
 use recorded::{RecordedScoring, Unreplayable};
 use summary::{Replayed, Summary};
 

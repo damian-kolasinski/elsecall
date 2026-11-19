@@ -18,7 +18,7 @@ impl Callers for Nobody {
         None
     }
     fn ask(&self, member: &str, _: Question) -> BoxFuture<'static, Result<Answer>> {
-        let failure = crate::scheduling::placed::not_in_fleet(member);
+        let failure = elsecall_scheduling::placed::not_in_fleet(member);
         Box::pin(async move { Err(failure) })
     }
 }

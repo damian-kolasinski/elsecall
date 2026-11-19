@@ -79,7 +79,7 @@ pub struct Reply {
     #[serde(default)]
     pub calibration: Option<super::worker::Calibration>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub settings: Option<crate::scheduling::records::SchedulerSettings>,
+    pub settings: Option<elsecall_scheduling::records::SchedulerSettings>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub recorded_load: Option<elsecall_load_log::session::Recorded>,
     #[serde(default)]

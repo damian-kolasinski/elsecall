@@ -48,7 +48,7 @@ impl Callers for FleetCallers {
                 .members()
                 .iter()
                 .find(|m| m.name.as_str() == member)
-                .ok_or_else(|| crate::scheduling::placed::not_in_fleet(&member))?
+                .ok_or_else(|| elsecall_scheduling::placed::not_in_fleet(&member))?
                 .clone();
             peer_client::call(
                 fleet.key(),

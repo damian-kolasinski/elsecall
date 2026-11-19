@@ -12,7 +12,7 @@ pub mod work;
 pub mod worker;
 mod workspace;
 
-pub use crate::scheduling::service::invalid_rehearsal as invalid;
+pub use elsecall_scheduling::service::invalid_rehearsal as invalid;
 
 pub mod cancellation;
 pub mod compare;

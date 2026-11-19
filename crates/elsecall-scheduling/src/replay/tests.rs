@@ -2,7 +2,7 @@
 //! `placement::decide`, recorded by `Candidate::scored` and `Arrival::of`, and
 //! read back from JSON, in each generation of the record format.
 use super::*;
-use crate::scheduling::{
+use crate::{
     admission::QueueCounts,
     learning::Conversions,
     load,
@@ -174,7 +174,7 @@ fn busy_and_learned() -> Vec<Observation> {
             time: Duration::from_nanos(412_345_678),
             source: Source::WorkspaceSyncs { samples: 3 },
         }),
-        losses: Some(crate::scheduling::loss_history::Losses {
+        losses: Some(crate::loss_history::Losses {
             lost: 3,
             run: Duration::from_millis(7_654_321),
         }),

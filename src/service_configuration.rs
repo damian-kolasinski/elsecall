@@ -37,7 +37,7 @@ pub struct Temporary {
 #[serde(deny_unknown_fields)]
 pub struct Projection {
     pub reserved: elsecall_scheduling_model::capacity::Cores,
-    pub parameters: crate::scheduling::parameters::Parameters,
+    pub parameters: elsecall_scheduling::parameters::Parameters,
 }
 
 /// Holds validated document bytes and parsed settings, never included in diagnostics.

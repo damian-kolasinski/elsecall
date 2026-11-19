@@ -2,11 +2,11 @@
 use crate::{
     housekeeping::settings::{self, Settings as Housekeeping},
     remote_run::leftovers::Cap,
-    scheduling::parameters::{
-        AdmissionOverrides, EstimatesOverrides, Overrides, Parameters, PlacementOverrides,
-    },
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling::parameters::{
+    AdmissionOverrides, EstimatesOverrides, Overrides, Parameters, PlacementOverrides,
+};
 use elsecall_scheduling_model::{capacity::Cores, request::AtDeadline};
 use elsecall_workspace::location::Setting;
 use serde::Deserialize;
@@ -42,7 +42,7 @@ pub struct ServiceConfiguration {
     pub sync_paths: Vec<elsecall_config_sync_model::synced_path::SyncedPath>,
 }
 
-impl From<&ServiceConfiguration> for crate::scheduling::service::SchedulerConfiguration {
+impl From<&ServiceConfiguration> for elsecall_scheduling::service::SchedulerConfiguration {
     fn from(configuration: &ServiceConfiguration) -> Self {
         Self {
             reserved: configuration.reserved,

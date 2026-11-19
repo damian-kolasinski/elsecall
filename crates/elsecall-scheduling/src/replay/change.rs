@@ -1,6 +1,6 @@
 //! The parameters a replay changes: `--set` settings, through the same parser
 //! and validation as `config.toml`, limited to what replay can re-score.
-use crate::scheduling::parameters::{Overrides, Parameters};
+use crate::parameters::{Overrides, Parameters};
 use serde::{Serialize, Serializer, ser::SerializeMap};
 
 /// Changes to the keep-local margin, the only ones a decision recorded without

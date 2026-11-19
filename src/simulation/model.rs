@@ -1,11 +1,9 @@
 //! Execution physics, separate from admission/placement's own estimates.
-use crate::{
-    scheduling::placed::Warmth,
-    workload::{
-        demand::{family, interval, median, overlap},
-        trace::{Request, Trace},
-    },
+use crate::workload::{
+    demand::{family, interval, median, overlap},
+    trace::{Request, Trace},
 };
+use elsecall_scheduling::placed::Warmth;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -425,7 +423,7 @@ pub fn eligible_members(trace: &Trace, request: &Request) -> Vec<String> {
                     .as_ref()
                     .is_some_and(|d| d.unreachable.iter().any(|m| m.member == *name))
                 && !candidate.and_then(|c| c.inputs.as_ref()).is_some_and(|i| {
-                    matches!(i.copy, crate::scheduling::placement::Copy::Unavailable)
+                    matches!(i.copy, elsecall_scheduling::placement::Copy::Unavailable)
                 })
         })
         .collect()
@@ -468,8 +466,8 @@ pub fn ideal_from_reference(
             .and_then(|d| d.candidates.iter().find(|c| c.member == member));
         let warmth = if member == request.fact.calling_member {
             None
-        } else if let Some(crate::scheduling::placement::Inputs {
-            copy: crate::scheduling::placement::Copy::Remote { warmth, .. },
+        } else if let Some(elsecall_scheduling::placement::Inputs {
+            copy: elsecall_scheduling::placement::Copy::Remote { warmth, .. },
             ..
         }) = candidate.and_then(|c| c.inputs.as_ref())
         {
@@ -497,7 +495,7 @@ pub fn ideal_from_reference(
                 })
                 .map(|s| s.parameters.placement.cold_run_factor)
                 .unwrap_or_else(|| {
-                    crate::scheduling::parameters::Parameters::default()
+                    elsecall_scheduling::parameters::Parameters::default()
                         .placement
                         .cold_run_factor
                 });
@@ -527,7 +525,7 @@ mod tests {
     use super::*;
     #[test]
     fn ideal_respects_frozen_capacity_placement_availability_and_cold_runtime() {
-        use crate::scheduling::record::WorkspaceIdentity;
+        use elsecall_scheduling::record::WorkspaceIdentity;
         use elsecall_scheduling_model::{capacity::Cores, request::Placement};
         let mut t = crate::simulation::engine::tests::trace();
         t.requests.truncate(1);
@@ -557,12 +555,12 @@ mod tests {
         // Explicitly unreachable members cannot supply the ideal. Occupancy or
         // estimate.eligible=false alone would not establish unavailability.
         let mut r = r;
-        r.decision = Some(crate::scheduling::record::Decision {
+        r.decision = Some(elsecall_scheduling::record::Decision {
             decided_at: r.fact.requested_at,
-            verdict: crate::scheduling::record::Verdict::Started,
+            verdict: elsecall_scheduling::record::Verdict::Started,
             reason: "fixture".into(),
             candidates: vec![],
-            unreachable: vec![crate::scheduling::placement::Unreachable {
+            unreachable: vec![elsecall_scheduling::placement::Unreachable {
                 peer_io: None,
                 member: "b".into(),
                 why: "unavailable".into(),
@@ -582,7 +580,7 @@ mod tests {
             .as_mut()
             .unwrap()
             .candidates
-            .push(crate::scheduling::record::Candidate {
+            .push(elsecall_scheduling::record::Candidate {
                 member: "b".into(),
                 chosen: false,
                 why: String::new(),
@@ -592,17 +590,17 @@ mod tests {
                 queued: Default::default(),
                 load: None,
                 cpu_utilization_window: None,
-                gate: crate::scheduling::load::Gate::Open,
+                gate: elsecall_scheduling::load::Gate::Open,
                 expected_run_seconds: None,
                 expected_completion: None,
                 estimate: None,
-                inputs: Some(crate::scheduling::placement::Inputs {
+                inputs: Some(elsecall_scheduling::placement::Inputs {
                     caller: false,
                     speed: Some(2.0),
                     utilization: None,
                     holding: vec![],
                     ahead: vec![],
-                    copy: crate::scheduling::placement::Copy::Remote {
+                    copy: elsecall_scheduling::placement::Copy::Remote {
                         warmth: Warmth::Cold,
                         busy: false,
                     },
@@ -618,7 +616,7 @@ mod tests {
             .inputs
             .as_mut()
             .unwrap()
-            .copy = crate::scheduling::placement::Copy::Unavailable;
+            .copy = elsecall_scheduling::placement::Copy::Unavailable;
         assert_eq!(eligible_members(&t, &r), vec!["a".to_string()]);
     }
     #[test]

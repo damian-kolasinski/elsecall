@@ -1,6 +1,6 @@
 //! The real scheduler driven by virtual boundary adapters, without service tasks.
 use super::*;
-use crate::scheduling::{
+use crate::{
     clock::VirtualClock,
     messages::RunEnded,
     placed::Alone,
@@ -443,7 +443,7 @@ async fn draining_active_internal_work_respects_short_preparation_limit_and_neve
 
 #[tokio::test(start_paused = true)]
 async fn workload_reports_obey_pending_nested_requester_barriers_and_pid_identity() {
-    use crate::scheduling::{binding::fake::FakeProcesses, messages::CommandStarted};
+    use crate::{binding::fake::FakeProcesses, messages::CommandStarted};
     use elsecall_scheduling_model::workload_metadata::{Observation, Workload};
     let home = tempfile::tempdir().unwrap();
     let clock = Arc::new(VirtualClock::new(Timestamp::from_millis(1_000)));
@@ -619,7 +619,7 @@ async fn workload_metadata_does_not_change_learned_size_hold_or_admission_decisi
 
 #[tokio::test(start_paused = true)]
 async fn structured_placement_requires_acknowledgement_without_retry_or_attach() {
-    use crate::scheduling::{
+    use crate::{
         messages::MemberState,
         placed::{Members, OfferReply, PlacementOffer, Standing, Warmth, WorkspaceRef},
         quote::{Quote, QuoteRequest},
@@ -736,7 +736,7 @@ async fn structured_placement_requires_acknowledgement_without_retry_or_attach()
 
 #[tokio::test(start_paused = true)]
 async fn a_peer_that_lost_its_placed_runs_keeps_short_work_and_not_long_work() {
-    use crate::scheduling::{
+    use crate::{
         messages::MemberState,
         placed::{Members, OfferReply, PlacementOffer, Standing, Warmth, WorkspaceRef},
         quote::{CopyQuote, Quote, QuoteRequest},
@@ -1049,7 +1049,7 @@ async fn held_internal_work_does_not_start_when_room_frees_and_starts_once_relea
 
 #[tokio::test(start_paused = true)]
 async fn an_update_waits_only_for_work_a_restart_would_cut_short() {
-    use crate::scheduling::placed::{OfferReply, PlacementOffer, Warmth, WorkspaceRef};
+    use crate::placed::{OfferReply, PlacementOffer, Warmth, WorkspaceRef};
     let home = tempfile::tempdir().unwrap();
     let clock = Arc::new(VirtualClock::new(Timestamp::from_millis(1000)));
     let (_, exits) = mpsc::unbounded_channel();
@@ -1179,7 +1179,7 @@ async fn an_update_waits_only_for_work_a_restart_would_cut_short() {
 
 #[tokio::test(start_paused = true)]
 async fn no_offer_leaves_while_an_update_holds_admission() {
-    use crate::scheduling::{
+    use crate::{
         messages::MemberState,
         placed::{Members, OfferReply, PlacementOffer, Standing, WorkspaceRef},
         quote::{Quote, QuoteRequest},

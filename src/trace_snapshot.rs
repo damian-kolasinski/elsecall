@@ -1,11 +1,9 @@
 //! Offline read-only history adapter, for exports before installing new routes.
-use crate::{
-    scheduling::records::Records,
-    workload::trace::{Member, PAGE, Trace, VERSION},
-};
+use crate::workload::trace::{Member, PAGE, Trace, VERSION};
 use elsecall_failure::Result;
 use elsecall_load_log::{buckets, store::LoadStore};
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling::records::Records;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use std::time::Duration;
 

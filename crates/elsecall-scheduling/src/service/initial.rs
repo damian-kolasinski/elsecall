@@ -2,7 +2,7 @@
 //! same Admission adoption used for restart recovery, without making another
 //! scheduling decision under a later load gate or candidate configuration.
 use super::{Entry, OnHandover, Phase, Scheduler};
-use crate::scheduling::{
+use crate::{
     messages::Grant,
     placed::{PlacedGrant, Side},
     processes,

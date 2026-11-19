@@ -1,23 +1,21 @@
 //! The report as one document: the period, the filters, fleet and member
 //! metrics, estimate accuracy and findings, from what was gathered.
-use crate::{
-    reporting::{
-        accuracy::{self, Accuracy},
-        blocked::{self, Blocked, BlockedQueue},
-        facts::Fact,
-        findings::{self, Finding},
-        leftovers::{self, LeftoverFact, LeftoverMetrics},
-        load::{self, Balance, LoadTotals, SeriesPoint, SpeedDrift},
-        overload::{self, Overload},
-        requests::{self, FleetBusy, PlacementMix, Requests, Waits, Work},
-        run_phases::{self, PhaseMetrics},
-        window::Window,
-    },
-    scheduling::parameters::Parameters,
+use crate::reporting::{
+    accuracy::{self, Accuracy},
+    blocked::{self, Blocked, BlockedQueue},
+    facts::Fact,
+    findings::{self, Finding},
+    leftovers::{self, LeftoverFact, LeftoverMetrics},
+    load::{self, Balance, LoadTotals, SeriesPoint, SpeedDrift},
+    overload::{self, Overload},
+    requests::{self, FleetBusy, PlacementMix, Requests, Waits, Work},
+    run_phases::{self, PhaseMetrics},
+    window::Window,
 };
 use elsecall_failure::Failure;
 use elsecall_labels::pattern as label_pattern;
 use elsecall_load_log::buckets::Bucket;
+use elsecall_scheduling::parameters::Parameters;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
@@ -371,7 +369,7 @@ pub fn document(query: &Query, gathered: &Gathered) -> Document {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
+    use elsecall_scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
 
     fn gathered() -> Gathered {
         let mut records = vec![

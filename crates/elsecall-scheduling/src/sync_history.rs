@@ -12,7 +12,7 @@
 //!   from one sample on. A first sync happens once per copy, so a single sample of
 //!   the same repository is the best evidence there will be; it depends on the
 //!   repository's size far more than on the member.
-use crate::scheduling::{
+use crate::{
     parameters::Estimates,
     placed::{Side, Warmth, WorkspaceRef},
     record::Record,
@@ -84,7 +84,7 @@ impl Default for SyncHistory {
     fn default() -> Self {
         Self::new(
             Vec::new(),
-            &crate::scheduling::parameters::Parameters::default().estimates,
+            &crate::parameters::Parameters::default().estimates,
         )
     }
 }
@@ -175,7 +175,7 @@ mod tests {
             sample("devbox", "/w/b", Warmth::Warm, 1000),
             sample("other", "/w/a", Warmth::Warm, 50),
         ];
-        let defaults = crate::scheduling::parameters::Parameters::default().estimates;
+        let defaults = crate::parameters::Parameters::default().estimates;
         let stricter = Estimates {
             minimum_workspace_syncs: 3,
             minimum_member_syncs: 4,
@@ -218,7 +218,7 @@ mod tests {
                 sample("devbox", "/w/a", Warmth::Cold, 43_000),
                 sample("devbox", "/w/b", Warmth::ColdWithHistory, 5_800),
             ],
-            &crate::scheduling::parameters::Parameters::default().estimates,
+            &crate::parameters::Parameters::default().estimates,
         );
         let new = workspace("/w/c");
         assert_eq!(

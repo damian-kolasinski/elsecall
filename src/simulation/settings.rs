@@ -8,13 +8,11 @@
 //! Quote the entire argument when a pattern contains spaces. Patterns use the
 //! consumer configuration's glob syntax and first matching rule wins, in argument
 //! order. Duplicate keys are errors, as with production parameter overrides.
-use crate::{
-    scheduling::parameters::{Overrides, Parameters},
-    workload::trace::{Request, Trace},
-};
+use crate::workload::trace::{Request, Trace};
 use elsecall_failure::{Failure, Result};
 use elsecall_labels::pattern as label_pattern;
 use elsecall_membership::roster::MemberName;
+use elsecall_scheduling::parameters::{Overrides, Parameters};
 use elsecall_scheduling_model::{
     capacity::{Capacity, Cores},
     request::{MAXIMUM_HOLD_LIMIT, Urgency},

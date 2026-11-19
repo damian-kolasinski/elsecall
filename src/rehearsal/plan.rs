@@ -148,15 +148,13 @@ pub(crate) fn nested_problems(trace: &Trace) -> Vec<(String, &'static str)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        scheduling::{
-            fixtures::{T0, base},
-            record::{HoldBasis, HoldLimitRecord, Outcome, WorkspaceIdentity},
-        },
-        workload::{
-            demand::Demand,
-            trace::{Member, Request, TraceOutcome},
-        },
+    use crate::workload::{
+        demand::Demand,
+        trace::{Member, Request, TraceOutcome},
+    };
+    use elsecall_scheduling::{
+        fixtures::{T0, base},
+        record::{HoldBasis, HoldLimitRecord, Outcome, WorkspaceIdentity},
     };
     use elsecall_scheduling_model::{
         request::{AtDeadline, Placement, Urgency},

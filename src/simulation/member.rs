@@ -5,14 +5,14 @@ use super::{
     engine::invalid,
     settings::Settings,
 };
-use crate::scheduling::{
+use elsecall_failure::Result;
+use elsecall_load_log::LoadLog;
+use elsecall_scheduling::{
     clock::Clock,
     parameters::Parameters,
     records::SchedulerSettings,
     service::{Adapters, Driving, Runtime, Scheduler, SchedulerConfiguration, Tasks},
 };
-use elsecall_failure::Result;
-use elsecall_load_log::LoadLog;
 use elsecall_scheduling_model::capacity::Capacity;
 use std::{
     path::{Path, PathBuf},
@@ -212,15 +212,13 @@ fn start_scheduler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        scheduling::{
-            clock::VirtualClock,
-            fixtures,
-            placed::Side,
-            processes::ProcessIdentity,
-            record::{Outcome, State},
-        },
-        simulation::model::Envelope,
+    use crate::simulation::model::Envelope;
+    use elsecall_scheduling::{
+        clock::VirtualClock,
+        fixtures,
+        placed::Side,
+        processes::ProcessIdentity,
+        record::{Outcome, State},
     };
     use elsecall_scheduling_model::{
         capacity::Cores,

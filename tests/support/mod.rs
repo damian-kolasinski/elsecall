@@ -1,9 +1,6 @@
 //! A real service on a real socket, driven by the real CLI binary. Only the
 //! machine's load is faked, as an external observation boundary.
 #![allow(dead_code)]
-use elsecall::{
-    macos::processes::MacProcesses, peer_listener, scheduling::service::Adapters, server,
-};
 use elsecall_failure::Result;
 use elsecall_local_state::{paths::Paths, private_files};
 use elsecall_machine::inspection::{
@@ -19,6 +16,10 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::process::Child;
+use {
+    elsecall::{macos::processes::MacProcesses, peer_listener, server},
+    elsecall_scheduling::service::Adapters,
+};
 
 /// These tests never join a fleet, so the member listener has no tailnet to bind.
 struct NoTailnet;

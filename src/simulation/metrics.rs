@@ -1,12 +1,10 @@
 //! Harness objective and constraints, evaluated on arrival-window roots only.
 use super::engine::{Outcome, Trial};
-use crate::{
-    scheduling::placed::Warmth,
-    workload::{
-        demand::median,
-        trace::{Request, Trace},
-    },
+use crate::workload::{
+    demand::median,
+    trace::{Request, Trace},
 };
+use elsecall_scheduling::placed::Warmth;
 use elsecall_scheduling_model::{
     request::{Kind, Placement},
     timestamp::Timestamp,
@@ -481,9 +479,9 @@ mod tests {
     use super::*;
     use crate::{
         reporting::facts::PlacementKind,
-        scheduling::record::WorkspaceIdentity,
         simulation::{engine::Reserve, model::Envelope},
     };
+    use elsecall_scheduling::record::WorkspaceIdentity;
 
     fn fixture() -> (Trace, Trial) {
         let mut trace = crate::simulation::engine::tests::trace();

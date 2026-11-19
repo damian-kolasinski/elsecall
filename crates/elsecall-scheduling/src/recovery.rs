@@ -1,6 +1,6 @@
 //! What survives a service restart: grants whose processes still run keep their
 //! capacity, so it is never handed out twice; everything else is closed.
-use crate::scheduling::{
+use crate::{
     processes::ProcessIdentity,
     record::{Outcome, Record, State},
 };

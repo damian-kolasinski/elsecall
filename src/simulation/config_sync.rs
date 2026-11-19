@@ -1,7 +1,7 @@
 //! Recorded pre-run configuration I/O at the real scheduler's sync boundary.
 use super::world::World;
-use crate::scheduling::pre_run_sync::{PreRunSync, Synced};
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling::pre_run_sync::{PreRunSync, Synced};
 use elsecall_scheduling_model::run_id::RunId;
 use futures_util::future::BoxFuture;
 use std::{
@@ -111,10 +111,10 @@ mod tests {
     use super::*;
     use crate::{
         reporting::facts::PlacementKind,
-        scheduling::{placed::Warmth, record::WorkspaceIdentity},
         simulation::{Options, simulate},
         workload::trace::{PreRunAttempt, Trace, TraceOutcome},
     };
+    use elsecall_scheduling::{placed::Warmth, record::WorkspaceIdentity};
     use elsecall_scheduling_model::request::Placement;
     fn trace() -> Trace {
         let mut trace = crate::simulation::engine::tests::trace();
@@ -183,18 +183,16 @@ mod tests {
     }
     #[tokio::test(start_paused = true)]
     async fn successful_pre_run_retries_are_recorded_before_busy_and_acceptance() {
-        use crate::{
-            scheduling::{
-                clock::{Clock, VirtualClock},
-                messages::RunEnded,
-                placed::WorkspaceRef,
-            },
-            simulation::{
-                adapters::Registry,
-                member::{FleetAdapters, Member},
-                model::Envelope,
-                settings::Settings,
-            },
+        use crate::simulation::{
+            adapters::Registry,
+            member::{FleetAdapters, Member},
+            model::Envelope,
+            settings::Settings,
+        };
+        use elsecall_scheduling::{
+            clock::{Clock, VirtualClock},
+            messages::RunEnded,
+            placed::WorkspaceRef,
         };
         use elsecall_scheduling_model::{
             capacity::Cores,

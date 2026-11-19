@@ -279,7 +279,6 @@ async fn peer_io(body: Bytes) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::fixtures::{self, bucket};
     use crate::{
         report_protocol::PAGE,
         reporting::{
@@ -289,6 +288,7 @@ mod tests {
     };
     use elsecall_machine::inspection::{MemoryPressure, ThermalState};
     use elsecall_peer_transport::peer_client::RESPONSE_LIMIT;
+    use elsecall_scheduling::fixtures::{self, bucket};
 
     #[test]
     fn the_largest_answers_fit_a_member_response() {
@@ -305,7 +305,7 @@ mod tests {
             sync_prior: true,
             run_ms: Some(u64::MAX),
             run_prior: true,
-            run_level: Some(crate::scheduling::placement::Level::Converted),
+            run_level: Some(elsecall_scheduling::placement::Level::Converted),
         });
         let leftover = crate::reporting::leftovers::LeftoverFact {
             run_id: "r".repeat(64),
@@ -376,7 +376,7 @@ mod tests {
             document::{Gathered, MemberInput, Query, RecordsRead, document},
             window::{MAXIMUM_PERIOD, Window},
         };
-        use crate::scheduling::fixtures::{Run, T0};
+        use elsecall_scheduling::fixtures::{Run, T0};
         // 50,000 requests from each of two members, every one with its own
         // longest label and failure code, and a series point per fine bucket.
         let until = Timestamp::from_millis(T0 + MAXIMUM_PERIOD.as_millis() as u64);

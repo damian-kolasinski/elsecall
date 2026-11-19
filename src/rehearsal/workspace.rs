@@ -1,8 +1,6 @@
 //! Stable scratch grouping for historical requests without workspace identities.
-use crate::{
-    scheduling::record::WorkspaceIdentity,
-    workload::{demand::family, trace::Request},
-};
+use crate::workload::{demand::family, trace::Request};
+use elsecall_scheduling::record::WorkspaceIdentity;
 use sha2::{Digest, Sha256};
 
 pub(super) fn prepare(requests: &mut [Request]) {
@@ -36,7 +34,7 @@ mod tests {
     #[test]
     fn identities_reuse_family_and_caller_but_separate_other_work() {
         let mut first =
-            Request::of(&crate::scheduling::fixtures::base(1, "build target", "a")).unwrap();
+            Request::of(&elsecall_scheduling::fixtures::base(1, "build target", "a")).unwrap();
         first.workspace = None;
         first.workspace_recorded = false;
         first.fact.family = Some("build *".into());
@@ -74,7 +72,8 @@ mod tests {
 
     #[test]
     fn exact_labels_are_the_fallback_when_no_family_was_recorded() {
-        let make = |label| Request::of(&crate::scheduling::fixtures::base(1, label, "a")).unwrap();
+        let make =
+            |label| Request::of(&elsecall_scheduling::fixtures::base(1, label, "a")).unwrap();
         let mut requests = vec![
             make("build target"),
             make("build target"),

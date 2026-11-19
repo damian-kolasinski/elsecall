@@ -140,7 +140,7 @@ impl Housekeeper {
     /// Uses the same identity checks, reservations and confined trash as a pass.
     pub async fn clean_rehearsal(self: &Arc<Self>, session: String) -> Result<()> {
         if !elsecall_rehearsal_identity::identity::valid_session(&session) {
-            return Err(crate::scheduling::service::invalid_rehearsal(
+            return Err(elsecall_scheduling::service::invalid_rehearsal(
                 "Invalid rehearsal cleanup identity.",
             ));
         }
@@ -165,7 +165,7 @@ impl Housekeeper {
                     if !this.remove(&entry, Reason::CallerDeleted, &mut pass)
                         && pass.report.problems.is_empty()
                     {
-                        return Err(crate::scheduling::service::invalid_rehearsal(
+                        return Err(elsecall_scheduling::service::invalid_rehearsal(
                             "A synthetic copy is still in use; cleanup must be retried.",
                         ));
                     }
@@ -206,7 +206,7 @@ impl Housekeeper {
                     &mut pass,
                 );
                 if path.exists() && pass.report.problems.is_empty() {
-                    return Err(crate::scheduling::service::invalid_rehearsal(
+                    return Err(elsecall_scheduling::service::invalid_rehearsal(
                         "A synthetic object store is still in use; cleanup must be retried.",
                     ));
                 }

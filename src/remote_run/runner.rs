@@ -13,10 +13,10 @@ use crate::{
         output::{self, Window},
         protocol::{Exited, RunMessage, Start, Stream},
     },
-    scheduling::leftovers::Leftovers,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_run_admission::{self as run_admission, Admission};
+use elsecall_scheduling::leftovers::Leftovers;
 use elsecall_scheduling_model::run_id::RunId;
 use elsecall_wire::wire::Frame;
 use elsecall_workspace::{

@@ -924,7 +924,6 @@ pub fn findings(metrics: &Metrics, gathered: &Gathered) -> Vec<Finding> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
     use crate::{
         outside_pressure::sampling::Owner,
         reporting::{
@@ -933,10 +932,11 @@ mod tests {
             leftovers::LeftoverFact,
             window::Window,
         },
-        scheduling::{
-            placement::Source,
-            record::{Outcome, Verdict},
-        },
+    };
+    use elsecall_scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
+    use elsecall_scheduling::{
+        placement::Source,
+        record::{Outcome, Verdict},
     };
     use elsecall_scheduling_model::{request::Placement, timestamp::Timestamp};
 
@@ -1587,7 +1587,7 @@ mod tests {
         at: u64,
         waited: u64,
         outcome: Outcome,
-    ) -> crate::scheduling::record::Record {
+    ) -> elsecall_scheduling::record::Record {
         let mut record = fixtures::base(n, label, member);
         record.kind = elsecall_scheduling_model::request::Kind::Lease;
         record.urgency = elsecall_scheduling_model::request::Urgency::Deferrable {

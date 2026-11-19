@@ -7,7 +7,7 @@ mod expiry;
 mod hosting;
 mod initial;
 mod internal;
-pub use crate::scheduling::parameters::SchedulerConfiguration;
+pub use crate::parameters::SchedulerConfiguration;
 pub use internal::{InternalHold, InternalPause, invalid_rehearsal};
 #[cfg(test)]
 mod runtime_tests;
@@ -20,7 +20,7 @@ mod running_estimates;
 mod upgrading;
 pub use upgrading::{HostingHold, OnHandover, UpdateHold, WorkInFlight};
 
-use crate::scheduling::{
+use crate::{
     admission::{Admission, Class},
     binding::{Bindings, Lost},
     busy::{self, Situation, Work},
@@ -333,7 +333,7 @@ impl Scheduler {
         let capacity = Capacity::of(cores, configuration.reserved);
         let records = Records::open(records)?;
         let meter = adapters.speed;
-        records.save_scheduler_settings(&crate::scheduling::records::SchedulerSettings {
+        records.save_scheduler_settings(&crate::records::SchedulerSettings {
             at: runtime.clock.now(),
             capacity,
             parameters: configuration.parameters.clone(),
@@ -486,7 +486,7 @@ impl Scheduler {
         &self,
         since: Timestamp,
         until: Timestamp,
-    ) -> Result<Vec<crate::scheduling::records::SchedulerSettings>> {
+    ) -> Result<Vec<crate::records::SchedulerSettings>> {
         self.records.scheduler_settings(since, until)
     }
 
@@ -524,10 +524,7 @@ impl Scheduler {
 
     /// The load gate, given the share of the machine Elsecall's own grants hold.
     fn gate(&self, book: &Book) -> Gate {
-        let own = crate::scheduling::load::own_share(
-            book.admission.in_use(),
-            self.capacity.weighted_cores,
-        );
+        let own = crate::load::own_share(book.admission.in_use(), self.capacity.weighted_cores);
         book.load.gate(own, &self.parameters.admission)
     }
 
@@ -954,7 +951,7 @@ impl Scheduler {
             workspace: request
                 .workspace
                 .as_ref()
-                .map(|w| crate::scheduling::record::WorkspaceIdentity::of(&self.name(), w)),
+                .map(|w| crate::record::WorkspaceIdentity::of(&self.name(), w)),
             member: None,
             placement_note: None,
             nested_in: None,
@@ -1711,7 +1708,7 @@ impl Scheduler {
                 code: "connection_lost".into(),
             });
             if let Some(placed) = &mut record.placed {
-                placed.interrupted = Some(crate::scheduling::placed::Interruption::ServiceRestart);
+                placed.interrupted = Some(crate::placed::Interruption::ServiceRestart);
             }
             record.warnings.push(
                 "The service restarted during the run, which ended the connection; the command was stopped."
@@ -1830,7 +1827,7 @@ impl Drop for Pending {
 #[cfg(test)]
 mod pending_snapshot_tests {
     use super::*;
-    use crate::scheduling::{
+    use crate::{
         binding::fake::FakeProcesses, clock::VirtualClock, placed::Alone, pre_run_sync::Synced,
     };
     use elsecall_machine::inspection::{LoadSample, Machine, MemoryPressure, ThermalState};
@@ -1976,7 +1973,7 @@ mod pending_snapshot_tests {
                 .run_ended(
                     100,
                     &RunId::parse("r-000000000001").unwrap(),
-                    crate::scheduling::messages::RunEnded::Exited {
+                    crate::messages::RunEnded::Exited {
                         plan_observation: None,
                         exit_code: 0,
                         cpu_ms: None,

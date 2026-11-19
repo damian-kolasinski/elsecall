@@ -1,11 +1,6 @@
 use crate::{
-    fleet::Fleet,
-    fleet_local_api,
-    fleet_placement::FleetMembers,
-    peer_api, peer_listener, placement_api,
-    placement_host::PlacementHost,
-    run_relay,
-    scheduling::service::{Adapters, Scheduler},
+    fleet::Fleet, fleet_local_api, fleet_placement::FleetMembers, peer_api, peer_listener,
+    placement_api, placement_host::PlacementHost, run_relay,
 };
 use crate::{
     fleet_callers::FleetCallers,
@@ -28,6 +23,7 @@ use elsecall_failure::{Failure, Result};
 use elsecall_local_state::{local_access, paths::Paths, private_files};
 use elsecall_machine::inspection::Inspection;
 use elsecall_membership::{member_key::MemberKey, membership_store::MembershipStore};
+use elsecall_scheduling::service::{Adapters, Scheduler};
 use elsecall_wire::api;
 use elsecall_workspace::{copies::Copies, location::Locations, object_sources::ObjectSources};
 use std::{
@@ -277,7 +273,7 @@ pub async fn serve_with_updates(
                 Arc::new(crate::outside_pressure_gate::SchedulerGate(
                     scheduler.clone(),
                 )),
-                crate::scheduling::service::SAMPLE_INTERVAL,
+                elsecall_scheduling::service::SAMPLE_INTERVAL,
             ))
             .abort_handle(),
         )),

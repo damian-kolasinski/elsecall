@@ -1,7 +1,8 @@
 //! Machine CPU attribution by family. Grant-derived outside load is circular,
 //! so fit an idle baseline and active family counts to total machine CPU.
-use crate::{reporting::facts::Fact, scheduling::record::SizeBasis};
+use crate::reporting::facts::Fact;
 use elsecall_load_log::buckets::Bucket;
+use elsecall_scheduling::record::SizeBasis;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -347,7 +348,7 @@ pub fn disagreement(d: &Demand) -> bool {
 pub(crate) mod tests {
     use super::*;
     use crate::reporting::facts::ResourceUse;
-    use crate::scheduling::fixtures::{self, T0};
+    use elsecall_scheduling::fixtures::{self, T0};
     use elsecall_scheduling_model::{capacity::Cores, timestamp::Timestamp};
     pub fn run(n: u64, name: &str, start: u64, end: u64, size: f64) -> Fact {
         let mut f = Fact::of(&fixtures::pinned(
