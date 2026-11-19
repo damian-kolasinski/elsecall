@@ -801,7 +801,11 @@ mod tests {
 
     #[test]
     fn the_readme_examples_are_valid() {
-        let readme = include_str!("../README.md");
+        // The README holds the reference; the integration guide, the other example.
+        let readme = concat!(
+            include_str!("../README.md"),
+            include_str!("../skill/elsecall/references/integrate.md")
+        );
         let examples: Vec<&str> = readme
             .split("```toml\n")
             .skip(1)

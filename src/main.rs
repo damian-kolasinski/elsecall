@@ -23,7 +23,7 @@ use std::{process::ExitCode, sync::Arc, time::Duration};
 #[command(
     version,
     about = "Inspect this machine and admit work onto it through the local Elsecall service",
-    after_help = "Commands return one JSON document. Errors exit 1; invalid arguments exit 2. Help and version are text."
+    after_help = "Commands return one JSON document. Errors exit 1; invalid arguments exit 2. Help, version and skill show are text."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -140,6 +140,9 @@ enum Command {
 
     /// Search scheduling settings offline and print proposals only
     Tune(elsecall::tune_cli::TuneArgs),
+    /// Print the agent guide matching this build, or install it as a skill for the
+    /// coding agents on this machine
+    Skill(elsecall::agent_skill::cli::SkillArgs),
 }
 #[derive(Subcommand)]
 enum ConfigCommand {
@@ -253,6 +256,24 @@ async fn main() -> ExitCode {
                     "The simulation task failed.",
                     "Check the trace and retry.",
                 )),
+            };
+        }
+        // The guide is text unless --json; nothing here needs the service.
+        Command::Skill(args) => {
+            return match elsecall::agent_skill::cli::run(args) {
+                Ok(elsecall::agent_skill::cli::Printed::Text(text)) => {
+                    print!("{text}");
+                    ExitCode::SUCCESS
+                }
+                Ok(elsecall::agent_skill::cli::Printed::Json(data, complete)) => {
+                    output(data);
+                    if complete {
+                        ExitCode::SUCCESS
+                    } else {
+                        ExitCode::FAILURE
+                    }
+                }
+                Err(error) => fail(error),
             };
         }
         // Run passes the command's output through rather than printing JSON.
@@ -371,6 +392,8 @@ async fn run(cli: Cli) -> Result<bool> {
                 serde_json::to_value(ApplicationFirewall.inbound(&paths.executable()))
                     .expect("serializable firewall state");
             data["window"] = serde_json::to_value(window).expect("serializable window state");
+            // Agents learn the installed build from its skill (README "Agent skill").
+            data["agent_skill"] = elsecall::agent_skill::set_up_found(&paths.home);
             output(data);
             return Ok(complete);
         }
@@ -386,8 +409,12 @@ async fn run(cli: Cli) -> Result<bool> {
                     elsecall::uninstall::Request::Remove
                 },
             )?;
-            let complete = uninstalled.complete();
-            output(uninstalled);
+            let mut complete = uninstalled.complete();
+            let mut data = serde_json::to_value(uninstalled).expect("serializable uninstall");
+            let (skills, removed) = elsecall::agent_skill::remove_all(&paths);
+            complete &= removed;
+            data["agent_skill"] = skills;
+            output(data);
             return Ok(complete);
         }
         Command::Ui => {
@@ -581,6 +608,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 "configuration_sync": service_configurations,
                 "paths": {"executable": paths.bin, "launch_agent": paths.agent, "socket": paths.socket(), "log": paths.log()},
                 "next_step": next_step,
+                "agent_skill": elsecall::agent_skill::health(&paths.home),
             }));
             return Ok(healthy);
         }
@@ -592,6 +620,8 @@ async fn run(cli: Cli) -> Result<bool> {
             output(wait_ready(&paths).await?);
         }
         Command::Serve => {
+            // After an upgrade, the stubs an older build wrote point at this one.
+            elsecall::agent_skill::refresh_if_installed(&paths);
             let machine: Arc<dyn elsecall::inspection::MachineInspector> =
                 if let Some(file) = elsecall::machine_script::load_file() {
                     Arc::new(elsecall::machine_script::ScriptedLoad {
@@ -653,6 +683,7 @@ async fn run(cli: Cli) -> Result<bool> {
 
         Command::Tune(_) => unreachable!("handled before platform and service checks"),
         Command::Simulate(_) => unreachable!("handled before platform and service checks"),
+        Command::Skill(_) => unreachable!("handled before platform and service checks"),
         Command::Copies(args) => {
             let (data, clean) = elsecall::copies_cli::run(&paths, args).await?;
             output(data);
