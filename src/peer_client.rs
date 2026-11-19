@@ -299,6 +299,20 @@ pub fn unavailable(member: &Member) -> Failure {
     )
 }
 
+/// An outer whole-operation bound, rather than a timeout in a known socket phase.
+pub fn operation_timeout(member: &Member, path: &str, started: std::time::Instant) -> Failure {
+    let attempt = crate::peer_diagnostics::Attempt::new(
+        member.name.as_str(),
+        path,
+        1,
+        crate::peer_diagnostics::Phase::Request,
+        Some(crate::peer_diagnostics::Kind::Timeout),
+        started,
+    );
+    crate::peer_diagnostics::record(&attempt);
+    unavailable(member).with_details(serde_json::json!({"peer_io":attempt}))
+}
+
 /// Marks a `member_unavailable` whose member took the connection and dropped it
 /// before any answer: its service listens, but something stops the request.
 const CLOSED_WITHOUT_ANSWER: &str = "closed_without_answer";

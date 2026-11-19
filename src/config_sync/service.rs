@@ -429,7 +429,7 @@ impl ConfigSync {
         let result = tokio::time::timeout(EXCHANGE_TIMEOUT, self.exchange_push(member, manifest))
             .await
             .unwrap_or_else(|_| {
-                Err(crate::peer_diagnostics::operation_timeout(
+                Err(crate::peer_client::operation_timeout(
                     member,
                     protocol::ROUTE,
                     started,
@@ -533,7 +533,7 @@ impl ConfigSync {
         tokio::time::timeout(EXCHANGE_TIMEOUT, exchange)
             .await
             .unwrap_or_else(|_| {
-                Err(crate::peer_diagnostics::operation_timeout(
+                Err(crate::peer_client::operation_timeout(
                     member,
                     protocol::ROUTE,
                     started,

@@ -1,7 +1,7 @@
 //! One minute of a member's load, folded from the scheduler's per-second samples.
 use crate::{
     inspection::{MemoryPressure, ThermalState},
-    scheduling::{capacity::Cores, load::Gate, timestamp::Timestamp},
+    scheduling::{capacity::Cores, gate::Gate, timestamp::Timestamp},
 };
 use serde::{Deserialize, Serialize};
 

@@ -6,7 +6,6 @@
 use crate::{
     failure::Result,
     inspection::{CoreCounts, LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState},
-    scheduling::speed::SpeedMeter,
 };
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -77,11 +76,4 @@ impl<M: MachineInspector> MachineInspector for ScriptedLoad<M> {
     }
 }
 
-/// A speed meter that always measures the same speed.
-#[derive(Clone, Copy, Debug)]
-pub struct FixedSpeed(pub f64);
-impl SpeedMeter for FixedSpeed {
-    fn measure(&self) -> Result<f64> {
-        Ok(self.0)
-    }
-}
+pub use crate::scheduling::speed::FixedSpeed;

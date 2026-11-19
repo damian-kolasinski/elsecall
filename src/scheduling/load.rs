@@ -3,7 +3,6 @@ use crate::{
     inspection::{LoadSample, MemoryPressure},
     scheduling::{capacity::Cores, parameters::Admission},
 };
-use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
 /// Samples averaged for saturation; at one sample a second, about three seconds.
@@ -16,28 +15,7 @@ pub struct LoadHistory {
     unavailable: bool,
 }
 
-/// The verdict admission applies to new, non-nested work.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "verdict", rename_all = "snake_case")]
-pub enum Gate {
-    Open,
-    /// The latest sample could not be read; admission falls back to capacity alone.
-    Unknown,
-    Saturated {
-        /// Measured utilization of the whole machine.
-        cpu_utilization: f64,
-        /// The part attributed to work Elsecall did not start.
-        outside_utilization: f64,
-    },
-    MemoryPressure {
-        level: MemoryPressure,
-    },
-}
-impl Gate {
-    pub fn admits(self) -> bool {
-        matches!(self, Gate::Open | Gate::Unknown)
-    }
-}
+pub use super::gate::Gate;
 
 impl LoadHistory {
     pub fn record(&mut self, sample: LoadSample) {

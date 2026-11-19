@@ -276,19 +276,6 @@ pub fn recent() -> History {
         Timestamp::now(),
     )
 }
-/// An outer whole-operation bound, rather than a timeout in a known socket phase.
-pub fn operation_timeout(member: &crate::roster::Member, path: &str, started: Instant) -> Failure {
-    let attempt = Attempt::new(
-        member.name.as_str(),
-        path,
-        1,
-        Phase::Request,
-        Some(Kind::Timeout),
-        started,
-    );
-    record(&attempt);
-    crate::peer_client::unavailable(member).with_details(serde_json::json!({"peer_io":attempt}))
-}
 
 #[cfg(test)]
 mod tests {

@@ -17,34 +17,7 @@ use futures_util::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-/// The caller's working tree, which the member copies.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct WorkspaceRef {
-    /// The working tree's absolute root on the calling member.
-    pub root: String,
-    /// The repository's common git directory, which its worktrees share.
-    pub common_dir: String,
-}
-impl WorkspaceRef {
-    pub fn validate(&self) -> Result<()> {
-        let absolute = |p: &str| {
-            p.len() > 1
-                && p.len() <= 1024
-                && p.starts_with('/')
-                && p[1..]
-                    .split('/')
-                    .all(|c| !c.is_empty() && c != "." && c != "..")
-        };
-        if absolute(&self.root) && absolute(&self.common_dir) {
-            Ok(())
-        } else {
-            Err(crate::scheduling::request::invalid(
-                "The workspace must be an absolute, normalized path of at most 1024 bytes.",
-            ))
-        }
-    }
-}
+pub use crate::scheduling::request::WorkspaceRef;
 
 /// What the master asks a member to admit.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

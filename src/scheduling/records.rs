@@ -19,7 +19,7 @@ use std::{
 };
 
 /// Ended records older than this are deleted when the service starts.
-pub const RETENTION: Duration = Duration::from_secs(30 * 24 * 60 * 60);
+pub use crate::sqlite_retention::RETENTION;
 
 /// Effective scheduler settings since this service started. Service settings
 /// are immutable until restart, so these events preserve changes exactly.

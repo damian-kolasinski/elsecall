@@ -1,6 +1,10 @@
 //! Reclaim retained SQLite files after bulk expiry, without vacuuming for every
 //! row. Ordinary freed pages are reused; substantial slack is returned to disk.
 use rusqlite::Connection;
+use std::time::Duration;
+
+/// Ended request records and minutes of load history are kept this long.
+pub const RETENTION: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 
 pub fn reclaim(connection: &Connection) -> rusqlite::Result<()> {
     let pages: i64 = connection.pragma_query_value(None, "page_count", |row| row.get(0))?;

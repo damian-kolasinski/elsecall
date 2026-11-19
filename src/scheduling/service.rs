@@ -1915,7 +1915,7 @@ mod pending_snapshot_tests {
                 ServiceConfiguration::default(),
                 Adapters {
                     machine: Arc::new(ObservedMachine),
-                    speed: Arc::new(crate::machine_script::FixedSpeed(1.0)),
+                    speed: Arc::new(crate::scheduling::speed::FixedSpeed(1.0)),
                     processes,
                     exits,
                 },

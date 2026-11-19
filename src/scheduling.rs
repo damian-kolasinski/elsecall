@@ -5,6 +5,7 @@ pub mod busy;
 pub mod capacity;
 pub mod clock;
 pub mod estimates;
+pub mod gate;
 pub mod learning;
 pub mod leftovers;
 pub mod load;

@@ -17,6 +17,15 @@ pub trait SpeedMeter: Send + Sync {
     fn measure(&self) -> Result<f64>;
 }
 
+/// A speed meter that always measures the same speed.
+#[derive(Clone, Copy, Debug)]
+pub struct FixedSpeed(pub f64);
+impl SpeedMeter for FixedSpeed {
+    fn measure(&self) -> Result<f64> {
+        Ok(self.0)
+    }
+}
+
 /// How often a member measures itself again.
 pub const MEASURE_EVERY: Duration = Duration::from_secs(10 * 60);
 /// Measurements the best is taken from: an hour's worth.

@@ -44,7 +44,7 @@ modules = ["label_pattern", "label_rules"]
 
 [crates.wire]
 band = "foundation"
-modules = ["api", "wire", "report_protocol"]
+modules = ["api", "wire"]
 
 [crates.local-state]
 band = "foundation"
@@ -74,11 +74,12 @@ modules = ["roster", "member_key", "member_code", "membership_store", "peer_auth
 band = "foundation"
 # The scheduler's vocabulary: what a request, a time, a capacity and a run id
 # are. Everything that decides or stores stays in `scheduling`.
-modules = ["scheduling::request", "scheduling::timestamp", "scheduling::capacity", "scheduling::run_id", "scheduling::speed"]
+# workload_metadata is what a command declares about itself; requests carry it.
+modules = ["scheduling::request", "scheduling::settings", "scheduling::timestamp", "scheduling::capacity", "scheduling::gate", "scheduling::run_id", "scheduling::speed", "workload_metadata"]
 
 [crates.machine]
 band = "foundation"
-modules = ["inspection", "idle_load", "machine_script", "state_sizes"]
+modules = ["inspection", "idle_load"]
 
 # --- core ---------------------------------------------------------------------
 
@@ -100,19 +101,16 @@ modules = ["peer_client", "peer_transport", "socket_io", "send_inactivity", "rec
 
 [crates.peer-diagnostics]
 band = "core"
-modules = ["peer_diagnostics", "peer_history"]
+modules = ["peer_diagnostics"]
 
 [crates.scheduling]
 band = "core"
 modules = ["scheduling"]
 
-[crates.workload]
-band = "core"
-modules = ["workload", "workload_metadata"]
 
 [crates.load-log]
 band = "core"
-modules = ["load_log", "own_history"]
+modules = ["load_log"]
 
 [crates.outside-pressure]
 band = "core"
@@ -192,7 +190,14 @@ modules = ["service_handover", "service_relaunch"]
 
 [crates.reporting]
 band = "lab"
-modules = ["reporting", "report_api", "report_cli"]
+# Reports and where their facts come from: this member's history, other
+# members' over the peer channel, and the protocol between them.
+modules = ["reporting", "report_api", "report_cli", "report_protocol", "own_history", "peer_history"]
+
+[crates.workload]
+band = "lab"
+# Workload traces and the empirical models built from recorded requests.
+modules = ["workload"]
 
 [crates.trace]
 band = "lab"
@@ -220,6 +225,11 @@ modules = ["tuning", "tune_cli", "tuning_drift", "tuning_preflight", "tuning_pre
 band = "adapter"
 modules = ["macos", "lan_address", "inbound_firewall", "process_service"]
 
+[crates.scripted-machine]
+band = "adapter"
+# Machine observations a test scripts through files, selected by environment.
+modules = ["machine_script"]
+
 # --- entry points -------------------------------------------------------------
 
 [crates.service]
@@ -233,11 +243,11 @@ band = "entry"
 # The `elsecall` binary, src/main.rs, and subcommands of slices that may not
 # use clap themselves.
 binary = "src/main.rs"
-modules = ["workload_observation_cli"]
+modules = ["workload_observation_cli", "state_sizes"]
 
 [crates.ui]
 band = "entry"
 packages = ["elsecall-ui"]
 # The desktop app talks to the service through its contract, never through the
 # service's internals.
-may_depend_on = ["failure", "wire", "local-client", "local-state", "build-identity", "membership", "labels", "add-mac", "release-update", "installation", "window", "workload-config"]
+may_depend_on = ["failure", "scheduling-model", "wire", "local-client", "local-state", "build-identity", "membership", "labels", "add-mac", "release-update", "installation", "window", "workload-config"]

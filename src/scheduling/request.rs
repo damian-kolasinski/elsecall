@@ -1,7 +1,7 @@
 //! Work requests: what a caller asks for, and the rules that make one valid.
 use crate::{
     failure::{Failure, Result},
-    scheduling::{capacity::Cores, placed::WorkspaceRef, settings::Settings, timestamp::Timestamp},
+    scheduling::{capacity::Cores, settings::Settings, timestamp::Timestamp},
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -173,6 +173,35 @@ impl AdmissionRequest {
             workspace: self.workspace,
             settings: self.settings,
         })
+    }
+}
+
+/// The caller's working tree, which the member copies.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkspaceRef {
+    /// The working tree's absolute root on the calling member.
+    pub root: String,
+    /// The repository's common git directory, which its worktrees share.
+    pub common_dir: String,
+}
+impl WorkspaceRef {
+    pub fn validate(&self) -> Result<()> {
+        let absolute = |p: &str| {
+            p.len() > 1
+                && p.len() <= 1024
+                && p.starts_with('/')
+                && p[1..]
+                    .split('/')
+                    .all(|c| !c.is_empty() && c != "." && c != "..")
+        };
+        if absolute(&self.root) && absolute(&self.common_dir) {
+            Ok(())
+        } else {
+            Err(invalid(
+                "The workspace must be an absolute, normalized path of at most 1024 bytes.",
+            ))
+        }
     }
 }
 

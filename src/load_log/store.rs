@@ -8,7 +8,7 @@ use rusqlite::{Connection, params};
 use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt, path::Path, sync::Mutex, time::Duration};
 
 /// Minutes older than this are deleted: as long as request records are kept.
-pub const RETENTION: Duration = crate::scheduling::records::RETENTION;
+pub const RETENTION: Duration = crate::sqlite_retention::RETENTION;
 
 pub struct LoadStore {
     connection: Mutex<Connection>,
