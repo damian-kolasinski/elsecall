@@ -212,6 +212,16 @@ fn sync_failure(member: &str, what: String, cause: String) -> SyncFailure {
 /// The cause's own message is never repeated, since it may come from the member.
 pub fn failed(member: &str, cause: &Failure) -> Failed {
     match cause.code.as_str() {
+        "member_unavailable" if crate::peer_client::is_closed_without_answer(cause) => {
+            let closed = crate::peer_client::closed_without_answer(&member);
+            Failed::Unavailable(Failure::new(
+                "member_unavailable",
+                format!(
+                    "{member} closed the connection without answering, so its synced configuration could not be brought up to date."
+                ),
+                closed.hint,
+            ))
+        }
         "member_unavailable" | "member_rejected" | "member_unverified" => {
             Failed::Unavailable(Failure::new(
                 "member_unavailable",
@@ -357,6 +367,24 @@ mod tests {
                 }
                 Failed::Sync(sync) => panic!("{code}: {sync:?}"),
             }
+        }
+        // A member that closed the connection without answering names its
+        // firewall, not Tailscale.
+        let mut closed = crate::peer_client::closed_without_answer(&"bravo");
+        closed.message = "secret=hunter2".into();
+        match failed("bravo", &closed) {
+            Failed::Unavailable(failure) => {
+                assert_eq!(failure.code, "member_unavailable");
+                assert!(
+                    failure
+                        .message
+                        .contains("closed the connection without answering")
+                );
+                assert!(!failure.message.contains("hunter2"));
+                assert!(failure.hint.contains("firewall"));
+                assert!(!failure.hint.contains("Tailscale"));
+            }
+            other => panic!("{other:?}"),
         }
     }
 

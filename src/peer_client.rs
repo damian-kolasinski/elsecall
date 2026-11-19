@@ -117,14 +117,8 @@ pub async fn call_with_retry<T: DeserializeOwned>(
                     || timeout.saturating_sub(started.elapsed()) <= backoff
                 {
                     let mut error = error;
-                    let mut details = error.details.take().map_or(serde_json::json!({}), |d| *d);
-                    if !details.is_object() {
-                        details = serde_json::json!({"remote_details":details});
-                    }
-                    if let Some(prior) = details.as_object_mut().and_then(|d| d.remove("peer_io")) {
-                        details["remote_peer_io"] = prior;
-                    }
-                    details["peer_io"] = serde_json::json!(diagnostic);
+                    let mut details =
+                        diagnosed(&mut error, &diagnostic, kind == Some(Kind::Remote));
                     details["request_duration_ms"] =
                         serde_json::json!(started.elapsed().as_millis());
                     details["attempts"] = serde_json::json!(attempt);
@@ -135,6 +129,25 @@ pub async fn call_with_retry<T: DeserializeOwned>(
         }
     }
     unreachable!("at least one attempt")
+}
+
+/// `error`'s details with this attempt's diagnostics added. A member's own
+/// diagnostics move aside, and a `remote` refusal cannot claim that it closed
+/// a connection without answering: only this member observes that.
+fn diagnosed(error: &mut Failure, diagnostic: &Attempt, remote: bool) -> serde_json::Value {
+    let mut details = error.details.take().map_or(serde_json::json!({}), |d| *d);
+    if !details.is_object() {
+        details = serde_json::json!({"remote_details":details});
+    }
+    let fields = details.as_object_mut().expect("details are an object");
+    if let Some(prior) = fields.remove("peer_io") {
+        fields.insert("remote_peer_io".into(), prior);
+    }
+    if remote {
+        fields.remove(CLOSED_WITHOUT_ANSWER);
+    }
+    details["peer_io"] = serde_json::json!(diagnostic);
+    details
 }
 fn retryable(method: &Method, path: &str) -> bool {
     (*method == Method::GET && matches!(path, "/peer/v1/status" | "/peer/v1/roster"))
@@ -202,10 +215,11 @@ async fn exchange<T: DeserializeOwned>(
         .body(Full::new(Bytes::from(body)))
         .map_err(|_| protocol_error(member))?;
     progress.set(Phase::Send);
+    let sent = Instant::now();
     let response = sender
         .send_request(request)
         .await
-        .map_err(|_| unavailable(member))?;
+        .map_err(|error| unanswered(member, &error, sent.elapsed()))?;
     let status = response.status();
     let signature = response
         .headers()
@@ -283,6 +297,60 @@ pub fn unavailable(member: &Member) -> Failure {
             member.name
         ),
     )
+}
+
+/// Marks a `member_unavailable` whose member took the connection and dropped it
+/// before any answer: its service listens, but something stops the request.
+const CLOSED_WITHOUT_ANSWER: &str = "closed_without_answer";
+
+/// How soon after the request a close still means the member never took it up.
+/// A firewall closes at once; the member's own deadlines close a connection
+/// after seconds (`peer_listener`'s 30), and that is a slow answer instead.
+const PROMPT_CLOSE: Duration = Duration::from_secs(2);
+
+/// Why a request sent `waited` ago got no answer. A member that accepted the
+/// connection and promptly closed it is not lost on the tailnet: a firewall that
+/// filters the service, such as the macOS Application Firewall with no rule for
+/// a new build, does exactly this, and so does a service that stopped
+/// mid-request.
+fn unanswered(member: &Member, error: &hyper::Error, waited: Duration) -> Failure {
+    use std::io::ErrorKind;
+    let dropped = std::error::Error::source(error)
+        .and_then(|source| source.downcast_ref::<std::io::Error>())
+        .is_some_and(|io| {
+            matches!(
+                io.kind(),
+                ErrorKind::ConnectionReset | ErrorKind::BrokenPipe | ErrorKind::ConnectionAborted
+            )
+        });
+    if (error.is_incomplete_message() || dropped) && waited < PROMPT_CLOSE {
+        closed_without_answer(&member.name)
+    } else {
+        unavailable(member)
+    }
+}
+
+/// `member_unavailable` for a member that closed the connection without
+/// answering, with its own repair. Callers that branch on `member_unavailable`
+/// keep treating it as an unreachable member.
+pub fn closed_without_answer(member: &impl std::fmt::Display) -> Failure {
+    Failure::new(
+        "member_unavailable",
+        format!("{member} accepted the connection but closed it without answering."),
+        format!(
+            "Its firewall may be blocking Elsecall, or its service stopped mid-request. Run elsecall doctor on {member}: it reports the firewall and prints the commands that let members in."
+        ),
+    )
+    .with_details(serde_json::json!({ CLOSED_WITHOUT_ANSWER: true }))
+}
+
+/// Whether `failure` is a member that closed the connection without answering.
+pub fn is_closed_without_answer(failure: &Failure) -> bool {
+    failure
+        .details
+        .as_ref()
+        .and_then(|details| details.get(CLOSED_WITHOUT_ANSWER))
+        == Some(&serde_json::Value::Bool(true))
 }
 
 fn protocol_error(member: &Member) -> Failure {
@@ -419,7 +487,10 @@ async fn open_channel(
         ),
     };
     peer_diagnostics::record(&diagnostic);
-    result.map_err(|e| e.with_details(serde_json::json!({"peer_io":diagnostic})))
+    result.map_err(|mut error| {
+        let details = diagnosed(&mut error, &diagnostic, kind == Some(Kind::Remote));
+        error.with_details(details)
+    })
 }
 
 async fn channel_once(
@@ -468,10 +539,11 @@ async fn channel_once(
         .body(Full::new(Bytes::from(body)))
         .map_err(|_| protocol_error(member))?;
     progress.set(Phase::Send);
+    let sent = Instant::now();
     let mut response = sender
         .send_request(request)
         .await
-        .map_err(|_| unavailable(member))?;
+        .map_err(|error| unanswered(member, &error, sent.elapsed()))?;
     let status = response.status();
     let header = |name: &str| {
         response

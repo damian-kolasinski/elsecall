@@ -240,6 +240,12 @@ async fn failures_are_typed_bounded_retained_and_only_idempotent_requests_retry(
         error.details.as_ref().unwrap()["peer_io"]["failure_kind"],
         "connect"
     );
+    assert!(
+        error
+            .message
+            .contains("could not be reached over the tailnet")
+    );
+    assert!(!peer_client::is_closed_without_answer(&error));
     // Drop after reading the request: a response/receive failure. A fresh signed
     // retry succeeds, while non-idempotent offers are never sent twice.
     for (path, partial_body, read_only) in [
@@ -366,4 +372,107 @@ async fn failures_are_typed_bounded_retained_and_only_idempotent_requests_retry(
             .unwrap()
             .contains("x-elsecall")
     );
+}
+
+/// A member that reads each request's head and drops the connection after
+/// `delay`, with a reset when `reset`, as a firewall or a dying service would.
+async fn dropping_member(
+    delay: Duration,
+    reset: bool,
+) -> (Member, Arc<AtomicUsize>, tokio::task::JoinHandle<()>) {
+    use tokio::io::AsyncReadExt;
+    elsecall::tailnet::allow_loopback_members();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let member = Member::new(
+        "macbook-pro".parse().unwrap(),
+        MemberKey::generate().unwrap().public(),
+        vec![listener.local_addr().unwrap()],
+    )
+    .unwrap();
+    let accepted = Arc::new(AtomicUsize::new(0));
+    let counted = accepted.clone();
+    let task = tokio::spawn(async move {
+        loop {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            counted.fetch_add(1, Ordering::SeqCst);
+            let mut request = Vec::new();
+            while !request.ends_with(b"\r\n\r\n") {
+                request.push(stream.read_u8().await.unwrap());
+            }
+            tokio::time::sleep(delay).await;
+            if reset {
+                stream.set_zero_linger().unwrap();
+            }
+            drop(stream);
+        }
+    });
+    (member, accepted, task)
+}
+
+fn assert_points_at_firewall(error: &elsecall::failure::Failure, case: &str) {
+    assert_eq!(error.code, "member_unavailable", "{case}");
+    assert!(peer_client::is_closed_without_answer(error), "{case}");
+    assert_eq!(
+        error.message, "macbook-pro accepted the connection but closed it without answering.",
+        "{case}"
+    );
+    assert!(error.hint.contains("firewall"), "{case}");
+    assert!(
+        error.hint.contains("elsecall doctor on macbook-pro"),
+        "{case}"
+    );
+    assert!(!error.hint.contains("Tailscale"), "{case}");
+}
+
+/// A member whose service listens but whose firewall drops each connection, as
+/// the macOS Application Firewall does to a build it has no rule for: the
+/// connection is accepted and closed at once, before any answer. The failure
+/// stays `member_unavailable` for every caller, and names the firewall and the
+/// member's doctor instead of Tailscale, for requests and channels alike.
+#[tokio::test]
+async fn a_member_that_closes_without_answering_points_at_its_firewall() {
+    let key = MemberKey::generate().unwrap();
+    for reset in [false, true] {
+        let (member, accepted, task) = dropping_member(Duration::ZERO, reset).await;
+        let error = call(&key, &member, "/peer/v1/status", Duration::from_secs(2))
+            .await
+            .unwrap_err();
+        assert_points_at_firewall(&error, &format!("request, reset: {reset}"));
+        // Still a transient failure: an idempotent request was tried twice.
+        assert_eq!(error.details.as_ref().unwrap()["attempts"], 2);
+        assert_eq!(accepted.load(Ordering::SeqCst), 2);
+        task.abort();
+    }
+    let (member, _, task) = dropping_member(Duration::ZERO, false).await;
+    let Err(error) =
+        peer_client::channel(&key, &member, "/channel", "purpose", "elsecall-run/1").await
+    else {
+        panic!("a dropped channel opened");
+    };
+    assert_points_at_firewall(&error, "channel");
+    assert!(error.details.as_ref().unwrap().get("peer_io").is_some());
+    task.abort();
+}
+
+/// A member that held the request for seconds before closing took it up: that is
+/// its own deadline or a crash, not a firewall, and keeps the plain message.
+#[tokio::test]
+async fn a_member_that_closes_late_is_not_blamed_on_its_firewall() {
+    let key = MemberKey::generate().unwrap();
+    let (member, _, task) = dropping_member(Duration::from_millis(2300), false).await;
+    let error = peer_client::call(
+        &key,
+        &member,
+        Method::POST,
+        "/peer/v1/placements",
+        Some(&json!({})),
+        Duration::from_secs(6),
+    )
+    .await
+    .map(|_: Value| ())
+    .unwrap_err();
+    assert_eq!(error.code, "member_unavailable");
+    assert!(!peer_client::is_closed_without_answer(&error));
+    assert!(error.message.contains("could not be reached"));
+    task.abort();
 }
