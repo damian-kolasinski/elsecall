@@ -1,6 +1,8 @@
 //! The service side of admission: this member's queue, grants, timers and records,
 //! and the requests it places on, or hosts for, other members.
 mod auto;
+mod background;
+pub use background::Tasks;
 mod expiry;
 mod hosting;
 mod initial;
@@ -45,7 +47,7 @@ use crate::{
         recovery,
         request::{self, AdmissionRequest, AtDeadline, Kind, Placement, Urgency, WorkRequest},
         run_id::{RandomRunIds, RunId, RunIds},
-        speed::{self, SpeedHistory, SpeedMeter},
+        speed::{SpeedHistory, SpeedMeter},
         timestamp::Timestamp,
     },
 };
@@ -67,8 +69,6 @@ use tokio::{
 
 /// How often live load is sampled and waiting work reconsidered.
 pub const SAMPLE_INTERVAL: Duration = Duration::from_secs(1);
-/// How often ended records past their retention are deleted.
-const PRUNE_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// The system boundaries admission depends on.
 pub struct Adapters {
@@ -120,16 +120,6 @@ enum HoldResolution {
     Fresh,
     Interactive(HoldLimitRecord),
     Deferrable(Option<Duration>),
-}
-
-/// Background work of a running scheduler, stopped when dropped.
-pub struct Tasks(Vec<AbortHandle>);
-impl Drop for Tasks {
-    fn drop(&mut self) {
-        for task in &self.0 {
-            task.abort();
-        }
-    }
 }
 
 pub struct Scheduler {
@@ -384,21 +374,10 @@ impl Scheduler {
         });
         scheduler.recover()?;
         if driving == Driving::Controlled {
-            return Ok((scheduler, Tasks(Vec::new())));
+            return Ok((scheduler, Tasks::none()));
         }
-        let sampler = tokio::spawn(sample(Arc::downgrade(&scheduler)));
-        let exits = tokio::spawn(follow_exits(Arc::downgrade(&scheduler), adapters.exits));
-        let speed = tokio::spawn(measure_speed(Arc::downgrade(&scheduler), meter));
-        let placement = tokio::spawn(auto::reconsider(Arc::downgrade(&scheduler)));
-        Ok((
-            scheduler,
-            Tasks(vec![
-                sampler.abort_handle(),
-                exits.abort_handle(),
-                speed.abort_handle(),
-                placement.abort_handle(),
-            ]),
-        ))
+        let tasks = background::start(&scheduler, adapters.exits, meter);
+        Ok((scheduler, tasks))
     }
 
     /// Samples the machine, expires due requests and runs the real admission
@@ -1853,63 +1832,6 @@ impl Drop for Pending {
             }
             Ok(Err(_)) | Err(oneshot::error::TryRecvError::Closed) => (),
         }
-    }
-}
-
-async fn sample(scheduler: Weak<Scheduler>) {
-    let mut interval = tokio::time::interval(SAMPLE_INTERVAL);
-    // After a stall, sample on, rather than several times in one second.
-    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-    let mut pruned = Instant::now();
-    loop {
-        interval.tick().await;
-        let Some(scheduler) = scheduler.upgrade() else {
-            return;
-        };
-        if let Err(error) = scheduler.tick() {
-            log("load_history_write_failed", &error);
-        }
-        if pruned.elapsed() >= PRUNE_INTERVAL {
-            pruned = Instant::now();
-            if let Err(error) = scheduler.records.prune(scheduler.clock.now()) {
-                log("record_prune_failed", &error);
-            }
-            if let Err(error) = scheduler.load_log.prune(scheduler.clock.now()) {
-                log("load_history_prune_failed", &error);
-            }
-        }
-    }
-}
-
-/// Measures this member's speed now and then. The workload is short and runs on
-/// a blocking thread, so admission never waits for it.
-async fn measure_speed(scheduler: Weak<Scheduler>, meter: Arc<dyn SpeedMeter>) {
-    let mut interval = tokio::time::interval(speed::MEASURE_EVERY);
-    loop {
-        interval.tick().await;
-        let meter = meter.clone();
-        let measured = tokio::task::spawn_blocking(move || meter.measure()).await;
-        let Some(scheduler) = scheduler.upgrade() else {
-            return;
-        };
-        match measured {
-            Ok(Ok(speed)) => scheduler
-                .speed
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .record(speed),
-            Ok(Err(error)) => log("speed_unavailable", &error),
-            Err(_) => log("speed_unavailable", "the measurement panicked"),
-        }
-    }
-}
-
-async fn follow_exits(scheduler: Weak<Scheduler>, mut exits: mpsc::UnboundedReceiver<u32>) {
-    while let Some(pid) = exits.recv().await {
-        let Some(scheduler) = scheduler.upgrade() else {
-            return;
-        };
-        scheduler.exited(pid);
     }
 }
 
