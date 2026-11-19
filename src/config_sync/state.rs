@@ -23,8 +23,7 @@ use std::{
 const LIMIT: u64 = 16 << 20;
 /// Backups kept of each file; older ones are removed and counted.
 pub const BACKUPS_PER_FILE: usize = 20;
-/// Global oldest-first cap, including filenames no longer in the synced set.
-pub const BACKUPS_TOTAL: usize = 1000;
+pub use super::synced_path::BACKUPS_TOTAL;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

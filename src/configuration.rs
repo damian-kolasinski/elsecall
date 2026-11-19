@@ -58,7 +58,7 @@ impl Default for ServiceConfiguration {
     fn default() -> Self {
         Self {
             logs: Default::default(),
-            sync_backups: crate::config_sync::state::BACKUPS_TOTAL,
+            sync_backups: crate::config_sync::synced_path::BACKUPS_TOTAL,
             reserved: Default::default(),
             location: Default::default(),
             workspace_root: None,
@@ -249,7 +249,7 @@ pub fn parse(text: &str, path: &Path) -> Result<ServiceConfiguration> {
         .and_then(|paths| {
             crate::config_sync::synced_path::check_set(
                 &paths,
-                crate::config_sync::manifest::MAXIMUM_PATHS,
+                crate::config_sync::synced_path::MAXIMUM_PATHS,
             )
             .map(|()| paths)
         })
@@ -269,7 +269,7 @@ pub fn parse(text: &str, path: &Path) -> Result<ServiceConfiguration> {
     let sync_backups = file
         .retention
         .sync_backups
-        .unwrap_or(crate::config_sync::state::BACKUPS_TOTAL);
+        .unwrap_or(crate::config_sync::synced_path::BACKUPS_TOTAL);
     if !(1..=10_000).contains(&sync_backups) {
         return Err(invalid(
             "[retention] sync_backups must be from 1 to 10000.".into(),

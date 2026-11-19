@@ -46,6 +46,20 @@ modules = ["label_pattern", "label_rules"]
 band = "foundation"
 modules = ["rehearsal_identity"]
 
+[crates.config-sync-model]
+band = "foundation"
+# The paths a fleet may mirror and the limits on them, which the service
+# configuration names and config sync enforces.
+modules = ["config_sync::synced_path", "config_sync::status"]
+
+[crates.guidance]
+band = "foundation"
+modules = ["guidance"]
+
+[crates.run-admission]
+band = "foundation"
+modules = ["run_admission"]
+
 [crates.wire]
 band = "foundation"
 modules = ["api", "wire"]
@@ -135,7 +149,7 @@ modules = ["workload_settings", "workload_configuration", "workload_migration"]
 
 [crates.admission]
 band = "feature"
-modules = ["run_admission", "admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "guidance"]
+modules = ["admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client"]
 
 [crates.remote-run]
 band = "feature"
@@ -147,7 +161,7 @@ modules = ["placement_api", "placement_authority", "placement_host", "placement_
 
 [crates.fleet]
 band = "feature"
-modules = ["fleet", "fleet_changes", "fleet_local_api", "fleet_view", "fleet_callers", "fleet_placement"]
+modules = ["fleet", "fleet_changes", "fleet_local_api", "fleet_view", "fleet_placement"]
 
 [crates.add-mac]
 band = "feature"
@@ -155,11 +169,11 @@ modules = ["add_mac", "nearby_macs", "remote_mac", "askpass", "authorized_keys",
 
 [crates.service-config]
 band = "feature"
-modules = ["configuration", "service_configuration"]
+modules = ["configuration"]
 
 [crates.config-sync]
 band = "feature"
-modules = ["config_sync", "config_sync_api", "config_sync_cli", "config_sync_local_api"]
+modules = ["config_sync", "config_sync_api", "config_sync_cli", "config_sync_local_api", "service_configuration"]
 
 [crates.tools]
 band = "feature"
@@ -167,11 +181,13 @@ modules = ["toolset", "toolset_api", "tools_api", "tools_cli", "tool_inventory",
 
 [crates.workspace]
 band = "feature"
-modules = ["workspace", "workspace_check_api", "copies_api", "copies_cli", "fleet_copies"]
+modules = ["workspace"]
 
 [crates.housekeeping]
 band = "feature"
-modules = ["housekeeping"]
+# Removing copies of other members' workspaces, asking their owners first over
+# the fleet, and the routes that serve and trigger it.
+modules = ["housekeeping", "fleet_callers", "fleet_copies", "copies_api", "copies_cli", "workspace_check_api"]
 
 [crates.installation]
 band = "feature"

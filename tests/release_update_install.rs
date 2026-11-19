@@ -320,7 +320,7 @@ async fn helper_survives_the_service_restart(mode: Mode) {
     let mut manager = Manager::new(paths.clone(), (mode == Mode::Install).then_some(incoming));
     manager.unavailable_update_digest = (mode == Mode::UpdateApi).then_some(incoming);
     installation::install(&paths, &original, &manager, None).unwrap();
-    elsecall::fleet_upgrade::helper::confirm(&paths, &before.build_id(), true)
+    elsecall::installation::ready::confirm(&paths, &before.build_id(), true)
         .await
         .unwrap();
     let old_window = Window {

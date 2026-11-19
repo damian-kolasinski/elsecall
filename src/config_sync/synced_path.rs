@@ -13,6 +13,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// The most paths one fleet syncs.
+pub const MAXIMUM_PATHS: usize = 16;
+/// Global oldest-first cap on backups, including filenames no longer in the
+/// synced set.
+pub const BACKUPS_TOTAL: usize = 1000;
+
 const MAXIMUM_LENGTH: usize = 1024;
 const MAXIMUM_COMPONENT: usize = 255;
 

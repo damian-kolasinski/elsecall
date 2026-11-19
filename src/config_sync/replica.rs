@@ -12,9 +12,7 @@ use crate::{
         history::{Event, History, PathRecord, Record},
         manifest::{FileKey, FileNode, Manifest, Tree},
         pins::{Pin, Pins},
-        report::{
-            self, Applied, BackupView, FileReport, PathReport, PathState, SyncRole, SyncSummary,
-        },
+        report::{self, Applied, BackupView, PathReport, PathState, SyncRole, SyncSummary},
         state::{Backup, State},
         store::ReplicaStore,
         synced_path::SyncedPath,
@@ -399,7 +397,7 @@ impl Replica {
                         ),
                         files: differences
                             .iter()
-                            .map(|d| FileReport::of(path, d))
+                            .map(|d| super::report::file_report(path, d))
                             .collect(),
                         skipped,
                         error: None,
@@ -825,7 +823,7 @@ impl Replica {
                     state.differences = differences
                         .iter()
                         .filter(|d| d.change != Change::Overridden || d.live != d.desired)
-                        .map(|d| FileReport::of(path, d))
+                        .map(|d| super::report::file_report(path, d))
                         .collect();
                     state.skipped = live.skipped;
                     Ok::<_, Failure>(())

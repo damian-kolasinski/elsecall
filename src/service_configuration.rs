@@ -331,19 +331,7 @@ memory_pressure = "critical"
     }
 }
 
-/// Diagnostics contain identifiers and failure reasons, never setting values.
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
-pub struct Summary {
-    pub current: Option<bool>,
-    pub generation: Option<u64>,
-    pub active_generation: Option<u64>,
-    pub fingerprint: Option<String>,
-    /// Active parsed scheduling settings and capacity, independent of generation.
-    #[serde(default)]
-    pub effective_fingerprint: Option<String>,
-    pub pending: bool,
-    pub rejection: Option<Failure>,
-}
+pub use crate::config_sync::status::ServiceSummary as Summary;
 
 /// Managed members start from their verified replica. A retained local file,
 /// including later edits to it, cannot override or break an accepted generation.

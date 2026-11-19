@@ -53,7 +53,7 @@ pub struct PeerStatus {
     pub load_history_error: Option<Failure>,
     /// The member's configuration sync state; absent from members that predate it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub config_sync: Option<crate::config_sync::report::SyncSummary>,
+    pub config_sync: Option<crate::config_sync::status::SyncSummary>,
     /// Set while outside pressure holds the member's admission gate closed;
     /// absent otherwise, from members that predate it, and when this build
     /// cannot read the member's report.
@@ -76,7 +76,7 @@ pub struct PeerStatus {
 
 /// Where the fleet learns this member's configuration sync state.
 pub trait SyncReport: Send + Sync {
-    fn summary(&self) -> crate::config_sync::report::SyncSummary;
+    fn summary(&self) -> crate::config_sync::status::SyncSummary;
 }
 
 /// What must happen before the master role moves, such as configuration sync's

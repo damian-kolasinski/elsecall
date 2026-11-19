@@ -6,6 +6,8 @@ use crate::{
     private_files,
 };
 
+pub mod ready;
+
 /// The file a service started as a plain process records its PID in, under the
 /// data directory; installation removes it with the service.
 pub const PID_FILE: &str = "process-service.pid";

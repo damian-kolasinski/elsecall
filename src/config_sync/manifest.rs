@@ -15,8 +15,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// The most paths one fleet syncs.
-pub const MAXIMUM_PATHS: usize = 16;
+pub use super::synced_path::MAXIMUM_PATHS;
 /// The most entries (files and directories) across every synced path.
 pub const MAXIMUM_ENTRIES: usize = 4000;
 pub const MAXIMUM_FILE_BYTES: u64 = 16 << 20;

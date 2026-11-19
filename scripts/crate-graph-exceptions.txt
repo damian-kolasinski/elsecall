@@ -4,27 +4,11 @@
 # `extern CRATE DEP`: uses of a framework the crate's band forbids. `lines CRATE`:
 # non-test lines over the band's budget. Counts are exact and only go down:
 # scripts/crate_graph.py --shrink lowers them after a fix.
-edge admission fleet 1
-edge admission remote-run 27
-edge admission service-lifecycle 2
-edge admission workload-config 13
-edge admission workspace 13
-edge config-sync fleet 7
-edge config-sync service-config 31
-edge config-sync workspace 12
-edge fleet config-sync 3
-edge fleet housekeeping 4
-edge fleet-upgrade release-update 3
-edge housekeeping workspace 18
 edge rehearsal replay 5
 edge rehearsal reporting 4
 edge rehearsal simulation 10
 edge rehearsal trace 3
 edge rehearsal workload 21
-edge release-update fleet-upgrade 2
-edge remote-run admission 2
-edge remote-run workload-config 6
-edge remote-run workspace 30
 edge replay rehearsal 2
 edge replay reporting 2
 edge replay simulation 1
@@ -32,12 +16,6 @@ edge replay workload 2
 edge reporting rehearsal 1
 edge reporting trace 1
 edge reporting workload 10
-edge service-config config-sync 10
-edge service-config housekeeping 2
-edge service-config remote-run 1
-edge service-config workspace 1
-edge service-lifecycle admission 1
-edge service-lifecycle config-sync 1
 edge simulation rehearsal 1
 edge simulation replay 6
 edge simulation reporting 2
@@ -56,9 +34,6 @@ edge workload rehearsal 1
 edge workload replay 1
 edge workload reporting 11
 edge workload simulation 3
-edge workload-config workspace 3
-edge workspace fleet 5
-edge workspace housekeeping 5
 testedge outside-pressure scheduling 3
 testedge rehearsal reporting 2
 testedge rehearsal simulation 4
@@ -66,7 +41,6 @@ testedge rehearsal workload 9
 testedge replay simulation 2
 testedge replay workload 3
 testedge scheduling outside-pressure 2
-testedge service-config config-sync 1
 testedge simulation rehearsal 3
 testedge simulation replay 1
 testedge simulation reporting 3

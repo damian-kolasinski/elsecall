@@ -4,7 +4,6 @@ use crate::{
     config_sync::manifest::{FileKey, FileNode, Node, Tree},
     workspace::path::WorkspacePath,
 };
-use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// The tree a member holds at a synced path: the mirrored tree with the member's
@@ -89,22 +88,7 @@ pub fn issued_from(live: &Tree, overridden: &BTreeSet<FileKey>, previous: &Tree)
     Tree::Directory(entries)
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Change {
-    /// The member will get a file it lacks.
-    Added,
-    /// The member's file will be replaced with the master's.
-    Changed,
-    /// The member's file will be removed: the master has none.
-    Removed,
-    /// Same content, other permissions.
-    ModeChanged,
-    /// The member changed a file sync wrote; it is backed up, then the master wins.
-    LocallyEdited,
-    /// The member's override decides this file.
-    Overridden,
-}
+pub use super::status::Change;
 
 /// How one file of a synced path differs, by fingerprints only.
 #[derive(Clone, Debug, PartialEq, Eq)]

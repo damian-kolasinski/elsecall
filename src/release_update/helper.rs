@@ -103,7 +103,7 @@ pub async fn run(
             .as_ref()
             .expect("transaction")
             .install(&staged.executable, manager, None)?;
-        crate::fleet_upgrade::helper::confirm(
+        crate::installation::ready::confirm(
             paths,
             &staged.digest.build_id(),
             paths.fleet_membership().exists(),
@@ -158,7 +158,7 @@ pub async fn run(
                         .as_ref()
                         .expect("changed in transaction")
                         .install(&store.backup().join("elsecall"), manager, None)?;
-                    crate::fleet_upgrade::helper::confirm(
+                    crate::installation::ready::confirm(
                         paths,
                         &old_digest.expect("backed up build").build_id(),
                         false,

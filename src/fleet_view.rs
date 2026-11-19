@@ -51,7 +51,7 @@ pub struct MemberView {
     /// The member's configuration sync state against the master's; its details
     /// are `status.config_sync`.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub config_sync: Option<crate::config_sync::report::SyncState>,
+    pub config_sync: Option<crate::config_sync::status::SyncState>,
     /// The member's version and build, as it reports them; null when unreachable
     /// or when its build predates build IDs.
     pub build: Option<Build>,

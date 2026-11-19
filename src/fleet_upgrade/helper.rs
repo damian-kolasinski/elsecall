@@ -12,18 +12,10 @@ use crate::{
     fleet_upgrade::journal::{Journal, Phase},
     fleet_upgrade::protocol::UpgradeId,
     inspection::Health,
-    installation::{ServiceManager, Transaction},
+    installation::{ServiceManager, Transaction, ready::confirm},
     paths::Paths,
 };
-use std::{
-    path::Path,
-    time::{Duration, Instant},
-};
-
-/// How long a freshly installed service has to answer with its build.
-const READY_WITHIN: Duration = Duration::from_secs(20);
-/// How long a ready service must keep running, as the same process, to count.
-const STABLE_FOR: Duration = Duration::from_secs(2);
+use std::path::Path;
 
 fn log(event: &str, id: &UpgradeId, detail: serde_json::Value) {
     crate::service_log!(
@@ -56,7 +48,7 @@ pub async fn run(paths: &Paths, manager: &dyn ServiceManager, id: &UpgradeId) ->
     let before = client::get::<Health>(&socket, "/v1/health").await.ok();
     // A new build must reach the fleet if the build it replaces did, or the master
     // could neither confirm it nor upgrade it again.
-    let fleet_before = fleet_ready(paths).await;
+    let fleet_before = crate::installation::ready::fleet_ready(paths).await;
     let incoming = journal.incoming();
     let staged = Digest::of_file(&incoming).ok() == Some(state.digest);
     // Held until the outcome is confirmed, rollback included, so other lifecycle
@@ -164,13 +156,6 @@ async fn untouched(paths: &Paths, before: Option<&Health>, running: &BuildId) ->
             .is_ok_and(|now| now.pid == before.pid && now.build == before.build)
 }
 
-/// Whether the service has its fleet identity and member listener.
-async fn fleet_ready(paths: &Paths) -> bool {
-    client::get::<serde_json::Value>(&paths.socket(), "/v1/fleet/identity")
-        .await
-        .is_ok()
-}
-
 async fn install_and_confirm(
     transaction: &Transaction,
     manager: &dyn ServiceManager,
@@ -180,38 +165,4 @@ async fn install_and_confirm(
     // Updates keep the installation's session, as `elsecall install` does.
     transaction.install(executable, manager, None)?;
     confirm(transaction.paths(), expected, false).await
-}
-
-/// Waits until the service answers with `expected`, and its fleet identity if
-/// `with_fleet`, and keeps running for a moment.
-pub async fn confirm(paths: &Paths, expected: &BuildId, with_fleet: bool) -> Result<Build> {
-    let deadline = Instant::now() + READY_WITHIN;
-    let socket = paths.socket();
-    let health = || client::get::<Health>(&socket, "/v1/health");
-    while Instant::now() < deadline {
-        if let Ok(first) = health().await
-            && first.build.as_ref() == Some(expected)
-            && (!with_fleet || fleet_ready(paths).await)
-        {
-            tokio::time::sleep(STABLE_FOR).await;
-            if let Ok(again) = health().await
-                && again.pid == first.pid
-                && again.build == first.build
-            {
-                return Ok(Build {
-                    version: again.version,
-                    build: expected.clone(),
-                });
-            }
-        }
-        tokio::time::sleep(Duration::from_millis(200)).await;
-    }
-    Err(Failure::new(
-        "startup_failed",
-        format!(
-            "Build {expected} did not become ready (answering its local API and reaching its fleet identity) within {} seconds.",
-            READY_WITHIN.as_secs()
-        ),
-        "Inspect the service log on this member for the build's startup error.",
-    ))
 }

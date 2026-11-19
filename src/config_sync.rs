@@ -28,6 +28,7 @@ pub mod replica;
 pub mod report;
 pub mod service;
 pub mod state;
+pub mod status;
 pub mod store;
 pub mod synced_path;
 
