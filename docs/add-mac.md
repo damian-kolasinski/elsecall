@@ -83,6 +83,19 @@ it without changing its readiness.
    with sudo. This changes the rule that Elsecall only reports firewall rules
    ([fleet membership](fleet-membership.md)): during Add Mac the operator has
    granted administrator access for exactly this.
+
+   It also installs a root LaunchDaemon, `dev.elsecall.firewall-guard`, whether the
+   firewall is on or off. The firewall can ask whoever sits at the Mac's console
+   "Accept incoming network connections?" even for a program an administrator
+   allowed, and a console user who leaves that unanswered and logs out denies it: the
+   rule turns to Block, every member's connection is accepted and closed unanswered,
+   and only an administrator can lift it. Every 30 seconds the guard allows again any
+   of those programs whose rule blocks. It cannot see a prompt that is still waiting
+   for an answer, while connections wait too, and it adds no rule the firewall does
+   not have. Running Add Mac again on a member installs or updates the guard. To
+   remove it on the Mac:
+   `sudo launchctl bootout system/dev.elsecall.firewall-guard` and
+   `sudo rm /Library/LaunchDaemons/dev.elsecall.firewall-guard.plist`.
 6. **Authorizes the master's SSH key.** The operator's public key on the master
    (`~/.ssh/id_ed25519.pub`, or the first of the other default keys) is added to the
    account's `authorized_keys`, limited to connections from the tailnet ranges and
@@ -104,6 +117,22 @@ it without changing its readiness.
   could put its own `mkdir` or `shasum` first. Tailscale is downloaded, checked
   and installed by root in a directory root created, never from a path the
   account could change.
+- **A root guard acts on the account's executable, as data only.** The firewall
+  guard is the one root component that keeps running, and it acts on a path the
+  account can change. It runs only `socketfilterfw` and `logger`, by absolute path
+  and in launchd's empty environment, with the program paths as arguments, and never
+  runs the programs. A firewall rule already follows the program's path from build to
+  build, so allowing it again grants nothing the account could not get by replacing
+  the file. It skips anything but a regular file reached without a symbolic link, and
+  acts only on the path's own rule when that rule blocks; `socketfilterfw` changes no
+  file, and a path without a rule reads as permitted, so it is left alone. The
+  firewall records a rule with the code signature of the file at the path, so an
+  account that puts another program's bytes there, and gets its rule to Block, has
+  the guard allow that signature for the path; that program's own rules elsewhere
+  stay as they were. Nothing runs as root but `socketfilterfw`. Verified in a macOS
+  VM: a rule that a denied prompt turned to Block, and one set to Block by hand, were
+  allowed again on the guard's next run, a linked path was left alone, and an
+  unsigned file was unchanged by `--add`.
 - **SSH from the master, not an installer on the Mac.** A plain Mac exposes nothing
   else the master can use, and an installer delivered to it would need a Developer ID
   signature, notarization and several approvals on the Mac. Turning on Remote Login

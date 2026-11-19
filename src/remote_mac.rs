@@ -34,9 +34,7 @@ pub enum RemoteTailnet {
     /// No Tailscale is installed.
     Absent,
     /// Installed, but its daemon does not answer.
-    NotRunning {
-        variant: TailscaleVariant,
-    },
+    NotRunning { variant: TailscaleVariant },
     /// Its daemon answers but the Mac is not on a tailnet: logged out, waiting
     /// for a login, or waiting for the tailnet's device approval. `domain` is the
     /// tailnet it belongs or belonged to, when it knows one.
@@ -44,7 +42,11 @@ pub enum RemoteTailnet {
         variant: TailscaleVariant,
         domain: Option<String>,
     },
-    Online(TailnetNode),
+    /// On a tailnet, through `variant`'s daemon.
+    Online {
+        variant: TailscaleVariant,
+        node: TailnetNode,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -154,6 +156,9 @@ pub trait RemoteMac {
     async fn incoming(&mut self, program: &str) -> Result<Rule>;
     /// Lets the Application Firewall pass incoming connections to `programs`.
     async fn allow_incoming(&mut self, programs: &[String]) -> Result<()>;
+    /// Keeps the Application Firewall passing incoming connections to `programs`
+    /// from now on, whoever denies them later; true when that changed anything.
+    async fn guard_incoming(&mut self, programs: &[String]) -> Result<bool>;
     /// Adds `line` to the account's `authorized_keys` unless its key is there;
     /// true when it was added.
     async fn authorize_key(&mut self, line: &str) -> Result<bool>;
