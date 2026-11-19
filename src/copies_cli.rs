@@ -1,6 +1,7 @@
 //! `elsecall copies`: this member's workspace copies, and housekeeping on demand.
-use crate::{client, copies_api::PruneRequest, failure::Result, paths::Paths};
+use crate::{client, copies_api::PruneRequest, paths::Paths};
 use clap::{Args, Subcommand};
+use elsecall_failure::Result;
 use serde_json::Value;
 
 #[derive(Args)]

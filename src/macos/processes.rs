@@ -1,8 +1,6 @@
 //! Process identity through libproc and exit notification through kqueue.
-use crate::{
-    failure::{Failure, Result},
-    scheduling::processes::{ProcessIdentity, ProcessInfo, ProcessTable},
-};
+use crate::scheduling::processes::{ProcessIdentity, ProcessInfo, ProcessTable};
+use elsecall_failure::{Failure, Result};
 use std::{
     os::fd::{AsRawFd, FromRawFd, OwnedFd},
     sync::Arc,

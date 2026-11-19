@@ -2,12 +2,13 @@
 //! its scheduler to admit the run at once, holds the admission until the caller
 //! attaches, and reports the runner's progress back to its records.
 use crate::{
-    failure::{Failure, Result},
-    remote_run::leftovers::Cap,
-    remote_run::protocol::Exited,
-    remote_run::runner::{Assignment, Ending, Host, Reached as RunnerReached},
-    scheduling::leftovers::Leftovers,
+    remote_run::{
+        leftovers::Cap,
+        protocol::Exited,
+        runner::{Assignment, Ending, Host, Reached as RunnerReached},
+    },
     scheduling::{
+        leftovers::Leftovers,
         placed::{OfferReply, PlacementOffer, Reached, SyncSummary, Warmth},
         quote::{CopyQuote, MAXIMUM_WORKSPACES, Quote, QuoteRequest},
         run_id::RunId,
@@ -21,6 +22,7 @@ use crate::{
         sync::{self, MemberStats},
     },
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     collections::HashMap,
     ffi::OsString,
@@ -146,7 +148,7 @@ impl PlacementHost {
         }
         // A member waiting to upgrade is left out of placement until it is back.
         if self.scheduler.hosting_held() {
-            return Err(crate::failure::Failure::new(
+            return Err(elsecall_failure::Failure::new(
                 "member_upgrading",
                 "This member is waiting for its work to end before it installs a new build, and takes no placed runs meanwhile.",
                 "Placement uses the other members; retry on this member once its upgrade ends.",

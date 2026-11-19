@@ -1,15 +1,13 @@
 //! Content gathered for a sync before the copy's tree changes: blobs in a private
 //! directory inside the copy's git directory, named by order and kept by digest,
 //! then moved into place in one quick pass.
-use crate::{
-    failure::Result,
-    workspace::{
-        confined::{Confined, remove_at, stat_at, temporary_name},
-        digest::{Digest, Hasher},
-        path::WorkspacePath,
-        sync_failed,
-    },
+use crate::workspace::{
+    confined::{Confined, remove_at, stat_at, temporary_name},
+    digest::{Digest, Hasher},
+    path::WorkspacePath,
+    sync_failed,
 };
+use elsecall_failure::Result;
 use std::{
     collections::HashMap,
     ffi::CString,
@@ -24,7 +22,7 @@ pub struct Staging {
     next: u64,
 }
 
-fn failed(action: &str) -> impl Fn(io::Error) -> crate::failure::Failure + '_ {
+fn failed(action: &str) -> impl Fn(io::Error) -> elsecall_failure::Failure + '_ {
     move |e| sync_failed(format!("{action} on the member failed: {e}."))
 }
 

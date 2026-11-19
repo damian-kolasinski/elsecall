@@ -9,12 +9,12 @@
 //! input.
 use crate::{
     askpass,
-    failure::{Failure, Result},
     inbound_firewall::Rule,
     macos::application_firewall,
     remote_mac::{Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailscaleVariant},
     tailscale_bottle::Bottle,
 };
+use elsecall_failure::{Failure, Result};
 use serde_json::Value;
 use std::{path::Path, process::Stdio, time::Duration};
 use tokio::{

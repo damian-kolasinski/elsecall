@@ -4,11 +4,11 @@
 //! builds only; release builds always use launchd. It keeps nothing alive after a
 //! crash, which launchd would.
 use crate::{
-    failure::{Failure, Result},
     installation::{ServiceManager, Session},
     paths::Paths,
     private_files,
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     os::unix::process::CommandExt,
     path::{Path, PathBuf},

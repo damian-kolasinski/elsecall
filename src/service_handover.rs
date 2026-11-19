@@ -7,10 +7,8 @@
 //! stopped or starting. Such a request now waits for the handover and asks the new
 //! service again, so scripts and agents never see the handover. Anything else, such
 //! as a service that is simply not running, fails at once as before.
-use crate::{
-    failure::{Failure, Result},
-    guidance, installation,
-};
+use crate::{guidance, installation};
+use elsecall_failure::{Failure, Result};
 use std::{future::Future, path::Path, time::Duration};
 use tokio::time::Instant;
 

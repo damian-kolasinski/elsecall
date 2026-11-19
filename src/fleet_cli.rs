@@ -2,12 +2,12 @@
 //! member key and talks to the other members.
 use crate::{
     client,
-    failure::Result,
     fleet_local_api::{CodeRequest, EnrollRequest, ForceRequest, MemberRequest, SyncRequest},
     paths::Paths,
     roster::{MemberName, Readiness},
 };
 use clap::{Args, Subcommand};
+use elsecall_failure::Result;
 use hyper::Method;
 use serde_json::Value;
 use std::time::Duration;
@@ -234,7 +234,7 @@ async fn upgrade(
     let executable = executable
         .map(|path| {
             std::fs::canonicalize(&path).map_err(|e| {
-                crate::failure::Failure::new(
+                elsecall_failure::Failure::new(
                     "build_unreadable",
                     format!("The build at {} could not be read: {e}", path.display()),
                     "Pass the path of a built elsecall executable.",

@@ -1,6 +1,5 @@
 //! The service's local configuration, written by the operator.
 use crate::{
-    failure::{Failure, Result},
     housekeeping::settings::{self, Settings as Housekeeping},
     remote_run::leftovers::Cap,
     scheduling::{
@@ -12,6 +11,7 @@ use crate::{
     },
     workspace::location::Setting,
 };
+use elsecall_failure::{Failure, Result};
 use serde::Deserialize;
 use std::{
     io::Read,

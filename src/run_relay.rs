@@ -3,7 +3,6 @@
 //! Legacy callers retain the plaintext relay. Both paths carry the caller/member
 //! run protocol, including end-to-end heartbeats.
 use crate::{
-    failure::Failure,
     fleet::Fleet,
     local_access::LocalCaller,
     peer_client,
@@ -17,6 +16,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
+use elsecall_failure::Failure;
 use hyper_util::rt::TokioIo;
 use std::sync::Arc;
 

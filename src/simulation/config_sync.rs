@@ -1,12 +1,10 @@
 //! Recorded pre-run configuration I/O at the real scheduler's sync boundary.
 use super::world::World;
-use crate::{
-    failure::{Failure, Result},
-    scheduling::{
-        pre_run_sync::{PreRunSync, Synced},
-        run_id::RunId,
-    },
+use crate::scheduling::{
+    pre_run_sync::{PreRunSync, Synced},
+    run_id::RunId,
 };
+use elsecall_failure::{Failure, Result};
 use futures_util::future::BoxFuture;
 use std::{
     sync::{Arc, Mutex},

@@ -13,7 +13,6 @@
 //! 5. The member asks only for content it cannot take from its own copy or object
 //!    store; the caller sends it; the member applies everything and confirms.
 use crate::{
-    failure::{Failure, Result},
     wire,
     workspace::{
         carried_refs::{CarriedRefs, RefPattern},
@@ -33,6 +32,7 @@ use crate::{
         sync_failed,
     },
 };
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},

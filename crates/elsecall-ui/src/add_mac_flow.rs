@@ -3,9 +3,9 @@
 //! source feeds it.
 
 use elsecall::add_mac::{AddReport, Approval, Event, Step};
-use elsecall::failure::Failure;
 use elsecall::nearby_macs::{Membership, NearbyMac, RemoteLogin};
 use elsecall::remote_mac::LoginLink;
+use elsecall_failure::Failure;
 use rune::TextEdit;
 use zeroize::Zeroizing;
 

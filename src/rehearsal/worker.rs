@@ -6,8 +6,8 @@
 pub use crate::workload::format::{Calibration, logical_demand};
 pub async fn calibrate(
     cores: crate::inspection::CoreCounts,
-) -> crate::failure::Result<Calibration> {
-    use crate::failure::Failure;
+) -> elsecall_failure::Result<Calibration> {
+    use elsecall_failure::Failure;
     let script = r#"use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC CLOCK_PROCESS_CPUTIME_ID);
 my $start = clock_gettime(CLOCK_MONOTONIC); my $cpu_start = clock_gettime(CLOCK_PROCESS_CPUTIME_ID); my $x = 17; my $n = 0;
 while (clock_gettime(CLOCK_MONOTONIC) - $start < 0.25) {

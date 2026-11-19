@@ -7,7 +7,7 @@
 //! not its load. Load is placement's separate input. A trial can still land on an
 //! efficiency core or share a core's caches, which only ever makes it slower, so
 //! the member's speed is the best of its recent measurements.
-use crate::failure::Result;
+use elsecall_failure::Result;
 use std::{collections::VecDeque, time::Duration};
 
 /// Measures one core's speed. The unit is the meter's own; only ratios between

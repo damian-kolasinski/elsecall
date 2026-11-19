@@ -1,6 +1,6 @@
 //! The local HTTP interface of housekeeping, a driving adapter of the
 //! housekeeper: list this member's copies, or run a pass now.
-use crate::{api, failure::Failure, housekeeping::pass::Housekeeper};
+use crate::{api, housekeeping::pass::Housekeeper};
 use axum::{
     Json, Router,
     body::Bytes,
@@ -9,6 +9,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+use elsecall_failure::Failure;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

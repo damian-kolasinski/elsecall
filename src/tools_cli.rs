@@ -4,7 +4,6 @@
 //! is one member's entry from that same fleet document.
 use crate::{
     client,
-    failure::{Failure, Result},
     paths::Paths,
     roster::MemberName,
     tool_inventory::{Manager, ToolName},
@@ -12,6 +11,7 @@ use crate::{
     toolset_api::{DesiredEdit, EditBody},
 };
 use clap::{Args, Subcommand};
+use elsecall_failure::{Failure, Result};
 use hyper::Method;
 use serde_json::Value;
 use std::time::Duration;

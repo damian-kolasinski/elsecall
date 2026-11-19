@@ -5,10 +5,10 @@
 //! (S3), which starts asynchronously, copies the workspace within the hold limit,
 //! and forwards streams and signals over its connection.
 use crate::{
-    failure::{Failure, Result},
     run_admission::Admission,
     scheduling::{run_id::RunId, run_phases::RemoteFailurePhase},
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     ffi::OsString,
     time::{Duration, Instant},

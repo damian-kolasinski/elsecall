@@ -3,7 +3,8 @@
 //! What the network advertises comes through the `LocalNetwork` port. This module
 //! decides which advertisements are Macs, whether each can be reached over Remote
 //! Login, and which are already fleet members.
-use crate::{failure::Result, lan_address::is_lan};
+use crate::lan_address::is_lan;
+use elsecall_failure::Result;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, net::IpAddr, time::Duration};
 

@@ -8,7 +8,6 @@ use super::{
     scratch,
 };
 use crate::{
-    failure::{Failure, Result},
     housekeeping::pass::Housekeeper,
     paths::Paths,
     scheduling::{
@@ -16,6 +15,7 @@ use crate::{
         service::Scheduler,
     },
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     fs,
     path::PathBuf,

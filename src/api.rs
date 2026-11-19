@@ -1,4 +1,4 @@
-use crate::failure::Failure;
+use elsecall_failure::Failure;
 
 pub mod response;
 use serde::{Deserialize, Serialize};

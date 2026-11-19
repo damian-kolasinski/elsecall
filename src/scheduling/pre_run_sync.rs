@@ -7,10 +7,8 @@
 //!
 //! This is placement's port; the adapter over configuration sync lives outside
 //! scheduling. Records keep paths, counts and sizes only, never values.
-use crate::{
-    failure::{Failure, Result},
-    scheduling::timestamp::Timestamp,
-};
+use crate::scheduling::timestamp::Timestamp;
+use elsecall_failure::{Failure, Result};
 use futures_util::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 

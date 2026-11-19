@@ -3,7 +3,6 @@
 //! Processes the command leaves running when it exits are handed to
 //! [`leftovers`](crate::remote_run::leftovers), which caps them.
 use crate::{
-    failure::{Failure, Result},
     macos::process_usage,
     remote_run::{
         consistency::{self, Fingerprints, Mismatches},
@@ -30,6 +29,7 @@ use crate::{
         sync::{self, MemberStats},
     },
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     ffi::{OsStr, OsString},
     os::{

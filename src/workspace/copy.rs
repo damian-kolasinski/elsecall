@@ -4,25 +4,23 @@
 //! shared object store. Its record says what Elsecall last wrote. A run may change
 //! the copy; the next sync finds what it changed by file status alone and puts back
 //! the caller's state, never touching files git ignores.
-use crate::{
-    failure::Result,
-    workspace::{
-        carried_refs::CarriedRefs,
-        confined::{Confined, Create, Kind, stat_at},
-        copy_record::{CopyRecord, Written},
-        digest::Digest,
-        git::{Git, ObjectFormat, Oid},
-        head::Head,
-        index::IndexListing,
-        location::{CopyLocation, Setting},
-        manifest::{Entry, Manifest},
-        object_sources::{Destination, ObjectSources},
-        output_staging::OutputStaging,
-        path::WorkspacePath,
-        staging::Staging,
-        sync_failed,
-    },
+use crate::workspace::{
+    carried_refs::CarriedRefs,
+    confined::{Confined, Create, Kind, stat_at},
+    copy_record::{CopyRecord, Written},
+    digest::Digest,
+    git::{Git, ObjectFormat, Oid},
+    head::Head,
+    index::IndexListing,
+    location::{CopyLocation, Setting},
+    manifest::{Entry, Manifest},
+    object_sources::{Destination, ObjectSources},
+    output_staging::OutputStaging,
+    path::WorkspacePath,
+    staging::Staging,
+    sync_failed,
 };
+use elsecall_failure::Result;
 use std::{
     collections::HashMap,
     fs,
@@ -77,7 +75,7 @@ pub struct Applied {
     pub extras_removed: usize,
 }
 
-fn failed(action: &str) -> impl Fn(io::Error) -> crate::failure::Failure + '_ {
+fn failed(action: &str) -> impl Fn(io::Error) -> elsecall_failure::Failure + '_ {
     move |e| sync_failed(format!("{action} on the member failed: {e}."))
 }
 

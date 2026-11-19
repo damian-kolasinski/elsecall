@@ -1,4 +1,4 @@
-use crate::failure::Result;
+use elsecall_failure::Result;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Instant};
 

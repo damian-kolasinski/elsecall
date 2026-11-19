@@ -11,7 +11,8 @@
 //! A request that names no build comes from a build that predates upgrades and is
 //! not refused; the header is not part of the signed request, because it decides
 //! compatibility, not authority.
-use crate::{build_identity::BuildId, failure::Failure};
+use crate::build_identity::BuildId;
+use elsecall_failure::Failure;
 
 pub const BUILD_HEADER: &str = "x-elsecall-build";
 

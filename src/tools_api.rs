@@ -10,9 +10,7 @@
 //! routes use, including the refusal of a different build. Reading the managers
 //! blocks, so it runs off the async worker, and only one such read is in flight.
 use crate::{
-    api,
-    api::response as api_response,
-    failure::Failure,
+    api::{self, response as api_response},
     fleet::Fleet,
     fleet_tool_inventory::{self, MemberInventories, OwnInventories, PeerInventories, Source},
     membership_store::Membership,
@@ -26,6 +24,7 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
+use elsecall_failure::Failure;
 use serde::Deserialize;
 use std::sync::Arc;
 

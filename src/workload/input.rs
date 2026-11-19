@@ -1,8 +1,6 @@
 //! Bounded versioned trace-file decoding, shared by simulation and rehearsal.
-use crate::{
-    failure::{Failure, Result},
-    workload::trace::Trace,
-};
+use crate::workload::trace::Trace;
+use elsecall_failure::{Failure, Result};
 use std::io::Read;
 pub fn read(path: &std::path::Path) -> Result<Trace> {
     let file = std::fs::File::open(path).map_err(|e| Failure::io("Read workload trace", e))?;

@@ -22,12 +22,12 @@ use crate::{
         synced_path::SyncedPath,
     },
     configuration,
-    failure::{Failure, Result},
     fleet::{Fleet, RoleHandover, SyncReport},
     peer_client,
     roster::{Member, MemberName, Roster},
     workspace::digest::Digest,
 };
+use elsecall_failure::{Failure, Result};
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use std::{

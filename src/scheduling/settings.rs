@@ -1,10 +1,8 @@
 //! Where a request's properties came from: the caller's flags, the caller's
 //! environment, a label rule in the consumer configuration, or defaults. Records
 //! keep it so `explain` shows which rule applied and what overrode it.
-use crate::{
-    failure::Result,
-    scheduling::request::{Urgency, invalid},
-};
+use crate::scheduling::request::{Urgency, invalid};
+use elsecall_failure::Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

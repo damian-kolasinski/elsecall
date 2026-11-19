@@ -199,8 +199,8 @@ async fn sync_carrying(
     bytes_per_second: Option<u64>,
     declared: &[&str],
 ) -> (
-    elsecall::failure::Result<SyncStats>,
-    elsecall::failure::Result<MemberStats>,
+    elsecall_failure::Result<SyncStats>,
+    elsecall_failure::Result<MemberStats>,
 ) {
     let declared: Vec<RefPattern> = declared
         .iter()
@@ -581,7 +581,7 @@ async fn refused_sync(
     located: &Located,
     caches: &Path,
     location: &CopyLocation,
-) -> elsecall::failure::Failure {
+) -> elsecall_failure::Failure {
     let (a, b) = tokio::io::duplex(1 << 20);
     let (ar, aw) = tokio::io::split(a);
     let (br, bw) = tokio::io::split(b);

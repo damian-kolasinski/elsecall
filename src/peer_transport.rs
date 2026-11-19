@@ -1,11 +1,11 @@
 //! TCP connection and HTTP I/O progress. Tailnet roster endpoints are numeric
 //! addresses, so this transport does not do DNS or TLS. Identity is signed above it.
 use crate::{
-    failure::Result,
     peer_client::unavailable,
     peer_diagnostics::{Kind, Phase},
     roster::Member,
 };
+use elsecall_failure::Result;
 use std::{
     pin::Pin,
     sync::{

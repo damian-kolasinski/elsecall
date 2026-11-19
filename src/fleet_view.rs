@@ -2,13 +2,13 @@
 //! each fetched from that member over the authenticated channel.
 use crate::{
     build_identity::{Build, BuildId},
-    failure::Failure,
     fleet::{Fleet, PeerStatus},
     member_key::PublicKey,
     membership_store::Membership,
     peer_client,
     roster::{MemberName, Readiness},
 };
+use elsecall_failure::Failure;
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;

@@ -1,4 +1,4 @@
-use crate::failure::{Failure, Result};
+use elsecall_failure::{Failure, Result};
 
 /// The process at the other end of a local connection, as the kernel reported
 /// it; `None` when it could not be identified.

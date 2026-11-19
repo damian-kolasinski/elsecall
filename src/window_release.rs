@@ -1,5 +1,6 @@
 //! The companion window shipped beside a CLI release and staged by installation.
-use crate::{build_identity::Digest, failure::Failure, paths::Paths, private_files};
+use crate::{build_identity::Digest, paths::Paths, private_files};
+use elsecall_failure::Failure;
 use std::{fs, path::Path};
 
 /// `elsecall-ui` sitting next to the service executable that is being installed.
@@ -9,7 +10,7 @@ pub fn companion(source: &Path) -> std::path::PathBuf {
 
 /// Copies the sibling window into the support directory when the install has one.
 /// A missing sibling leaves any previously stored window in place.
-pub fn store_companion(paths: &Paths, source: &Path) -> crate::failure::Result<()> {
+pub fn store_companion(paths: &Paths, source: &Path) -> elsecall_failure::Result<()> {
     let sibling = companion(source);
     if !sibling.is_file() {
         return Ok(());
@@ -20,7 +21,7 @@ pub fn store_companion(paths: &Paths, source: &Path) -> crate::failure::Result<(
 
 pub fn installed_build(
     paths: &Paths,
-) -> crate::failure::Result<Option<crate::build_identity::BuildId>> {
+) -> elsecall_failure::Result<Option<crate::build_identity::BuildId>> {
     let path = paths.window_executable();
     if !path.is_file() {
         return Ok(None);

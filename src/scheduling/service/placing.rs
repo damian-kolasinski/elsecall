@@ -5,22 +5,19 @@
 //! on stale configuration. When that fails, a placeable request is placed again
 //! without the member, and a request required there fails.
 use super::{Book, Entry, Phase, Scheduler};
-use crate::{
-    failure::Failure,
-    scheduling::{
-        messages::{Grant, MemberState},
-        placed::{
-            OfferReply, PlacedGrant, PlacedRecord, PlacementOffer, Reached, Side, Warmth,
-            WorkspaceRef,
-        },
-        pre_run_sync::{self, Done, Failed, PreRunSyncRecord, SyncFailure},
-        processes::ProcessIdentity,
-        quote::{self, HeldWork},
-        record::{Candidate, Decision, Outcome, SizeBasis, Verdict},
-        run_id::RunId,
-        timestamp::Timestamp,
+use crate::scheduling::{
+    messages::{Grant, MemberState},
+    placed::{
+        OfferReply, PlacedGrant, PlacedRecord, PlacementOffer, Reached, Side, Warmth, WorkspaceRef,
     },
+    pre_run_sync::{self, Done, Failed, PreRunSyncRecord, SyncFailure},
+    processes::ProcessIdentity,
+    quote::{self, HeldWork},
+    record::{Candidate, Decision, Outcome, SizeBasis, Verdict},
+    run_id::RunId,
+    timestamp::Timestamp,
 };
+use elsecall_failure::Failure;
 use std::{collections::BTreeSet, sync::Weak, time::Duration};
 use tokio::time::Instant;
 use tokio::{sync::oneshot, task::AbortHandle};

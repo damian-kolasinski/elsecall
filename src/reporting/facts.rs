@@ -115,7 +115,7 @@ fn ms(duration: Duration) -> u64 {
     duration.as_millis().min(u128::from(u64::MAX)) as u64
 }
 
-pub use crate::failure::is_code;
+pub use elsecall_failure::is_code;
 
 /// Text another member sent that a report may show: bounded and printable.
 fn plausible_text(text: &str, most: usize) -> bool {

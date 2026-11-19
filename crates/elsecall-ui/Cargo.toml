@@ -9,6 +9,7 @@ publish = false
 
 [dependencies]
 elsecall.workspace = true
+elsecall-failure.workspace = true
 libc.workspace = true
 rune.workspace = true
 rune-kit.workspace = true

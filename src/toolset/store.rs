@@ -2,11 +2,8 @@
 //!
 //! A missing file is an empty desired state. Writes replace the file atomically
 //! with an owner-only temporary, the same way other application files are replaced.
-use crate::{
-    failure::{Failure, Result},
-    private_files,
-    toolset::document::LIMIT,
-};
+use crate::{private_files, toolset::document::LIMIT};
+use elsecall_failure::{Failure, Result};
 use std::{
     fs::File,
     io::Read,

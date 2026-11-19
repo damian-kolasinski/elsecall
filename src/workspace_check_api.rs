@@ -4,7 +4,6 @@
 //! workspaces it pushed to that member.
 use crate::{
     api::response::failure,
-    failure::Failure,
     fleet::{AuthenticatedPeer, Fleet},
     housekeeping::{
         caller_state::CallerState,
@@ -19,6 +18,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
+use elsecall_failure::Failure;
 use std::sync::Arc;
 
 pub fn routes(state: Arc<CallerState>) -> Router<Arc<Fleet>> {

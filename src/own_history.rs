@@ -2,7 +2,6 @@
 //! read in pages so neither a report nor a member's answer reads everything at
 //! once.
 use crate::{
-    failure::{Failure, Result},
     load_log::{LoadReport, buckets::Bucket},
     report_protocol::PAGE,
     reporting::{
@@ -14,6 +13,7 @@ use crate::{
     },
     scheduling::{service::Scheduler, timestamp::Timestamp},
 };
+use elsecall_failure::{Failure, Result};
 use futures_util::future::BoxFuture;
 use std::{sync::Arc, time::Duration};
 

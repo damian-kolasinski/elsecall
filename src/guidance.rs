@@ -6,7 +6,7 @@
 //!   failure's code, before the JSON error envelope.
 //! - Work that proceeds without admission because the service is unavailable
 //!   writes one, with the code `unmanaged`, before it proceeds.
-use crate::failure::Failure;
+use elsecall_failure::Failure;
 use std::io::Write;
 
 /// The retry delay `fleet_busy` suggests when its details lack one.

@@ -1,11 +1,11 @@
 //! Release updates for operators and scripts; the service owns the durable job.
 use crate::{
     client,
-    failure::{Failure, Result},
     paths::Paths,
     release_update::{Job, Phase, Status},
 };
 use clap::{Args, Subcommand};
+use elsecall_failure::{Failure, Result};
 use std::time::Duration;
 
 #[derive(Args)]

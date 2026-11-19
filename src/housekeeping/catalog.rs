@@ -2,7 +2,6 @@
 //! when it was last used, what it and each object store last measured, every
 //! removal with its reason, and removals still being deleted.
 use crate::{
-    failure::{Failure, Result},
     housekeeping::clock::Clock,
     scheduling::timestamp::Timestamp,
     workspace::{
@@ -10,6 +9,7 @@ use crate::{
         location::{CopyLocation, Setting},
     },
 };
+use elsecall_failure::{Failure, Result};
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use std::{

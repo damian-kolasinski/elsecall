@@ -6,7 +6,6 @@ use super::{
     settings::Settings,
 };
 use crate::{
-    failure::Result,
     load_log::LoadLog,
     scheduling::{
         capacity::Capacity,
@@ -16,6 +15,7 @@ use crate::{
         service::{Adapters, Driving, Runtime, Scheduler, SchedulerConfiguration, Tasks},
     },
 };
+use elsecall_failure::Result;
 use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},

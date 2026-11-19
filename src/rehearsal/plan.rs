@@ -1,6 +1,7 @@
 //! Freeze trace inputs before creating scratch trees or submitting any work.
 use super::{invalid, protocol::Launch};
-use crate::{failure::Result, scheduling::request::Kind, workload::trace::Trace};
+use crate::{scheduling::request::Kind, workload::trace::Trace};
+use elsecall_failure::Result;
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 

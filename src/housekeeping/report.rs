@@ -1,6 +1,5 @@
 //! What `elsecall copies` and `elsecall copies prune` show.
 use crate::{
-    failure::Failure,
     housekeeping::{
         caller_state::Tidied,
         catalog::{Reason, Removal},
@@ -10,6 +9,7 @@ use crate::{
     scheduling::timestamp::Timestamp,
     workspace::location::Setting,
 };
+use elsecall_failure::Failure;
 use serde::Serialize;
 use std::path::PathBuf;
 

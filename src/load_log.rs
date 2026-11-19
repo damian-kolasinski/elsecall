@@ -13,8 +13,9 @@ pub mod minute;
 pub mod session;
 pub mod store;
 
-use crate::{failure::Result, scheduling::timestamp::Timestamp};
+use crate::scheduling::timestamp::Timestamp;
 use buckets::{Bucket, LoadSummary};
+use elsecall_failure::Result;
 use minute::{Accumulator, Second};
 use std::{path::Path, sync::Mutex, time::Duration};
 use store::LoadStore;

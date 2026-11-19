@@ -1,11 +1,11 @@
 //! Bounded file input and CLI routing for the offline tuner.
 use crate::{
     evaluation_day::day,
-    failure::{Failure, Result},
     tuning::{self, Space, TuneOptions},
     workload::input::read as read_trace,
 };
 use clap::{Args, Subcommand};
+use elsecall_failure::{Failure, Result};
 use std::{io::Read, path::PathBuf};
 #[derive(Subcommand, Debug)]
 pub enum TuneCommand {
@@ -106,7 +106,7 @@ pub async fn current_trust(mut result: serde_json::Value) -> serde_json::Value {
     if !paths.data.join("tuning-evidence.sqlite").exists() && !paths.socket().exists() {
         return result;
     }
-    let evidence: crate::failure::Result<serde_json::Value> = crate::client::post(
+    let evidence: elsecall_failure::Result<serde_json::Value> = crate::client::post(
         &paths.socket(),
         "/v1/tuning/trust",
         &json!({}),

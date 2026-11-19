@@ -4,7 +4,6 @@
 //! member's latest upgrade went.
 use crate::{
     api::response::failure,
-    failure::Failure,
     fleet::{AuthenticatedPeer, Fleet, UpgradeAuthority},
     fleet_upgrade::{member::Upgrades, protocol},
     secure_channel::{Ephemeral, SecureStream},
@@ -18,6 +17,7 @@ use axum::{
     routing::{get, post},
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use elsecall_failure::Failure;
 use hyper_util::rt::TokioIo;
 use serde::Deserialize;
 use std::sync::Arc;

@@ -413,7 +413,7 @@ fn plan_enable_push_overrides_and_local_edits() {
 async fn channel(
     from: &TestMember,
     to: &TestMember,
-) -> elsecall::failure::Result<peer_client::RunChannel> {
+) -> elsecall_failure::Result<peer_client::RunChannel> {
     peer_client::channel(
         &from.key(),
         &to.as_member(),

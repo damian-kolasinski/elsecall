@@ -5,7 +5,8 @@
 //! variables and without optional locks, so Elsecall never takes the caller's index
 //! lock or follows a redirected repository. On a member, git also ignores the
 //! account's global and system configuration, so copies behave the same everywhere.
-use crate::{failure::Result, workspace::sync_failed};
+use crate::workspace::sync_failed;
+use elsecall_failure::Result;
 use serde::{Deserialize, Serialize};
 use std::{
     io::Write,

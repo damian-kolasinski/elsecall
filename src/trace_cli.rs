@@ -1,7 +1,6 @@
 //! Export orchestration and exclusive owner-only artifact writing.
 use crate::{
     client,
-    failure::{Failure, Result},
     paths::Paths,
     report_cli::since,
     reporting::window::invalid,
@@ -10,6 +9,7 @@ use crate::{
     workload::trace::{self, Member, Page, Trace},
 };
 use clap::{Args, Subcommand};
+use elsecall_failure::{Failure, Result};
 use std::{collections::BTreeSet, io::Write, os::unix::fs::OpenOptionsExt, path::PathBuf};
 
 #[derive(Args, Debug)]

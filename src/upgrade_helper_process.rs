@@ -2,10 +2,8 @@
 //! `upgrade-helper` command, started in its own session (`setsid`) so it outlives
 //! the service it stops, launchd's `bootout` included, with its output in the
 //! service log.
-use crate::{
-    failure::{Failure, Result},
-    fleet_upgrade::{member::Installer, protocol::UpgradeId},
-};
+use crate::fleet_upgrade::{member::Installer, protocol::UpgradeId};
+use elsecall_failure::{Failure, Result};
 use std::os::unix::process::CommandExt;
 
 pub struct HelperProcess;

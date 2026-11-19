@@ -3,10 +3,10 @@ use crate::{
     client,
     config_sync::synced_path::SyncedPath,
     config_sync_local_api::{HistoryRequest, PathRequest, PlanRequest, PushRequest},
-    failure::{Failure, Result},
     paths::Paths,
 };
 use clap::{Args, Subcommand};
+use elsecall_failure::{Failure, Result};
 use serde_json::Value;
 
 #[derive(Args)]

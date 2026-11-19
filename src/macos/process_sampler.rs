@@ -8,10 +8,10 @@
 //! processes. `ps` is asked for the executable's name only (`-c -o comm`), never
 //! its arguments or environment.
 use crate::{
-    failure::{Failure, Result},
     outside_pressure::sampling::{Memory, Owner, ProcessSampler, ProcessUse},
     scheduling::timestamp::Timestamp,
 };
+use elsecall_failure::{Failure, Result};
 use std::{process::Command, time::Duration};
 
 const PS: &str = "/bin/ps";

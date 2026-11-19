@@ -2,13 +2,11 @@
 //! reported, kept apart so that answers about different workspaces, asked at
 //! different times, merge rather than erase one another. An answer older than
 //! the one kept is ignored.
-use crate::{
-    failure::Failure,
-    scheduling::{
-        messages::MemberState,
-        quote::{CopyQuote, HeldWork, Quote},
-    },
+use crate::scheduling::{
+    messages::MemberState,
+    quote::{CopyQuote, HeldWork, Quote},
 };
+use elsecall_failure::Failure;
 use std::{collections::HashMap, time::Duration};
 use tokio::time::Instant;
 

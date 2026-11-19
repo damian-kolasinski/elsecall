@@ -2,7 +2,6 @@
 //! standard streams, environment, working directory and process group exactly.
 use crate::{
     client::{self, Wait},
-    failure::{Failure, Result},
     macos::process_usage,
     passthrough::{
         executor::{CommandLine, Executor, Exit, Finished, RunContext, RunResult, Running},
@@ -11,6 +10,7 @@ use crate::{
     run_admission::Admission,
     scheduling::messages::CommandStarted,
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     ffi::OsStr,
     os::unix::{ffi::OsStrExt, fs::PermissionsExt, process::ExitStatusExt},

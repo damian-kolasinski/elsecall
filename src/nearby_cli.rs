@@ -4,11 +4,11 @@
 //! when run from a terminal, over SSH or by an app the user allowed.
 use crate::{
     client,
-    failure::Result,
     macos::dns_sd::Bonjour,
     nearby_macs::{KnownMember, LocalNetwork, Membership, NearbyMac, RemoteLogin, nearby},
     paths::Paths,
 };
+use elsecall_failure::Result;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{net::IpAddr, time::Duration};

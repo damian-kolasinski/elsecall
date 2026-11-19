@@ -2,11 +2,11 @@
 //! a revocation: only a subsequent successful rehearsal can do that.
 use crate::{
     build_identity::{Build, Digest},
-    failure::{Failure, Result},
     paths::Paths,
     scheduling::timestamp::Timestamp,
     workload::trace::Trace,
 };
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::time::Duration;

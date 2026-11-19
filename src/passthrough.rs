@@ -18,7 +18,6 @@ use crate::{
     },
     api::SCHEMA_VERSION,
     client::{self, Wait},
-    failure::{Failure, Result},
     guidance::{self, Unmanaged},
     local_access,
     paths::Paths,
@@ -34,6 +33,7 @@ use crate::{
     workspace::{self, push_cache::CacheFiles},
 };
 use clap::Args;
+use elsecall_failure::{Failure, Result};
 use executor::{CommandLine, Executor, Exit, Finished, RunContext, RunFailure, Running};
 use local::LocalExecutor;
 use remote::RemoteExecutor;

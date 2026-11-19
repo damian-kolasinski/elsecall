@@ -2,9 +2,9 @@
 //! Bootstrap identity, trust, transport and installation never enter this schema.
 use crate::{
     configuration::{self, ServiceConfiguration},
-    failure::{Failure, Result},
     roster::MemberName,
 };
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::Path};
 

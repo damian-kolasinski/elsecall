@@ -1,5 +1,5 @@
 //! Private launch acknowledgment, sent only after the native window is ready.
-use crate::failure::{Failure, Result};
+use elsecall_failure::{Failure, Result};
 use std::{
     io::{Read, Write},
     os::unix::{

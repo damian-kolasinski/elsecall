@@ -1,6 +1,6 @@
 //! Which machines an executable can run on, read from its Mach-O header, so a
 //! member never installs a build made for another platform or architecture.
-use crate::failure::{Failure, Result};
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 
 /// The processor architectures Elsecall builds for on macOS.

@@ -7,7 +7,6 @@
 //! drained, the member sends `Exited`, then the outputs from its snapshot at exit;
 //! the caller says what did not come back (`Returned`) and ends the run with `Done`.
 use crate::{
-    failure::Failure,
     remote_run::consistency::{self, Fingerprints, Mismatches},
     wire,
     workspace::{
@@ -17,6 +16,7 @@ use crate::{
         sync::SyncMessage,
     },
 };
+use elsecall_failure::Failure;
 use serde::{Deserialize, Serialize};
 
 /// How many output or input bytes may be in flight unacknowledged per stream.

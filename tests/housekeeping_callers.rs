@@ -8,7 +8,6 @@ mod members;
 mod processes;
 
 use elsecall::{
-    failure::Result,
     housekeeping::{
         caller_state::CallerState,
         callers::Callers,
@@ -28,6 +27,7 @@ use elsecall::{
         push_cache::CacheFiles,
     },
 };
+use elsecall_failure::Result;
 use futures_util::future::BoxFuture;
 use members::{TestMember, enrol};
 use serde_json::Value;

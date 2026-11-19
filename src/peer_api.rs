@@ -3,7 +3,6 @@
 //! authenticated response is signed by this member.
 use crate::{
     api,
-    failure::Failure,
     fleet::{AuthenticatedPeer, Fleet},
     peer_auth::{RequestProof, SIGNATURE_HEADER},
     peer_client::RESPONSE_LIMIT,
@@ -18,6 +17,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+use elsecall_failure::Failure;
 use std::{sync::Arc, time::Duration};
 
 pub use crate::peer_transport::REQUEST_LIMIT;

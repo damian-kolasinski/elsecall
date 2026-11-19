@@ -6,7 +6,6 @@
 use crate::{
     build_identity::{Build, BuildId, Digest},
     executable_format::{self, Architecture},
-    failure::{Failure, Result},
     fleet::Fleet,
     fleet_upgrade::{
         journal::{Phase, UpgradeState},
@@ -16,6 +15,7 @@ use crate::{
     peer_client,
     roster::{Member, MemberName},
 };
+use elsecall_failure::{Failure, Result};
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use std::{

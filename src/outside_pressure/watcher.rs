@@ -3,7 +3,6 @@
 //! say. It runs whether or not the gate is open: the point is to warn before an
 //! outside process closes it.
 use crate::{
-    failure::Result,
     outside_pressure::{
         attribution::{self, OwnWork},
         detector::GateSource,
@@ -14,6 +13,7 @@ use crate::{
     },
     scheduling::timestamp::Timestamp,
 };
+use elsecall_failure::Result;
 use serde::Serialize;
 use std::{
     path::Path,

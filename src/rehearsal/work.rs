@@ -3,7 +3,8 @@ use super::{
     invalid,
     worker::{Calibration, logical_demand},
 };
-use crate::{failure::Result, inspection::CoreCounts, scheduling::capacity::Cores};
+use crate::{inspection::CoreCounts, scheduling::capacity::Cores};
+use elsecall_failure::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 

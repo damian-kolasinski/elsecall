@@ -4,7 +4,6 @@
 //! file inside that lock, and run only on the master.
 use crate::{
     api,
-    failure::{Failure, Result},
     fleet::Fleet,
     paths::Paths,
     roster::{MemberName, Roster},
@@ -23,6 +22,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{any, get},
 };
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{path::PathBuf, sync::Arc};
 

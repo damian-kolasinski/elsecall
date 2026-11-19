@@ -1,6 +1,7 @@
 //! The shared object stores under the workspace root: one per caller repository,
 //! at `<root>/.stores/<calling member>/<id>.git`.
-use crate::{failure::Result, workspace::git::Git};
+use crate::workspace::git::Git;
+use elsecall_failure::Result;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Debug, PartialEq, Eq)]

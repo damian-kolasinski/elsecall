@@ -1,7 +1,6 @@
 //! The report as one document: the period, the filters, fleet and member
 //! metrics, estimate accuracy and findings, from what was gathered.
 use crate::{
-    failure::Failure,
     labels::pattern as label_pattern,
     load_log::buckets::Bucket,
     reporting::{
@@ -18,6 +17,7 @@ use crate::{
     },
     scheduling::{parameters::Parameters, timestamp::Timestamp},
 };
+use elsecall_failure::Failure;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 

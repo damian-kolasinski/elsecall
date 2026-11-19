@@ -8,10 +8,10 @@
 //! never follows links. A pass interrupted after the move finishes the deletion on
 //! its next run, and deletes only a directory that is still the one it moved.
 use crate::{
-    failure::{Failure, Result},
     housekeeping::catalog::Catalog,
     workspace::confined::{self, Confined},
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     ffi::CString,
     fs, io,

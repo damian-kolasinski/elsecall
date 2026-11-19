@@ -1,6 +1,5 @@
 //! Validate peer trace projections before they cross into workload modelling.
 use crate::{
-    failure::Result,
     report_protocol::Cursor,
     reporting::{
         facts::is_code,
@@ -13,6 +12,7 @@ use crate::{
     },
     workload::trace::{PAGE, Page, TraceOutcome, sanitize_decision},
 };
+use elsecall_failure::Result;
 fn name(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 255

@@ -2,9 +2,9 @@
 //! fleet view show it. The fleet carries it between members, so it lives below
 //! both the fleet and config sync.
 use crate::{
-    config_sync::synced_path::SyncedPath, failure::Failure, roster::MemberName,
-    scheduling::timestamp::Timestamp,
+    config_sync::synced_path::SyncedPath, roster::MemberName, scheduling::timestamp::Timestamp,
 };
+use elsecall_failure::Failure;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 

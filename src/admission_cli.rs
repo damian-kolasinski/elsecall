@@ -6,7 +6,6 @@ pub mod resolution;
 use crate::admission_api::{self, MAXIMUM_LISTED};
 use crate::{
     client::{self, Wait},
-    failure::{Failure, Result},
     guidance::{self, Unmanaged},
     local_access,
     paths::Paths,
@@ -24,6 +23,7 @@ use crate::{
     workload_settings::{WhenUnavailable, WorkloadSettings},
 };
 use clap::Subcommand;
+use elsecall_failure::{Failure, Result};
 use environment::{CallerEnvironment, Mode};
 use options::{CallerOptions, RequestOptions, UnavailableAction};
 use resolution::{Layers, resolve};

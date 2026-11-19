@@ -1705,7 +1705,7 @@ mod tests {
 
         // A member that could not say what held it closed: the remedy is generic.
         let mut unnamed = incident();
-        unnamed.members[1].outside = Err(crate::failure::Failure::new(
+        unnamed.members[1].outside = Err(elsecall_failure::Failure::new(
             "member_unavailable",
             "macbook-pro's outside pressure history could not be read.",
             "Check the member with elsecall fleet.",

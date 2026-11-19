@@ -2,21 +2,19 @@
 //! upstream and the other refs a copy carries, its ignore rules, its index, and
 //! every tracked or untracked non-ignored file. Reading it changes nothing in the
 //! caller's repository.
-use crate::{
-    failure::Result,
-    workspace::{
-        carried_refs::{CarriedRefs, RefPattern},
-        confined::{Confined, Kind},
-        digest::Digest,
-        git::{Git, ObjectFormat, Oid},
-        head::{BranchName, Head, Reference, RemoteName, Upstream},
-        index::{GITLINK, IndexListing},
-        manifest::{Entry, Manifest, PERMISSIONS},
-        path::WorkspacePath,
-        stat_cache::{StatCache, StatKey},
-        sync_failed,
-    },
+use crate::workspace::{
+    carried_refs::{CarriedRefs, RefPattern},
+    confined::{Confined, Kind},
+    digest::Digest,
+    git::{Git, ObjectFormat, Oid},
+    head::{BranchName, Head, Reference, RemoteName, Upstream},
+    index::{GITLINK, IndexListing},
+    manifest::{Entry, Manifest, PERMISSIONS},
+    path::WorkspacePath,
+    stat_cache::{StatCache, StatKey},
+    sync_failed,
 };
+use elsecall_failure::Result;
 
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},

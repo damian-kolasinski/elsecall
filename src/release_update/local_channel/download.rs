@@ -2,11 +2,11 @@
 //! executables, without changing the active installation.
 use super::{LocalChannel, PROJECT, transport, verifier};
 use crate::{
-    failure::{Failure, Result},
     paths::Paths,
     private_files,
     release_update::{Release, ReleaseDownload, StagedRelease, download, invalid},
 };
+use elsecall_failure::{Failure, Result};
 use std::{fs, path::Path, time::Duration};
 
 pub struct LocalDownload {

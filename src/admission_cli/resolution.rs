@@ -7,7 +7,6 @@ use crate::{
         environment::CallerEnvironment,
         options::{Declared, UrgencyChoice},
     },
-    failure::Result,
     scheduling::{
         request::{AdmissionRequest, Kind, Placement, Urgency, invalid},
         settings::{AppliedRule, Settings, Source},
@@ -15,6 +14,7 @@ use crate::{
     },
     workload_settings::{LabelRule, RulePlacement, RuleUrgency, WhenUnavailable, WorkloadSettings},
 };
+use elsecall_failure::Result;
 
 /// Everything a request's properties may come from.
 pub struct Layers<'a> {

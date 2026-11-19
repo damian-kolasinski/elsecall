@@ -4,13 +4,13 @@
 //! A change is computed from this member's roster, refused while another member is
 //! unreachable unless forced, recorded locally, then delivered to every other member.
 use crate::{
-    failure::{Failure, Result},
     fleet::{Fleet, OfferOutcome, PeerStatus, PlacementAccepted},
     member_code,
     membership_store::Membership,
     peer_client::{self, PEER_TIMEOUT},
     roster::{Change, Member, MemberName, Offer, Readiness, Roster, not_a_member},
 };
+use elsecall_failure::{Failure, Result};
 use hyper::Method;
 use serde::Serialize;
 

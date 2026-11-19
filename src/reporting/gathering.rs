@@ -3,7 +3,6 @@
 //! the [`MemberHistory`] port: this member's own records and load, and other
 //! members' over the member channel.
 use crate::{
-    failure::{Failure, Result},
     load_log::buckets::Bucket,
     reporting::{
         document::{self, Document, Gathered, MemberInput, Query, RecordsRead},
@@ -12,6 +11,7 @@ use crate::{
         window::{Window, invalid},
     },
 };
+use elsecall_failure::{Failure, Result};
 use futures_util::future::BoxFuture;
 use std::{collections::BTreeSet, sync::Arc, time::Duration};
 

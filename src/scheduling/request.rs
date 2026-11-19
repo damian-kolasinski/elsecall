@@ -1,8 +1,6 @@
 //! Work requests: what a caller asks for, and the rules that make one valid.
-use crate::{
-    failure::{Failure, Result},
-    scheduling::{capacity::Cores, settings::Settings, timestamp::Timestamp},
-};
+use crate::scheduling::{capacity::Cores, settings::Settings, timestamp::Timestamp};
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

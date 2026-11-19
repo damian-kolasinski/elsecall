@@ -6,11 +6,9 @@ use super::{
     guide,
     targets::{self, Done, Outcome, Target},
 };
-use crate::{
-    failure::{Failure, Result},
-    paths::Paths,
-};
+use crate::paths::Paths;
 use clap::{Args, Subcommand};
+use elsecall_failure::{Failure, Result};
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 

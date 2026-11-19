@@ -4,7 +4,6 @@ use super::{
     protocol::{Job, Launch},
 };
 use crate::{
-    failure::{Failure, Result},
     paths::Paths,
     scheduling::{
         processes::ProcessIdentity,
@@ -12,6 +11,7 @@ use crate::{
         timestamp::Timestamp,
     },
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     fs,
     path::{Path, PathBuf},

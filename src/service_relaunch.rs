@@ -1,9 +1,6 @@
 //! Automatic service configuration application at an atomic idle boundary.
-use crate::{
-    config_sync::service::ConfigSync,
-    failure::{Failure, Result},
-    scheduling::service::Scheduler,
-};
+use crate::{config_sync::service::ConfigSync, scheduling::service::Scheduler};
+use elsecall_failure::{Failure, Result};
 use std::{os::unix::process::CommandExt, sync::Arc, time::Duration};
 
 pub async fn when_idle(sync: Option<Arc<ConfigSync>>, scheduler: Arc<Scheduler>) {

@@ -1,5 +1,5 @@
 //! Paths inside a workspace, validated once so the rest of the code can trust them.
-use crate::failure::{Failure, Result};
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

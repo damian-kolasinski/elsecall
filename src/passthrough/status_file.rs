@@ -1,12 +1,9 @@
 //! The optional status file: the run's outcome as JSON, so a caller can tell a
 //! command that exited 125 from Elsecall's own failure.
 use crate::{
-    api,
-    failure::{Failure, Result},
-    passthrough::executor::Exit,
-    run_admission::Admission,
-    scheduling::run_id::RunId,
+    api, passthrough::executor::Exit, run_admission::Admission, scheduling::run_id::RunId,
 };
+use elsecall_failure::{Failure, Result};
 use serde::Serialize;
 use std::{
     fs::{self, OpenOptions},

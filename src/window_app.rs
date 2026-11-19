@@ -1,9 +1,6 @@
 //! Publishes a staged, signed app without modifying the running executable.
-use crate::{
-    failure::{Failure, Result},
-    paths::Paths,
-    private_files,
-};
+use crate::{paths::Paths, private_files};
+use elsecall_failure::{Failure, Result};
 use std::{
     fs,
     io::Write,

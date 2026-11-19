@@ -14,12 +14,12 @@ use crate::{
         },
         synced_path::SyncedPath,
     },
-    failure::{Failure, Result},
     workspace::{
         confined::{self, Confined, Create, Kind, Status},
         path::WorkspacePath,
     },
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     collections::{BTreeMap, HashMap},
     ffi::{CStr, CString},

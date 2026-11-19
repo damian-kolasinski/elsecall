@@ -1,12 +1,12 @@
 //! A wrapper's one terminal assertion, posted from inside its admitted command.
 use crate::{
     client::{self, Wait},
-    failure::Result,
     paths::Paths,
     scheduling::{request::invalid, run_id::RunId},
     workload_metadata::parse_observation,
 };
 use clap::{Args, Subcommand};
+use elsecall_failure::Result;
 
 #[derive(Args, Debug)]
 pub struct WorkloadArgs {
@@ -49,7 +49,7 @@ pub async fn run(args: WorkloadArgs, paths: &Paths) -> Result<serde_json::Value>
     loop {
         let result = tokio::time::timeout_at(deadline,
             client::post::<(), _>(&paths.socket(), &route, &observation, Wait::Bounded)
-        ).await.map_err(|_| crate::failure::Failure::new(
+        ).await.map_err(|_| elsecall_failure::Failure::new(
             "observation_timeout", "The observation acknowledgement did not arrive within one second.",
             "Inspect the run record; an unacknowledged assertion may already have been recorded."
         ))?;

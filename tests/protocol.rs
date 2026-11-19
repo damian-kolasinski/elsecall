@@ -2,7 +2,6 @@
 use axum::{Json, Router, routing::get};
 use elsecall::{
     client,
-    failure::{Failure, Result},
     inspection::{Inspection, LoadSample, Machine, MachineInspector},
     macos::processes::MacProcesses,
     paths::Paths,
@@ -11,6 +10,7 @@ use elsecall::{
     server,
     tailnet::{Presence, Tailnet},
 };
+use elsecall_failure::{Failure, Result};
 use std::{future::IntoFuture, sync::Arc};
 
 struct UnavailableMachine;

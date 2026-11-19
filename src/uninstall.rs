@@ -2,11 +2,13 @@
 //! that makes the user's tool manager resolve the CLI, which the one-command
 //! installer added and which would otherwise keep `elsecall` on the PATH.
 use crate::{
-    failure::{Failure, Result},
-    installation::cli_request::{CliRequest, Request, Selection},
-    installation::{self, InstalledParts, Kept, ServiceManager},
+    installation::{
+        self, InstalledParts, Kept, ServiceManager,
+        cli_request::{CliRequest, Request, Selection},
+    },
     paths::Paths,
 };
+use elsecall_failure::{Failure, Result};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]

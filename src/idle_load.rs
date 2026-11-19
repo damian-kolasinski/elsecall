@@ -2,10 +2,8 @@
 //! shared machine: its real load comes from unrelated work, which would otherwise
 //! decide whether their tests' requests start. Selected only by
 //! `ELSECALL_MACHINE_LOAD=idle`, like the tailnet discovery overrides.
-use crate::{
-    failure::Result,
-    inspection::{LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState},
-};
+use crate::inspection::{LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState};
+use elsecall_failure::Result;
 
 pub struct IdleLoad<M>(pub M);
 

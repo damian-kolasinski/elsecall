@@ -6,10 +6,8 @@
 //! gives to other processes does not count. The thread asks for user-interactive
 //! quality of service, which macOS places on performance cores when one is free.
 //! The best of several trials is the measurement.
-use crate::{
-    failure::{Failure, Result},
-    scheduling::speed::SpeedMeter,
-};
+use crate::scheduling::speed::SpeedMeter;
+use elsecall_failure::{Failure, Result};
 use std::{collections::HashMap, hint::black_box, time::Duration};
 
 /// Rounds per trial: about 27 ms of CPU on an M4 Pro performance core.

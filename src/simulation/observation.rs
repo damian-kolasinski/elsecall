@@ -1,12 +1,12 @@
 //! Machine and core-speed observation adapters over virtual fleet state.
 use super::{model, world::World};
 use crate::{
-    failure::Result,
     inspection::{
         self, CoreCounts, LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState,
     },
     scheduling::speed::SpeedMeter,
 };
+use elsecall_failure::Result;
 use std::sync::{Arc, Mutex};
 
 pub(super) struct Observation {

@@ -2,7 +2,6 @@
 //! offer reaches a member. The adapter of `scheduling::placed::Members` over the
 //! authenticated member API.
 use crate::{
-    failure::Result,
     fleet::Fleet,
     peer_client,
     roster::Readiness,
@@ -11,6 +10,7 @@ use crate::{
         quote::{Quote, QuoteRequest},
     },
 };
+use elsecall_failure::Result;
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};

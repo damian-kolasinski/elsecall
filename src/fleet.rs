@@ -4,7 +4,6 @@
 //! Operator changes live in `fleet_changes` and the fleet-wide view in `fleet_view`;
 //! both act through this module's state.
 use crate::{
-    failure::{Failure, Result},
     inspection::Inspection,
     member_code,
     member_key::{MemberKey, PublicKey},
@@ -12,6 +11,7 @@ use crate::{
     peer_auth::{self, ReplayGuard, RequestProof},
     roster::{Member, MemberName, Offer, Roster},
 };
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     net::SocketAddr,

@@ -76,7 +76,7 @@ impl CallerState {
     }
 
     /// Forget only caches registered for this removed synthetic session.
-    pub fn forget_rehearsal(&self, session: &str) -> crate::failure::Result<()> {
+    pub fn forget_rehearsal(&self, session: &str) -> elsecall_failure::Result<()> {
         let files = push_cache::list(&self.directory);
         let ids: HashSet<_> = files
             .iter()
@@ -102,7 +102,7 @@ impl CallerState {
                     Ok(()) => (),
                     Err(e) if e.kind() == io::ErrorKind::NotFound => (),
                     Err(e) => {
-                        return Err(crate::failure::Failure::io(
+                        return Err(elsecall_failure::Failure::io(
                             "Remove rehearsal sync cache",
                             e,
                         ));

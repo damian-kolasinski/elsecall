@@ -8,13 +8,15 @@
 use crate::{
     build_identity::{Build, BuildId, Digest},
     client,
-    failure::{Failure, Result},
-    fleet_upgrade::journal::{Journal, Phase},
-    fleet_upgrade::protocol::UpgradeId,
+    fleet_upgrade::{
+        journal::{Journal, Phase},
+        protocol::UpgradeId,
+    },
     inspection::Health,
     installation::{ServiceManager, Transaction, ready::confirm},
     paths::Paths,
 };
+use elsecall_failure::{Failure, Result};
 use std::path::Path;
 
 fn log(event: &str, id: &UpgradeId, detail: serde_json::Value) {

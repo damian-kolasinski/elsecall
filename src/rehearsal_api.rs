@@ -1,7 +1,6 @@
 //! Local master orchestration and enrolled, master-authorized member operations.
 use crate::{
     api,
-    failure::Result,
     fleet::{Fleet, PlacementAuthority},
     peer_client,
     rehearsal::{
@@ -18,6 +17,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
+use elsecall_failure::Result;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};
 #[derive(Clone)]
@@ -48,7 +48,7 @@ async fn local(State(state): State<Local>, body: Bytes) -> Response {
                 .map_err(|_| invalid("Invalid rehearsal operation."))?;
             let roster = state.fleet.roster()?;
             if state.fleet.name_in(&roster) != roster.master().name {
-                return Err(crate::failure::Failure::new(
+                return Err(elsecall_failure::Failure::new(
                     "not_master",
                     "Rehearsal must be orchestrated on the master.",
                     "Run elsecall rehearse on the recorded master.",

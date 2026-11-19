@@ -13,7 +13,7 @@
 //! executes anything a member's account controls. A rule already follows a
 //! program's path from build to build, so the guard grants nothing the rule did
 //! not.
-use crate::failure::{Failure, Result};
+use elsecall_failure::{Failure, Result};
 
 pub const LABEL: &str = "dev.elsecall.firewall-guard";
 pub const PLIST: &str = "/Library/LaunchDaemons/dev.elsecall.firewall-guard.plist";

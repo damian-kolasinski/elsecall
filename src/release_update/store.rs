@@ -1,10 +1,7 @@
 //! Owner-only update records shared by the old service, detached helper and successor.
 use super::{Discovery, Job, JobId, Phase, invalid, now};
-use crate::{
-    failure::{Failure, Result},
-    paths::Paths,
-    private_files,
-};
+use crate::{paths::Paths, private_files};
+use elsecall_failure::{Failure, Result};
 use serde::{Serialize, de::DeserializeOwned};
 use std::{
     fs::{self, File},

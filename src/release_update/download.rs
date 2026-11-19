@@ -1,11 +1,7 @@
 //! Mise's packslip backend verifies the fixed repository/workflow/issuer before exporting files.
 use super::{ISSUER, Release, ReleaseDownload, StagedRelease, TOOL, invalid};
-use crate::{
-    build_identity::Digest,
-    failure::{Failure, Result},
-    paths::Paths,
-    private_files,
-};
+use crate::{build_identity::Digest, paths::Paths, private_files};
+use elsecall_failure::{Failure, Result};
 use std::{
     ffi::OsString,
     fs,

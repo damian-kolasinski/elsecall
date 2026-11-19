@@ -4,22 +4,18 @@
 //! interactive work, never keeps placed work out. An admitted run keeps its
 //! capacity until its runner ends it.
 use super::{Entry, OnHandover, Phase, Scheduler};
-use crate::{
-    failure::{Failure, Result},
-    scheduling::{
-        capacity::Cores,
-        leftovers::Leftovers,
-        placed::{OfferReply, PlacedRecord, PlacementOffer, Reached, Side, SyncSummary, Warmth},
-        processes::ProcessIdentity,
-        quote::{self, HeldWork, Quote, WaitingWork},
-        record::{
-            Decision, HoldBasis, HoldLimitRecord, Outcome, Record, SizeBasis, State, Verdict,
-        },
-        request::{self, Kind, Placement, Urgency},
-        run_id::RunId,
-        run_phases::{RemoteFailurePhase, RunPhases},
-    },
+use crate::scheduling::{
+    capacity::Cores,
+    leftovers::Leftovers,
+    placed::{OfferReply, PlacedRecord, PlacementOffer, Reached, Side, SyncSummary, Warmth},
+    processes::ProcessIdentity,
+    quote::{self, HeldWork, Quote, WaitingWork},
+    record::{Decision, HoldBasis, HoldLimitRecord, Outcome, Record, SizeBasis, State, Verdict},
+    request::{self, Kind, Placement, Urgency},
+    run_id::RunId,
+    run_phases::{RemoteFailurePhase, RunPhases},
 };
+use elsecall_failure::{Failure, Result};
 use std::{collections::BTreeSet, time::Duration};
 
 /// How a hosted run ended, as its runner saw it.

@@ -2,7 +2,6 @@
 //! reaches the member that owns copies here. The adapter of
 //! `housekeeping::callers::Callers` over the authenticated member API.
 use crate::{
-    failure::Result,
     fleet::Fleet,
     housekeeping::{
         callers::Callers,
@@ -10,6 +9,7 @@ use crate::{
     },
     peer_client,
 };
+use elsecall_failure::Result;
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};

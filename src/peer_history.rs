@@ -3,7 +3,6 @@
 //! buckets of the period and bounded, and a member's own error text is never
 //! quoted.
 use crate::{
-    failure::{Failure, Result},
     fleet::Fleet,
     load_log::buckets::Bucket,
     peer_client,
@@ -16,6 +15,7 @@ use crate::{
     roster::Member,
     scheduling::speed::PLAUSIBLE,
 };
+use elsecall_failure::{Failure, Result};
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};

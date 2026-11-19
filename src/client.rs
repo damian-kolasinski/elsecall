@@ -1,8 +1,8 @@
 use crate::{
     api::{ErrorResponse, Response, SCHEMA_VERSION},
-    failure::{Failure, Result},
     local_access, private_files,
 };
+use elsecall_failure::{Failure, Result};
 use http_body_util::{BodyExt, Full, Limited};
 use hyper::{Method, Request, body::Bytes, client::conn::http1};
 use hyper_util::rt::TokioIo;

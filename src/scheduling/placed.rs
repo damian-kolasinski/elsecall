@@ -1,18 +1,16 @@
 //! Work placed on another member: what the master offers, what the member answers,
 //! and what both record. The master holds placed requests; the member it names
 //! either admits one at once or refuses it.
-use crate::{
-    failure::{Failure, Result},
-    scheduling::{
-        capacity::Cores,
-        leftovers::Leftovers,
-        messages::MemberState,
-        quote::{Quote, QuoteRequest},
-        record::SizeBasis,
-        run_id::RunId,
-        timestamp::Timestamp,
-    },
+use crate::scheduling::{
+    capacity::Cores,
+    leftovers::Leftovers,
+    messages::MemberState,
+    quote::{Quote, QuoteRequest},
+    record::SizeBasis,
+    run_id::RunId,
+    timestamp::Timestamp,
 };
+use elsecall_failure::{Failure, Result};
 use futures_util::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

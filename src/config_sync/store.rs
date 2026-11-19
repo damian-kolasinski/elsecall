@@ -9,9 +9,9 @@ use crate::{
         fingerprint::{Fingerprint, SyncKey},
         manifest::FileNode,
     },
-    failure::{Failure, Result},
     private_files,
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     collections::BTreeSet,
     fs,

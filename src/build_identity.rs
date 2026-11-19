@@ -2,7 +2,7 @@
 //! first 16 hex digits of the SHA-256 digest of its executable. Two members with the
 //! same build ID run byte-identical executables, which is what `fleet upgrade`
 //! distributes and what version skew compares.
-use crate::failure::{Failure, Result};
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use std::{

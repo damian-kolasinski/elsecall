@@ -7,7 +7,6 @@ use super::{
     model,
 };
 use crate::{
-    failure::Result,
     scheduling::{
         messages::{Grant, Release, RunEnded},
         placed::{PlacedReport, Reached, SyncSummary, Warmth},
@@ -21,6 +20,7 @@ use crate::{
         trace::{Request, Trace, TraceOutcome},
     },
 };
+use elsecall_failure::Result;
 use serde::Serialize;
 use std::{
     collections::{BTreeMap, BTreeSet},

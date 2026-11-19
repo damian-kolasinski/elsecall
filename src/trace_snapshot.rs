@@ -1,11 +1,11 @@
 //! Offline read-only history adapter, for exports before installing new routes.
 use crate::{
-    failure::Result,
     load_log::{buckets, store::LoadStore},
     paths::Paths,
     scheduling::{records::Records, timestamp::Timestamp},
     workload::trace::{Member, PAGE, Trace, VERSION},
 };
+use elsecall_failure::Result;
 use std::time::Duration;
 
 pub fn local(paths: &Paths, member: String, since: Timestamp, until: Timestamp) -> Result<Trace> {

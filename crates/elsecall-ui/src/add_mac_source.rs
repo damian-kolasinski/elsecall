@@ -8,8 +8,8 @@ use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 
 use elsecall::add_mac::{AddReport, Event};
-use elsecall::failure::Failure;
 use elsecall::nearby_macs::NearbyMac;
+use elsecall_failure::Failure;
 use rune::Waker;
 
 use crate::add_mac_flow::{AddRequest, AddUpdate};

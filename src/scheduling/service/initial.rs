@@ -2,15 +2,13 @@
 //! same Admission adoption used for restart recovery, without making another
 //! scheduling decision under a later load gate or candidate configuration.
 use super::{Entry, OnHandover, Phase, Scheduler};
-use crate::{
-    failure::{Failure, Result},
-    scheduling::{
-        messages::Grant,
-        placed::{PlacedGrant, Side},
-        processes,
-        record::{Record, State},
-    },
+use crate::scheduling::{
+    messages::Grant,
+    placed::{PlacedGrant, Side},
+    processes,
+    record::{Record, State},
 };
+use elsecall_failure::{Failure, Result};
 use std::{collections::BTreeSet, time::Duration};
 
 impl Scheduler {

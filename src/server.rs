@@ -1,6 +1,5 @@
 use crate::{
     api,
-    failure::{Failure, Result},
     fleet::Fleet,
     fleet_local_api,
     fleet_placement::FleetMembers,
@@ -32,6 +31,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     fs,
     os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},

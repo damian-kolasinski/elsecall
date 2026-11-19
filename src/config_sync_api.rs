@@ -7,7 +7,6 @@ use crate::{
         protocol,
         service::{ConfigSync, PushRequest},
     },
-    failure::Failure,
     fleet::{AuthenticatedPeer, Fleet, SyncAuthority},
     secure_channel::{Ephemeral, SecureStream},
 };
@@ -20,6 +19,7 @@ use axum::{
     routing::{get, post},
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use elsecall_failure::Failure;
 use hyper_util::rt::TokioIo;
 use serde::Deserialize;
 use std::sync::Arc;

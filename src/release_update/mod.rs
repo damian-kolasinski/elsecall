@@ -11,10 +11,8 @@ pub mod service;
 pub mod store;
 mod tools;
 
-use crate::{
-    build_identity::Digest,
-    failure::{Failure, Result},
-};
+use crate::build_identity::Digest;
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 

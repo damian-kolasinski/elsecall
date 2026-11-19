@@ -1,7 +1,6 @@
 //! Follows this member's gate each second, samples processes while it stays
 //! closed, and keeps the blocked state and its episodes.
 use crate::{
-    failure::Result,
     outside_pressure::{
         attribution::{self, OwnWork},
         blocked::Blocked,
@@ -11,6 +10,7 @@ use crate::{
     },
     scheduling::{load::Gate, timestamp::Timestamp},
 };
+use elsecall_failure::Result;
 use serde::Serialize;
 use std::{
     path::Path,

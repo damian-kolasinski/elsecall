@@ -3,7 +3,7 @@
 //!
 //! The line accepts the key only from tailnet addresses and is marked with a
 //! comment, so Elsecall removes only lines it added.
-use crate::failure::{Failure, Result};
+use elsecall_failure::{Failure, Result};
 use std::path::Path;
 
 /// Every line Elsecall adds ends with this comment, followed by the master's name.

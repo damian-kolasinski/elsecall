@@ -1,13 +1,11 @@
 //! Durable request records in SQLite.
-use crate::{
-    failure::{Failure, Result},
-    scheduling::{
-        estimates,
-        record::{Record, State},
-        run_id::RunId,
-        timestamp::Timestamp,
-    },
+use crate::scheduling::{
+    estimates,
+    record::{Record, State},
+    run_id::RunId,
+    timestamp::Timestamp,
 };
+use elsecall_failure::{Failure, Result};
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use std::{

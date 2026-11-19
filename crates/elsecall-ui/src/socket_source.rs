@@ -134,8 +134,8 @@ impl FleetSource for LazySocket {
     }
 }
 
-pub(crate) fn classify(failure: elsecall::failure::Failure) -> SourceFailure {
-    let elsecall::failure::Failure {
+pub(crate) fn classify(failure: elsecall_failure::Failure) -> SourceFailure {
+    let elsecall_failure::Failure {
         code,
         message,
         hint,

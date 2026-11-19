@@ -3,7 +3,6 @@
 use crate::{
     api,
     config_sync::{service::ConfigSync, synced_path::SyncedPath},
-    failure::Failure,
 };
 use axum::{
     Json, Router,
@@ -13,6 +12,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{any, post},
 };
+use elsecall_failure::Failure;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::sync::Arc;
 
@@ -74,14 +74,14 @@ pub fn unavailable(error: Failure) -> Router {
         .route("/v1/sync/{*operation}", any(respond))
 }
 
-fn respond<T: Serialize>(result: crate::failure::Result<T>) -> Response {
+fn respond<T: Serialize>(result: elsecall_failure::Result<T>) -> Response {
     match result {
         Ok(value) => Json(api::Response::new(value)).into_response(),
         Err(error) => (StatusCode::CONFLICT, Json(api::ErrorResponse::new(error))).into_response(),
     }
 }
 
-fn parse<T: DeserializeOwned>(body: &Bytes) -> crate::failure::Result<T> {
+fn parse<T: DeserializeOwned>(body: &Bytes) -> elsecall_failure::Result<T> {
     serde_json::from_slice(body).map_err(|_| {
         Failure::new(
             "invalid_request",

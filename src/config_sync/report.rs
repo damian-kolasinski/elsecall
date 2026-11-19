@@ -1,15 +1,13 @@
 //! What sync shows: plans, each member's sync state, and what a push changed. Only
 //! names, classes, sizes and short keyed fingerprints; never content.
-use crate::{
-    config_sync::{
-        compare::{Change, FileDifference},
-        history::{FileRecord, PathRecord},
-        manifest::FileKey,
-        state::Backup,
-        synced_path::SyncedPath,
-    },
-    failure::Failure,
+use crate::config_sync::{
+    compare::{Change, FileDifference},
+    history::{FileRecord, PathRecord},
+    manifest::FileKey,
+    state::Backup,
+    synced_path::SyncedPath,
 };
+use elsecall_failure::Failure;
 use serde::{Deserialize, Serialize};
 
 pub use super::status::{BackupView, FileReport, PathState, SyncRole, SyncState, SyncSummary};

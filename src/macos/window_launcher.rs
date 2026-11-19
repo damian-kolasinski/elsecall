@@ -1,8 +1,6 @@
 //! macOS signing and LaunchServices adapter for window publication.
-use crate::{
-    failure::{Failure, Result},
-    window_app::WindowLauncher,
-};
+use crate::window_app::WindowLauncher;
+use elsecall_failure::{Failure, Result};
 use std::{path::Path, process::Command};
 
 pub struct MacWindowLauncher;

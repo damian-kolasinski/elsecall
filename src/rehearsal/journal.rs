@@ -1,11 +1,11 @@
 //! Owner-only recovery state. It contains only synthetic scratch paths and
 //! identities of synthetic callers, never consumer inputs or secret values.
 use crate::{
-    failure::{Failure, Result},
     paths::Paths,
     private_files,
     scheduling::{processes::ProcessIdentity, timestamp::Timestamp},
 };
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     io::Read,

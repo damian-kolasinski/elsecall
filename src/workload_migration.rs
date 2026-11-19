@@ -1,11 +1,11 @@
 //! Explicit, atomic import of legacy repository policy into personal settings.
 use crate::{
-    failure::{Failure, Result},
     paths::Paths,
     private_files,
     workload_configuration::{self, Configuration, FILE_NAME},
     workload_settings::WorkloadSettings,
 };
+use elsecall_failure::{Failure, Result};
 use serde::Serialize;
 use std::{
     io::Write,

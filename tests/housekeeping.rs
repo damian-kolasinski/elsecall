@@ -588,13 +588,13 @@ struct Gated<L> {
     gate: Option<(Arc<tokio::sync::Notify>, Arc<tokio::sync::Notify>)>,
 }
 impl<L: sync::Link> sync::Link for Gated<L> {
-    async fn send(&mut self, message: sync::SyncMessage) -> elsecall::failure::Result<()> {
+    async fn send(&mut self, message: sync::SyncMessage) -> elsecall_failure::Result<()> {
         self.inner.send(message).await
     }
-    async fn send_content(&mut self, chunk: Vec<u8>) -> elsecall::failure::Result<()> {
+    async fn send_content(&mut self, chunk: Vec<u8>) -> elsecall_failure::Result<()> {
         self.inner.send_content(chunk).await
     }
-    async fn receive(&mut self) -> elsecall::failure::Result<sync::Received> {
+    async fn receive(&mut self) -> elsecall_failure::Result<sync::Received> {
         let received = self.inner.receive().await?;
         if let Some((release, reached)) = self.gate.take() {
             reached.notify_one();

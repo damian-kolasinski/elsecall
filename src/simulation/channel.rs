@@ -3,14 +3,12 @@ use super::{
     model,
     world::{CopyState, World},
 };
-use crate::{
-    failure::{Failure, Result},
-    scheduling::{
-        placed::{Members, OfferReply, PlacementOffer, Standing, Warmth},
-        quote::{CopyQuote, Quote, QuoteRequest},
-        service::Scheduler,
-    },
+use crate::scheduling::{
+    placed::{Members, OfferReply, PlacementOffer, Standing, Warmth},
+    quote::{CopyQuote, Quote, QuoteRequest},
+    service::Scheduler,
 };
+use elsecall_failure::{Failure, Result};
 use futures_util::future::BoxFuture;
 use std::{
     collections::BTreeMap,

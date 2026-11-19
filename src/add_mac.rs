@@ -7,7 +7,6 @@
 //! and running it on a member repairs it.
 use crate::{
     authorized_keys, client,
-    failure::{Failure, Result},
     fleet_local_api::EnrollRequest,
     inbound_firewall::Rule,
     member_code,
@@ -18,6 +17,7 @@ use crate::{
     roster::Readiness,
     tailscale_bottle,
 };
+use elsecall_failure::{Failure, Result};
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

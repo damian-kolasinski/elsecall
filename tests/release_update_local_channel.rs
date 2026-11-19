@@ -155,7 +155,7 @@ impl Fixture {
     fn stage(
         &self,
         version: &str,
-    ) -> elsecall::failure::Result<elsecall::release_update::StagedRelease> {
+    ) -> elsecall_failure::Result<elsecall::release_update::StagedRelease> {
         let stage = self
             .paths
             .home

@@ -34,7 +34,7 @@ pub mod staging;
 pub mod stat_cache;
 pub mod sync;
 
-use crate::failure::Failure;
+use elsecall_failure::Failure;
 
 /// The workspace could not be copied. The message never contains file content.
 pub fn sync_failed(message: impl Into<String>) -> Failure {

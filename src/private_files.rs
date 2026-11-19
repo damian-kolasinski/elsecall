@@ -1,8 +1,6 @@
 //! Filesystem ownership and exclusive locks for per-user state.
-use crate::{
-    failure::{Failure, Result},
-    local_access::user_id,
-};
+use crate::local_access::user_id;
+use elsecall_failure::{Failure, Result};
 use std::{
     fs::{self, File, OpenOptions},
     os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsExt},

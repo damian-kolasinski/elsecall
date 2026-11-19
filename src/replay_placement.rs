@@ -1,12 +1,10 @@
 //! Read-only placement counterfactuals. Keep measured work, label families and
 //! urgency fixed; only the placement component of current consumer rules applies.
 use crate::{
-    failure::{Failure, Result},
-    scheduling::request::Placement,
-    workload::trace::Trace,
-    workload_settings::RulePlacement,
+    scheduling::request::Placement, workload::trace::Trace, workload_settings::RulePlacement,
 };
 use clap::Args;
+use elsecall_failure::{Failure, Result};
 use std::{io::Read, path::PathBuf};
 
 pub use crate::workload::format::{Mode, Provenance};

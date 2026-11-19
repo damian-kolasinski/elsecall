@@ -15,9 +15,9 @@ use crate::{
         manifest::Manifest,
         report::{Applied, PathReport},
     },
-    failure::{Failure, Result},
     wire::{self, Frame},
 };
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use zeroize::Zeroizing;

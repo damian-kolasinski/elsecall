@@ -1,10 +1,6 @@
 //! Durable record of this member's fleet membership, in Elsecall's state directory.
-use crate::{
-    failure::{Failure, Result},
-    local_access::user_id,
-    private_files,
-    roster::Roster,
-};
+use crate::{local_access::user_id, private_files, roster::Roster};
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::OpenOptions,

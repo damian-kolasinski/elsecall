@@ -17,12 +17,12 @@ use crate::{
         store::ReplicaStore,
         synced_path::SyncedPath,
     },
-    failure::{Failure, Result},
     private_files,
     roster::MemberName,
     scheduling::timestamp::Timestamp,
     workspace::confined::Confined,
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},

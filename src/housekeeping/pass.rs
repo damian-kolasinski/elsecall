@@ -11,7 +11,6 @@
 //! or a sync; a copy used between the judgement and its removal is judged again
 //! next pass.
 use crate::{
-    failure::{Failure, Result},
     housekeeping::{
         adoption,
         caller_state::CallerState,
@@ -32,6 +31,7 @@ use crate::{
     },
     workspace::{copies::Copies, copy, location::Locations},
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     io,

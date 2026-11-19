@@ -1,9 +1,9 @@
 //! Tailnet discovery through the Tailscale command-line interface.
 use crate::{
-    failure::Result,
     remote_mac::TailnetNode,
     tailnet::{Presence, Tailnet, is_tailnet_address, unavailable},
 };
+use elsecall_failure::Result;
 use serde::Deserialize;
 use std::{
     io::Read,

@@ -2,7 +2,6 @@
 //! placeable records and replays their decisions under changed parameters.
 use crate::{
     api,
-    failure::Failure,
     scheduling::{
         replay::{self, Change, Replay},
         service::Scheduler,
@@ -17,6 +16,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
+use elsecall_failure::Failure;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

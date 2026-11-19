@@ -5,7 +5,6 @@ use super::{
     engine::settings,
 };
 use crate::{
-    failure::{Failure, Result},
     scheduling::{
         messages::Grant,
         placed::{PlacedRecord, Reached, Side, SyncSummary},
@@ -18,6 +17,7 @@ use crate::{
     },
     workload::trace::{Request, Trace},
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,

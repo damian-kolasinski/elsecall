@@ -1,7 +1,6 @@
 //! Validate the on-disk trace at the simulator boundary. Missing historical
 //! evidence is allowed; the fidelity gate identifies it without inventing data.
 use crate::{
-    failure::{Failure, Result},
     reporting::facts::{PlacementKind, is_code},
     scheduling::{
         capacity::Capacity,
@@ -11,6 +10,7 @@ use crate::{
     },
     workload::trace::{Trace, TraceOutcome, VERSION},
 };
+use elsecall_failure::{Failure, Result};
 use std::collections::{BTreeMap, BTreeSet};
 
 const DAY: u64 = 86_400_000;

@@ -3,11 +3,11 @@
 //! The window never decides whether the service installed: a failure to place or
 //! open the app is reported beside a successful installation.
 use crate::{
-    failure::{Failure, Result},
     installation::{Installed, ServiceManager, Session, Transaction},
     paths::Paths,
     window_app::{self, WindowLauncher},
 };
+use elsecall_failure::{Failure, Result};
 use serde::Serialize;
 use std::{future::Future, path::Path, path::PathBuf};
 

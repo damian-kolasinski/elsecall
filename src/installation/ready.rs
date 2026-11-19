@@ -3,10 +3,10 @@
 use crate::{
     build_identity::{Build, BuildId},
     client,
-    failure::{Failure, Result},
     inspection::Health,
     paths::Paths,
 };
+use elsecall_failure::{Failure, Result};
 use std::time::{Duration, Instant};
 
 /// How long a freshly installed service has to answer with its build.

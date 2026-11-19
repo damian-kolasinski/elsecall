@@ -1,10 +1,10 @@
 //! What the fleet reports of this member's copies: the adapter of
 //! `fleet::CopiesReport` over housekeeping.
 use crate::{
-    failure::Result,
     fleet::{CopiesDisk, CopiesReport, CopiesUsage},
     housekeeping::pass::Housekeeper,
 };
+use elsecall_failure::Result;
 use std::sync::Arc;
 
 pub struct FleetCopies(pub Arc<Housekeeper>);

@@ -1,6 +1,6 @@
 //! The user's tool manager, as far as its request for the Elsecall CLI goes:
 //! uninstall asks it to forget the request, and a release update reads it.
-use crate::failure::Failure;
+use elsecall_failure::Failure;
 use serde::Serialize;
 
 /// The user's tool manager, as far as its request for the Elsecall CLI goes.

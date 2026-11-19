@@ -21,7 +21,6 @@ mod upgrading;
 pub use upgrading::{HostingHold, OnHandover, UpdateHold, WorkInFlight};
 
 use crate::{
-    failure::{Failure, Result},
     inspection::{CoreCounts, MachineInspector},
     load_log::{LoadLog, minute::Second},
     scheduling::{
@@ -52,6 +51,7 @@ use crate::{
     },
 };
 use auto::Auto;
+use elsecall_failure::{Failure, Result};
 use placing::Placing;
 use quotes::Quotes;
 use serde::Serialize;

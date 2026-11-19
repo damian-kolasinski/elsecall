@@ -4,10 +4,10 @@
 //! overlay. A member tool entry replaces the whole default for that tool, and an
 //! entry that wants nothing is dropped from the resolved map.
 use crate::{
-    failure::{Failure, Result},
     roster::MemberName,
     tool_inventory::{Manager, ToolName, ToolVersion},
 };
+use elsecall_failure::{Failure, Result};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 

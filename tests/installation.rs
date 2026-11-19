@@ -1,10 +1,12 @@
 #![cfg(target_os = "macos")]
-use elsecall::{
-    failure::{Failure, Result},
-    installation::{self, ServiceManager, Session},
-    paths::Paths,
-};
 use std::{cell::RefCell, fs, path::Path};
+use {
+    elsecall::{
+        installation::{self, ServiceManager, Session},
+        paths::Paths,
+    },
+    elsecall_failure::{Failure, Result},
+};
 
 #[derive(Default)]
 struct Manager {

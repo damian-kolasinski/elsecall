@@ -13,10 +13,10 @@ use crate::add_mac_flow::{
 use crate::app::AppState;
 use crate::theme;
 use elsecall::add_mac::AddReport;
-use elsecall::failure::Failure;
 use elsecall::nearby_macs::NearbyMac;
 use elsecall::remote_mac::LoginLink;
 use elsecall::roster::Readiness;
+use elsecall_failure::Failure;
 
 const SHEET_WIDTH: f32 = 680.0;
 const ART_WIDTH: f32 = 300.0;

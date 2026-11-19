@@ -3,7 +3,6 @@
 //! warned after it stopped. Rounds are kept for [`trend::KEPT`], warnings for
 //! [`RETENTION`] after they end. Processes are kept by name only.
 use crate::{
-    failure::{Failure, Result},
     outside_pressure::{
         sampling::Owner,
         trend::{self, Round, Seen},
@@ -11,6 +10,7 @@ use crate::{
     },
     scheduling::timestamp::Timestamp,
 };
+use elsecall_failure::{Failure, Result};
 use rusqlite::{Connection, params};
 use std::{
     collections::HashSet, fs::OpenOptions, os::unix::fs::OpenOptionsExt, path::Path, sync::Mutex,

@@ -7,10 +7,10 @@ use crate::{
         report::Applied,
         service::{ConfigSync, MemberSync},
     },
-    failure::{Failure, Result},
     roster::MemberName,
     scheduling::pre_run_sync::{PreRunSync, PushedPath, Synced},
 };
+use elsecall_failure::{Failure, Result};
 use futures_util::future::BoxFuture;
 use std::sync::Arc;
 

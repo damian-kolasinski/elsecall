@@ -1065,6 +1065,7 @@ dependencies = [
  "chacha20poly1305",
  "clap",
  "ed25519-dalek",
+ "elsecall-failure",
  "futures-util",
  "getrandom 0.3.4",
  "hkdf",
@@ -1090,10 +1091,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "elsecall-failure"
+version = "0.3.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "elsecall-ui"
 version = "0.3.0"
 dependencies = [
  "elsecall",
+ "elsecall-failure",
  "libc",
  "png 0.18.1",
  "rune",

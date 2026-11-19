@@ -1,13 +1,11 @@
 //! What a working tree has checked out, as validated values: a detached commit, or a
 //! branch with its commit and upstream. Names are checked when they are read, so no
 //! untrusted name reaches git's arguments.
-use crate::{
-    failure::Result,
-    workspace::{
-        git::{Git, ObjectFormat, Oid},
-        sync_failed,
-    },
+use crate::workspace::{
+    git::{Git, ObjectFormat, Oid},
+    sync_failed,
 };
+use elsecall_failure::Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

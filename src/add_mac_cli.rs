@@ -3,13 +3,13 @@
 use crate::{
     add_mac::{self, Approval, Event, Master},
     authorized_keys,
-    failure::{Failure, Result},
     macos::tailscale::TailscaleCli,
     openssh_mac::OpensshMac,
     paths::Paths,
     remote_mac::Build,
     tailnet::{Configured, Tailnet},
 };
+use elsecall_failure::{Failure, Result};
 use serde_json::Value;
 use std::{
     io::{BufRead, IsTerminal, Read, Write},

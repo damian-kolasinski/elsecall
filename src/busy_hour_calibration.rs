@@ -1,8 +1,6 @@
 //! Select arrival density from complete, observed rehearsals of the same workload.
-use crate::{
-    failure::Result, replay_load::LoadFactor, scheduling::timestamp::Timestamp,
-    workload::trace::Trace,
-};
+use crate::{replay_load::LoadFactor, scheduling::timestamp::Timestamp, workload::trace::Trace};
+use elsecall_failure::Result;
 use serde::{Deserialize, Serialize};
 mod fit;
 use fit::Fit;

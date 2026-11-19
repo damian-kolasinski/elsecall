@@ -1,6 +1,5 @@
 //! Request properties and caller choices as callers write them on the command line.
 use crate::{
-    failure::Result,
     scheduling::{
         capacity::Cores,
         request::{AtDeadline, invalid},
@@ -9,6 +8,7 @@ use crate::{
     workload_settings::WhenUnavailable,
 };
 use clap::{Args, ValueEnum};
+use elsecall_failure::Result;
 use std::{path::PathBuf, time::Duration};
 
 /// Options shared by every work request. Values are parsed here rather than by

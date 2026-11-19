@@ -1,9 +1,7 @@
 //! Complete lifecycle records, reopened under a process-shared lock on every
 //! write. No inherited descriptor can keep writing into a rotated archive.
-use crate::{
-    failure::{Failure, Result},
-    private_files,
-};
+use crate::private_files;
+use elsecall_failure::{Failure, Result};
 use std::{
     fs::{self, OpenOptions},
     io::Write,

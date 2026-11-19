@@ -120,7 +120,7 @@ async fn call(
     member: &Member,
     path: &str,
     timeout: Duration,
-) -> elsecall::failure::Result<Value> {
+) -> elsecall_failure::Result<Value> {
     peer_client::call(key, member, Method::GET, path, None::<&Value>, timeout).await
 }
 #[tokio::test]
@@ -312,7 +312,7 @@ async fn failures_are_typed_bounded_retained_and_only_idempotent_requests_retry(
         } else {
             Method::POST
         };
-        let result: elsecall::failure::Result<Value> = if read_only {
+        let result: elsecall_failure::Result<Value> = if read_only {
             peer_client::call_with_retry(
                 &key,
                 &member,
@@ -409,7 +409,7 @@ async fn dropping_member(
     (member, accepted, task)
 }
 
-fn assert_points_at_firewall(error: &elsecall::failure::Failure, case: &str) {
+fn assert_points_at_firewall(error: &elsecall_failure::Failure, case: &str) {
     assert_eq!(error.code, "member_unavailable", "{case}");
     assert!(peer_client::is_closed_without_answer(error), "{case}");
     assert_eq!(

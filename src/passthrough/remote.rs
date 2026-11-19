@@ -3,7 +3,6 @@
 //! command's exit through, as if it ran here.
 use crate::{
     client::{self, Wait},
-    failure::{Failure, Result},
     passthrough::executor::{
         CommandLine, Executor, Exit, Finished, ResultReturn, RunContext, RunFailure, RunResult,
         Running,
@@ -33,6 +32,7 @@ use crate::{
         sync,
     },
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     fs::File,
     io::{Read, Write},

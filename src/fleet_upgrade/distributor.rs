@@ -3,10 +3,10 @@
 //! at the same time.
 use super::master::{self, Outcome, UpgradeReport, UpgradeRequest};
 use crate::{
-    failure::{Failure, Result},
     fleet::Fleet,
     release_update::{FleetDistribution, FleetOutcome, MemberOutcome},
 };
+use elsecall_failure::{Failure, Result};
 use std::{future::Future, path::PathBuf, pin::Pin, sync::Arc};
 
 pub struct Distributor {

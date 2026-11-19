@@ -10,7 +10,8 @@ use super::{
     ReleaseCatalog, ReleaseDownload,
     local_channel::{LocalChannel, LocalDownload, Packslip},
 };
-use crate::{failure::Result, paths::Paths};
+use crate::paths::Paths;
+use elsecall_failure::Result;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -48,7 +49,7 @@ impl Channel {
 #[cfg(feature = "local-release-channel")]
 mod local {
     use super::LocalChannel;
-    use crate::failure::Result;
+    use elsecall_failure::Result;
 
     /// Lets packaging tell this build from a publishable one; see
     /// `distribution/package.py`.

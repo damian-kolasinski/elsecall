@@ -1,9 +1,7 @@
 //! Crash remnants of atomic writes in service-owned metadata directories. Never
 //! visit stored content, caller workspaces, or backup trees.
-use crate::{
-    failure::{Failure, Result},
-    paths::Paths,
-};
+use crate::paths::Paths;
+use elsecall_failure::{Failure, Result};
 use std::{
     fs,
     time::{Duration, SystemTime},

@@ -20,7 +20,6 @@ pub mod configuration;
 pub mod copies_api;
 pub mod copies_cli;
 pub mod executable_format;
-pub mod failure;
 pub mod fleet;
 pub mod fleet_callers;
 pub mod fleet_changes;

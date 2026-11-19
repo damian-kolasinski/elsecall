@@ -9,10 +9,10 @@ use crate::{
         manifest::{Manifest, Tree},
         synced_path::SyncedPath,
     },
-    failure::{Failure, Result},
     private_files,
     scheduling::timestamp::Timestamp,
 };
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,

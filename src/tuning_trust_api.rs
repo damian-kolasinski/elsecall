@@ -1,12 +1,13 @@
 //! Fleet-readable evidence; certificate writes remain on the master-authorized
 //! rehearsal route. An unreachable member cannot silently certify fleet trust.
-use crate::{api, failure::Result, fleet::Fleet, paths::Paths, peer_client};
+use crate::{api, fleet::Fleet, paths::Paths, peer_client};
 use axum::{
     Extension, Json, Router,
     extract::State,
     response::{IntoResponse, Response},
     routing::post,
 };
+use elsecall_failure::Result;
 use serde_json::{Value, json};
 use std::{sync::Arc, time::Duration};
 pub async fn fleet_status(paths: &Paths, fleet: &Result<Arc<Fleet>>) -> Value {

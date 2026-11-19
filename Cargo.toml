@@ -51,6 +51,7 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 elsecall = { path = "." }
+elsecall-failure = { path = "crates/elsecall-failure" }
 
 [package]
 name = "elsecall"
@@ -82,6 +83,7 @@ base64.workspace = true
 chacha20poly1305.workspace = true
 clap.workspace = true
 ed25519-dalek.workspace = true
+elsecall-failure.workspace = true
 futures-util.workspace = true
 getrandom.workspace = true
 hkdf.workspace = true
@@ -97,8 +99,8 @@ serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 sysinfo.workspace = true
-tokio.workspace = true
 tempfile.workspace = true
+tokio.workspace = true
 toml.workspace = true
 toml_edit.workspace = true
 tower.workspace = true

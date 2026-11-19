@@ -2,7 +2,6 @@
 //! authorizes the operator. The service holds the member key that signs the build.
 use crate::{
     api,
-    failure::Failure,
     fleet_upgrade::{distributor::Distributor, master::UpgradeRequest},
 };
 use axum::{
@@ -13,6 +12,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
+use elsecall_failure::Failure;
 use std::sync::Arc;
 
 pub fn routes(distributor: Arc<Distributor>) -> Router {

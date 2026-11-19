@@ -2,8 +2,8 @@
 //! placements, the arrival density it ran at, and a rehearsal's worker
 //! calibration. Replay, simulation, rehearsal and tuning all read traces, so the
 //! format lives with them in workload, below each of them.
-use crate::failure::Result;
 use clap::ValueEnum;
+use elsecall_failure::Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, serde::Deserialize, ValueEnum)]
@@ -31,12 +31,12 @@ impl Default for LoadFactor {
     }
 }
 impl TryFrom<f64> for LoadFactor {
-    type Error = crate::failure::Failure;
+    type Error = elsecall_failure::Failure;
     fn try_from(f: f64) -> Result<Self> {
         if f.is_finite() && (1.0..=MAXIMUM).contains(&f) {
             Ok(Self(f))
         } else {
-            Err(crate::failure::Failure::new(
+            Err(elsecall_failure::Failure::new(
                 "invalid_request",
                 "--load-factor must be finite and from 1 to 32.",
                 "Use an arrival load factor from 1 to 32.",
@@ -45,7 +45,7 @@ impl TryFrom<f64> for LoadFactor {
     }
 }
 impl std::str::FromStr for LoadFactor {
-    type Err = crate::failure::Failure;
+    type Err = elsecall_failure::Failure;
     fn from_str(s: &str) -> Result<Self> {
         Self::try_from(s.parse::<f64>().unwrap_or(f64::NAN))
     }

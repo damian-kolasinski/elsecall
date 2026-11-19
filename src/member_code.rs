@@ -2,11 +2,9 @@
 //!
 //! Codes hold no secrets. The operator carries them between machines, and that
 //! channel is what vouches for the key inside; codes are validated as untrusted input.
-use crate::{
-    failure::{Failure, Result},
-    roster::Member,
-};
+use crate::roster::Member;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use elsecall_failure::{Failure, Result};
 
 const PREFIX: &str = "elsecall-member-v1.";
 const LIMIT: usize = 4096;

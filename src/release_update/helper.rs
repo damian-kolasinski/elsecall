@@ -7,12 +7,12 @@ use super::{
 use crate::{
     build_identity::Digest,
     client,
-    failure::{Failure, Result},
     installation::{ServiceManager, Transaction},
     paths::Paths,
     private_files,
     window_app::{self, WindowLauncher},
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     fs,
     path::PathBuf,

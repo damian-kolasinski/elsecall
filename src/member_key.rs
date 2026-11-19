@@ -2,13 +2,10 @@
 //!
 //! The private key lives only in an owner-only file in Elsecall's state directory and
 //! in the service process. Neither type prints key material through `Debug`.
-use crate::{
-    failure::{Failure, Result},
-    local_access::user_id,
-    private_files,
-};
+use crate::{local_access::user_id, private_files};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, OpenOptions},

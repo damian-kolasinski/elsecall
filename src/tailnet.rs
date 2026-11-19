@@ -2,7 +2,7 @@
 //!
 //! Tailscale provides addresses, a node name and transport encryption. It never
 //! provides identity: members authenticate each other with enrolled keys.
-use crate::failure::{Failure, Result};
+use elsecall_failure::{Failure, Result};
 use std::{
     net::IpAddr,
     sync::atomic::{AtomicBool, Ordering},

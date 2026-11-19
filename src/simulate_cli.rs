@@ -1,11 +1,11 @@
 //! Offline simulation never connects to, installs or changes an Elsecall service.
 use crate::{
     evaluation_day::day,
-    failure::Result,
     simulation::{self, Options},
     workload::input::read as read_trace,
 };
 use clap::Args;
+use elsecall_failure::Result;
 use std::path::PathBuf;
 #[derive(Args, Debug)]
 pub struct SimulateArgs {

@@ -16,7 +16,6 @@ use super::{
     validation,
 };
 use crate::{
-    failure::{Failure, Result},
     scheduling::{
         capacity::Capacity,
         clock::{Clock, VirtualClock},
@@ -29,6 +28,7 @@ use crate::{
     },
     workload::trace::{Request, Trace},
 };
+use elsecall_failure::{Failure, Result};
 use serde::Serialize;
 use serde_json::{Value, json};
 use std::{

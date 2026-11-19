@@ -1,9 +1,6 @@
 //! Choose a synthetic rehearsal population, without hiding competing work.
-use crate::{
-    failure::{Failure, Result},
-    scheduling::timestamp::Timestamp,
-    workload::trace::Trace,
-};
+use crate::{scheduling::timestamp::Timestamp, workload::trace::Trace};
+use elsecall_failure::{Failure, Result};
 use serde::Serialize;
 use std::{collections::BTreeMap, num::NonZeroUsize};
 

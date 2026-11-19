@@ -2,7 +2,6 @@
 //! workload selection and execution planning.
 use super::{invalid, plan::Arrival, protocol::Launch};
 use crate::{
-    failure::Result,
     scheduling::{
         request::{Kind, Placement, Urgency},
         timestamp::Timestamp,
@@ -12,6 +11,7 @@ use crate::{
         trace::{Request, Trace, TraceOutcome},
     },
 };
+use elsecall_failure::Result;
 use std::collections::BTreeMap;
 
 pub(crate) struct Inputs<'a> {

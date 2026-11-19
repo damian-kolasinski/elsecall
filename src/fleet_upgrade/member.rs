@@ -25,7 +25,6 @@
 use crate::{
     build_identity::{Build, Digest},
     executable_format::{self, Architecture},
-    failure::{Failure, Result},
     fleet::Fleet,
     fleet_upgrade::{
         journal::{Journal, Phase, UpgradeState},
@@ -37,6 +36,7 @@ use crate::{
     roster::MemberName,
     scheduling::timestamp::Timestamp,
 };
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     path::PathBuf,

@@ -8,7 +8,6 @@ mod processes;
 
 use elsecall::{
     add_mac::{self, Approval, Event, Master, Outcome, Step},
-    failure::{Failure, Result},
     inbound_firewall::Rule,
     paths::Paths,
     remote_mac::{
@@ -16,6 +15,7 @@ use elsecall::{
     },
     tailscale_bottle::Bottle,
 };
+use elsecall_failure::{Failure, Result};
 use members::{TestMember, free_port};
 use serde_json::Value;
 use std::{path::Path, process::Output, time::Duration};

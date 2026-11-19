@@ -1,10 +1,10 @@
 //! Offline unattended-climb readiness. Uses the rehearsal planner and production
 //! scheduler search; never obtains trust, dispatches work or changes settings.
 use crate::{
-    failure::Result,
     tuning::{self, TuneOptions},
     workload::trace::Trace,
 };
+use elsecall_failure::Result;
 use serde_json::{Value, json};
 use std::time::Instant;
 

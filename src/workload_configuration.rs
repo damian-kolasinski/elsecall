@@ -1,10 +1,6 @@
 //! Personal workload policy, independent of repositories and service generations.
-use crate::{
-    build_identity::Digest,
-    failure::{Failure, Result},
-    paths::Paths,
-    workload_settings::WorkloadSettings,
-};
+use crate::{build_identity::Digest, paths::Paths, workload_settings::WorkloadSettings};
+use elsecall_failure::{Failure, Result};
 use std::{
     collections::BTreeMap,
     fs::OpenOptions,

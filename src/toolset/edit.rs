@@ -3,11 +3,11 @@
 //! `toml_edit` changes one key and leaves every other comment and table alone.
 //! The result is parsed again and returned only when the whole document validates.
 use crate::{
-    failure::Result,
     roster::MemberName,
     tool_inventory::{Manager, ToolName, ToolVersion},
     toolset::document::{Toolset, invalid},
 };
+use elsecall_failure::Result;
 use toml_edit::{DocumentMut, Entry, Item, Table, Value, value};
 
 /// Where an edit is written. A member scope replaces defaults for that member only.

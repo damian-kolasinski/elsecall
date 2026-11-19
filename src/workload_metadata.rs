@@ -1,6 +1,7 @@
 //! Optional declarations about operations inside one admitted command. These are
 //! observations, never authorization, resource policy, or process outcomes.
-use crate::{failure::Result, scheduling::request::invalid};
+use crate::scheduling::request::invalid;
+use elsecall_failure::Result;
 use serde::{Deserialize, Serialize};
 
 pub const VERSION: u32 = 1;

@@ -52,12 +52,12 @@ impl Noise {
                 .all(|m| m.parse::<crate::roster::MemberName>().is_ok())
             && self.calibration.values().all(Calibration::valid)
     }
-    pub fn read(path: &std::path::Path) -> crate::failure::Result<Self> {
+    pub fn read(path: &std::path::Path) -> elsecall_failure::Result<Self> {
         use std::io::Read;
         let mut bytes = Vec::new();
         std::fs::File::open(path)
             .and_then(|f| f.take(32 * 1024 * 1024 + 1).read_to_end(&mut bytes))
-            .map_err(|e| crate::failure::Failure::io("Read A/A noise", e))?;
+            .map_err(|e| elsecall_failure::Failure::io("Read A/A noise", e))?;
         if bytes.len() > 32 * 1024 * 1024 {
             return Err(crate::rehearsal::invalid("Noise file exceeds 32 MiB."));
         }

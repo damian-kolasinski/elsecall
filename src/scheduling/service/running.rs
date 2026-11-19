@@ -1,17 +1,15 @@
 //! Work that is running: a run's command and end, releasing leases, shutdown.
 use super::{Book, Entry, Phase, Scheduler, not_found, stopping};
-use crate::{
-    failure::Result,
-    scheduling::{
-        messages::{CommandStarted, Release, Released, RunEnded},
-        placed::{PlacedReport, Reached, Side},
-        processes,
-        record::{MAXIMUM_CPU_MS, Outcome},
-        request::{self, Kind},
-        run_id::RunId,
-        run_phases::{RemoteFailurePhase, RunPhases},
-    },
+use crate::scheduling::{
+    messages::{CommandStarted, Release, Released, RunEnded},
+    placed::{PlacedReport, Reached, Side},
+    processes,
+    record::{MAXIMUM_CPU_MS, Outcome},
+    request::{self, Kind},
+    run_id::RunId,
+    run_phases::{RemoteFailurePhase, RunPhases},
 };
+use elsecall_failure::Result;
 
 impl Scheduler {
     /// Active run `id` requested by the process `peer`. The peer is compared by

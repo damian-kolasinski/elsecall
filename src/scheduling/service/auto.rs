@@ -15,28 +15,26 @@
 //! placement from then on, and the request is placed again at once, within the
 //! same hold limit. The caller needs no sync, so it always remains a candidate.
 use super::{Book, Entry, Phase, Scheduler, Waiting, placing::Placing, running_estimates};
-use crate::{
-    failure::Failure,
-    scheduling::{
-        admission::Class,
-        busy::{self, MemberSituation, RunningOn},
-        estimates,
-        learning::{self, RunHistory, ratios::SpeedRatios},
-        loss_history::LossHistory,
-        placed::WorkspaceRef,
-        placement::{
-            self, Ahead, Copy, Expectation, Held, Learned, LearnedRun, Observation, Start,
-            Unreachable, Wanted,
-        },
-        pre_run_sync::{Fallback, PreRunSyncRecord, SyncFailure},
-        quote::{self, MAXIMUM_WORKSPACES, Quote, QuoteRequest},
-        record::{Arrival, Candidate, Decision, Scoring, Verdict},
-        request::Kind,
-        run_id::RunId,
-        sync_history::{self, SyncHistory},
-        timestamp::Timestamp,
+use crate::scheduling::{
+    admission::Class,
+    busy::{self, MemberSituation, RunningOn},
+    estimates,
+    learning::{self, RunHistory, ratios::SpeedRatios},
+    loss_history::LossHistory,
+    placed::WorkspaceRef,
+    placement::{
+        self, Ahead, Copy, Expectation, Held, Learned, LearnedRun, Observation, Start, Unreachable,
+        Wanted,
     },
+    pre_run_sync::{Fallback, PreRunSyncRecord, SyncFailure},
+    quote::{self, MAXIMUM_WORKSPACES, Quote, QuoteRequest},
+    record::{Arrival, Candidate, Decision, Scoring, Verdict},
+    request::Kind,
+    run_id::RunId,
+    sync_history::{self, SyncHistory},
+    timestamp::Timestamp,
 };
+use elsecall_failure::Failure;
 use futures_util::future::join_all;
 use std::{collections::BTreeSet, sync::Weak, time::Duration};
 use tokio::time::Instant;
@@ -122,7 +120,7 @@ impl Scheduler {
                 .saturating_sub(trust.recency.as_millis() as u64),
         );
         let samples =
-            |kind: Kind, read: crate::failure::Result<Vec<crate::scheduling::record::Record>>| {
+            |kind: Kind, read: elsecall_failure::Result<Vec<crate::scheduling::record::Record>>| {
                 match read {
                     Ok(records) => learning::samples_of(kind, &records, now, trust.recency),
                     Err(error) => {

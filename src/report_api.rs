@@ -3,9 +3,7 @@
 //! member's own requests, load, peer I/O and outside-pressure history to the
 //! member that reports.
 use crate::{
-    api,
-    api::response as api_response,
-    failure::{Failure, Result},
+    api::{self, response as api_response},
     fleet::Fleet,
     load_log::buckets::Bucket,
     membership_store::Membership,
@@ -27,6 +25,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 

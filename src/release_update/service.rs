@@ -5,11 +5,11 @@ use super::{
 };
 use crate::{
     build_identity::BuildId,
-    failure::{Failure, Result},
     paths::Paths,
     private_files,
     scheduling::service::{Scheduler, UpdateHold},
 };
+use elsecall_failure::{Failure, Result};
 use std::{
     fs,
     os::unix::process::CommandExt,

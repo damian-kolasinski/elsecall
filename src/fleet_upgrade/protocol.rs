@@ -17,11 +17,11 @@
 use crate::{
     build_identity::{Build, Digest},
     executable_format::Architecture,
-    failure::{Failure, Result},
     member_key::{MemberKey, PublicKey},
     wire::{self, Frame},
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 

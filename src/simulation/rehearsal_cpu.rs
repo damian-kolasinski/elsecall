@@ -1,7 +1,8 @@
 //! Forensic replay: inject measured CPU service cost, never observed waits or
 //! wall runtimes. This explains an old worker's calibration error without
 //! granting predictive trust to a model fitted on the evaluated population.
-use crate::{failure::Result, workload::trace::Trace};
+use crate::workload::trace::Trace;
+use elsecall_failure::Result;
 use serde_json::{Value, json};
 
 pub fn replay(mut trace: Trace) -> Result<Value> {

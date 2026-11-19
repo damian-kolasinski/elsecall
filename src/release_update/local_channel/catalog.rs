@@ -2,10 +2,8 @@
 //! as `["0.2.1", "0.2.2"]`. Like the published catalog it is only a hint, which
 //! verification later confirms.
 use super::{LocalChannel, transport};
-use crate::{
-    failure::Result,
-    release_update::{Release, ReleaseCatalog, ReleaseVersion, invalid},
-};
+use crate::release_update::{Release, ReleaseCatalog, ReleaseVersion, invalid};
+use elsecall_failure::Result;
 
 impl ReleaseCatalog for LocalChannel {
     fn latest(&self) -> Result<Option<Release>> {

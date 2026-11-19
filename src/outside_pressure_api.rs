@@ -3,7 +3,6 @@
 //! fleet and for agents asking this member alone.
 use crate::{
     api,
-    failure::Failure,
     outside_pressure::{BlockedReport, Warning, WarningReport},
 };
 use axum::{
@@ -13,6 +12,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
+use elsecall_failure::Failure;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
