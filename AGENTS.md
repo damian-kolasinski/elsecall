@@ -30,6 +30,7 @@ Agents using the CLI are the primary consumers. Humans using the web interface a
 - Before shipping work, spawn a code review subagent to review architectural and behavioral correctness, as well as security.
 - When an operator's request spans multiple vertical slices, split the work into one deliverable per slice. Each slice must be independently verifiable and small enough for the operator to review comfortably.
 - Verify each base slice before starting work on a slice that depends on it. Building on an unverified base makes problems harder to review and fix.
+- Cargo runs through mbx, which shares compiled work between worktrees (README, "Build and install"). Keep its scheduler off: Elsecall admits builds.
 - Always verify your work with the smallest check that would fail if the intended behavior broke:
   - Pure functions: unit tests.
   - Business logic: integration tests that prove behavior without stubbing modules or units internal to the codebase.

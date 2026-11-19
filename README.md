@@ -156,6 +156,17 @@ command again to update. In a fleet, update the master this way, then run
 access are required by the installed application. Dependency downloads during the
 build require network access.
 
+With mise, `cargo` runs through [mbx](https://mr-boxington.jdx.dev): in `mise run`
+tasks, under `mise exec`, and in any shell where mise is activated. mbx caches each
+compilation in `~/Library/Caches/mbx` and shares it with every checkout and worktree
+of your account, so a new worktree reuses what another one already built. The first
+edit to a crate there compiles that crate in full once; later edits are incremental.
+`target` becomes a link to a build directory in that cache, which mbx removes when
+its checkout is gone, after 30 days unused, over the disk budget, or when the disk
+runs low. Elsecall admits the builds itself, so mbx's own build scheduler is off.
+`MBX_DISABLE=1` runs one command with plain Cargo, as CI does; release packaging
+always uses plain Cargo.
+
 The CLI link is `~/.local/bin/elsecall`. If that directory is not on your PATH, use
 `~/.local/bin/elsecall` directly or add this to your shell configuration:
 

@@ -57,6 +57,18 @@ def release_env(root, env=None):
     return prepared
 
 
+def cargo():
+    """The toolchain's own cargo, which mise.toml pins, rather than mise's cargo
+    wrapper: the wrapper adds the build cache, and it reads mise.toml where it
+    runs, which a copied source tree (scripts/local_release.py) is not trusted to
+    provide. Plain `cargo` without mise."""
+    try:
+        found = subprocess.run(["mise", "which", "cargo"], cwd=ROOT, capture_output=True, text=True)
+    except FileNotFoundError:
+        return "cargo"
+    return found.stdout.strip() if found.returncode == 0 and found.stdout.strip() else "cargo"
+
+
 def build(root=ROOT, target=TARGET, features=(), env=None):
     """Build both executables; features and env apply to the CLI only."""
     if target != TARGET:
@@ -70,8 +82,9 @@ def build(root=ROOT, target=TARGET, features=(), env=None):
         for key, value in release_env(root).items()
         if not key.startswith("ELSECALL_LOCAL_RELEASE_")
     }
+    toolchain = cargo()
     for crate, deployment in ((TOOL, "13.0"), ("elsecall-ui", "14.0")):
-        command = ["cargo", "build", "--locked", "--release", "--target", target, "-p", crate]
+        command = [toolchain, "build","--locked", "--release", "--target", target, "-p", crate]
         extra = {}
         if crate == TOOL and features:
             command += ["--features", ",".join(features)]

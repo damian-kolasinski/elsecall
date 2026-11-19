@@ -130,6 +130,7 @@ class Package(unittest.TestCase):
 
         with (
             mock.patch.object(package.subprocess, "check_output", return_value="host: aarch64-apple-darwin\n"),
+            mock.patch.object(package, "cargo", return_value="cargo"),
             mock.patch.object(package.subprocess, "run", side_effect=record),
             mock.patch.object(package.sys, "argv", ["package.py", "--build"]),
             mock.patch("builtins.print"),
@@ -147,6 +148,7 @@ class Package(unittest.TestCase):
         calls = []
         with (
             mock.patch.object(package.subprocess, "check_output", return_value="host: aarch64-apple-darwin\n"),
+            mock.patch.object(package, "cargo", return_value="cargo"),
             mock.patch.object(package.subprocess, "run", side_effect=lambda command, **kw: calls.append(kw["env"])),
             mock.patch.dict(package.os.environ, {"ELSECALL_LOCAL_RELEASE_FAULT": "serve"}),
         ):
@@ -155,6 +157,27 @@ class Package(unittest.TestCase):
         self.assertTrue(all("ELSECALL_LOCAL_RELEASE_FAULT" not in env for env in calls))
         self.assertEqual(calls[0]["ELSECALL_LOCAL_RELEASE_CHANNEL"], "http://x")
         self.assertTrue(all("ELSECALL_LOCAL_RELEASE_CHANNEL" not in env for env in calls[1:]))
+
+    def test_builds_run_the_toolchains_cargo_from_any_directory(self):
+        commands = []
+        with (
+            mock.patch.object(package.subprocess, "check_output", return_value="host: aarch64-apple-darwin\n"),
+            mock.patch.object(package, "cargo", return_value="/toolchain/bin/cargo"),
+            mock.patch.object(package.subprocess, "run", side_effect=lambda command, **_: commands.append(command)),
+        ):
+            package.build(root="/elsewhere/copy")
+        self.assertEqual([command[0] for command in commands], ["/toolchain/bin/cargo"] * 2)
+
+    def test_cargo_is_resolved_from_the_repository_and_falls_back_to_plain_cargo(self):
+        found = mock.Mock(returncode=0, stdout="/toolchain/bin/cargo\n")
+        with mock.patch.object(package.subprocess, "run", return_value=found) as run:
+            self.assertEqual(package.cargo(), "/toolchain/bin/cargo")
+        self.assertEqual(run.call_args.args[0], ["mise", "which", "cargo"])
+        self.assertEqual(run.call_args.kwargs["cwd"], package.ROOT)
+        with mock.patch.object(package.subprocess, "run", return_value=mock.Mock(returncode=1, stdout="")):
+            self.assertEqual(package.cargo(), "cargo")
+        with mock.patch.object(package.subprocess, "run", side_effect=FileNotFoundError):
+            self.assertEqual(package.cargo(), "cargo")
 
     def test_archive_reader_rejects_a_path(self):
         with tempfile.TemporaryDirectory() as directory:

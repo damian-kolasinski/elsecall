@@ -21,6 +21,8 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   MISE_GITHUB_TOKEN: ${{ github.token }}
+  # Plain Cargo, not mbx's build cache: a runner starts with an empty one.
+  MBX_DISABLE: "1"
 
 jobs:
   version:

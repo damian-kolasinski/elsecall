@@ -13,6 +13,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
+env:
+  # Plain Cargo, not mbx's build cache: a runner starts with an empty one.
+  MBX_DISABLE: "1"
 jobs:
   macos:
     runs-on: macos-latest
