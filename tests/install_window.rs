@@ -1,14 +1,14 @@
 //! `elsecall install` puts the release's window in place as the app, and opens it on
 //! request, with real files and only launchd, signing and launching replaced.
 #![cfg(target_os = "macos")]
-use elsecall::{
-    install_window::{self, Window},
-    window_app::{self, WindowLauncher},
-};
 use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::{Failure, Result};
 use elsecall_installation::installation::{self, ServiceManager, Session, Transaction};
 use elsecall_local_state::paths::Paths;
+use elsecall_window::{
+    install_window::{self, Window},
+    window_app::{self, WindowLauncher},
+};
 use std::{cell::RefCell, fs, path::Path, sync::Mutex};
 
 #[derive(Default)]

@@ -48,7 +48,10 @@ async fn offer(State(paths): State<Paths>) -> Response {
 
 async fn update(State(paths): State<Paths>) -> Response {
     let launched = tokio::task::spawn_blocking(move || {
-        crate::window_app::publish(&paths, &crate::macos::window_launcher::MacWindowLauncher)
+        elsecall_window::window_app::publish(
+            &paths,
+            &crate::macos::window_launcher::MacWindowLauncher,
+        )
     })
     .await
     .expect("replacing the window does not panic");

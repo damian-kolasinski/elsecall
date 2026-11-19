@@ -12,7 +12,6 @@ pub mod fleet_cli;
 pub mod fleet_upgrade;
 pub mod fleet_upgrade_api;
 pub mod fleet_upgrade_local_api;
-pub mod install_window;
 pub mod macos;
 pub mod nearby_cli;
 pub mod openssh_mac;
@@ -34,8 +33,6 @@ pub mod ui_app;
 pub mod uninstall;
 pub mod upgrade_drain;
 pub mod upgrade_helper_process;
-pub mod window_app;
-pub mod window_startup;
 
 pub mod state_sizes;
 

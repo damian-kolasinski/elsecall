@@ -106,7 +106,7 @@ fn not_ready() -> Failure {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::window_startup::*;
     #[test]
     fn startup_requires_an_acknowledgment_and_cleans_up_after_a_failure() {
         let startup = WindowStartup::new().unwrap();

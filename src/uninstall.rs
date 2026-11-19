@@ -59,7 +59,7 @@ impl InstalledParts for InstalledSlices {
     fn remove(&self, paths: &Paths) -> Result<()> {
         crate::fleet_upgrade::journal::Journal::new(&paths.data).remove()?;
         crate::release_update::store::remove(paths)?;
-        crate::window_app::remove_locked(paths);
+        elsecall_window::window_app::remove_locked(paths);
         Ok(())
     }
 }

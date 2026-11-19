@@ -54,7 +54,7 @@ const INFO_PLIST: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 
 /// The app's icon, `CFBundleIconFile` in `Contents/Resources`. Rendered from
 /// `assets/icon/elsecall.svg` by `scripts/render-icon.sh`.
-const ICON: &[u8] = include_bytes!("../assets/icon/Elsecall.icns");
+const ICON: &[u8] = include_bytes!("../../../assets/icon/Elsecall.icns");
 
 /// Sign before publication; restore the previous bundle if opening fails.
 pub fn publish(paths: &Paths, launcher: &dyn WindowLauncher) -> Result<()> {
@@ -292,7 +292,7 @@ pub fn running_build(
 
 #[cfg(test)]
 mod tests {
-    use super::ICON;
+    use crate::window_app::ICON;
 
     /// The element types in an ICNS file, after its 8-byte header.
     fn icns_types(icns: &[u8]) -> Vec<String> {

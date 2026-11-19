@@ -404,7 +404,7 @@ pub fn run() {
     let mut args = std::env::args().skip(1).collect::<Vec<_>>();
     let mut ready = if args
         .first()
-        .is_some_and(|arg| arg == elsecall::window_startup::READY_ARGUMENT)
+        .is_some_and(|arg| arg == elsecall_window::window_startup::READY_ARGUMENT)
     {
         if args.len() < 2 {
             eprintln!("elsecall-ui: missing startup socket");
@@ -421,7 +421,7 @@ pub fn run() {
         .args(args)
         .on_ready(move |_| {
             if let Some(socket) = ready.take()
-                && elsecall::window_startup::acknowledge(&socket).is_err()
+                && elsecall_window::window_startup::acknowledge(&socket).is_err()
             {
                 // The launcher timed out and restored the previous bundle.
                 std::process::exit(1);
@@ -528,7 +528,7 @@ fn init() -> AppState {
 
 fn own_build() -> Option<String> {
     let path = std::env::current_exe().ok()?;
-    elsecall::window_app::running_build(&path)
+    elsecall_window::window_app::running_build(&path)
         .ok()
         .map(|build| build.to_string())
 }

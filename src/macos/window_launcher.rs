@@ -1,6 +1,6 @@
 //! macOS signing and LaunchServices adapter for window publication.
-use crate::window_app::WindowLauncher;
 use elsecall_failure::{Failure, Result};
+use elsecall_window::window_app::WindowLauncher;
 use std::{path::Path, process::Command};
 
 pub struct MacWindowLauncher;
@@ -23,13 +23,13 @@ impl WindowLauncher for MacWindowLauncher {
     }
 
     fn open(&self, app: &Path) -> Result<()> {
-        let startup = crate::window_startup::WindowStartup::new()?;
+        let startup = elsecall_window::window_startup::WindowStartup::new()?;
         // Without -n, LaunchServices activates the old instance, which is about to exit.
         let opened = Command::new("/usr/bin/open")
             .arg("-n")
             .arg(app)
             .arg("--args")
-            .arg(crate::window_startup::READY_ARGUMENT)
+            .arg(elsecall_window::window_startup::READY_ARGUMENT)
             .arg(startup.socket())
             .output()
             .map_err(|error| Failure::io("Open the Elsecall app", error))?;

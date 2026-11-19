@@ -1,13 +1,5 @@
 #![cfg(target_os = "macos")]
 //! The real installer, transaction, service restart and rollback; provider/OS adapters are fakes.
-use elsecall::{
-    release_update::{
-        self, Job, JobId, Phase, Release, ReleaseDownload, ReleaseVersion, StagedRelease, helper,
-        selection::{CliSelection, Snapshot},
-        store::Store,
-    },
-    window_app::{self, WindowLauncher},
-};
 use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::{Failure, Result};
 use elsecall_installation::installation::{self, ServiceManager, Session};
@@ -21,6 +13,14 @@ use std::{
         atomic::{AtomicUsize, Ordering},
     },
     time::Duration,
+};
+use {
+    elsecall::release_update::{
+        self, Job, JobId, Phase, Release, ReleaseDownload, ReleaseVersion, StagedRelease, helper,
+        selection::{CliSelection, Snapshot},
+        store::Store,
+    },
+    elsecall_window::window_app::{self, WindowLauncher},
 };
 
 struct Manager {

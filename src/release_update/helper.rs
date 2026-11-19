@@ -4,12 +4,12 @@ use super::{
     selection::{CliSelection, Snapshot},
     store::{self, Store},
 };
-use crate::window_app::{self, WindowLauncher};
 use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::{Failure, Result};
 use elsecall_installation::installation::{ServiceManager, Transaction};
 use elsecall_local_client as client;
 use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_window::window_app::{self, WindowLauncher};
 use std::{
     fs,
     path::PathBuf,

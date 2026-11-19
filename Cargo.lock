@@ -1100,6 +1100,7 @@ dependencies = [
  "elsecall-sqlite-retention",
  "elsecall-tailnet",
  "elsecall-tools",
+ "elsecall-window",
  "elsecall-wire",
  "elsecall-workload",
  "elsecall-workload-config",
@@ -1659,6 +1660,7 @@ dependencies = [
  "elsecall-local-state",
  "elsecall-membership",
  "elsecall-scheduling-model",
+ "elsecall-window",
  "elsecall-wire",
  "elsecall-workload-config",
  "libc",
@@ -1671,6 +1673,20 @@ dependencies = [
  "tempfile",
  "tokio",
  "zeroize",
+]
+
+[[package]]
+name = "elsecall-window"
+version = "0.3.0"
+dependencies = [
+ "elsecall-build-identity",
+ "elsecall-failure",
+ "elsecall-installation",
+ "elsecall-local-state",
+ "libc",
+ "plist",
+ "serde",
+ "tempfile",
 ]
 
 [[package]]

@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use elsecall::{
     admission_cli::{self, LeaseCommand},
-    fleet_cli, install_window,
+    fleet_cli,
     macos::{
         application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
         tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
@@ -17,6 +17,7 @@ use elsecall_machine::inspection::{Health, Inspection, Machine};
 use elsecall_os_processes::processes::MacProcesses;
 use elsecall_scheduling as scheduling;
 use elsecall_tailnet::tailnet;
+use elsecall_window::install_window;
 use elsecall_wire::api;
 use serde::Serialize;
 use std::{process::ExitCode, sync::Arc, time::Duration};
