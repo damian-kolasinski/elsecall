@@ -6,10 +6,11 @@
 //! process it denies gets `local_network_denied`.
 use crate::{
     failure::{Failure, Result},
+    lan_address::is_lan,
     nearby_macs::{Advertisement, LocalNetwork, Offer},
 };
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     ffi::{CStr, CString, c_char, c_void},
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
     time::{Duration, Instant},
@@ -26,6 +27,8 @@ const FLAG_ADD: u32 = 0x2;
 const FLAG_SHARE_CONNECTION: u32 = 0x4000;
 const PROTOCOL_IPV4: u32 = 0x01;
 const PROTOCOL_IPV6: u32 = 0x02;
+/// `kDNSServiceInterfaceIndexAny`: every interface except peer-to-peer ones.
+const INTERFACE_ANY: u32 = 0;
 const TYPE_TXT: u16 = 16;
 const CLASS_IN: u16 = 1;
 const DOMAIN: &CStr = c"local.";
@@ -204,10 +207,7 @@ impl LocalNetwork for Bonjour {
             })?;
             (resolutions(&session), models(&session))
         };
-        let mut hosts: BTreeMap<String, u32> = BTreeMap::new();
-        for target in resolved.values() {
-            hosts.entry(target.host.clone()).or_insert(target.interface);
-        }
+        let hosts: BTreeSet<&str> = resolved.values().map(|t| t.host.as_str()).collect();
         let addresses = addresses(&hosts, Instant::now() + ADDRESS_WINDOW)?;
 
         Ok(found
@@ -261,7 +261,6 @@ fn start_resolving(session: &mut Session, found: &BTreeMap<(Kind, String), u32>)
         };
         let context = Resolved {
             key: (*kind, name.clone()),
-            interface: *interface,
             target: None,
         };
         let _ = session.start(context, |reference, context| unsafe {
@@ -279,9 +278,8 @@ fn start_resolving(session: &mut Session, found: &BTreeMap<(Kind, String), u32>)
     }
 }
 
-/// Where a browsed service runs, and the interface it was seen on.
+/// Where a browsed service runs.
 struct Target {
-    interface: u32,
     host: String,
     port: u16,
 }
@@ -291,31 +289,25 @@ fn resolutions(session: &Session) -> BTreeMap<(Kind, String), Target> {
         .contexts::<Resolved>()
         .filter_map(|r| {
             let (host, port) = r.target.clone()?;
-            Some((
-                r.key.clone(),
-                Target {
-                    interface: r.interface,
-                    host,
-                    port,
-                },
-            ))
+            Some((r.key.clone(), Target { host, port }))
         })
         .collect()
 }
 
-/// Every host's addresses that a connection can use: IPv4 first, without IPv6
-/// link-local addresses, which need an interface scope the output does not carry.
-fn addresses(
-    hosts: &BTreeMap<String, u32>,
-    deadline: Instant,
-) -> Result<BTreeMap<String, Vec<IpAddr>>> {
+/// Every host's local network addresses, IPv4 first: the same kind members
+/// report, so the two compare.
+///
+/// They are looked up on every interface, not the one the service was browsed
+/// on: a host sees its own services on loopback too, and there it has only
+/// addresses no other machine can use, so the Mac running this would have none.
+fn addresses(hosts: &BTreeSet<&str>, deadline: Instant) -> Result<BTreeMap<String, Vec<IpAddr>>> {
     let mut session = Session::open()?;
-    for (host, interface) in hosts {
-        let Ok(c_host) = CString::new(host.as_str()) else {
+    for host in hosts {
+        let Ok(c_host) = CString::new(*host) else {
             continue;
         };
         let context = Addressed {
-            host: host.clone(),
+            host: (*host).to_owned(),
             addresses: Vec::new(),
             settled: false,
         };
@@ -323,7 +315,7 @@ fn addresses(
             DNSServiceGetAddrInfo(
                 reference,
                 FLAG_SHARE_CONNECTION,
-                *interface,
+                INTERFACE_ANY,
                 PROTOCOL_IPV4 | PROTOCOL_IPV6,
                 c_host.as_ptr(),
                 addressed,
@@ -337,21 +329,12 @@ fn addresses(
     Ok(session
         .contexts::<Addressed>()
         .map(|a| {
-            let mut addresses: Vec<IpAddr> = a
-                .addresses
-                .iter()
-                .copied()
-                .filter(|address| !is_link_local_v6(*address))
-                .collect();
+            let mut addresses = a.addresses.clone();
             addresses.sort_by_key(|address| (address.is_ipv6(), *address));
             addresses.dedup();
             (a.host.clone(), addresses)
         })
         .collect())
-}
-
-fn is_link_local_v6(address: IpAddr) -> bool {
-    matches!(address, IpAddr::V6(v6) if v6.segments()[0] & 0xffc0 == 0xfe80)
 }
 
 /// Starts reading the model each advertised name reports in its
@@ -435,11 +418,11 @@ struct Browsed {
 }
 struct Resolved {
     key: (Kind, String),
-    interface: u32,
     target: Option<(String, u16)>,
 }
 struct Addressed {
     host: String,
+    /// Only `is_lan` addresses.
     addresses: Vec<IpAddr>,
     /// The daemon delivered what it had at once (no "more coming").
     settled: bool,
@@ -516,6 +499,7 @@ unsafe extern "C" fn addressed(
         && flags & FLAG_ADD != 0
         && !address.is_null()
         && let Some(address) = unsafe { ip_address(address) }
+        && is_lan(address)
     {
         context.addresses.push(address);
     }
@@ -696,12 +680,5 @@ mod tests {
         assert_eq!(txt_value(record, "missing"), None);
         // A truncated string ends the record instead of reading past it.
         assert_eq!(txt_value(b"\x20model=Mac", "model"), None);
-    }
-
-    #[test]
-    fn link_local_ipv6_addresses_are_recognised() {
-        assert!(is_link_local_v6("fe80::1".parse().unwrap()));
-        assert!(!is_link_local_v6("fd7a:115c:a1e0::1".parse().unwrap()));
-        assert!(!is_link_local_v6("192.168.1.2".parse().unwrap()));
     }
 }

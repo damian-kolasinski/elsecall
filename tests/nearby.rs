@@ -75,10 +75,12 @@ fn nearby_lists_macs_whether_remote_login_is_on_and_which_are_members() {
     let member = TestMember::start("nearby-member");
     let tag = format!("ec{}", std::process::id());
     let mut advertised = Advertised::default();
+    // Documentation-range addresses: the kind a Mac has on a local network, which
+    // nearby keeps, unlike loopback; registered on this Mac only, never routed.
     advertised.device(
         &format!("{tag} New Mac"),
         &format!("{tag}-new.local"),
-        "127.0.0.1",
+        "192.0.2.1",
         "_ssh._tcp",
         "2222",
         "Mac16,10",
@@ -86,15 +88,24 @@ fn nearby_lists_macs_whether_remote_login_is_on_and_which_are_members() {
     advertised.device(
         &format!("{tag} Studio"),
         &format!("{tag}-studio.local"),
-        "127.0.0.2",
+        "192.0.2.2",
         "_companion-link._tcp",
         "49152",
+        "Mac14,13",
+    );
+    // Only addresses no other Mac can use: listed without them.
+    advertised.device(
+        &format!("{tag} Loop"),
+        &format!("{tag}-loop.local"),
+        "127.0.0.4",
+        "_companion-link._tcp",
+        "49154",
         "Mac14,13",
     );
     advertised.device(
         &format!("{tag} Phone"),
         &format!("{tag}-phone.local"),
-        "127.0.0.3",
+        "192.0.2.3",
         "_companion-link._tcp",
         "49153",
         "iPhone17,1",
@@ -116,11 +127,14 @@ fn nearby_lists_macs_whether_remote_login_is_on_and_which_are_members() {
 
     let new = format!("{tag} New Mac");
     let new_host = format!("{tag}-new.local");
+    let lo = format!("{tag} Loop");
+    let lo_host = format!("{tag}-loop.local");
     let studio = format!("{tag} Studio");
     let studio_host = format!("{tag}-studio.local");
     let member_name = format!("{tag} Member");
     let expected = serde_json::json!([
         [new, new_host, "on", "not_member", null, "Mac16,10"],
+        [lo, lo_host, "off", "not_member", null, "Mac14,13"],
         [studio, studio_host, "off", "not_member", null, "Mac14,13"],
         [
             member_name,
@@ -158,8 +172,10 @@ fn nearby_lists_macs_whether_remote_login_is_on_and_which_are_members() {
     assert_eq!(summary(&data), expected, "{data}");
     let found = ours(&data["macs"], &tag);
     assert_eq!(found[0]["ssh_port"], 2222);
-    assert_eq!(found[0]["addresses"], serde_json::json!(["127.0.0.1"]));
+    assert_eq!(found[0]["addresses"], serde_json::json!(["192.0.2.1"]));
     assert!(found[1].get("ssh_port").is_none());
+    assert_eq!(found[1]["addresses"], serde_json::json!([]));
+    assert_eq!(found[2]["addresses"], serde_json::json!(["192.0.2.2"]));
     assert!(
         data["next_step"]
             .as_str()

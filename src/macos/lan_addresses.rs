@@ -1,5 +1,5 @@
 //! This Mac's addresses on its local networks: what other Macs there reach it at.
-use crate::tailnet::is_tailnet_address;
+use crate::lan_address::is_lan;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 /// Every IPv4 and routable IPv6 address on an interface that is up, without
@@ -45,35 +45,12 @@ pub fn lan_addresses() -> Vec<IpAddr> {
     addresses
 }
 
-fn is_lan(address: IpAddr) -> bool {
-    if address.is_loopback() || address.is_unspecified() || is_tailnet_address(address) {
-        return false;
-    }
-    match address {
-        IpAddr::V4(v4) => !v4.is_link_local(),
-        IpAddr::V6(v6) => v6.segments()[0] & 0xffc0 != 0xfe80,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn only_local_network_addresses_count() {
-        for lan in ["192.168.1.20", "10.0.0.5", "fdf1:54a:8baf::1"] {
-            assert!(is_lan(lan.parse().unwrap()), "{lan}");
-        }
-        for not in [
-            "127.0.0.1",
-            "::1",
-            "169.254.1.1",
-            "fe80::1",
-            "100.64.0.10",
-            "fd7a:115c:a1e0::a",
-        ] {
-            assert!(!is_lan(not.parse().unwrap()), "{not}");
-        }
+    fn only_local_network_addresses_are_listed() {
         // Whatever this Mac has, none of it is loopback or tailnet.
         assert!(lan_addresses().into_iter().all(is_lan));
     }

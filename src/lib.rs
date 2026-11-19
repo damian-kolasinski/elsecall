@@ -41,6 +41,7 @@ pub mod install_window;
 pub mod installation;
 pub mod inventory_reader;
 pub mod label_pattern;
+pub mod lan_address;
 pub mod lifecycle_holder;
 pub mod load_log;
 pub mod local_access;

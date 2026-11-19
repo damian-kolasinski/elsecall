@@ -41,7 +41,7 @@ it without changing its readiness.
    Login off and what to turn on. Listing is best effort; a typed host name works
    without it. Members are listed as members, so the window can repair one.
    Discovery is a port; the production adapter uses the system's DNS-SD.
-2. **Connects over SSH** to the address Bonjour resolved, with the account and
+2. **Connects over SSH** to the Mac by its host name or address, with the account and
    password, and checks the Mac before changing anything. It refuses a Mac it cannot run the master's build
    on (the build is arm64 for macOS 14 or later), an account that is not an
    administrator, and a password sudo does not accept. It reports the Mac's model,

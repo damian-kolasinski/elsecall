@@ -1798,11 +1798,13 @@ the first step of [Adding a Mac](docs/add-mac.md). It browses Bonjour for `_ssh.
 (Remote Login on) and `_companion-link._tcp` (most Macs while Continuity is on), keeps
 the hosts whose `_device-info._tcp` model is a Mac model identifier (or SSH hosts that
 report none), and prints one entry per host: `name`, `host` (such as
-`macbook-pro.local`), `addresses` (IPv4 first, without unscoped link-local IPv6),
+`macbook-pro.local`), `addresses` (IPv4 first, looked up on every interface, without loopback,
+link-local or tailnet addresses, as members report theirs),
 `model`, `remote_login` (`on` with `ssh_port`, or `off`) and `membership`. A Mac is a
 `member` (with `member` naming it) when its host name and one of its addresses match
 what that member reports; a name match alone is a `possible_member`, since default
-Mac names repeat across networks. Members report their Bonjour `local_host_name` and
+Mac names repeat across networks, unless that member reports addresses and the Mac
+has others, which makes it another Mac (`not_member`). Members report their Bonjour `local_host_name` and
 `lan_addresses` in machine inspection for this. Macs that can be added come first,
 then those with Remote Login off, SSH hosts without a model, and members; `next_step`
 suggests only a Mac that can be added. It browses in the CLI's own process while it
