@@ -23,6 +23,12 @@ const STOP_GRACE: Duration = Duration::from_secs(5);
 const KILL_WAIT: Duration = Duration::from_secs(2);
 /// At most this many of them are recorded, for a restart to find the group.
 const RECORDED: usize = 8;
+// Scheduling's `STOPPING` is the longest stopping takes here, which the hold
+// budget and the simulation plan with: grace, kill wait and a sample.
+const _: () = assert!(
+    STOP_GRACE.as_millis() + KILL_WAIT.as_millis() + SAMPLE.as_millis()
+        <= elsecall_scheduling::leftovers::STOPPING.as_millis()
+);
 
 pub(crate) use elsecall_scheduling::leftovers::Cap;
 

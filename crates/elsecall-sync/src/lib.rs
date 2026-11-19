@@ -1,5 +1,5 @@
 //! Keeping members alike: syncing configuration between them, and this member's
-//! service configuration.
+//! service configuration, which the service relaunches to apply once it is idle.
 pub mod config_sync;
 pub mod config_sync_api;
 pub mod config_sync_cli;

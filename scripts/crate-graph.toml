@@ -71,8 +71,8 @@ modules = ["tailnet", "tailscale_bottle", "secure_channel", "roster", "member_ke
 [crates.scheduling]
 band = "core"
 # Scheduling work on this member: admitting it, the records and estimates it
-# learns from, the load log, outside pressure, and the operating system's
-# processes it watches. The library's `scheduling` module is this crate's root
+# learns from, the load log, outside pressure, and the leftovers of placed runs.
+# The library's `scheduling` module is this crate's root
 # (`scheduling::service` is `elsecall_scheduling::service`).
 modules = ["scheduling", "load_log", "outside_pressure", "outside_pressure_gate"]
 
@@ -108,7 +108,7 @@ modules = ["workload_settings", "workload_configuration", "workload_migration"]
 [crates.sync]
 band = "feature"
 # Keeping members alike: syncing configuration between them, and this member's
-# service configuration.
+# service configuration, which the service relaunches to apply once it is idle.
 modules = ["config_sync", "config_sync_api", "config_sync_cli", "config_sync_local_api", "service_configuration", "configuration", "service_relaunch"]
 
 [crates.workspace]
