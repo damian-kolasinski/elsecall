@@ -1,10 +1,8 @@
 //! Observational duration curves, paired by exact label and warmth before
 //! pooling into a family. These are associations, not causal slowdown claims.
-use crate::{
-    reporting::facts::Fact,
-    workload::demand::{family, interval, median, overlap},
-};
+use crate::workload::demand::{family, interval, median, overlap};
 use elsecall_load_log::buckets::Bucket;
+use elsecall_report_facts::facts::Fact;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 

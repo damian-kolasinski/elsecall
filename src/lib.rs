@@ -54,7 +54,6 @@ pub mod replay_api;
 pub mod replay_cli;
 pub mod report_api;
 pub mod report_cli;
-pub mod report_protocol;
 pub mod reporting;
 pub mod run_relay;
 pub mod server;

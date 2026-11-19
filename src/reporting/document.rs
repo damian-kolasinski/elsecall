@@ -3,18 +3,20 @@
 use crate::reporting::{
     accuracy::{self, Accuracy},
     blocked::{self, Blocked, BlockedQueue},
-    facts::Fact,
     findings::{self, Finding},
-    leftovers::{self, LeftoverFact, LeftoverMetrics},
     load::{self, Balance, LoadTotals, SeriesPoint, SpeedDrift},
     overload::{self, Overload},
     requests::{self, FleetBusy, PlacementMix, Requests, Waits, Work},
     run_phases::{self, PhaseMetrics},
-    window::Window,
 };
 use elsecall_failure::Failure;
 use elsecall_labels::pattern as label_pattern;
 use elsecall_load_log::buckets::Bucket;
+use elsecall_report_facts::{
+    facts::Fact,
+    leftovers::{self, LeftoverFact, LeftoverMetrics},
+    window::Window,
+};
 use elsecall_scheduling::parameters::Parameters;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
@@ -485,7 +487,7 @@ mod tests {
             ));
         }
         // report uses all context to fit, then applies label/member filters.
-        use crate::reporting::window::Window;
+        use elsecall_report_facts::window::Window;
         let until = Timestamp::from_millis(T0 + 26 * 60_000);
         let gathered = Gathered {
             this_member: "mini".into(),

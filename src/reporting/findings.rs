@@ -5,7 +5,6 @@ use crate::reporting::{
     accuracy::Agreement,
     blocked::{Blocked, BlockedQueue, Pressure, QUEUED_SECONDS, QueueEnd},
     document::{Gathered, MemberInput, MemberMetrics, Metrics},
-    leftovers::LabelLeftovers,
     load::{BUSY_CPU, IDLE_CPU},
     outside_warnings::PeriodWarning,
     overload::{How, Overload},
@@ -16,6 +15,7 @@ use elsecall_outside_pressure::outside_pressure::{
     trend,
     warning::Concern,
 };
+use elsecall_report_facts::leftovers::LabelLeftovers;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 
@@ -922,13 +922,9 @@ pub fn findings(metrics: &Metrics, gathered: &Gathered) -> Vec<Finding> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reporting::{
-        document::{Gathered, MemberInput, Query, RecordsRead, document},
-        facts::Fact,
-        leftovers::LeftoverFact,
-        window::Window,
-    };
+    use crate::reporting::document::{Gathered, MemberInput, Query, RecordsRead, document};
     use elsecall_outside_pressure::outside_pressure::sampling::Owner;
+    use elsecall_report_facts::{facts::Fact, leftovers::LeftoverFact, window::Window};
     use elsecall_scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
     use elsecall_scheduling::{
         placement::Source,
@@ -1779,7 +1775,7 @@ mod tests {
 
         // The same lease placeable waits for any member, not this one's gate.
         let mut placeable = incident();
-        placeable.facts[0].placement = crate::reporting::facts::PlacementKind::Placeable;
+        placeable.facts[0].placement = elsecall_report_facts::facts::PlacementKind::Placeable;
         let findings = document(&incident_query(), &placeable).findings;
         assert!(
             findings.iter().all(|f| f.kind != "queued_on_closed_gate"),

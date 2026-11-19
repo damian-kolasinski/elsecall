@@ -4,17 +4,17 @@
 //! quoted.
 use crate::{
     fleet::Fleet,
-    report_protocol::{FactsPage, FactsRequest, LoadRequest, PAGE},
-    reporting::{
-        facts::is_code,
-        gathering::{Facts, MAXIMUM_FACTS, MemberHistory},
-        window::{FINE_BUCKETS, Window},
-    },
+    reporting::gathering::{Facts, MAXIMUM_FACTS, MemberHistory},
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_load_log::buckets::Bucket;
 use elsecall_membership::roster::Member;
 use elsecall_peer_transport::peer_client;
+use elsecall_report_facts::{
+    facts::is_code,
+    report_protocol::{FactsPage, FactsRequest, LoadRequest, PAGE},
+    window::{FINE_BUCKETS, Window},
+};
 use elsecall_scheduling_model::speed::PLAUSIBLE;
 use futures_util::future::BoxFuture;
 use hyper::Method;
@@ -164,7 +164,7 @@ impl MemberHistory for PeerHistory {
             history
                 .call(
                     "/peer/v1/report/outside",
-                    &crate::report_protocol::OutsideRequest {
+                    &elsecall_report_facts::report_protocol::OutsideRequest {
                         since_ms: window.since.millis(),
                         until_ms: window.until.millis(),
                     },
@@ -190,7 +190,7 @@ impl MemberHistory for PeerHistory {
             let result: elsecall_peer_diagnostics::History = history
                 .call(
                     "/peer/v1/report/peer-io",
-                    &crate::report_protocol::PeerIoRequest {
+                    &elsecall_report_facts::report_protocol::PeerIoRequest {
                         since_ms: window.since.millis(),
                         until_ms: window.until.millis(),
                     },
@@ -199,7 +199,7 @@ impl MemberHistory for PeerHistory {
             if result
                 .error
                 .as_deref()
-                .is_some_and(|code| !crate::reporting::facts::is_code(code))
+                .is_some_and(|code| !elsecall_report_facts::facts::is_code(code))
                 || result
                     .coverage_since
                     .is_some_and(|at| at > elsecall_scheduling_model::timestamp::Timestamp::now())
@@ -235,7 +235,7 @@ impl MemberHistory for PeerHistory {
     fn trace_page(
         &self,
         window: Window,
-        before: Option<crate::report_protocol::Cursor>,
+        before: Option<elsecall_report_facts::report_protocol::Cursor>,
     ) -> BoxFuture<'static, Result<crate::workload::trace::Page>> {
         let history = self.clone();
         Box::pin(async move {
@@ -243,7 +243,7 @@ impl MemberHistory for PeerHistory {
             let page = history
                 .call(
                     "/peer/v1/trace/requests",
-                    &crate::report_protocol::PageRequest {
+                    &elsecall_report_facts::report_protocol::PageRequest {
                         since_ms: window.since.millis(),
                         until_ms: window.until.millis(),
                         member: None,

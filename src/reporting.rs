@@ -24,10 +24,8 @@ pub mod accuracy;
 pub mod backtest;
 pub mod blocked;
 pub mod document;
-pub mod facts;
 pub mod findings;
 pub mod gathering;
-pub mod leftovers;
 pub mod load;
 pub mod outside;
 pub mod outside_warnings;
@@ -35,6 +33,5 @@ pub mod overload;
 pub mod requests;
 pub mod run_phases;
 pub mod statistics;
-pub mod window;
 
 pub mod tuning;

@@ -1,10 +1,8 @@
 //! Validate the on-disk trace at the simulator boundary. Missing historical
 //! evidence is allowed; the fidelity gate identifies it without inventing data.
-use crate::{
-    reporting::facts::{PlacementKind, is_code},
-    workload::trace::{Trace, TraceOutcome, VERSION},
-};
+use crate::workload::trace::{Trace, TraceOutcome, VERSION};
 use elsecall_failure::{Failure, Result};
+use elsecall_report_facts::facts::{PlacementKind, is_code};
 use elsecall_scheduling_model::{
     capacity::Capacity,
     request::{Kind, MAXIMUM_DEADLINE, MAXIMUM_HOLD_LIMIT, Placement, Urgency},

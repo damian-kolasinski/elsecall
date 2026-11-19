@@ -3,12 +3,13 @@
 //! gate closed, and its early warnings about outside processes that spun or
 //! grew before any did. Members answer `POST /peer/v1/report/outside` with it; another
 //! member's answer is untrusted and bounded by [`bounded`].
-use crate::reporting::{blocked::Pressure, window::Window};
+use crate::reporting::blocked::Pressure;
 use elsecall_outside_pressure::outside_pressure::{
     blocked::{OutsideProcess, Reason, lenient_list},
     store::Episode,
     warning::{Concern, WarningEpisode},
 };
+use elsecall_report_facts::window::Window;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 
@@ -51,7 +52,7 @@ fn believable_warning(episode: &WarningEpisode, window: Window) -> bool {
     let measures = match warning.concern {
         Concern::Spinning { cpu_cores } => {
             cpu_cores.is_finite()
-                && (0.0..=crate::reporting::leftovers::MOST_CORES as f64).contains(&cpu_cores)
+                && (0.0..=elsecall_report_facts::leftovers::MOST_CORES as f64).contains(&cpu_cores)
         }
         Concern::Growing { .. } => true,
         Concern::Oversized {
@@ -80,7 +81,7 @@ fn misleading(c: char) -> bool {
 fn believable(process: &OutsideProcess) -> bool {
     believable_name(&process.name)
         && process.cpu_cores.is_finite()
-        && (0.0..=crate::reporting::leftovers::MOST_CORES as f64).contains(&process.cpu_cores)
+        && (0.0..=elsecall_report_facts::leftovers::MOST_CORES as f64).contains(&process.cpu_cores)
 }
 
 /// `history` within bounds, as a member answers it and as another member's

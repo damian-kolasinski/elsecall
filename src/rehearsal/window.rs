@@ -27,8 +27,8 @@ impl std::str::FromStr for Busiest {
         }
         let duration = text.strip_prefix("busiest:")
             .and_then(|s| humantime::parse_duration(s).ok())
-            .filter(|d| d.as_millis() >= 1 && *d <= crate::reporting::window::MAXIMUM_PERIOD)
-            .ok_or_else(|| crate::reporting::window::invalid(
+            .filter(|d| d.as_millis() >= 1 && *d <= elsecall_report_facts::window::MAXIMUM_PERIOD)
+            .ok_or_else(|| elsecall_report_facts::window::invalid(
                 "--rehearsal-window must be busiest:DURATION, from 1ms to 30d (for example busiest:2h)."))?;
         Ok(Self {
             duration_ms: duration.as_millis() as u64,
@@ -347,7 +347,7 @@ pub fn explicit(
     minimum: NonZeroUsize,
 ) -> Result<(Trace, Selection)> {
     if since < source.since || until > source.until || since >= until {
-        return Err(crate::reporting::window::invalid(
+        return Err(elsecall_report_facts::window::invalid(
             "Explicit arrival bounds must be nonempty and inside the source history.",
         ));
     }
@@ -367,7 +367,7 @@ pub fn explicit(
 pub fn bound(source: &Trace, since: Timestamp, until: Timestamp) -> Result<Trace> {
     crate::simulation::validate_trace(source)?;
     if since < source.since || until > source.until || since >= until {
-        return Err(crate::reporting::window::invalid(
+        return Err(elsecall_report_facts::window::invalid(
             "Explicit arrival bounds must be nonempty and inside the source history.",
         ));
     }

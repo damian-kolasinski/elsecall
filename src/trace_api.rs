@@ -1,13 +1,7 @@
 //! Paginated history endpoints. The CLI assembles files; services never buffer
 //! a fleet's entire trace. Peer routes inherit enrolled-key authentication.
 use crate::{
-    fleet::Fleet,
-    report_api::Reporter,
-    reporting::{
-        gathering::Source,
-        window::{Window, invalid},
-    },
-    workload::trace::Page,
+    fleet::Fleet, report_api::Reporter, reporting::gathering::Source, workload::trace::Page,
 };
 use axum::{
     Extension, Json, Router,
@@ -18,12 +12,13 @@ use axum::{
     routing::post,
 };
 use elsecall_failure::Result;
+use elsecall_report_facts::window::{Window, invalid};
 use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_wire::api;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 
-pub use crate::report_protocol::PageRequest;
+pub use elsecall_report_facts::report_protocol::PageRequest;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Members {
     pub members: Vec<String>,

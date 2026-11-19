@@ -110,10 +110,10 @@ impl PreRunSync for ConfigurationSync {
 mod tests {
     use super::*;
     use crate::{
-        reporting::facts::PlacementKind,
         simulation::{Options, simulate},
         workload::trace::{PreRunAttempt, Trace, TraceOutcome},
     };
+    use elsecall_report_facts::facts::PlacementKind;
     use elsecall_scheduling::{placed::Warmth, record::WorkspaceIdentity};
     use elsecall_scheduling_model::request::Placement;
     fn trace() -> Trace {

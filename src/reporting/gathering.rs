@@ -2,14 +2,14 @@
 //! and compute the report from what they answer. Members are reached through
 //! the [`MemberHistory`] port: this member's own records and load, and other
 //! members' over the member channel.
-use crate::reporting::{
-    document::{self, Document, Gathered, MemberInput, Query, RecordsRead},
+use crate::reporting::document::{self, Document, Gathered, MemberInput, Query, RecordsRead};
+use elsecall_failure::{Failure, Result};
+use elsecall_load_log::buckets::Bucket;
+use elsecall_report_facts::{
     facts::Fact,
     leftovers::LeftoverFact,
     window::{Window, invalid},
 };
-use elsecall_failure::{Failure, Result};
-use elsecall_load_log::buckets::Bucket;
 use futures_util::future::BoxFuture;
 use std::{collections::BTreeSet, sync::Arc, time::Duration};
 
@@ -53,7 +53,7 @@ pub trait MemberHistory: Send + Sync {
     fn trace_page(
         &self,
         _window: Window,
-        _before: Option<crate::report_protocol::Cursor>,
+        _before: Option<elsecall_report_facts::report_protocol::Cursor>,
     ) -> BoxFuture<'static, Result<crate::workload::trace::Page>> {
         Box::pin(async {
             Err(invalid(

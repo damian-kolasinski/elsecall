@@ -477,10 +477,8 @@ pub fn summarize(trace: &Trace, trial: &Trial, since: Timestamp, until: Timestam
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        reporting::facts::PlacementKind,
-        simulation::{engine::Reserve, model::Envelope},
-    };
+    use crate::simulation::{engine::Reserve, model::Envelope};
+    use elsecall_report_facts::facts::PlacementKind;
     use elsecall_scheduling::record::WorkspaceIdentity;
 
     fn fixture() -> (Trace, Trial) {

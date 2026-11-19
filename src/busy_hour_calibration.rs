@@ -546,7 +546,7 @@ mod tests {
 
     #[test]
     fn placeable_remote_admissions_count_in_master_queue_without_sync_time() {
-        use crate::reporting::facts::PlacementKind;
+        use elsecall_report_facts::facts::PlacementKind;
         use elsecall_scheduling_model::request::Placement;
         let (workload, mut trace, mut target) = observed_fixture();
         for demands in trace.rehearsal.as_mut().unwrap().demand.values_mut() {

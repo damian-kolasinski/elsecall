@@ -83,8 +83,10 @@ impl ReplayPlacement {
                         Placement::Pinned
                     };
                     r.fact.placement = match r.placement_request {
-                        Placement::Placeable => crate::reporting::facts::PlacementKind::Placeable,
-                        _ => crate::reporting::facts::PlacementKind::Pinned,
+                        Placement::Placeable => {
+                            elsecall_report_facts::facts::PlacementKind::Placeable
+                        }
+                        _ => elsecall_report_facts::facts::PlacementKind::Pinned,
                     };
                 }
                 trace.placement_replay = Some(Provenance {

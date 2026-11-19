@@ -148,7 +148,7 @@ pub fn leftovers(facts: &[LeftoverFact]) -> LeftoverMetrics {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::leftovers::*;
     use elsecall_scheduling::fixtures::{self, Run};
 
     fn hosted(n: u64, label: &'static str, ending: Ending, cpu_ms: u64) -> Record {

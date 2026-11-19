@@ -18,10 +18,8 @@
 //!   converted between members by measured speed: what placement estimated
 //!   before families and learned speed ratios.
 //! - At most the latest [`MAXIMUM_RUNS`] runs of the period are estimated.
-use crate::reporting::{
-    facts::Fact,
-    statistics::{mean, nearest_rank, sorted},
-};
+use crate::reporting::statistics::{mean, nearest_rank, sorted};
+use elsecall_report_facts::facts::Fact;
 use elsecall_scheduling::{
     learning::{self, RunHistory, RunSample, ratios::SpeedRatios},
     parameters::Parameters,

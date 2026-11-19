@@ -1,7 +1,8 @@
 //! Early warnings about outside processes, as a report shows them per member:
 //! each warning that held in the period and how long it had held. Pure.
-use crate::reporting::{outside::OutsideHistory, window::Window};
+use crate::reporting::outside::OutsideHistory;
 use elsecall_outside_pressure::outside_pressure::warning::Warning;
+use elsecall_report_facts::window::Window;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 

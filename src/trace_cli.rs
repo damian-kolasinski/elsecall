@@ -1,7 +1,6 @@
 //! Export orchestration and exclusive owner-only artifact writing.
 use crate::{
     report_cli::since,
-    reporting::window::invalid,
     trace_api::{Members, PageRequest},
     workload::trace::{self, Member, Page, Trace},
 };
@@ -9,6 +8,7 @@ use clap::{Args, Subcommand};
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
+use elsecall_report_facts::window::invalid;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{collections::BTreeSet, io::Write, os::unix::fs::OpenOptionsExt, path::PathBuf};
 
@@ -52,7 +52,7 @@ pub async fn run(paths: &Paths, args: TraceArgs) -> Result<serde_json::Value> {
     let now = Timestamp::now();
     let until = crate::workload::bounds::until(args.until.as_deref(), now)?;
     let start = since(&args.since, now)?;
-    crate::reporting::window::Window::new(start, until, now)?;
+    elsecall_report_facts::window::Window::new(start, until, now)?;
     if args.local_history {
         let mut trace = crate::trace_snapshot::local(paths, args.member.unwrap(), start, now)?;
         trace.until = until;
@@ -103,7 +103,7 @@ pub async fn run(paths: &Paths, args: TraceArgs) -> Result<serde_json::Value> {
 
 /// Fixed-end fleet collection, shared by export and the rehearsal's own window.
 pub async fn collect(paths: &Paths, start: Timestamp, until: Timestamp) -> Result<Trace> {
-    let window = crate::reporting::window::Window::new(start, until, Timestamp::now())?;
+    let window = elsecall_report_facts::window::Window::new(start, until, Timestamp::now())?;
     let roster: Members =
         client::post_large(&paths.socket(), "/v1/trace/members", &serde_json::json!({})).await?;
     let mut trace=Trace {placement_replay: None, rehearsal: None,
@@ -202,7 +202,7 @@ pub async fn collect(paths: &Paths, start: Timestamp, until: Timestamp) -> Resul
             .min(Timestamp::now());
         if load_until > until {
             let tail_window =
-                crate::reporting::window::Window::new(until, load_until, Timestamp::now())?;
+                elsecall_report_facts::window::Window::new(until, load_until, Timestamp::now())?;
             let tail: Result<Page> = client::post_large(
                 &paths.socket(),
                 "/v1/trace/requests",

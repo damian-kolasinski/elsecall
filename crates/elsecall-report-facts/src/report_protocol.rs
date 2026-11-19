@@ -1,7 +1,7 @@
 //! What members exchange for reports: the requests and answers of
 //! `POST /peer/v1/report/facts` and `POST /peer/v1/report/load`. The member that
 //! reports asks with `peer_history`; the member asked answers in `report_api`.
-use crate::reporting::{facts::Fact, leftovers::LeftoverFact};
+use crate::{facts::Fact, leftovers::LeftoverFact};
 use serde::{Deserialize, Serialize};
 
 /// Records read for one page of facts: their facts stay well within a member

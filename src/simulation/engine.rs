@@ -1524,7 +1524,8 @@ pub(super) mod tests {
     }
     #[test]
     fn next_remote_run_is_admitted_then_settles_leftovers_before_sync() {
-        use crate::{reporting::facts::PlacementKind, workload::trace::Leftover};
+        use crate::workload::trace::Leftover;
+        use elsecall_report_facts::facts::PlacementKind;
         use elsecall_scheduling::{leftovers::Ending, placed::Warmth, record::WorkspaceIdentity};
         use elsecall_scheduling_model::request::Placement;
         let mut trace = trace();

@@ -1083,6 +1083,7 @@ dependencies = [
  "elsecall-peer-transport",
  "elsecall-process",
  "elsecall-rehearsal-identity",
+ "elsecall-report-facts",
  "elsecall-run-admission",
  "elsecall-scheduling",
  "elsecall-scheduling-model",
@@ -1326,6 +1327,17 @@ dependencies = [
 [[package]]
 name = "elsecall-rehearsal-identity"
 version = "0.3.0"
+
+[[package]]
+name = "elsecall-report-facts"
+version = "0.3.0"
+dependencies = [
+ "elsecall-failure",
+ "elsecall-labels",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "serde",
+]
 
 [[package]]
 name = "elsecall-run-admission"

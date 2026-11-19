@@ -1,13 +1,11 @@
 //! Validate peer trace projections before they cross into workload modelling.
-use crate::{
-    report_protocol::Cursor,
-    reporting::{
-        facts::is_code,
-        window::{Window, invalid},
-    },
-    workload::trace::{PAGE, Page, TraceOutcome, sanitize_decision},
-};
+use crate::workload::trace::{PAGE, Page, TraceOutcome, sanitize_decision};
 use elsecall_failure::Result;
+use elsecall_report_facts::{
+    facts::is_code,
+    report_protocol::Cursor,
+    window::{Window, invalid},
+};
 use elsecall_scheduling::record::MAXIMUM_CPU_MS;
 use elsecall_scheduling_model::{
     request::{MAXIMUM_HOLD_LIMIT, Placement, Urgency},
@@ -131,7 +129,10 @@ pub fn page(mut page: Page, window: Window, before: Option<&Cursor>, member: &st
     for l in &page.leftovers {
         if !id(&l.run_id)
             || l.member != member
-            || l.since > window.since.after(crate::reporting::window::MAXIMUM_PERIOD)
+            || l.since
+                > window
+                    .since
+                    .after(elsecall_report_facts::window::MAXIMUM_PERIOD)
             || l.since
                 > elsecall_scheduling_model::timestamp::Timestamp::now()
                     .after(std::time::Duration::from_secs(60))

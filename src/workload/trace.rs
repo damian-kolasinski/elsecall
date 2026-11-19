@@ -1,9 +1,7 @@
 //! Explicit projections: never serialize a Record wholesale into a trace.
-use crate::{
-    reporting::facts::Fact,
-    workload::{contention::Curve, demand::Demand},
-};
+use crate::workload::{contention::Curve, demand::Demand};
 use elsecall_load_log::buckets::Bucket;
+use elsecall_report_facts::facts::Fact;
 use elsecall_scheduling::{
     leftovers::{Ending, Leftovers},
     record::{Decision, HoldLimitRecord, Outcome, Record},
@@ -244,7 +242,7 @@ impl Leftover {
 pub struct Page {
     pub requests: Vec<Request>,
     pub leftovers: Vec<Leftover>,
-    pub next: Option<crate::report_protocol::Cursor>,
+    pub next: Option<elsecall_report_facts::report_protocol::Cursor>,
     /// First-page member settings, independent of whether any requests exist.
     #[serde(default)]
     pub scheduler_settings: Vec<elsecall_scheduling::records::SchedulerSettings>,
@@ -281,7 +279,7 @@ impl Page {
         }
         if consumed > 0 && (consumed < records.len() || records.len() == PAGE as usize) {
             let record = &records[consumed - 1];
-            page.next = Some(crate::report_protocol::Cursor {
+            page.next = Some(elsecall_report_facts::report_protocol::Cursor {
                 requested_at_ms: record.requested_at.millis(),
                 run_id: record.run_id.to_string(),
             });

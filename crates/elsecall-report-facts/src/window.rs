@@ -84,7 +84,7 @@ impl Window {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::window::*;
 
     const DAY: u64 = 86_400_000;
 

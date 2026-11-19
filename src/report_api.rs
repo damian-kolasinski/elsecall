@@ -6,11 +6,9 @@ use crate::{
     fleet::Fleet,
     own_history::OwnHistory,
     peer_history::PeerHistory,
-    report_protocol::{Cursor, FactsPage, FactsRequest, LoadRequest},
     reporting::{
         document::{Document, Query},
         gathering::{self, Source},
-        window::{Window, invalid},
     },
 };
 use axum::{
@@ -25,6 +23,10 @@ use elsecall_api_response as api_response;
 use elsecall_failure::{Failure, Result};
 use elsecall_load_log::buckets::Bucket;
 use elsecall_membership::membership_store::Membership;
+use elsecall_report_facts::{
+    report_protocol::{Cursor, FactsPage, FactsRequest, LoadRequest},
+    window::{Window, invalid},
+};
 use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_wire::api;
 use serde::{Deserialize, Serialize};
@@ -257,7 +259,7 @@ async fn peer_load(Extension(reporter): Extension<Reporter>, body: Bytes) -> Res
 async fn peer_outside(Extension(reporter): Extension<Reporter>, body: Bytes) -> Response {
     answer(
         &body,
-        move |request: crate::report_protocol::OutsideRequest| {
+        move |request: elsecall_report_facts::report_protocol::OutsideRequest| {
             let window = asked_window(request.since_ms, request.until_ms)?;
             reporter.own.outside_history(window)
         },
@@ -266,28 +268,29 @@ async fn peer_outside(Extension(reporter): Extension<Reporter>, body: Bytes) -> 
 }
 
 async fn peer_io(body: Bytes) -> Response {
-    answer(&body, |request: crate::report_protocol::PeerIoRequest| {
-        let window = asked_window(request.since_ms, request.until_ms)?;
-        Ok(elsecall_peer_diagnostics::between(
-            window.since,
-            window.until,
-        ))
-    })
+    answer(
+        &body,
+        |request: elsecall_report_facts::report_protocol::PeerIoRequest| {
+            let window = asked_window(request.since_ms, request.until_ms)?;
+            Ok(elsecall_peer_diagnostics::between(
+                window.since,
+                window.until,
+            ))
+        },
+    )
     .await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        report_protocol::PAGE,
-        reporting::{
-            facts::{Estimator, Fact, Predicted},
-            window::FINE_BUCKETS,
-        },
-    };
     use elsecall_machine::inspection::{MemoryPressure, ThermalState};
     use elsecall_peer_transport::peer_client::RESPONSE_LIMIT;
+    use elsecall_report_facts::{
+        facts::{Estimator, Fact, Predicted},
+        report_protocol::PAGE,
+        window::FINE_BUCKETS,
+    };
     use elsecall_scheduling::fixtures::{self, bucket};
 
     #[test]
@@ -307,7 +310,7 @@ mod tests {
             run_prior: true,
             run_level: Some(elsecall_scheduling::placement::Level::Converted),
         });
-        let leftover = crate::reporting::leftovers::LeftoverFact {
+        let leftover = elsecall_report_facts::leftovers::LeftoverFact {
             run_id: "r".repeat(64),
             label: fact.label.clone(),
             member: "m".repeat(255),
@@ -372,10 +375,8 @@ mod tests {
 
     #[test]
     fn the_largest_report_fits_the_cli_response() {
-        use crate::reporting::{
-            document::{Gathered, MemberInput, Query, RecordsRead, document},
-            window::{MAXIMUM_PERIOD, Window},
-        };
+        use crate::reporting::document::{Gathered, MemberInput, Query, RecordsRead, document};
+        use elsecall_report_facts::window::{MAXIMUM_PERIOD, Window};
         use elsecall_scheduling::fixtures::{Run, T0};
         // 50,000 requests from each of two members, every one with its own
         // longest label and failure code, and a series point per fine bucket.

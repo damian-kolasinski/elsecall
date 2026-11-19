@@ -1,18 +1,15 @@
 //! This member's history for reports: its request records and load history,
 //! read in pages so neither a report nor a member's answer reads everything at
 //! once.
-use crate::{
-    report_protocol::PAGE,
-    reporting::{
-        facts::Fact,
-        gathering::{Facts, MAXIMUM_FACTS, MemberHistory},
-        leftovers::LeftoverFact,
-        outside::OutsideHistory,
-        window::Window,
-    },
+use crate::reporting::{
+    gathering::{Facts, MAXIMUM_FACTS, MemberHistory},
+    outside::OutsideHistory,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_load_log::{LoadReport, buckets::Bucket};
+use elsecall_report_facts::{
+    facts::Fact, leftovers::LeftoverFact, report_protocol::PAGE, window::Window,
+};
 use elsecall_scheduling::service::Scheduler;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use futures_util::future::BoxFuture;
@@ -157,7 +154,7 @@ impl MemberHistory for OwnHistory {
     fn trace_page(
         &self,
         window: Window,
-        before: Option<crate::report_protocol::Cursor>,
+        before: Option<elsecall_report_facts::report_protocol::Cursor>,
     ) -> BoxFuture<'static, Result<crate::workload::trace::Page>> {
         let history = self.clone();
         blocking(move || {

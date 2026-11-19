@@ -1,0 +1,17 @@
+[package]
+name = "elsecall-report-facts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+elsecall-failure.workspace = true
+elsecall-labels.workspace = true
+elsecall-scheduling.workspace = true
+elsecall-scheduling-model.workspace = true
+serde.workspace = true

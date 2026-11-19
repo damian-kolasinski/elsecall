@@ -1,9 +1,7 @@
 //! Metrics of the requests themselves: how they ended, `fleet_busy`, where they
 //! ran, how long they queued, and how much work each member took.
-use crate::reporting::{
-    facts::{Fact, PlacementKind},
-    statistics::{Distribution, seconds},
-};
+use crate::reporting::statistics::{Distribution, seconds};
+use elsecall_report_facts::facts::{Fact, PlacementKind};
 use elsecall_scheduling::record::Verdict;
 use elsecall_scheduling_model::request::Kind;
 use serde::Serialize;

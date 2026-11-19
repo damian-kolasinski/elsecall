@@ -4,9 +4,9 @@
 //! would have done (`backtest`).
 use crate::reporting::{
     backtest::{self, Backtest},
-    facts::{Estimator, Fact},
     statistics::{mean, nearest_rank, seconds, sorted},
 };
+use elsecall_report_facts::facts::{Estimator, Fact};
 use elsecall_scheduling::{
     learning::{
         RunSample,

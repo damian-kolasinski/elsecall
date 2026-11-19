@@ -3,11 +3,9 @@
 //! work that ran there then, by how it came to run there. Enough to decide
 //! whether to move work elsewhere, make labels placeable, or bring outside work
 //! under admission.
-use crate::reporting::{
-    facts::{Fact, PlacementKind},
-    load::{has_room, overloaded, peak_load_per_cpu, weighted_mean},
-};
+use crate::reporting::load::{has_room, overloaded, peak_load_per_cpu, weighted_mean};
 use elsecall_load_log::buckets::Bucket;
+use elsecall_report_facts::facts::{Fact, PlacementKind};
 use elsecall_scheduling_model::{request::Kind, timestamp::Timestamp};
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
