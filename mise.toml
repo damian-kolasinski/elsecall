@@ -3,6 +3,13 @@ rust = "1.99.0"
 "github:jdx/packslip" = "1.11.1"
 # The test runner `mise run check` uses; see .config/nextest.toml.
 "github:nextest-rs/nextest" = { version = "0.9.150", version_prefix = "cargo-nextest-" }
+# Shares compiled work between checkouts; see "Build and install" in README.md.
+mr-boxington = "1.30.0"
+
+# Cargo runs through mbx. Elsecall admits builds, so mbx's own scheduler is off.
+[wrappers.cargo]
+command = "mbx"
+env = { MBX_CARGO_SHIM_MODE = "1", MBX_SCHEDULER = "0" }
 
 [tasks.check]
 run = "./scripts/check.sh"
