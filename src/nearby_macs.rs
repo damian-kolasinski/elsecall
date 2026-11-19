@@ -3,7 +3,7 @@
 //! What the network advertises comes through the `LocalNetwork` port. This module
 //! decides which advertisements are Macs, whether each can be reached over Remote
 //! Login, and which are already fleet members.
-use crate::failure::Result;
+use crate::{failure::Result, lan_address::is_lan};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, net::IpAddr, time::Duration};
 
@@ -25,7 +25,8 @@ pub struct Advertisement {
     pub name: String,
     /// The host the service runs on, such as `macbook-pro.local.`.
     pub host: String,
-    /// Addresses a connection can use, IPv4 first.
+    /// The addresses the host answered with. Only its local network ones count,
+    /// the kind members report about themselves.
     pub addresses: Vec<IpAddr>,
     /// The hardware model from the device's `_device-info._tcp` record.
     pub model: Option<String>,
@@ -71,7 +72,8 @@ pub enum Membership {
     Member {
         member: String,
     },
-    /// Only a name matches: the member is unreachable or reports no addresses.
+    /// Only a name matches: the member is unreachable or reports no addresses, or
+    /// the Mac has no local network address to compare.
     PossibleMember {
         member: String,
     },
@@ -132,8 +134,11 @@ pub fn nearby(advertisements: Vec<Advertisement>, members: &[KnownMember]) -> Ve
                 .iter()
                 .find(|a| matches!(a.offer, Offer::RemoteLogin { .. }))
                 .unwrap_or(&found[0]);
-            let mut addresses: Vec<IpAddr> =
-                found.iter().flat_map(|a| a.addresses.clone()).collect();
+            let mut addresses: Vec<IpAddr> = found
+                .iter()
+                .flat_map(|a| a.addresses.iter().copied())
+                .filter(|address| is_lan(*address))
+                .collect();
             addresses.sort_by_key(|address| (address.is_ipv6(), *address));
             addresses.dedup();
             Some(NearbyMac {
@@ -204,11 +209,12 @@ fn membership(members: &[KnownMember], host: &str, addresses: &[IpAddr]) -> Memb
         };
     }
     // A member that reports its addresses and has none of these is another Mac
-    // with the same name, on another network.
+    // with the same name, on another network. A Mac with no local network address
+    // gives nothing to compare, so its name is all there is.
     match members
         .iter()
         .filter(named)
-        .find(|member| member.lan_addresses.is_none())
+        .find(|member| member.lan_addresses.is_none() || addresses.is_empty())
     {
         Some(member) => Membership::PossibleMember {
             member: member.name.clone(),
@@ -359,6 +365,29 @@ mod tests {
                     }
                 ),
             ]
+        );
+    }
+
+    #[test]
+    fn a_mac_without_local_network_addresses_may_be_the_member_it_is_named_after() {
+        // A Mac sees its own services on loopback too, where its host has only
+        // addresses no other Mac can use.
+        let unresolved = Advertisement {
+            addresses: vec!["127.0.0.1".parse().unwrap(), "fe80::1".parse().unwrap()],
+            ..seen(CONTINUITY, "Mac mini", "mac-mini.local.", Some("Mac16,10"))
+        };
+        let members = [KnownMember {
+            name: "build-host".into(),
+            host_names: vec!["Mac-mini".into()],
+            lan_addresses: Some(vec!["192.168.64.30".parse().unwrap()]),
+        }];
+        let macs = nearby(vec![unresolved], &members);
+        assert!(macs[0].addresses.is_empty());
+        assert_eq!(
+            macs[0].membership,
+            Membership::PossibleMember {
+                member: "build-host".into()
+            }
         );
     }
 
