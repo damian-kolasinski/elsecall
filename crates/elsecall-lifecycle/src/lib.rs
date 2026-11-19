@@ -11,7 +11,6 @@ pub mod release_update;
 pub mod release_update_api;
 pub mod release_update_cli;
 pub mod service_handover;
-pub mod service_relaunch;
 pub mod upgrade_drain;
 pub mod upgrade_helper_process;
 pub mod window_app;

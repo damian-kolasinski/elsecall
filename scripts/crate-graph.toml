@@ -101,7 +101,7 @@ modules = ["admission_api", "admission_cli", "run_relay", "passthrough", "local_
 band = "feature"
 # Keeping members alike: syncing configuration between them, and this member's
 # service configuration.
-modules = ["config_sync", "config_sync_api", "config_sync_cli", "config_sync_local_api", "service_configuration", "configuration"]
+modules = ["config_sync", "config_sync_api", "config_sync_cli", "config_sync_local_api", "service_configuration", "configuration", "service_relaunch"]
 
 [crates.workspace]
 band = "feature"
@@ -113,7 +113,7 @@ modules = ["workspace", "housekeeping", "fleet_callers", "fleet_copies", "copies
 band = "feature"
 # Elsecall's own lifecycle: installing it, its window, updating it and the
 # fleet, starting and stopping the service, and the agent skill it installs.
-modules = ["installation", "lifecycle_holder", "window_release", "window_app", "window_startup", "install_window", "release_update", "release_update_api", "release_update_cli", "fleet_upgrade", "fleet_upgrade_api", "fleet_upgrade_local_api", "upgrade_drain", "upgrade_helper_process", "service_handover", "service_relaunch", "agent_skill"]
+modules = ["installation", "lifecycle_holder", "window_release", "window_app", "window_startup", "install_window", "release_update", "release_update_api", "release_update_cli", "fleet_upgrade", "fleet_upgrade_api", "fleet_upgrade_local_api", "upgrade_drain", "upgrade_helper_process", "service_handover", "agent_skill"]
 
 [crates.tools]
 band = "feature"

@@ -26,7 +26,6 @@ elsecall-fleet.workspace = true
 elsecall-host.workspace = true
 elsecall-peers.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-sync.workspace = true
 futures-util.workspace = true
 getrandom.workspace = true
 humantime.workspace = true

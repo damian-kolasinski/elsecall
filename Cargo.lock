@@ -1174,7 +1174,6 @@ dependencies = [
  "elsecall-host",
  "elsecall-peers",
  "elsecall-scheduling",
- "elsecall-sync",
  "futures-util",
  "getrandom 0.3.4",
  "humantime",

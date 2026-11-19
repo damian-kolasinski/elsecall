@@ -6,3 +6,4 @@ pub mod config_sync_cli;
 pub mod config_sync_local_api;
 pub mod configuration;
 pub mod service_configuration;
+pub mod service_relaunch;
