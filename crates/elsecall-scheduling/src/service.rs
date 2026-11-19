@@ -51,6 +51,7 @@ use elsecall_contract::scheduling_model::{
     run_id::{RandomRunIds, RunId, RunIds},
     speed::{SpeedHistory, SpeedMeter},
     timestamp::Timestamp,
+    workload_metadata::{CensorReason, Observation},
 };
 use placing::Placing;
 use quotes::Quotes;
@@ -1377,9 +1378,6 @@ impl Scheduler {
             .started_at
             .map(|started| now.since(started).as_millis() as u64);
         if record.workload.is_some() && record.plan_observation.is_none() {
-            use elsecall_contract::scheduling_model::workload_metadata::{
-                CensorReason, Observation,
-            };
             record.plan_observation = Some(match &outcome {
                 _ if record.started_at.is_none() => Observation::Unknown {},
                 Outcome::Signaled { .. } => Observation::Censored {
