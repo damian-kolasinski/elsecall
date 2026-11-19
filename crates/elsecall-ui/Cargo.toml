@@ -8,7 +8,6 @@ license.workspace = true
 publish = false
 
 [dependencies]
-elsecall.workspace = true
 elsecall-add-mac.workspace = true
 elsecall-build-identity.workspace = true
 elsecall-failure.workspace = true
