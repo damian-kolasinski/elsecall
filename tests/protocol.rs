@@ -157,13 +157,13 @@ async fn fleet_reads_accept_large_diagnostics_with_size_schema_and_timeout_bound
             "/v1/fleet",
             get(move || {
                 let fleet = served_fleet.clone();
-                async move { Json(elsecall::api::Response::new(fleet)) }
+                async move { Json(elsecall_wire::api::Response::new(fleet)) }
             }),
         )
         .route(
             "/oversized",
             get(|| async {
-                Json(elsecall::api::Response::new(
+                Json(elsecall_wire::api::Response::new(
                     "x".repeat(client::LARGE_RESPONSE),
                 ))
             }),

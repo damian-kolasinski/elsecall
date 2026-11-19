@@ -1,5 +1,4 @@
 use crate::{
-    api,
     fleet::Fleet,
     fleet_local_api,
     fleet_placement::FleetMembers,
@@ -31,6 +30,7 @@ use axum::{
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::{local_access, paths::Paths, private_files};
+use elsecall_wire::api;
 use std::{
     fs,
     os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},

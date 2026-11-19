@@ -108,7 +108,7 @@ pub mod bytes {
     }
 
     pub mod list {
-        use super::*;
+        use crate::wire::bytes::*;
         use serde::ser::SerializeSeq;
 
         pub fn serialize<S: Serializer>(
@@ -136,7 +136,7 @@ pub mod bytes {
     }
 
     pub mod optional {
-        use super::*;
+        use crate::wire::bytes::*;
         pub fn serialize<S: Serializer>(
             value: &Option<Vec<u8>>,
             serializer: S,
@@ -162,7 +162,7 @@ pub mod bytes {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::wire::*;
 
     #[tokio::test]
     async fn frames_round_trip_and_reject_garbage() {

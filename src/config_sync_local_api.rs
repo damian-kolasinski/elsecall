@@ -1,9 +1,6 @@
 //! Configuration sync on the local socket, where the same-user rule authorizes the
 //! operator. The service holds the member key and the replica; the CLI holds neither.
-use crate::{
-    api,
-    config_sync::{service::ConfigSync, synced_path::SyncedPath},
-};
+use crate::config_sync::{service::ConfigSync, synced_path::SyncedPath};
 use axum::{
     Json, Router,
     body::Bytes,
@@ -13,6 +10,7 @@ use axum::{
     routing::{any, post},
 };
 use elsecall_failure::Failure;
+use elsecall_wire::api;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::sync::Arc;
 

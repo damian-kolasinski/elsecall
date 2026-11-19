@@ -3,7 +3,7 @@
 //! carries is code this member will run. Any enrolled member may read how this
 //! member's latest upgrade went.
 use crate::{
-    api::response::failure,
+    api_response::failure,
     fleet::{AuthenticatedPeer, Fleet, UpgradeAuthority},
     fleet_upgrade::{member::Upgrades, protocol},
 };
@@ -134,7 +134,7 @@ async fn attach(
 
 async fn status(Extension(upgrades): Extension<Arc<Upgrades>>) -> Response {
     match tokio::task::spawn_blocking(move || upgrades.status()).await {
-        Ok(Ok(state)) => Json(crate::api::Response::new(state)).into_response(),
+        Ok(Ok(state)) => Json(elsecall_wire::api::Response::new(state)).into_response(),
         Ok(Err(error)) => failure(StatusCode::SERVICE_UNAVAILABLE, error),
         Err(_) => failure(
             StatusCode::INTERNAL_SERVER_ERROR,

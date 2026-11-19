@@ -1,8 +1,5 @@
 //! Same-user local API for release discovery and durable update jobs.
-use crate::{
-    api,
-    release_update::{JobId, service::UpdateService},
-};
+use crate::release_update::{JobId, service::UpdateService};
 use axum::{
     Json, Router,
     extract::State,
@@ -11,6 +8,7 @@ use axum::{
     routing::{get, post},
 };
 use elsecall_failure::Failure;
+use elsecall_wire::api;
 use serde::Deserialize;
 use std::sync::Arc;
 

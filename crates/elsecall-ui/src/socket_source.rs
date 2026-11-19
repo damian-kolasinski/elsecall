@@ -708,7 +708,7 @@ mod tests {
     #[test]
     fn classifies_the_service_unavailable_envelope() {
         let fixture = include_str!("../tests/fixtures/error.json");
-        let response: elsecall::api::ErrorResponse = serde_json::from_str(fixture).unwrap();
+        let response: elsecall_wire::api::ErrorResponse = serde_json::from_str(fixture).unwrap();
         let failure = classify(response.error);
         match failure {
             SourceFailure::ServiceUnavailable { hint, .. } => {

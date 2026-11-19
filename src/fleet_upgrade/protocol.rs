@@ -14,16 +14,14 @@
 //! This wire format and the status route are frozen (`elsecall-upgrade/1`): every
 //! later build must still accept them, since they are how members on older builds
 //! are brought forward.
-use crate::{
-    member_key::{MemberKey, PublicKey},
-    wire::{self, Frame},
-};
+use crate::member_key::{MemberKey, PublicKey};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_build_identity::{
     build_identity::{Build, Digest},
     executable_format::Architecture,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_wire::wire::{self, Frame};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 

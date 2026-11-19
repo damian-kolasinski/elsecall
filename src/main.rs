@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use elsecall::{
     admission_cli::{self, LeaseCommand},
-    api, client, fleet_cli,
+    client, fleet_cli,
     inbound_firewall::{Inbound, InboundFirewall},
     inspection::{Health, Inspection, Machine},
     install_window,
@@ -15,6 +15,7 @@ use elsecall::{
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::{local_access, paths::Paths};
 use elsecall_tailnet::tailnet;
+use elsecall_wire::api;
 use serde::Serialize;
 use std::{process::ExitCode, sync::Arc, time::Duration};
 

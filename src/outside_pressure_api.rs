@@ -1,10 +1,7 @@
 //! Whether outside pressure blocks this member, and which outside processes it
 //! warns about, on the local socket, for doctor on a member that is not in a
 //! fleet and for agents asking this member alone.
-use crate::{
-    api,
-    outside_pressure::{BlockedReport, Warning, WarningReport},
-};
+use crate::outside_pressure::{BlockedReport, Warning, WarningReport};
 use axum::{
     Json, Router,
     extract::State,
@@ -13,6 +10,7 @@ use axum::{
     routing::get,
 };
 use elsecall_failure::Failure;
+use elsecall_wire::api;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

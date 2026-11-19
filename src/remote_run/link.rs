@@ -4,10 +4,10 @@
 
 use crate::{
     remote_run::protocol::RunMessage,
-    wire::{self, Frame},
     workspace::sync::{self, Received, SyncMessage},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_wire::wire::{self, Frame};
 use std::{
     sync::{Arc, Mutex},
     time::Duration,

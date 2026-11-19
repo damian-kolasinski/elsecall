@@ -19,7 +19,6 @@ use crate::{
         run_phases::RemoteFailurePhase,
         timestamp::Timestamp,
     },
-    wire::Frame,
     workload_settings::WorkloadSettings,
     workspace::{
         confined::Confined,
@@ -33,6 +32,7 @@ use crate::{
     },
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_wire::wire::Frame;
 use std::{
     fs::File,
     io::{Read, Write},
@@ -176,7 +176,7 @@ impl Executor for RemoteExecutor {
                 declared: declared.clone(),
             });
             let message = RunMessage::Start(start);
-            if serde_json::to_vec(&message).expect("messages serialize").len() > crate::wire::MAXIMUM_PAYLOAD {
+            if serde_json::to_vec(&message).expect("messages serialize").len() > elsecall_wire::wire::MAXIMUM_PAYLOAD {
                 return Err(Failure::new(
                     "invalid_request",
                     "The command line and forwarded variables are too large to place.",
@@ -808,7 +808,7 @@ impl RemoteRun {
 }
 
 async fn send_blob(link: &Link, bytes: &[u8]) -> Result<()> {
-    for chunk in bytes.chunks(crate::wire::CHUNK) {
+    for chunk in bytes.chunks(elsecall_wire::wire::CHUNK) {
         link.send(Frame::Content(chunk.to_vec())).await?;
     }
     link.send(Frame::Content(Vec::new())).await
@@ -933,7 +933,7 @@ mod tests {
                 r#"{{"type":"exited","exit":{{"kind":"code","code":7}},"cpu_ms":123,"plan_observation":{observation}}}"#
             );
             let sender = tokio::spawn(async move {
-                crate::wire::write(&mut peer, &Frame::Message(terminal.into_bytes()))
+                elsecall_wire::wire::write(&mut peer, &Frame::Message(terminal.into_bytes()))
                     .await
                     .unwrap();
                 // A lost external peer during output return, after Exited.

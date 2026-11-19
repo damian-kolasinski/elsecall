@@ -1,8 +1,6 @@
 //! The public run link against external byte streams, without a peer service.
-use elsecall::{
-    remote_run::link::{GRACE, Link},
-    wire::{self, Frame},
-};
+use elsecall::remote_run::link::{GRACE, Link};
+use elsecall_wire::wire::{self, Frame};
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 

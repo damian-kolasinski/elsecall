@@ -12,6 +12,7 @@ elsecall.workspace = true
 elsecall-build-identity.workspace = true
 elsecall-failure.workspace = true
 elsecall-local-state.workspace = true
+elsecall-wire.workspace = true
 libc.workspace = true
 rune.workspace = true
 rune-kit.workspace = true

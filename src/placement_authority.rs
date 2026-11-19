@@ -2,7 +2,7 @@
 //! recorded master may make. Placement itself arrives in later steps; a probe proves
 //! the boundary.
 use crate::{
-    api::response::failure,
+    api_response::failure,
     fleet::{AuthenticatedPeer, Fleet, PlacementAccepted, PlacementAuthority},
 };
 use axum::{
@@ -31,7 +31,7 @@ impl FromRequestParts<Arc<Fleet>> for PlacementAuthority {
 /// the same way.
 pub async fn probe(State(fleet): State<Arc<Fleet>>, authority: PlacementAuthority) -> Response {
     match fleet.status().await {
-        Ok(status) => Json(crate::api::Response::new(PlacementAccepted {
+        Ok(status) => Json(elsecall_wire::api::Response::new(PlacementAccepted {
             member: status.member,
             accepted_from: authority.master().clone(),
         }))

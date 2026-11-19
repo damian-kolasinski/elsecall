@@ -1,7 +1,7 @@
 //! The member API routes of placement, behind the placement-authority boundary:
 //! only the recorded master may offer runs or attach to them.
 use crate::{
-    api::response::failure,
+    api_response::failure,
     fleet::{AuthenticatedPeer, Fleet, PlacementAuthority},
     placement_host::PlacementHost,
     remote_run::runner,
@@ -51,7 +51,7 @@ async fn offer(
         return invalid("The placement offer is invalid.");
     };
     match host.offer(authority.master().as_str(), &offer) {
-        Ok(reply) => Json(crate::api::Response::new(reply)).into_response(),
+        Ok(reply) => Json(elsecall_wire::api::Response::new(reply)).into_response(),
         Err(error) => failure(StatusCode::CONFLICT, error),
     }
 }
@@ -65,7 +65,7 @@ async fn quote(
         return invalid("The quote request is invalid.");
     };
     match host.quote(authority.master().as_str(), &request) {
-        Ok(quote) => Json(crate::api::Response::new(quote)).into_response(),
+        Ok(quote) => Json(elsecall_wire::api::Response::new(quote)).into_response(),
         Err(error) => failure(StatusCode::CONFLICT, error),
     }
 }

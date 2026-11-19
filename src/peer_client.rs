@@ -1,6 +1,5 @@
 //! Signed requests to another member over the tailnet, with verified responses.
 use crate::{
-    api::{ErrorResponse, Response, SCHEMA_VERSION},
     member_key::MemberKey,
     peer_auth::{self, SIGNATURE_HEADER},
     roster::Member,
@@ -10,6 +9,7 @@ use crate::{
     peer_transport::{self, Progress},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_wire::api::{ErrorResponse, Response, SCHEMA_VERSION};
 use http_body_util::{BodyExt, Full, Limited};
 use hyper::{Method, Request, body::Bytes, client::conn::http1};
 use hyper_util::rt::TokioIo;

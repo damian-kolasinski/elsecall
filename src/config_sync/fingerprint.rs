@@ -56,12 +56,12 @@ impl fmt::Debug for SyncKey {
 }
 impl Serialize for SyncKey {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        crate::wire::bytes::serialize(self.0.as_ref(), serializer)
+        elsecall_wire::wire::bytes::serialize(self.0.as_ref(), serializer)
     }
 }
 impl<'de> Deserialize<'de> for SyncKey {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let bytes = Zeroizing::new(crate::wire::bytes::deserialize(deserializer)?);
+        let bytes = Zeroizing::new(elsecall_wire::wire::bytes::deserialize(deserializer)?);
         let array: [u8; 32] = bytes
             .as_slice()
             .try_into()

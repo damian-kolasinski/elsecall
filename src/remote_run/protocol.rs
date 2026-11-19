@@ -8,7 +8,6 @@
 //! the caller says what did not come back (`Returned`) and ends the run with `Done`.
 use crate::{
     remote_run::consistency::{self, Fingerprints, Mismatches},
-    wire,
     workspace::{
         not_returned::{Cause, NotReturned},
         outputs::MAXIMUM_DECLARED,
@@ -17,6 +16,7 @@ use crate::{
     },
 };
 use elsecall_failure::Failure;
+use elsecall_wire::wire;
 use serde::{Deserialize, Serialize};
 
 /// How many output or input bytes may be in flight unacknowledged per stream.

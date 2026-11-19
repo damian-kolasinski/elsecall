@@ -1,10 +1,8 @@
 //! Sync traffic as frames on a byte stream, without heartbeats: for streams whose
 //! liveness something else watches, and for tests.
-use crate::{
-    wire,
-    workspace::sync::{Link, Received, SyncMessage, unexpected},
-};
+use crate::workspace::sync::{Link, Received, SyncMessage, unexpected};
 use elsecall_failure::{Failure, Result};
+use elsecall_wire::wire;
 
 pub struct FramedLink<R, W> {
     pub reader: R,

@@ -469,9 +469,9 @@ async fn interrupted_pushes_change_nothing_and_only_the_master_pushes() {
         panic!("expected need")
     };
     assert_eq!(fingerprints.len(), 1, "only the content beta lacks");
-    elsecall::wire::write(
+    elsecall_wire::wire::write(
         &mut sealed,
-        &elsecall::wire::Frame::Content(content[..5].to_vec()),
+        &elsecall_wire::wire::Frame::Content(content[..5].to_vec()),
     )
     .await
     .unwrap();

@@ -2,7 +2,7 @@
 //! sync-authority boundary: only the recorded master may open it. Any enrolled
 //! member may read a member's sync state, or ask the master to push.
 use crate::{
-    api::response::failure,
+    api_response::failure,
     config_sync::{
         protocol,
         service::{ConfigSync, PushRequest},
@@ -125,7 +125,7 @@ async fn attach(
 
 async fn status(Extension(sync): Extension<Arc<ConfigSync>>) -> Response {
     match tokio::task::spawn_blocking(move || sync.summary()).await {
-        Ok(summary) => Json(crate::api::Response::new(summary)).into_response(),
+        Ok(summary) => Json(elsecall_wire::api::Response::new(summary)).into_response(),
         Err(_) => failure(
             StatusCode::INTERNAL_SERVER_ERROR,
             Failure::new(
@@ -147,7 +147,7 @@ async fn push(Extension(sync): Extension<Arc<ConfigSync>>, body: axum::body::Byt
         }
     };
     match sync.serve_push(request).await {
-        Ok(round) => Json(crate::api::Response::new(round)).into_response(),
+        Ok(round) => Json(elsecall_wire::api::Response::new(round)).into_response(),
         Err(error) => failure(StatusCode::CONFLICT, error),
     }
 }

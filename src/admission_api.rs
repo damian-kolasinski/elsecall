@@ -1,11 +1,8 @@
 //! The local HTTP interface of admission, a driving adapter of the scheduler.
-use crate::{
-    api,
-    scheduling::{
-        request,
-        run_id::RunId,
-        service::{OnHandover, Scheduler},
-    },
+use crate::scheduling::{
+    request,
+    run_id::RunId,
+    service::{OnHandover, Scheduler},
 };
 use axum::{
     Extension, Json, Router,
@@ -17,6 +14,7 @@ use axum::{
 };
 use elsecall_failure::Result;
 use elsecall_local_state::local_access::LocalCaller;
+use elsecall_wire::api;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::sync::Arc;
 

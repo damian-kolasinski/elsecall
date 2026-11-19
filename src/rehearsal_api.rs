@@ -1,6 +1,5 @@
 //! Local master orchestration and enrolled, master-authorized member operations.
 use crate::{
-    api,
     fleet::{Fleet, PlacementAuthority},
     peer_client,
     rehearsal::{
@@ -18,6 +17,7 @@ use axum::{
     routing::post,
 };
 use elsecall_failure::Result;
+use elsecall_wire::api;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};
 #[derive(Clone)]

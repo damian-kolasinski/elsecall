@@ -211,7 +211,7 @@ modules = ["fleet_upgrade", "fleet_upgrade_api", "fleet_upgrade_local_api", "upg
 [crates.api-response]
 band = "feature"
 # The error envelope slices' HTTP routes answer with.
-modules = ["api::response"]
+modules = ["api_response"]
 
 [crates.agent-skill]
 band = "feature"

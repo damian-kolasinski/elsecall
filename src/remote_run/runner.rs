@@ -14,7 +14,6 @@ use crate::{
         protocol::{Exited, RunMessage, Start, Stream},
     },
     scheduling::{leftovers::Leftovers, run_id::RunId},
-    wire::Frame,
     workspace::{
         confined::{Confined, Create},
         copies::Claim,
@@ -30,6 +29,7 @@ use crate::{
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_run_admission::{self as run_admission, Admission};
+use elsecall_wire::wire::Frame;
 use std::{
     ffi::{OsStr, OsString},
     os::{
@@ -453,7 +453,7 @@ async fn return_outputs(
 }
 
 async fn send_blob(link: &Link, bytes: &[u8]) -> Result<()> {
-    for chunk in bytes.chunks(crate::wire::CHUNK) {
+    for chunk in bytes.chunks(elsecall_wire::wire::CHUNK) {
         link.send(Frame::Content(chunk.to_vec())).await?;
     }
     link.send(Frame::Content(Vec::new())).await
@@ -524,7 +524,7 @@ async fn send_file(
     let mut sent = 0u64;
     loop {
         let chunk = tokio::task::block_in_place(|| {
-            let mut buffer = vec![0u8; crate::wire::CHUNK];
+            let mut buffer = vec![0u8; elsecall_wire::wire::CHUNK];
             let n = std::io::Read::read(&mut reader, &mut buffer)?;
             buffer.truncate(n);
             Ok::<_, std::io::Error>(buffer)

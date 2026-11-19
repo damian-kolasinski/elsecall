@@ -15,7 +15,6 @@ use crate::{
         options::{CallerOptions, RequestOptions},
         resolution::{Layers, resolve},
     },
-    api::SCHEMA_VERSION,
     client::{self, Wait},
     scheduling::{
         messages::{Grant, RunEnded},
@@ -32,6 +31,7 @@ use elsecall_failure::{Failure, Result};
 use elsecall_guidance::{self as guidance, Unmanaged};
 use elsecall_local_state::{local_access, paths::Paths, run_id_file::RunIdFile};
 use elsecall_run_admission::Admission;
+use elsecall_wire::api::SCHEMA_VERSION;
 use executor::{CommandLine, Executor, Exit, Finished, RunContext, RunFailure, Running};
 use local::LocalExecutor;
 use remote::RemoteExecutor;

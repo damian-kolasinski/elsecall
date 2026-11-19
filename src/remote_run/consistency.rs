@@ -7,10 +7,10 @@
 //! which names differed. The caller's fingerprints never leave it, and only the
 //! names of mismatches are kept. A mismatch is a warning; the run proceeds.
 use crate::{
-    wire,
     workload_settings::{self, ConfigurationLocation, MAXIMUM_LOCATIONS, WorkloadSettings},
     workspace::digest::Digest,
 };
+use elsecall_wire::wire;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::Path};
 

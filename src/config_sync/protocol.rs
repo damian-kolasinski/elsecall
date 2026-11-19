@@ -9,15 +9,13 @@
 //! so a channel lost earlier leaves its previous state in place. Every message and
 //! blob travels as a sequence of content frames ended by an empty one, so large
 //! manifests need no special case.
-use crate::{
-    config_sync::{
-        fingerprint::Fingerprint,
-        manifest::Manifest,
-        report::{Applied, PathReport},
-    },
-    wire::{self, Frame},
+use crate::config_sync::{
+    fingerprint::Fingerprint,
+    manifest::Manifest,
+    report::{Applied, PathReport},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_wire::wire::{self, Frame};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use zeroize::Zeroizing;

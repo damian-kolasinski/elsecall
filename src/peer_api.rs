@@ -2,7 +2,6 @@
 //! signed by an enrolled member; everything else gets an empty 401. Every
 //! authenticated response is signed by this member.
 use crate::{
-    api,
     fleet::{AuthenticatedPeer, Fleet},
     peer_auth::{RequestProof, SIGNATURE_HEADER},
     peer_client::RESPONSE_LIMIT,
@@ -18,6 +17,7 @@ use axum::{
     routing::{get, post},
 };
 use elsecall_failure::Failure;
+use elsecall_wire::api;
 use std::{sync::Arc, time::Duration};
 
 pub use crate::peer_transport::REQUEST_LIMIT;
@@ -48,7 +48,7 @@ pub fn routes(fleet: Arc<Fleet>, placement: Router<Arc<Fleet>>) -> Router {
         .with_state(fleet)
 }
 
-pub use crate::api::response::failure;
+pub use crate::api_response::failure;
 
 fn data<T: serde::Serialize>(value: T) -> Response {
     Json(api::Response::new(value)).into_response()

@@ -1,12 +1,10 @@
 //! Flow-controlled output draining. Only the pipe reader can establish quiet:
 //! elapsed time while a reader is waiting for CPU says nothing about its pipe.
-use crate::{
-    remote_run::{
-        link::Outbox,
-        protocol::{Stream, WINDOW},
-    },
-    wire::Frame,
+use crate::remote_run::{
+    link::Outbox,
+    protocol::{Stream, WINDOW},
 };
+use elsecall_wire::wire::Frame;
 use std::{
     os::fd::AsRawFd,
     sync::{

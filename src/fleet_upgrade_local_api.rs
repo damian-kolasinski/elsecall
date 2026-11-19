@@ -1,9 +1,6 @@
 //! `elsecall fleet upgrade` on the local socket, where the same-user rule
 //! authorizes the operator. The service holds the member key that signs the build.
-use crate::{
-    api,
-    fleet_upgrade::{distributor::Distributor, master::UpgradeRequest},
-};
+use crate::fleet_upgrade::{distributor::Distributor, master::UpgradeRequest};
 use axum::{
     Json, Router,
     body::Bytes,
@@ -13,6 +10,7 @@ use axum::{
     routing::post,
 };
 use elsecall_failure::Failure;
+use elsecall_wire::api;
 use std::sync::Arc;
 
 pub fn routes(distributor: Arc<Distributor>) -> Router {

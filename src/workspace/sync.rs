@@ -12,27 +12,25 @@
 //!    history.
 //! 5. The member asks only for content it cannot take from its own copy or object
 //!    store; the caller sends it; the member applies everything and confirms.
-use crate::{
-    wire,
-    workspace::{
-        carried_refs::{CarriedRefs, RefPattern},
-        confined::Confined,
-        copy::{Applied, Copy, MAXIMUM_PACK},
-        digest::Digest,
-        git::{Git, ObjectFormat, Oid},
-        head::Head,
-        index::{IndexDelta, IndexListing},
-        location::CopyLocation,
-        manifest::{Delta, Entry, Manifest},
-        object_sources::{MAXIMUM_BASES, ObjectSources},
-        path::WorkspacePath,
-        push_cache::{CacheFiles, Pushed},
-        snapshot::{self, Located, MAXIMUM_EXCLUDES},
-        stat_cache::StatCache,
-        sync_failed,
-    },
+use crate::workspace::{
+    carried_refs::{CarriedRefs, RefPattern},
+    confined::Confined,
+    copy::{Applied, Copy, MAXIMUM_PACK},
+    digest::Digest,
+    git::{Git, ObjectFormat, Oid},
+    head::Head,
+    index::{IndexDelta, IndexListing},
+    location::CopyLocation,
+    manifest::{Delta, Entry, Manifest},
+    object_sources::{MAXIMUM_BASES, ObjectSources},
+    path::WorkspacePath,
+    push_cache::{CacheFiles, Pushed},
+    snapshot::{self, Located, MAXIMUM_EXCLUDES},
+    stat_cache::StatCache,
+    sync_failed,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_wire::wire;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
