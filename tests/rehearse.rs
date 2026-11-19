@@ -620,15 +620,15 @@ fn repeated_cleanup_of_a_rehearsal_with_a_remote_copy_is_successful() {
         .build()
         .unwrap();
     for member in [&alpha, &bravo] {
-        let reply: elsecall::rehearsal::protocol::Reply = runtime
+        let reply: elsecall_rehearsal::rehearsal::protocol::Reply = runtime
             .block_on(elsecall_local_client::post_large(
                 &elsecall_local_state::paths::Paths::for_home(alpha.home.path())
                     .unwrap()
                     .socket(),
                 "/v1/rehearsal",
-                &elsecall::rehearsal::protocol::Call {
+                &elsecall_rehearsal::rehearsal::protocol::Call {
                     member: member.name.into(),
-                    operation: elsecall::rehearsal::protocol::Action::Clean {
+                    operation: elsecall_rehearsal::rehearsal::protocol::Action::Clean {
                         session: session.into(),
                     },
                 },
@@ -1145,7 +1145,7 @@ fn compare_reports_live_metrics_uses_synthetic_sizes_and_restores_synced_setting
     );
     // A missing noise floor prevents acceptance. A known hard violation may
     // still reject the proposal, including slowdown caused by host contention.
-    let expected = elsecall::tuning_objective::compare(
+    let expected = elsecall_rehearsal::tuning_objective::compare(
         &data["baseline"]["metrics"]["scheduling_objective"],
         &data["proposal"]["metrics"]["scheduling_objective"],
         None,
@@ -1709,7 +1709,7 @@ fn aa_noise_file_freezes_work_and_compare_applies_the_overhead_acceptance_rule()
     assert!(aa.status.success(), "{aa:?}");
     let aa = members::json(&aa)["data"].clone();
     assert_eq!(aa["comparison"]["status"], "compared", "{aa}");
-    let noise = elsecall::tuning_objective::Noise::read(&noise_path).unwrap();
+    let noise = elsecall_rehearsal::tuning_objective::Noise::read(&noise_path).unwrap();
     assert!(noise.valid());
     assert_eq!(serde_json::to_value(&noise).unwrap(), aa["noise_floor"]);
     use std::os::unix::fs::PermissionsExt;
@@ -1745,7 +1745,7 @@ fn aa_noise_file_freezes_work_and_compare_applies_the_overhead_acceptance_rule()
     }
     let a = &ab["baseline"]["metrics"]["scheduling_objective"];
     let b = &ab["proposal"]["metrics"]["scheduling_objective"];
-    let expected = elsecall::tuning_objective::compare(a, b, Some(&noise));
+    let expected = elsecall_rehearsal::tuning_objective::compare(a, b, Some(&noise));
     assert_eq!(ab["comparison"]["accepted"], expected["accepted"]);
     assert_eq!(ab["comparison"]["deltas"], expected["deltas"]);
     assert!(ab["comparison"]["accepted"].is_boolean(), "{ab}");

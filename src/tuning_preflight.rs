@@ -10,7 +10,7 @@ pub struct Options {
     pub observed_rehearsals: Vec<Trace>,
     pub busy_hours: Option<crate::busy_hour_calibration::Target>,
     pub load_factor: elsecall_simulation::replay_load::LoadFactor,
-    pub rehearsal_window: crate::rehearsal::window::Busiest,
+    pub rehearsal_window: elsecall_rehearsal::rehearsal::window::Busiest,
     pub min_interactive: std::num::NonZeroUsize,
     pub compress: f64,
     pub limit: std::time::Duration,
@@ -68,14 +68,14 @@ pub fn check(trace: Trace, args: Options) -> Result<Value> {
         || args.limit.is_zero()
         || args.limit.as_secs_f64() > 3600.0
     {
-        return Err(crate::rehearsal::invalid(
+        return Err(elsecall_rehearsal::rehearsal::invalid(
             "Preflight requires sample 2–16, budget 1–1024, compress 1–1000 and a positive limit at most 1h.",
         ));
     }
     let started = Instant::now();
     elsecall_simulation::simulation::validate_trace(&trace)?;
     let mut blockers = Vec::new();
-    let (mut workload, selection) = match crate::rehearsal::window::select(
+    let (mut workload, selection) = match elsecall_rehearsal::rehearsal::window::select(
         &trace,
         args.rehearsal_window.with_minimum(args.min_interactive),
     ) {
@@ -132,7 +132,9 @@ pub fn check(trace: Trace, args: Options) -> Result<Value> {
             serde_json::from_value(candidate["since"].clone()).expect("selection timestamp");
         let until =
             serde_json::from_value(candidate["until"].clone()).expect("selection timestamp");
-        workload = Some(crate::rehearsal::window::bound(&trace, since, until)?);
+        workload = Some(elsecall_rehearsal::rehearsal::window::bound(
+            &trace, since, until,
+        )?);
     }
     let mut search = Value::Null;
     let mut estimate = Value::Null;
@@ -159,7 +161,7 @@ pub fn check(trace: Trace, args: Options) -> Result<Value> {
                 ));
             }
         }
-        let inputs = crate::rehearsal::inputs::Inputs::new(&workload);
+        let inputs = elsecall_rehearsal::rehearsal::inputs::Inputs::new(&workload);
         for request in workload
             .requests
             .iter()
@@ -169,10 +171,14 @@ pub fn check(trace: Trace, args: Options) -> Result<Value> {
                 blockers.push(blocker("planning", reason, json!([request.fact.run_id])));
             }
         }
-        for (id, reason) in crate::rehearsal::plan::nested_problems(&workload) {
+        for (id, reason) in elsecall_rehearsal::rehearsal::plan::nested_problems(&workload) {
             blockers.push(blocker("planning", reason, json!([id])));
         }
-        let plan = crate::rehearsal::plan::Plan::with_load(&workload, args.compress, load_factor);
+        let plan = elsecall_rehearsal::rehearsal::plan::Plan::with_load(
+            &workload,
+            args.compress,
+            load_factor,
+        );
         if let Err(error) = &plan {
             blockers.push(blocker("planning", &error.message, json!([])));
         }

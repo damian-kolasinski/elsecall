@@ -363,7 +363,7 @@ fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
     );
     let selected: Trace = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     assert_eq!(selected.since.millis(), start + 19 * 60_000 + 1);
-    elsecall::rehearsal::plan::Plan::new(&selected, 6.0).unwrap();
+    elsecall_rehearsal::rehearsal::plan::Plan::new(&selected, 6.0).unwrap();
     // Older arrivals stay as history, while no root crosses the chosen start.
     assert!(
         selected
@@ -480,7 +480,7 @@ fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
     assert!(legacy.synthetic_workspace);
     assert!(!legacy.workspace_recorded);
     assert!(legacy.workspace.is_some());
-    elsecall::rehearsal::plan::Plan::new(&selected, 6.0).unwrap();
+    elsecall_rehearsal::rehearsal::plan::Plan::new(&selected, 6.0).unwrap();
 
     history[7].workspace_recorded = true;
     history[4].ended_at = Some(Timestamp::from_millis(start + 26 * 60_000));

@@ -213,11 +213,12 @@ fn summary(fidelity: &Value) -> Value {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::tuning_trust::*;
     #[test]
     fn summaries_preserve_the_evaluated_queue_policy_for_legacy_drift() {
         let legacy: Value =
-            serde_json::from_str(include_str!("../tests/fixtures/run5-rehearsal.json")).unwrap();
+            serde_json::from_str(include_str!("../../../tests/fixtures/run5-rehearsal.json"))
+                .unwrap();
         let mut fidelity = legacy["fidelity"].clone();
         let old = summary(&fidelity);
         assert_eq!(old["tolerances"]["queue_exact_fraction"], 0.95);

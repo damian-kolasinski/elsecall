@@ -1,14 +1,12 @@
 //! Paired live trials and the bounded synced-settings transaction between them.
-use crate::{
-    rehearsal::{
-        invalid,
-        protocol::{Action, Reply},
-    },
-    rehearse_cli::{self, RehearseArgs},
-};
+use crate::rehearse_cli::{self, RehearseArgs};
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
+use elsecall_rehearsal::rehearsal::{
+    invalid,
+    protocol::{Action, Reply},
+};
 use elsecall_scheduling::records::SchedulerSettings;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde_json::{Value, json};
@@ -163,7 +161,7 @@ async fn settings(
     Ok(result)
 }
 pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
-    let mut signals = super::cancellation::Signals::register()?;
+    let mut signals = elsecall_rehearsal::rehearsal::cancellation::Signals::register()?;
     let proposed = if args.aa {
         BTreeMap::new()
     } else {
@@ -178,7 +176,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
     let noise = args
         .noise
         .as_deref()
-        .map(crate::tuning_objective::Noise::read)
+        .map(elsecall_rehearsal::tuning_objective::Noise::read)
         .transpose()?;
     let trace = crate::rehearse_cli::source(&args)?;
     let source_digest = elsecall_build_identity::build_identity::Digest::of(
@@ -388,21 +386,23 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
             .as_f64()
             .zip(b["mean"].as_f64())
             .zip(a["p90"].as_f64().zip(b["p90"].as_f64()))
-            .map(|((am, bm), (ap, bp))| crate::tuning_objective::Noise {
-                noise_version: 1,
-                source_digest,
-                build: elsecall_build_identity::build_identity::this_build()
-                    .expect("rehearsal build"),
-                seed: baseline["seed"].as_u64().expect("seed"),
-                compress: baseline["compress"].as_f64().expect("compress"),
-                load_factor: serde_json::from_value(baseline["load_factor"].clone())
-                    .expect("load factor"),
-                mean_overhead: (am - bm).abs(),
-                p90_overhead: (ap - bp).abs(),
-                calibration: frozen_calibration,
-                ideals: frozen_ideals,
-                baseline_settings: original,
-            })
+            .map(
+                |((am, bm), (ap, bp))| elsecall_rehearsal::tuning_objective::Noise {
+                    noise_version: 1,
+                    source_digest,
+                    build: elsecall_build_identity::build_identity::this_build()
+                        .expect("rehearsal build"),
+                    seed: baseline["seed"].as_u64().expect("seed"),
+                    compress: baseline["compress"].as_f64().expect("compress"),
+                    load_factor: serde_json::from_value(baseline["load_factor"].clone())
+                        .expect("load factor"),
+                    mean_overhead: (am - bm).abs(),
+                    p90_overhead: (ap - bp).abs(),
+                    calibration: frozen_calibration,
+                    ideals: frozen_ideals,
+                    baseline_settings: original,
+                },
+            )
     } else {
         None
     };
@@ -430,7 +430,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
 fn comparison(
     baseline: &Value,
     proposal: Option<&Value>,
-    noise: Option<&crate::tuning_objective::Noise>,
+    noise: Option<&elsecall_rehearsal::tuning_objective::Noise>,
 ) -> Value {
     let complete = |run: &Value| {
         run["recording_complete"] == true
@@ -462,7 +462,7 @@ fn comparison(
     let b = proposal
         .map(|p| &p["metrics"]["scheduling_objective"])
         .unwrap_or(&Value::Null);
-    let mut result = crate::tuning_objective::compare(a, b, noise);
+    let mut result = elsecall_rehearsal::tuning_objective::compare(a, b, noise);
     if !complete {
         result["accepted"] = Value::Null;
     }
@@ -476,7 +476,7 @@ fn comparison(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::rehearsal_compare::*;
     #[test]
     fn an_incomplete_baseline_says_why() {
         assert_eq!(

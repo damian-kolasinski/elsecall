@@ -105,7 +105,7 @@ impl Plan {
 }
 
 /// Every unsupported nested interval, with the child's record identity.
-pub(crate) fn nested_problems(trace: &Trace) -> Vec<(String, &'static str)> {
+pub fn nested_problems(trace: &Trace) -> Vec<(String, &'static str)> {
     let by_id: BTreeMap<_, _> = trace
         .requests
         .iter()

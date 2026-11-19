@@ -12,7 +12,7 @@ use elsecall_workload::{
 };
 use std::collections::BTreeMap;
 
-pub(crate) struct Inputs<'a> {
+pub struct Inputs<'a> {
     trace: &'a Trace,
     references: BTreeMap<&'a str, elsecall_workload::trace::ExecutionReference>,
     demand: BTreeMap<(&'a str, &'a str), &'a Demand>,

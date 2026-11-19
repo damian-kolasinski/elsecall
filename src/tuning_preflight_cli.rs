@@ -31,7 +31,7 @@ pub struct PreflightArgs {
     pub until: Option<String>,
     /// busiest:DURATION or explicit (uses the given/source bounds)
     #[arg(long, default_value = "busiest:50m")]
-    pub rehearsal_window: crate::rehearsal::window::Busiest,
+    pub rehearsal_window: elsecall_rehearsal::rehearsal::window::Busiest,
     #[arg(long, default_value = "40")]
     pub min_interactive: NonZeroUsize,
     #[arg(long, default_value_t = 6.0)]
@@ -84,7 +84,7 @@ pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
     };
     let (start, end) =
         elsecall_workload::bounds::within(&trace, start_text, args.until.as_deref())?;
-    let trace = crate::rehearsal::window::bound(&trace, start, end)?;
+    let trace = elsecall_rehearsal::rehearsal::window::bound(&trace, start, end)?;
     let mut result = tokio::task::spawn_blocking(move || {
         crate::tuning_preflight::check(
             trace,

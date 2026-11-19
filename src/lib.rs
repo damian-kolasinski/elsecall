@@ -28,18 +28,12 @@ pub mod trace_cli;
 pub mod simulate_cli;
 pub mod trace_snapshot;
 
-pub mod rehearsal;
-pub mod rehearsal_api;
 pub mod rehearse_cli;
 
 pub mod tune_cli;
 pub mod tuning;
 
 pub mod tuning_drift;
-pub mod tuning_trust;
-pub mod tuning_trust_api;
-
-pub mod tuning_objective;
 
 pub mod tuning_preflight;
 pub mod tuning_preflight_cli;
@@ -48,4 +42,5 @@ pub mod busy_hour_calibration;
 
 mod local_run_client;
 
+pub mod rehearsal_compare;
 pub mod workload_observation_cli;

@@ -18,7 +18,7 @@ pub async fn monitor(paths: &Paths, scheduler: &Scheduler) -> Result<()> {
     for day in days.into_iter().rev() {
         let since = Timestamp::from_millis(day);
         let until = Timestamp::from_millis(day + DAY);
-        if crate::tuning_trust::monitored(paths, since)? {
+        if elsecall_rehearsal::tuning_trust::monitored(paths, since)? {
             continue;
         }
         // Check only days for which this member actually recorded inputs.
@@ -45,12 +45,12 @@ pub async fn monitor(paths: &Paths, scheduler: &Scheduler) -> Result<()> {
             )
         })
         .await
-        .map_err(|_| crate::rehearsal::invalid("Drift fidelity task failed."))?;
+        .map_err(|_| elsecall_rehearsal::rehearsal::invalid("Drift fidelity task failed."))?;
         match simulation {
             Ok(simulation) => {
-                crate::tuning_trust::record_day(paths, since, &simulation["fidelity"])?
+                elsecall_rehearsal::tuning_trust::record_day(paths, since, &simulation["fidelity"])?
             }
-            Err(error) => crate::tuning_trust::record_day(
+            Err(error) => elsecall_rehearsal::tuning_trust::record_day(
                 paths,
                 since,
                 &serde_json::json!({"status":"blocked_by_missing_evidence","error":error.code,"blockers":[error.message]}),

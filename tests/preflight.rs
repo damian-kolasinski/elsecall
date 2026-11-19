@@ -84,7 +84,7 @@ fn run3_arrivals_keep_post_window_drain_load_and_reject_genuine_holes() {
     request.fact.waited_ms = Some(0);
     request.fact.resources.as_mut().unwrap().started_at = Some(request.fact.requested_at);
     request.fact.resources.as_mut().unwrap().ended_at = Some(start.after(Duration::from_secs(120)));
-    let (selected, _) = elsecall::rehearsal::window::explicit(
+    let (selected, _) = elsecall_rehearsal::rehearsal::window::explicit(
         &source,
         start,
         start.after(Duration::from_secs(60)),
@@ -95,7 +95,7 @@ fn run3_arrivals_keep_post_window_drain_load_and_reject_genuine_holes() {
     assert_eq!(selected.until, start.after(Duration::from_secs(60)));
     elsecall_simulation::simulation::validate_trace(&selected).unwrap();
     source.members[0].load.remove(1);
-    let error = elsecall::rehearsal::window::explicit(
+    let error = elsecall_rehearsal::rehearsal::window::explicit(
         &source,
         start,
         start.after(Duration::from_secs(60)),
@@ -116,7 +116,7 @@ fn run4_housekeeping_is_background_without_demand_but_history_is_unchanged() {
     source.requests.push(internal);
     source.members[0].load[0].cpu_mean = Some(0.5);
     source.members[0].load[0].cpu_max = Some(0.5);
-    let (selected, _) = elsecall::rehearsal::window::explicit(
+    let (selected, _) = elsecall_rehearsal::rehearsal::window::explicit(
         &source,
         source.since,
         source.until,

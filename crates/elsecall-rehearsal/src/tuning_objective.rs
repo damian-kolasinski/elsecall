@@ -118,7 +118,7 @@ pub fn compare(a: &Value, b: &Value, noise: Option<&Noise>) -> Value {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::tuning_objective::*;
     fn metric(mean: f64, p90: f64) -> Value {
         json!({"overhead":{"mean":mean,"p90":p90},"hard_limits":{"reserve":true,"fleet_busy":true,"contention_slowdown":true,"failures":true},"failures":{"count":1}})
     }

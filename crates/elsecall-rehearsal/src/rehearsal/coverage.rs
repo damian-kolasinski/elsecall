@@ -1,7 +1,7 @@
 //! Minute evidence coverage for rehearsal arrival windows and their drain.
 use elsecall_workload::trace::Trace;
 
-pub(crate) struct Gap {
+pub struct Gap {
     pub member: String,
     pub since: u64,
     pub until: u64,
@@ -16,7 +16,7 @@ impl Gap {
         )
     }
 }
-pub(crate) fn gaps(trace: &Trace) -> Vec<Gap> {
+pub fn gaps(trace: &Trace) -> Vec<Gap> {
     let end = trace
         .requests
         .iter()

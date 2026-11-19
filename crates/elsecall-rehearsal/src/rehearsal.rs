@@ -1,7 +1,7 @@
 //! Controlled synthetic fleet execution. Scheduling remains in normal `run`.
 mod caller;
-pub(crate) mod coverage;
-pub(crate) mod inputs;
+pub mod coverage;
+pub mod inputs;
 mod journal;
 pub mod member;
 pub mod plan;
@@ -15,7 +15,6 @@ mod workspace;
 pub use elsecall_scheduling::service::invalid_rehearsal as invalid;
 
 pub mod cancellation;
-pub mod compare;
 pub use elsecall_workload::recording;
 
 /// Only known service-owned labels with internal placement are background in

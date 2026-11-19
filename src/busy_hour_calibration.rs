@@ -299,7 +299,8 @@ pub(crate) fn calibrate_preflight(
     compress: f64,
     seed: u64,
 ) -> Result<(Option<LoadFactor>, Value)> {
-    let bounded = crate::rehearsal::window::bound(source, selected.since, selected.until)?;
+    let bounded =
+        elsecall_rehearsal::rehearsal::window::bound(source, selected.since, selected.until)?;
     calibrate_observations(
         &[workload_digest(selected), workload_digest(&bounded)],
         target,

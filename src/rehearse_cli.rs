@@ -1,17 +1,15 @@
 //! Time-compressed replay orchestration. Trace parsing and model validation
 //! happen before the first fleet mutation; every exit path tears down sessions.
-use crate::{
-    rehearsal::{
-        invalid,
-        plan::{Arrival, Plan},
-        protocol::{Action, Call, Job, Reply},
-    },
-    trace_api::Members,
-};
+use crate::trace_api::Members;
 use clap::Args;
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
+use elsecall_rehearsal::rehearsal::{
+    invalid,
+    plan::{Arrival, Plan},
+    protocol::{Action, Call, Job, Reply},
+};
 use elsecall_scheduling_model::{request::Urgency, timestamp::Timestamp};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf, time::Duration};
@@ -95,9 +93,9 @@ pub async fn run(paths: &Paths, args: RehearseArgs) -> Result<Value> {
         ));
     }
     if args.compare.is_some() || args.aa {
-        return crate::rehearsal::compare::run(paths, args).await;
+        return crate::rehearsal_compare::run(paths, args).await;
     }
-    let mut signals = crate::rehearsal::cancellation::Signals::register()?;
+    let mut signals = elsecall_rehearsal::rehearsal::cancellation::Signals::register()?;
     let source = source(&args)?;
     single(
         paths,
@@ -114,9 +112,11 @@ pub(crate) async fn single(
     paths: &Paths,
     args: RehearseArgs,
     settings: &BTreeMap<String, String>,
-    signals: &mut crate::rehearsal::cancellation::Signals,
+    signals: &mut elsecall_rehearsal::rehearsal::cancellation::Signals,
     source: &elsecall_workload::trace::Trace,
-    frozen_calibration: Option<&BTreeMap<String, crate::rehearsal::worker::Calibration>>,
+    frozen_calibration: Option<
+        &BTreeMap<String, elsecall_rehearsal::rehearsal::worker::Calibration>,
+    >,
     frozen_ideals: Option<&BTreeMap<String, Option<f64>>>,
 ) -> Result<Value> {
     if args.limit.is_zero() || args.limit > Duration::from_secs(3600) {
@@ -186,7 +186,7 @@ pub(crate) async fn single(
                 .find(|r| &r.member == member)
                 .and_then(|r| r.cores)
                 .ok_or_else(|| invalid("Execution-member core counts are unavailable."))?;
-            let logical = crate::rehearsal::worker::logical_demand(*demand, cores);
+            let logical = elsecall_rehearsal::rehearsal::worker::logical_demand(*demand, cores);
             if !logical.is_finite() || logical > 256.0 {
                 return Err(invalid(
                     "Synthetic logical CPU duty exceeds the 256-core worker bound.",
@@ -267,7 +267,7 @@ pub(crate) async fn single(
             .map(|r| {
                 Ok((
                     r.member.clone(),
-                    crate::rehearsal::work::Member {
+                    elsecall_rehearsal::rehearsal::work::Member {
                         calibration: calibration
                             .get(&r.member)
                             .cloned()
@@ -299,7 +299,7 @@ pub(crate) async fn single(
                         .ok_or_else(|| invalid("Frozen ideal evidence lacks a planned request."))
                 })
                 .transpose()?;
-            arrival.request.work = Some(crate::rehearsal::work::Work::freeze(
+            arrival.request.work = Some(elsecall_rehearsal::rehearsal::work::Work::freeze(
                 arrival.request.duration_ms,
                 &arrival.request.demand,
                 &arrival.reference_member,
@@ -367,7 +367,8 @@ pub(crate) async fn single(
                             .ok_or_else(|| {
                                 invalid("Execution-member core counts are unavailable.")
                             })?;
-                        *demand = crate::rehearsal::worker::logical_demand(*demand, cores);
+                        *demand =
+                            elsecall_rehearsal::rehearsal::worker::logical_demand(*demand, cores);
                     }
                     ready.push((arrival.member.clone(), request));
                     // A lost response is an attempted submission too: its
@@ -609,7 +610,7 @@ pub(crate) async fn single(
     if inspections.iter().any(|r| r.production_active > 0) {
         unfinished.push("production work was active on a member".to_owned());
     }
-    trace.rehearsal = Some(crate::rehearsal::recording::Recording {
+    trace.rehearsal = Some(elsecall_rehearsal::rehearsal::recording::Recording {
         calibration: calibration.clone(),
         ideal_ms: submitted
             .iter()
@@ -673,7 +674,8 @@ pub(crate) async fn single(
     })
     .await
     .map_err(|_| invalid("Rehearsal fidelity task failed."))??;
-    let certificate = crate::tuning_trust::Certificate::from_rehearsal(&trace, &simulation);
+    let certificate =
+        elsecall_rehearsal::tuning_trust::Certificate::from_rehearsal(&trace, &simulation);
     artifact["fidelity"] = simulation["fidelity"].clone();
     artifact["certificate"] = json!(certificate);
     use std::io::Seek;
@@ -720,5 +722,5 @@ pub(crate) fn source(args: &RehearseArgs) -> Result<elsecall_workload::trace::Tr
     args.replay_placement.apply(&mut trace)?;
     let (since, until) =
         elsecall_workload::bounds::within(&trace, args.since.as_deref(), args.until.as_deref())?;
-    crate::rehearsal::window::bound(&trace, since, until)
+    elsecall_rehearsal::rehearsal::window::bound(&trace, since, until)
 }

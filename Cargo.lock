@@ -1090,6 +1090,7 @@ dependencies = [
  "elsecall-peer-transport",
  "elsecall-platform-macos",
  "elsecall-process",
+ "elsecall-rehearsal",
  "elsecall-rehearsal-identity",
  "elsecall-release-update",
  "elsecall-remote-run",
@@ -1537,6 +1538,43 @@ name = "elsecall-process"
 version = "0.3.0"
 dependencies = [
  "libc",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "elsecall-rehearsal"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "elsecall-build-identity",
+ "elsecall-failure",
+ "elsecall-fleet",
+ "elsecall-housekeeping",
+ "elsecall-labels",
+ "elsecall-load-log",
+ "elsecall-local-state",
+ "elsecall-machine",
+ "elsecall-membership",
+ "elsecall-os-processes",
+ "elsecall-peer-transport",
+ "elsecall-rehearsal-identity",
+ "elsecall-report-facts",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-service-log",
+ "elsecall-simulation",
+ "elsecall-wire",
+ "elsecall-workload",
+ "elsecall-workspace",
+ "futures-util",
+ "humantime",
+ "hyper",
+ "libc",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
  "tempfile",
  "tokio",
 ]

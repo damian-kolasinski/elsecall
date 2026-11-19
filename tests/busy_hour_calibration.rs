@@ -150,7 +150,8 @@ fn exercise(mode: Mode) {
     }
     .apply(&mut replay)
     .unwrap();
-    let replay = elsecall::rehearsal::window::bound(&replay, replay.since, replay.until).unwrap();
+    let replay =
+        elsecall_rehearsal::rehearsal::window::bound(&replay, replay.since, replay.until).unwrap();
     let output = temp.path().join("complete.json");
     let result = rehearsal_command(&alpha, &input, &output, rules)
         .output()
@@ -258,7 +259,8 @@ fn exercise(mode: Mode) {
         // Current rules are part of experiment identity; historical arms cannot
         // be pooled merely because their request counts happen to match.
         let historical =
-            elsecall::rehearsal::window::bound(&original, original.since, original.until).unwrap();
+            elsecall_rehearsal::rehearsal::window::bound(&original, original.since, original.until)
+                .unwrap();
         assert!(
             calibrate(
                 &historical,
