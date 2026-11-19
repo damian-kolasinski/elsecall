@@ -10,7 +10,6 @@ use crate::{
     fleet_local_api::EnrollRequest,
     inbound_firewall::Rule,
     member_code,
-    paths::Paths,
     remote_mac::{
         Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant,
     },
@@ -18,6 +17,7 @@ use crate::{
     tailscale_bottle,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

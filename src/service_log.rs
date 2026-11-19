@@ -1,7 +1,7 @@
 //! Complete lifecycle records, reopened under a process-shared lock on every
 //! write. No inherited descriptor can keep writing into a rotated archive.
-use crate::private_files;
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::private_files;
 use std::{
     fs::{self, OpenOptions},
     io::Write,
@@ -49,7 +49,10 @@ impl Log {
             .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
             .open(lock_path)?;
         let meta = lock.metadata()?;
-        if !meta.is_file() || meta.uid() != crate::local_access::user_id() || meta.nlink() != 1 {
+        if !meta.is_file()
+            || meta.uid() != elsecall_local_state::local_access::user_id()
+            || meta.nlink() != 1
+        {
             return Err(std::io::Error::other("unsafe service log lock"));
         }
         lock.set_permissions(fs::Permissions::from_mode(0o600))?;
@@ -81,7 +84,7 @@ impl Log {
                 match fs::symlink_metadata(&source) {
                     Ok(meta) => {
                         if !meta.is_file()
-                            || meta.uid() != crate::local_access::user_id()
+                            || meta.uid() != elsecall_local_state::local_access::user_id()
                             || meta.nlink() != 1
                         {
                             return Err(std::io::Error::other("unsafe service log"));
@@ -106,7 +109,10 @@ impl Log {
             .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
             .open(&self.path)?;
         let meta = file.metadata()?;
-        if !meta.is_file() || meta.uid() != crate::local_access::user_id() || meta.nlink() != 1 {
+        if !meta.is_file()
+            || meta.uid() != elsecall_local_state::local_access::user_id()
+            || meta.nlink() != 1
+        {
             return Err(std::io::Error::other("unsafe service log"));
         }
         file.set_permissions(fs::Permissions::from_mode(0o600))?;
@@ -118,7 +124,10 @@ static LOG: OnceLock<Mutex<Log>> = OnceLock::new();
 /// Called by the service and upgrade-helper entry points only, never CLI callers.
 /// `configured` is the log settings of the service configuration, or why it
 /// could not be read.
-pub fn initialize(paths: &crate::paths::Paths, configured: Result<Settings>) -> Result<()> {
+pub fn initialize(
+    paths: &elsecall_local_state::paths::Paths,
+    configured: Result<Settings>,
+) -> Result<()> {
     private_files::owned_tree(&paths.home, &paths.data)?;
     private_files::directory(&paths.data)?;
     // Defaults let invalid configuration itself leave a safe diagnostic.

@@ -4,7 +4,6 @@
 //! run protocol, including end-to-end heartbeats.
 use crate::{
     fleet::Fleet,
-    local_access::LocalCaller,
     peer_client,
     roster::MemberName,
     scheduling::{run_id::RunId, service::Scheduler},
@@ -17,6 +16,7 @@ use axum::{
     routing::post,
 };
 use elsecall_failure::Failure;
+use elsecall_local_state::local_access::LocalCaller;
 use hyper_util::rt::TokioIo;
 use std::sync::Arc;
 

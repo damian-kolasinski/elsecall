@@ -395,8 +395,8 @@ async fn observation_binding_grace_includes_slow_request_time() {
         .prefix("ec-observe-")
         .tempdir_in("/tmp")
         .unwrap();
-    let paths = elsecall::paths::Paths::for_home(home.path()).unwrap();
-    elsecall::private_files::directory(&paths.data).unwrap();
+    let paths = elsecall_local_state::paths::Paths::for_home(home.path()).unwrap();
+    elsecall_local_state::private_files::directory(&paths.data).unwrap();
     let listener = UnixListener::bind(paths.socket()).unwrap();
     let (seen, received) = tokio::sync::oneshot::channel();
     let peer = tokio::spawn(async move {

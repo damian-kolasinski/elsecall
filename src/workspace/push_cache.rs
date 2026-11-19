@@ -32,7 +32,10 @@ impl CacheFiles {
     }
     pub fn register(&self) {
         if !self.registry().exists() {
-            let _ = crate::private_files::replace(&self.registry(), self.root.as_bytes());
+            let _ = elsecall_local_state::private_files::replace(
+                &self.registry(),
+                self.root.as_bytes(),
+            );
         }
     }
     pub fn stat(&self) -> PathBuf {
@@ -116,6 +119,6 @@ impl Pushed {
         let mut bytes = (manifest.len() as u64).to_be_bytes().to_vec();
         bytes.extend_from_slice(&manifest);
         bytes.extend_from_slice(&index.encode());
-        let _ = crate::private_files::replace(path, &bytes);
+        let _ = elsecall_local_state::private_files::replace(path, &bytes);
     }
 }

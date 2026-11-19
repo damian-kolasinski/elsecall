@@ -1,8 +1,9 @@
 //! Durable simulator certificates and drift revocation. Passing days never clear
 //! a revocation: only a subsequent successful rehearsal can do that.
-use crate::{paths::Paths, scheduling::timestamp::Timestamp, workload::trace::Trace};
+use crate::{scheduling::timestamp::Timestamp, workload::trace::Trace};
 use elsecall_build_identity::build_identity::{Build, Digest};
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::time::Duration;
@@ -57,7 +58,7 @@ impl Certificate {
     }
 }
 fn database(paths: &Paths) -> Result<rusqlite::Connection> {
-    crate::private_files::directory(&paths.data)?;
+    elsecall_local_state::private_files::directory(&paths.data)?;
     let path = paths.data.join("tuning-evidence.sqlite");
     use std::os::unix::fs::OpenOptionsExt;
     std::fs::OpenOptions::new()

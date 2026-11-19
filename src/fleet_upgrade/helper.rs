@@ -13,10 +13,10 @@ use crate::{
     },
     inspection::Health,
     installation::{ServiceManager, Transaction, ready::confirm},
-    paths::Paths,
 };
 use elsecall_build_identity::build_identity::{Build, BuildId, Digest};
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use std::path::Path;
 
 fn log(event: &str, id: &UpgradeId, detail: serde_json::Value) {
@@ -132,7 +132,7 @@ pub async fn run(paths: &Paths, manager: &dyn ServiceManager, id: &UpgradeId) ->
     match phase {
         // Keep the previous build where the hint says, for the operator to restore.
         Phase::RollbackFailed { .. } => {
-            let _ = crate::private_files::remove_file(&journal.incoming());
+            let _ = elsecall_local_state::private_files::remove_file(&journal.incoming());
         }
         _ => journal.discard_builds(),
     }

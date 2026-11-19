@@ -11,6 +11,7 @@ publish = false
 elsecall.workspace = true
 elsecall-build-identity.workspace = true
 elsecall-failure.workspace = true
+elsecall-local-state.workspace = true
 libc.workspace = true
 rune.workspace = true
 rune-kit.workspace = true

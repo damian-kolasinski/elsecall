@@ -3,15 +3,13 @@ use super::{
     invalid,
     protocol::{Job, Launch},
 };
-use crate::{
-    paths::Paths,
-    scheduling::{
-        processes::ProcessIdentity,
-        request::{AtDeadline, Placement, Urgency},
-        timestamp::Timestamp,
-    },
+use crate::scheduling::{
+    processes::ProcessIdentity,
+    request::{AtDeadline, Placement, Urgency},
+    timestamp::Timestamp,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use std::{
     fs,
     path::{Path, PathBuf},

@@ -1,5 +1,5 @@
 //! Same-user socket routes for the staged window and app publication.
-use crate::{api, paths::Paths};
+use crate::api;
 use axum::{
     Json, Router,
     extract::State,
@@ -7,6 +7,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+use elsecall_local_state::paths::Paths;
 use serde::Serialize;
 
 #[derive(Serialize)]

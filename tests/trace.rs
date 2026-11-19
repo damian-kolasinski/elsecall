@@ -183,9 +183,9 @@ fn exports_paginated_fleet_history_without_commands_or_environment() {
 fn exports_real_overrun_shape_across_load_pages_without_losing_history() {
     use elsecall::{
         load_log::{minute::Minute, store::LoadStore},
-        paths::Paths,
         scheduling::timestamp::Timestamp,
     };
+    use elsecall_local_state::paths::Paths;
     let alpha = TestMember::start("alpha");
     let paths = Paths::for_home(alpha.home.path()).unwrap();
     let store = LoadStore::open(&paths.load_history()).unwrap();
@@ -235,10 +235,10 @@ fn exports_real_overrun_shape_across_load_pages_without_losing_history() {
 fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
     use elsecall::{
         load_log::{minute::Minute, store::LoadStore},
-        paths::Paths,
         scheduling::{record::Record, records::Records, run_id::RunId, timestamp::Timestamp},
         workload::trace::Trace,
     };
+    use elsecall_local_state::paths::Paths;
     use std::time::Duration;
     // Twelve scripted cores: overlapping runs record up to 6 cores in use.
     let load_dir = tempfile::tempdir().unwrap();

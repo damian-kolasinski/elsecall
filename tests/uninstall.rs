@@ -103,8 +103,8 @@ fn configuration_sync_backups_stay_with_the_state_that_indexes_them() {
     let member = installed();
     let data = member.data();
     let backups = data.join("config-sync/backups");
-    elsecall::private_files::directory(&data.join("config-sync")).unwrap();
-    elsecall::private_files::directory(&backups).unwrap();
+    elsecall_local_state::private_files::directory(&data.join("config-sync")).unwrap();
+    elsecall_local_state::private_files::directory(&backups).unwrap();
     fs::write(backups.join("original"), b"this member's own version").unwrap();
     fs::write(data.join("config-sync/state.json"), b"{\"backups\":[]}").unwrap();
     preserved(&member);
@@ -124,7 +124,7 @@ fn configuration_sync_backups_stay_with_the_state_that_indexes_them() {
 fn the_catalog_of_recorded_workspace_copies_stays_for_a_later_cleanup() {
     let member = installed();
     let data = member.data();
-    elsecall::private_files::directory(&data.join("copies")).unwrap();
+    elsecall_local_state::private_files::directory(&data.join("copies")).unwrap();
     fs::write(data.join("copies/copy.state"), b"{}").unwrap();
     preserved(&member);
     let kept = names(&data);

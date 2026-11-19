@@ -2,9 +2,9 @@
 
 use std::path::Path;
 
-use elsecall::paths::Paths;
 use elsecall::workload_configuration::{self, Configuration, FILE_NAME};
 use elsecall::workload_settings::WorkloadSettings;
+use elsecall_local_state::paths::Paths;
 
 pub(crate) struct Policy {
     pub(crate) source: Option<String>,

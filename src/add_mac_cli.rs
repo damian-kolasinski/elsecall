@@ -5,11 +5,11 @@ use crate::{
     authorized_keys,
     macos::tailscale::TailscaleCli,
     openssh_mac::OpensshMac,
-    paths::Paths,
     remote_mac::Build,
     tailnet::{Configured, Tailnet},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use serde_json::Value;
 use std::{
     io::{BufRead, IsTerminal, Read, Write},

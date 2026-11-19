@@ -3,12 +3,9 @@
 //! registering LaunchAgents. `ELSECALL_SERVICE_MANAGER=process` selects it in debug
 //! builds only; release builds always use launchd. It keeps nothing alive after a
 //! crash, which launchd would.
-use crate::{
-    installation::{ServiceManager, Session},
-    paths::Paths,
-    private_files,
-};
+use crate::installation::{ServiceManager, Session};
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::{paths::Paths, private_files};
 use std::{
     os::unix::process::CommandExt,
     path::{Path, PathBuf},

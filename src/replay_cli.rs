@@ -2,12 +2,12 @@
 //! under changed parameters.
 use crate::{
     client,
-    paths::Paths,
     replay_api::{ReplayRequest, invalid},
     scheduling::{replay::Change, timestamp::Timestamp},
 };
 use clap::Args;
 use elsecall_failure::Result;
+use elsecall_local_state::paths::Paths;
 use serde_json::Value;
 
 #[derive(Args)]

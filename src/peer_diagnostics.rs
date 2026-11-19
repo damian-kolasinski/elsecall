@@ -148,7 +148,10 @@ impl Store {
         let meta = file
             .metadata()
             .map_err(|e| Failure::io("Inspect peer diagnostics", e))?;
-        if !meta.is_file() || meta.uid() != crate::local_access::user_id() || meta.nlink() != 1 {
+        if !meta.is_file()
+            || meta.uid() != elsecall_local_state::local_access::user_id()
+            || meta.nlink() != 1
+        {
             return Err(Failure::new(
                 "peer_history_unavailable",
                 "Peer diagnostics must be an owner-owned regular file without hard links.",
@@ -231,7 +234,7 @@ fn db_error(_: rusqlite::Error) -> Failure {
     )
 }
 static STORE: OnceLock<Store> = OnceLock::new();
-pub fn initialize(paths: &crate::paths::Paths) -> Result<()> {
+pub fn initialize(paths: &elsecall_local_state::paths::Paths) -> Result<()> {
     let store = Store::open(&paths.data.join("peer-io.sqlite"))?;
     let _ = STORE.set(store);
     Ok(())

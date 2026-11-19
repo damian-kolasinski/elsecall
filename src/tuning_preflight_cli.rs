@@ -55,7 +55,8 @@ pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
         let start = crate::report_cli::since(args.since.as_deref().unwrap_or("7d"), now)?;
         // Collect through now, so every historical drain and sensitivity trial
         // can use the available evidence beyond the arrival cutoff.
-        crate::trace_cli::collect(&crate::paths::Paths::current()?, start, now).await?
+        crate::trace_cli::collect(&elsecall_local_state::paths::Paths::current()?, start, now)
+            .await?
     };
     crate::simulation::validate_trace(&trace)?;
     let placement = args.replay_placement.apply(&mut trace)?;

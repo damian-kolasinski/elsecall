@@ -9,13 +9,13 @@ use super::{
 };
 use crate::{
     housekeeping::pass::Housekeeper,
-    paths::Paths,
     scheduling::{
         request::{Placement, Urgency},
         service::Scheduler,
     },
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use std::{
     fs,
     path::PathBuf,

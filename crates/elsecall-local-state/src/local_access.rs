@@ -40,7 +40,7 @@ pub fn require_user() -> Result<()> {
 mod tests {
     #[test]
     fn only_same_user_is_authorized() {
-        assert!(super::authorize_peer(super::user_id()).is_ok());
-        assert!(super::authorize_peer(super::user_id() + 1).is_err());
+        assert!(crate::local_access::authorize_peer(crate::local_access::user_id()).is_ok());
+        assert!(crate::local_access::authorize_peer(crate::local_access::user_id() + 1).is_err());
     }
 }

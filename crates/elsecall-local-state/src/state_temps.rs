@@ -62,7 +62,7 @@ pub fn prune(paths: &Paths) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::state_temps::*;
     #[test]
     fn refuses_symlinked_metadata_directory_without_touching_target() {
         let home = tempfile::tempdir_in("/tmp").unwrap();

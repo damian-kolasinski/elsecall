@@ -10,7 +10,7 @@ mod guide;
 mod stub;
 mod targets;
 
-use crate::paths::Paths;
+use elsecall_local_state::paths::Paths;
 use serde_json::Value;
 use std::path::Path;
 

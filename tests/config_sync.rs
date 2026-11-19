@@ -11,10 +11,10 @@ use elsecall::{
         protocol::{self, Message, Purpose},
         state::State,
     },
-    paths::Paths,
     peer_client,
     workspace::path::WorkspacePath,
 };
+use elsecall_local_state::paths::Paths;
 use members::{TestMember, enrol};
 use serde_json::Value;
 use std::{

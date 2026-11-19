@@ -1,14 +1,12 @@
 //! Removes Elsecall from this user's account: the installation, then the request
 //! that makes the user's tool manager resolve the CLI, which the one-command
 //! installer added and which would otherwise keep `elsecall` on the PATH.
-use crate::{
-    installation::{
-        self, InstalledParts, Kept, ServiceManager,
-        cli_request::{CliRequest, Request, Selection},
-    },
-    paths::Paths,
+use crate::installation::{
+    self, InstalledParts, Kept, ServiceManager,
+    cli_request::{CliRequest, Request, Selection},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]

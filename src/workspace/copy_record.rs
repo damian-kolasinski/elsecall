@@ -155,7 +155,7 @@ impl CopyRecord {
         if let Some(refs) = &self.refs {
             block(&mut out, &serde_json::to_vec(refs).expect("refs serialize"));
         }
-        crate::private_files::replace(path, &out)
+        elsecall_local_state::private_files::replace(path, &out)
     }
 }
 

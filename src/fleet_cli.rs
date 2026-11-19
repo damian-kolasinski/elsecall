@@ -3,11 +3,11 @@
 use crate::{
     client,
     fleet_local_api::{CodeRequest, EnrollRequest, ForceRequest, MemberRequest, SyncRequest},
-    paths::Paths,
     roster::{MemberName, Readiness},
 };
 use clap::{Args, Subcommand};
 use elsecall_failure::Result;
+use elsecall_local_state::paths::Paths;
 use hyper::Method;
 use serde_json::Value;
 use std::time::Duration;

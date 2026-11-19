@@ -23,7 +23,7 @@ impl RunningBundle {
     pub fn current() -> Self {
         Self {
             app: std::env::current_exe().ok().as_deref().and_then(app_of),
-            cli: elsecall::paths::Paths::current()
+            cli: elsecall_local_state::paths::Paths::current()
                 .ok()
                 .map(|paths| paths.bin),
         }

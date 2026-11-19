@@ -1,9 +1,9 @@
-use crate::{
-    installation::{ServiceManager, Session},
+use crate::installation::{ServiceManager, Session};
+use elsecall_failure::{Failure, Result};
+use elsecall_local_state::{
     local_access::user_id,
     paths::{LABEL, Paths},
 };
-use elsecall_failure::{Failure, Result};
 use std::{
     path::Path,
     process::{Command, Stdio},

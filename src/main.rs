@@ -6,15 +6,14 @@ use elsecall::{
     inspection::{Health, Inspection, Machine},
     install_window,
     installation::{self, ServiceManager},
-    local_access,
     macos::{
         application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
         processes::MacProcesses, tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
     },
-    paths::Paths,
     peer_listener, scheduling, tailnet,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::{local_access, paths::Paths};
 use serde::Serialize;
 use std::{process::ExitCode, sync::Arc, time::Duration};
 
@@ -187,7 +186,7 @@ async fn main() -> ExitCode {
                 if let Some(path) =
                     elsecall::passthrough::option_argument(&all, "acquire", "--run-id-file")
                 {
-                    let _ = elsecall::run_id_file::RunIdFile::at(path).record(None);
+                    let _ = elsecall_local_state::run_id_file::RunIdFile::at(path).record(None);
                 }
                 let failure = Failure::new(
                     "invalid_arguments",

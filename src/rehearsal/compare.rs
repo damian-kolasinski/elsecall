@@ -1,7 +1,6 @@
 //! Paired live trials and the bounded synced-settings transaction between them.
 use crate::{
     client,
-    paths::Paths,
     rehearsal::{
         invalid,
         protocol::{Action, Reply},
@@ -10,6 +9,7 @@ use crate::{
     scheduling::{records::SchedulerSettings, timestamp::Timestamp},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, time::Duration};
 

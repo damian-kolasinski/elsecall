@@ -30,8 +30,8 @@ pub fn workload_policy(
     directory: Option<&std::path::Path>,
     settings: &str,
 ) {
-    let paths = elsecall::paths::Paths::for_home(home).unwrap();
-    elsecall::private_files::directory(&paths.data).unwrap();
+    let paths = elsecall_local_state::paths::Paths::for_home(home).unwrap();
+    elsecall_local_state::private_files::directory(&paths.data).unwrap();
     let target = paths.data.join(elsecall::workload_configuration::FILE_NAME);
     let mut table: toml::Table = std::fs::read_to_string(&target)
         .ok()

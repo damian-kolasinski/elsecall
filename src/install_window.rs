@@ -4,10 +4,10 @@
 //! open the app is reported beside a successful installation.
 use crate::{
     installation::{Installed, ServiceManager, Session, Transaction},
-    paths::Paths,
     window_app::{self, WindowLauncher},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use serde::Serialize;
 use std::{future::Future, path::Path, path::PathBuf};
 

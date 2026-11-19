@@ -1,8 +1,9 @@
 //! Align only Elsecall's existing global mise request, preserving unrelated settings.
 use super::{ISSUER, Release, StagedRelease, TOOL, invalid};
-use crate::{installation::cli_request::Selection, paths::Paths};
+use crate::installation::cli_request::Selection;
 use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
@@ -269,11 +270,14 @@ fn owned_config(paths: &Paths, path: &Path) -> Result<()> {
             "The global mise request is outside this user's home.",
         ));
     }
-    crate::private_files::owned_tree(&paths.home, path.parent().expect("config parent"))?;
+    elsecall_local_state::private_files::owned_tree(
+        &paths.home,
+        path.parent().expect("config parent"),
+    )?;
     let metadata =
         fs::symlink_metadata(path).map_err(|e| Failure::io("Inspect mise configuration", e))?;
     if !metadata.is_file()
-        || metadata.uid() != crate::local_access::user_id()
+        || metadata.uid() != elsecall_local_state::local_access::user_id()
         || metadata.mode() & 0o022 != 0
     {
         return Err(invalid(

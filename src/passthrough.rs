@@ -17,9 +17,6 @@ use crate::{
     },
     api::SCHEMA_VERSION,
     client::{self, Wait},
-    local_access,
-    paths::Paths,
-    run_id_file::RunIdFile,
     scheduling::{
         messages::{Grant, RunEnded},
         placed::WorkspaceRef,
@@ -33,6 +30,7 @@ use crate::{
 use clap::Args;
 use elsecall_failure::{Failure, Result};
 use elsecall_guidance::{self as guidance, Unmanaged};
+use elsecall_local_state::{local_access, paths::Paths, run_id_file::RunIdFile};
 use elsecall_run_admission::Admission;
 use executor::{CommandLine, Executor, Exit, Finished, RunContext, RunFailure, Running};
 use local::LocalExecutor;
@@ -295,7 +293,7 @@ async fn run(args: RunArgs, reports: &Reports) -> Result<Exit> {
     let caches = paths.data.join("workspaces");
     let copy_configuration = match &located {
         Some(_) => {
-            crate::private_files::directory(&caches)?;
+            elsecall_local_state::private_files::directory(&caches)?;
             Some(configuration.clone())
         }
         None => None,

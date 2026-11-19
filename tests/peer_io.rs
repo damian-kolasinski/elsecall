@@ -129,8 +129,8 @@ async fn failures_are_typed_bounded_retained_and_only_idempotent_requests_retry(
         .prefix("ec-peer-")
         .tempdir_in("/tmp")
         .unwrap();
-    let paths = elsecall::paths::Paths::for_home(home.path()).unwrap();
-    elsecall::private_files::directory(&paths.data).unwrap();
+    let paths = elsecall_local_state::paths::Paths::for_home(home.path()).unwrap();
+    elsecall_local_state::private_files::directory(&paths.data).unwrap();
     peer_diagnostics::initialize(&paths).unwrap();
     let key = MemberKey::generate().unwrap();
     let start = Timestamp::now();

@@ -2,7 +2,6 @@
 //! happen before the first fleet mutation; every exit path tears down sessions.
 use crate::{
     client,
-    paths::Paths,
     rehearsal::{
         invalid,
         plan::{Arrival, Plan},
@@ -13,6 +12,7 @@ use crate::{
 };
 use clap::Args;
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 use tokio::time::Instant;

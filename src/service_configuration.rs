@@ -336,7 +336,7 @@ pub use crate::config_sync::status::ServiceSummary as Summary;
 /// Managed members start from their verified replica. A retained local file,
 /// including later edits to it, cannot override or break an accepted generation.
 pub fn load(
-    paths: &crate::paths::Paths,
+    paths: &elsecall_local_state::paths::Paths,
     member: Option<&MemberName>,
 ) -> Result<ServiceConfiguration> {
     use crate::config_sync::{

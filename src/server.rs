@@ -4,13 +4,11 @@ use crate::{
     fleet_local_api,
     fleet_placement::FleetMembers,
     inspection::Inspection,
-    local_access,
     member_key::MemberKey,
     membership_store::MembershipStore,
-    paths::Paths,
     peer_api, peer_listener, placement_api,
     placement_host::PlacementHost,
-    private_files, run_relay,
+    run_relay,
     scheduling::service::{Adapters, Scheduler},
     workspace::{copies::Copies, location::Locations, object_sources::ObjectSources},
 };
@@ -32,6 +30,7 @@ use axum::{
     routing::get,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::{local_access, paths::Paths, private_files};
 use std::{
     fs,
     os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},
@@ -61,7 +60,7 @@ async fn identify_caller(
 ) -> Response {
     request
         .extensions_mut()
-        .insert(crate::local_access::LocalCaller { pid: peer.pid });
+        .insert(elsecall_local_state::local_access::LocalCaller { pid: peer.pid });
     next.run(request).await
 }
 
@@ -70,7 +69,7 @@ struct TuningTrust;
 impl crate::report_api::TrustEvidence for TuningTrust {
     fn fleet_status<'a>(
         &'a self,
-        paths: &'a crate::paths::Paths,
+        paths: &'a elsecall_local_state::paths::Paths,
         fleet: &'a std::result::Result<Arc<crate::fleet::Fleet>, Failure>,
     ) -> futures_util::future::BoxFuture<'a, serde_json::Value> {
         Box::pin(crate::tuning_trust_api::fleet_status(paths, fleet))
@@ -141,7 +140,7 @@ pub async fn serve_with_updates(
         ));
     };
     crate::peer_diagnostics::initialize(&paths)?;
-    if let Err(error) = crate::state_temps::prune(&paths) {
+    if let Err(error) = elsecall_local_state::state_temps::prune(&paths) {
         // Optional sync/upgrade state must not take down local admission.
         crate::service_log!(
             "{}",

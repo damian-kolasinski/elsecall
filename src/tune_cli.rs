@@ -100,7 +100,7 @@ pub fn run(args: TuneArgs) -> Result<serde_json::Value> {
 /// remains optional stronger evidence, but cannot bypass a drift revocation.
 pub async fn current_trust(mut result: serde_json::Value) -> serde_json::Value {
     use serde_json::json;
-    let Ok(paths) = crate::paths::Paths::current() else {
+    let Ok(paths) = elsecall_local_state::paths::Paths::current() else {
         return result;
     };
     if !paths.data.join("tuning-evidence.sqlite").exists() && !paths.socket().exists() {

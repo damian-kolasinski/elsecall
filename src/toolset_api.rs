@@ -5,7 +5,6 @@
 use crate::{
     api,
     fleet::Fleet,
-    paths::Paths,
     roster::{MemberName, Roster},
     tool_inventory::Manager,
     toolset::{
@@ -23,6 +22,7 @@ use axum::{
     routing::{any, get},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{path::PathBuf, sync::Arc};
 

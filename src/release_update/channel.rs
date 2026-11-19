@@ -10,8 +10,8 @@ use super::{
     ReleaseCatalog, ReleaseDownload,
     local_channel::{LocalChannel, LocalDownload, Packslip},
 };
-use crate::paths::Paths;
 use elsecall_failure::Result;
+use elsecall_local_state::paths::Paths;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -28,7 +28,7 @@ pub struct SocketSource {
 
 impl SocketSource {
     pub fn open() -> Self {
-        let socket = elsecall::paths::Paths::current()
+        let socket = elsecall_local_state::paths::Paths::current()
             .map(|paths| paths.socket())
             .map_err(classify);
         let runtime = tokio::runtime::Builder::new_current_thread()
@@ -65,12 +65,13 @@ pub struct SocketWindowUpgrade;
 
 impl crate::window_upgrade::WindowUpgrade for SocketWindowUpgrade {
     fn replace_and_reopen(&self) -> Result<(), String> {
-        let paths = elsecall::paths::Paths::current().map_err(|error| error.message.clone())?;
+        let paths =
+            elsecall_local_state::paths::Paths::current().map_err(|error| error.message.clone())?;
         replace_window_at(&paths.socket())
     }
 
     fn start_release(&self) -> Result<elsecall::release_update::Job, String> {
-        let paths = elsecall::paths::Paths::current().map_err(|error| error.message)?;
+        let paths = elsecall_local_state::paths::Paths::current().map_err(|error| error.message)?;
         start_release_at(&paths.socket())
     }
     fn close_old_window(&self) {

@@ -1069,6 +1069,7 @@ dependencies = [
  "elsecall-failure",
  "elsecall-guidance",
  "elsecall-labels",
+ "elsecall-local-state",
  "elsecall-process",
  "elsecall-rehearsal-identity",
  "elsecall-run-admission",
@@ -1129,6 +1130,16 @@ name = "elsecall-labels"
 version = "0.3.0"
 
 [[package]]
+name = "elsecall-local-state"
+version = "0.3.0"
+dependencies = [
+ "elsecall-failure",
+ "getrandom 0.3.4",
+ "libc",
+ "tempfile",
+]
+
+[[package]]
 name = "elsecall-process"
 version = "0.3.0"
 dependencies = [
@@ -1176,6 +1187,7 @@ dependencies = [
  "elsecall",
  "elsecall-build-identity",
  "elsecall-failure",
+ "elsecall-local-state",
  "libc",
  "png 0.18.1",
  "rune",

@@ -4,7 +4,6 @@
 //! is one member's entry from that same fleet document.
 use crate::{
     client,
-    paths::Paths,
     roster::MemberName,
     tool_inventory::{Manager, ToolName},
     tools_api,
@@ -12,6 +11,7 @@ use crate::{
 };
 use clap::{Args, Subcommand};
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use hyper::Method;
 use serde_json::Value;
 use std::time::Duration;

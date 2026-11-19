@@ -4,13 +4,13 @@ use elsecall::{
     client,
     inspection::{Inspection, LoadSample, Machine, MachineInspector},
     macos::processes::MacProcesses,
-    paths::Paths,
-    peer_listener, private_files,
+    peer_listener,
     scheduling::service::Adapters,
     server,
     tailnet::{Presence, Tailnet},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::{paths::Paths, private_files};
 use std::{future::IntoFuture, sync::Arc};
 
 struct UnavailableMachine;

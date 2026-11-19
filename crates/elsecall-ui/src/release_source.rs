@@ -69,7 +69,7 @@ pub fn production() -> Arc<dyn ReleaseSource> {
     impl ReleaseSource for Lazy {
         fn snapshot(&self) -> Result<ReleaseSnapshot, String> {
             match self.source.get_or_init(|| {
-                elsecall::paths::Paths::current()
+                elsecall_local_state::paths::Paths::current()
                     .map(|paths| SocketReleases::open(paths.socket()))
                     .map_err(|error| error.message)
             }) {

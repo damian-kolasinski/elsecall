@@ -1,6 +1,19 @@
 //! A real service on a real socket, driven by the real CLI binary. Only the
 //! machine's load is faked, as an external observation boundary.
 #![allow(dead_code)]
+use elsecall::{
+    inspection::{
+        CoreCounts, Inspection, LoadAverage, LoadSample, Machine, MachineInspector, Memory,
+        MemoryPressure, ThermalState,
+    },
+    macos::processes::MacProcesses,
+    peer_listener,
+    scheduling::service::Adapters,
+    server,
+    tailnet::{Presence, Tailnet},
+};
+use elsecall_failure::Result;
+use elsecall_local_state::{paths::Paths, private_files};
 use serde_json::Value;
 use std::{
     path::{Path, PathBuf},
@@ -9,21 +22,6 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::process::Child;
-use {
-    elsecall::{
-        inspection::{
-            CoreCounts, Inspection, LoadAverage, LoadSample, Machine, MachineInspector, Memory,
-            MemoryPressure, ThermalState,
-        },
-        macos::processes::MacProcesses,
-        paths::Paths,
-        peer_listener, private_files,
-        scheduling::service::Adapters,
-        server,
-        tailnet::{Presence, Tailnet},
-    },
-    elsecall_failure::Result,
-};
 
 /// These tests never join a fleet, so the member listener has no tailnet to bind.
 struct NoTailnet;

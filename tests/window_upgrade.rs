@@ -1,14 +1,15 @@
 //! Exercise real bundle publication with only macOS signing/launching replaced.
 #![cfg(target_os = "macos")]
-use elsecall::{
-    paths::Paths,
-    private_files,
-    window_app::{self, WindowLauncher},
-    window_release,
-};
 use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::{Failure, Result};
 use std::{fs, os::unix::fs::symlink, path::Path, sync::Mutex};
+use {
+    elsecall::{
+        window_app::{self, WindowLauncher},
+        window_release,
+    },
+    elsecall_local_state::{paths::Paths, private_files},
+};
 
 #[derive(Default)]
 struct Desktop {

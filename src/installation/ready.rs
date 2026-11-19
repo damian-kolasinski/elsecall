@@ -1,8 +1,9 @@
 //! Whether a freshly installed service came up: it answers its local API with
 //! the build that was installed, and keeps running as the same process.
-use crate::{client, inspection::Health, paths::Paths};
+use crate::{client, inspection::Health};
 use elsecall_build_identity::build_identity::{Build, BuildId};
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::paths::Paths;
 use std::time::{Duration, Instant};
 
 /// How long a freshly installed service has to answer with its build.

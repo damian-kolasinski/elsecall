@@ -1,6 +1,6 @@
 #![cfg(target_os = "macos")]
 mod processes;
-use elsecall::paths::Paths;
+use elsecall_local_state::paths::Paths;
 use serde_json::Value;
 use std::{
     fs,
@@ -179,7 +179,7 @@ fn usage_errors_are_json_and_do_not_echo_arguments() {
 fn lifecycle_logs_rotate_while_running_and_doctor_reports_sizes_without_secrets() {
     let home = home();
     let paths = Paths::for_home(home.path()).unwrap();
-    elsecall::private_files::directory(&paths.data).unwrap();
+    elsecall_local_state::private_files::directory(&paths.data).unwrap();
     fs::write(
         paths.configuration(),
         "[logs]\nmax_size = \"1024B\"\nkeep = 2\n",
@@ -244,7 +244,7 @@ fn lifecycle_logs_rotate_while_running_and_doctor_reports_sizes_without_secrets(
 fn unsafe_optional_metadata_does_not_stop_the_local_service_or_delete_external_scratch() {
     let home = home();
     let paths = Paths::for_home(home.path()).unwrap();
-    elsecall::private_files::directory(&paths.data).unwrap();
+    elsecall_local_state::private_files::directory(&paths.data).unwrap();
     let outside = tempfile::tempdir().unwrap();
     let target = outside.path().join(".write-123");
     let file = fs::File::create(&target).unwrap();
@@ -268,7 +268,7 @@ fn unsafe_optional_metadata_does_not_stop_the_local_service_or_delete_external_s
 fn invalid_configuration_logs_only_its_code_and_doctor_never_echoes_values() {
     let home = home();
     let paths = Paths::for_home(home.path()).unwrap();
-    elsecall::private_files::directory(&paths.data).unwrap();
+    elsecall_local_state::private_files::directory(&paths.data).unwrap();
     fs::write(
         paths.configuration(),
         "[logs]\nkeep = \"private-configuration-value\"\n",

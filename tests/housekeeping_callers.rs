@@ -18,7 +18,6 @@ use elsecall::{
         settings::Settings,
         volumes::Statfs,
     },
-    paths::Paths,
     peer_client,
     scheduling::timestamp::Timestamp,
     workspace::{
@@ -28,6 +27,7 @@ use elsecall::{
     },
 };
 use elsecall_failure::Result;
+use elsecall_local_state::paths::Paths;
 use futures_util::future::BoxFuture;
 use members::{TestMember, enrol};
 use serde_json::Value;

@@ -6,9 +6,9 @@ use crate::{
     client,
     macos::dns_sd::Bonjour,
     nearby_macs::{KnownMember, LocalNetwork, Membership, NearbyMac, RemoteLogin, nearby},
-    paths::Paths,
 };
 use elsecall_failure::Result;
+use elsecall_local_state::paths::Paths;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{net::IpAddr, time::Duration};

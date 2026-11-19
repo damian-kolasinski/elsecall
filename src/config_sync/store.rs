@@ -4,14 +4,12 @@
 //!
 //! `ReplicaStore` is a port so an external secret manager can stand in later;
 //! `FileStore` keeps each object as an owner-only file in Elsecall's state.
-use crate::{
-    config_sync::{
-        fingerprint::{Fingerprint, SyncKey},
-        manifest::FileNode,
-    },
-    private_files,
+use crate::config_sync::{
+    fingerprint::{Fingerprint, SyncKey},
+    manifest::FileNode,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_state::private_files;
 use std::{
     collections::BTreeSet,
     fs,

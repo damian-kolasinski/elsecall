@@ -52,7 +52,7 @@ impl StatCache {
     /// Writes the cache privately and atomically. A cache that cannot be written
     /// only costs hashing next time.
     pub fn save(&self, path: &Path) {
-        let _ = crate::private_files::replace(path, &self.encode());
+        let _ = elsecall_local_state::private_files::replace(path, &self.encode());
     }
 
     fn encode(&self) -> Vec<u8> {

@@ -284,7 +284,7 @@ fn an_upgrade_refreshes_older_stubs_and_installs_nothing_where_nothing_was() {
 
     // A build that is not the installed one never refreshes.
     fs::write(root.join(".claude/skills/elsecall/SKILL.md"), &older).unwrap();
-    let paths = elsecall::paths::Paths::for_home(root).unwrap();
+    let paths = elsecall_local_state::paths::Paths::for_home(root).unwrap();
     assert_eq!(elsecall::agent_skill::refresh_if_installed(&paths), 0);
     assert_eq!(read(&root.join(".claude/skills/elsecall/SKILL.md")), older);
 }
@@ -429,8 +429,8 @@ fn the_installed_service_refreshes_an_older_stub_when_it_starts() {
     fs::write(&stub, older_stub(&current)).unwrap();
 
     // The binary where `elsecall install` puts it, as the LaunchAgent runs it.
-    let paths = elsecall::paths::Paths::for_home(root).unwrap();
-    elsecall::private_files::directory(&paths.data).unwrap();
+    let paths = elsecall_local_state::paths::Paths::for_home(root).unwrap();
+    elsecall_local_state::private_files::directory(&paths.data).unwrap();
     fs::copy(env!("CARGO_BIN_EXE_elsecall"), paths.executable()).unwrap();
     let port = std::net::TcpListener::bind("127.0.0.1:0")
         .unwrap()
@@ -470,7 +470,7 @@ fn the_default_copy_keeps_the_data_folder_private_and_uninstall_removes_everythi
     fs::create_dir(root.join(".claude")).unwrap();
     assert!(skill(root, &["setup"]).status.success());
     let installed = json(&skill(root, &["install"]));
-    let paths = elsecall::paths::Paths::for_home(root).unwrap();
+    let paths = elsecall_local_state::paths::Paths::for_home(root).unwrap();
     let copy = paths.data.join("skill/elsecall");
     assert_eq!(
         installed["data"]["path"],

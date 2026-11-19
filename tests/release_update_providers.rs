@@ -1,15 +1,14 @@
 #![cfg(target_os = "macos")]
 //! Controlled external mise executable: verification policy, isolation, and config preservation.
-use elsecall::{
-    paths::Paths,
-    private_files,
-    release_update::{
+use std::{fs, os::unix::fs::PermissionsExt};
+use {
+    elsecall::release_update::{
         self, Release, ReleaseDownload, ReleaseVersion,
         download::MiseDownload,
         selection::{CliSelection, MiseSelection},
     },
+    elsecall_local_state::{paths::Paths, private_files},
 };
-use std::{fs, os::unix::fs::PermissionsExt};
 fn fixture() -> (tempfile::TempDir, Paths) {
     let home = tempfile::Builder::new()
         .prefix("ec-release-tools-")

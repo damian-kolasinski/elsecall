@@ -6,9 +6,6 @@ pub mod resolution;
 use crate::admission_api::{self, MAXIMUM_LISTED};
 use crate::{
     client::{self, Wait},
-    local_access,
-    paths::Paths,
-    run_id_file::RunIdFile,
     scheduling::{
         capacity::Cores,
         estimates,
@@ -24,6 +21,7 @@ use crate::{
 use clap::Subcommand;
 use elsecall_failure::{Failure, Result};
 use elsecall_guidance::{self as guidance, Unmanaged};
+use elsecall_local_state::{local_access, paths::Paths, run_id_file::RunIdFile};
 use environment::{CallerEnvironment, Mode};
 use options::{CallerOptions, RequestOptions, UnavailableAction};
 use resolution::{Layers, resolve};
