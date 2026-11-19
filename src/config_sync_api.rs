@@ -117,7 +117,7 @@ async fn attach(
         HeaderValue::from_static(protocol::PROTOCOL),
     );
     headers.insert(
-        crate::peer_auth::CHANNEL_HEADER,
+        elsecall_membership::peer_auth::CHANNEL_HEADER,
         HeaderValue::from_str(&accepted).expect("base64 header value"),
     );
     response

@@ -2,6 +2,8 @@
 //! machine observations and tailnet discovery are controlled: each member
 //! "discovers" loopback and its own port, with scripted load and speed.
 #![allow(dead_code)]
+use elsecall_local_state::paths::Paths;
+use elsecall_membership::{member_key::MemberKey, roster::Member};
 use serde_json::Value;
 use std::{
     io::{Read, Write},
@@ -10,10 +12,6 @@ use std::{
     process::{Child, Output},
     thread::sleep,
     time::{Duration, Instant},
-};
-use {
-    elsecall::{member_key::MemberKey, roster::Member},
-    elsecall_local_state::paths::Paths,
 };
 
 pub struct TestMember {
@@ -485,7 +483,7 @@ impl TestMember {
     }
 
     pub fn as_member(&self) -> Member {
-        elsecall::member_code::decode(&self.code()).unwrap()
+        elsecall_membership::member_code::decode(&self.code()).unwrap()
     }
 
     /// The fleet as this member sees it, keyed by member name.

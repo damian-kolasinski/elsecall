@@ -3,9 +3,9 @@
 use crate::{
     peer_client::unavailable,
     peer_diagnostics::{Kind, Phase},
-    roster::Member,
 };
 use elsecall_failure::Result;
+use elsecall_membership::roster::Member;
 use std::{
     pin::Pin,
     sync::{

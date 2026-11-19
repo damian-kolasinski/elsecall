@@ -1,10 +1,6 @@
 //! Fleet operations on the local socket, where the same-user rule authorizes the
 //! operator. The service holds the member key; the CLI never reads it.
-use crate::{
-    fleet::Fleet,
-    fleet_changes, fleet_view,
-    roster::{MemberName, Readiness},
-};
+use crate::{fleet::Fleet, fleet_changes, fleet_view};
 use axum::{
     Json, Router,
     body::Bytes,
@@ -14,6 +10,7 @@ use axum::{
     routing::{any, get, post},
 };
 use elsecall_failure::Failure;
+use elsecall_membership::roster::{MemberName, Readiness};
 use elsecall_wire::api;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::sync::Arc;

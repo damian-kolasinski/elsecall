@@ -3,15 +3,15 @@
 //!
 //! Operator changes live in `fleet_changes` and the fleet-wide view in `fleet_view`;
 //! both act through this module's state.
-use crate::{
+use elsecall_failure::{Failure, Result};
+use elsecall_machine::inspection::Inspection;
+use elsecall_membership::{
     member_code,
     member_key::{MemberKey, PublicKey},
     membership_store::{Membership, MembershipStore},
     peer_auth::{self, ReplayGuard, RequestProof},
     roster::{Member, MemberName, Offer, Roster},
 };
-use elsecall_failure::{Failure, Result};
-use elsecall_machine::inspection::Inspection;
 use serde::{Deserialize, Serialize};
 use std::{
     net::SocketAddr,

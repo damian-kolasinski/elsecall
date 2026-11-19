@@ -1,7 +1,7 @@
 //! Bounded headers for negotiating a sealed local run. These values are public;
 //! shared signature/transcript verification belongs to peer authentication.
-use crate::peer_auth::ChannelProof;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use elsecall_membership::peer_auth::ChannelProof;
 use hyper::HeaderMap;
 pub(crate) const PROTOCOL: &str = "elsecall-run-sealed/1";
 pub(crate) const EPHEMERAL: &str = "x-elsecall-run-ephemeral";
@@ -36,7 +36,7 @@ pub(crate) fn public_header(headers: &HeaderMap) -> Option<[u8; 32]> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
+    use elsecall_membership::{
         member_key::MemberKey,
         peer_auth::{self, ChannelAcceptance},
     };

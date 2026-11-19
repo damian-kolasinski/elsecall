@@ -12,8 +12,6 @@
 use crate::{
     fleet::Fleet,
     fleet_tool_inventory::{self, MemberInventories, OwnInventories, PeerInventories, Source},
-    membership_store::Membership,
-    roster::{MemberName, Roster},
     tool_inventory::Inventory,
 };
 use axum::{
@@ -25,6 +23,10 @@ use axum::{
 };
 use elsecall_api_response as api_response;
 use elsecall_failure::Failure;
+use elsecall_membership::{
+    membership_store::Membership,
+    roster::{MemberName, Roster},
+};
 use elsecall_wire::api;
 use serde::Deserialize;
 use std::sync::Arc;

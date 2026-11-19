@@ -1,10 +1,9 @@
 //! A member's configuration sync state as `sync status`, member status and the
 //! fleet view show it. The fleet carries it between members, so it lives below
 //! both the fleet and config sync.
-use crate::{
-    config_sync::synced_path::SyncedPath, roster::MemberName, scheduling::timestamp::Timestamp,
-};
+use crate::{config_sync::synced_path::SyncedPath, scheduling::timestamp::Timestamp};
 use elsecall_failure::Failure;
+use elsecall_membership::roster::MemberName;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 

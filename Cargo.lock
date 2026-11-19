@@ -1074,6 +1074,7 @@ dependencies = [
  "elsecall-local-client",
  "elsecall-local-state",
  "elsecall-machine",
+ "elsecall-membership",
  "elsecall-process",
  "elsecall-rehearsal-identity",
  "elsecall-run-admission",
@@ -1193,6 +1194,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "elsecall-membership"
+version = "0.3.0"
+dependencies = [
+ "base64 0.22.1",
+ "ed25519-dalek",
+ "elsecall-failure",
+ "elsecall-local-state",
+ "elsecall-secure-channel",
+ "elsecall-tailnet",
+ "getrandom 0.3.4",
+ "libc",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "zeroize",
+]
+
+[[package]]
 name = "elsecall-process"
 version = "0.3.0"
 dependencies = [
@@ -1250,6 +1269,7 @@ dependencies = [
  "elsecall-failure",
  "elsecall-local-client",
  "elsecall-local-state",
+ "elsecall-membership",
  "elsecall-wire",
  "libc",
  "png 0.18.1",

@@ -33,7 +33,7 @@ pub fn decode(code: &str) -> Result<Member> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::member_code::*;
     use crate::roster::tests::member;
 
     #[test]

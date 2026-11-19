@@ -14,10 +14,10 @@ use crate::{
     macos::xcodes::XcodesCli,
     mise_cli::MiseCli,
     peer_client,
-    roster::{Member, MemberName},
     tool_inventory::{Inventory, ToolManager},
 };
 use elsecall_failure::{Failure, is_code};
+use elsecall_membership::roster::{Member, MemberName};
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use serde::Serialize;
@@ -546,7 +546,9 @@ mod tests {
     #[test]
     fn the_fleet_document_limit_holds_every_member() {
         const {
-            assert!(crate::roster::MAX_MEMBERS * PER_MEMBER_LIMIT < FLEET_RESPONSE_LIMIT);
+            assert!(
+                elsecall_membership::roster::MAX_MEMBERS * PER_MEMBER_LIMIT < FLEET_RESPONSE_LIMIT
+            );
             assert!(PER_MEMBER_LIMIT == 512 * 1024);
             assert!(FLEET_RESPONSE_LIMIT == 40 * 1024 * 1024);
         }

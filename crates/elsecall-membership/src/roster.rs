@@ -9,7 +9,7 @@ use elsecall_tailnet::tailnet::is_member_address;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, net::SocketAddr};
 
-pub(crate) const MAX_MEMBERS: usize = 64;
+pub const MAX_MEMBERS: usize = 64;
 const MAX_ENDPOINTS: usize = 8;
 /// Epochs stay far below overflow, so every roster leaves room for later changes.
 const MAX_EPOCH: u64 = 1 << 53;
@@ -415,8 +415,8 @@ pub fn not_a_member(name: &MemberName) -> Failure {
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
     use crate::member_key::MemberKey;
+    use crate::roster::*;
 
     pub fn member(name: &str, port: u16) -> Member {
         elsecall_tailnet::tailnet::allow_loopback_members();

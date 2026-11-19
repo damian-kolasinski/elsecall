@@ -268,7 +268,7 @@ fn manifest(member: &TestMember, content: &[u8]) -> Manifest {
         os: Os::Macos,
         architectures: vec![Architecture::this().unwrap()],
         wait_seconds: 0,
-        issued_at: elsecall::peer_auth::now(),
+        issued_at: elsecall_membership::peer_auth::now(),
     }
 }
 

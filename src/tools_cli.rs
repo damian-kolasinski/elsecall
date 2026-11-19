@@ -3,7 +3,6 @@
 //! Without flags this is this machine. `--fleet` is every member. `--member`
 //! is one member's entry from that same fleet document.
 use crate::{
-    roster::MemberName,
     tool_inventory::{Manager, ToolName},
     tools_api,
     toolset_api::{DesiredEdit, EditBody},
@@ -12,6 +11,7 @@ use clap::{Args, Subcommand};
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
+use elsecall_membership::roster::MemberName;
 use hyper::Method;
 use serde_json::Value;
 use std::time::Duration;

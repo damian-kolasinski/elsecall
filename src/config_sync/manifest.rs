@@ -9,9 +9,9 @@ use crate::{
         fingerprint::{Fingerprint, SyncKey},
         synced_path::{self, SyncedPath},
     },
-    roster::MemberName,
     workspace::path::WorkspacePath,
 };
+use elsecall_membership::roster::MemberName;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 

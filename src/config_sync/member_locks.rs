@@ -1,7 +1,7 @@
 //! One lock per member for the master's exchanges with it: pushes and plans to
 //! the same member never overlap, while exchanges with different members proceed
 //! independently, so a slow member delays only its own syncs.
-use crate::roster::MemberName;
+use elsecall_membership::roster::MemberName;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},

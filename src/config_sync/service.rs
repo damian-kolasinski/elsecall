@@ -24,10 +24,10 @@ use crate::{
     configuration,
     fleet::{Fleet, RoleHandover, SyncReport},
     peer_client,
-    roster::{Member, MemberName, Roster},
     workspace::digest::Digest,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_membership::roster::{Member, MemberName, Roster};
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -562,7 +562,7 @@ impl ConfigSync {
         let target = roster
             .member(member)
             .cloned()
-            .ok_or_else(|| crate::roster::not_a_member(member))?;
+            .ok_or_else(|| elsecall_membership::roster::not_a_member(member))?;
         let _exchange = self.exchanges.lock(&target.name).await;
         let (manifest, _pin) = {
             let _issuing = self.issuing.lock().await;
@@ -927,7 +927,7 @@ impl ConfigSync {
         &self,
         mut channel: S,
         master: MemberName,
-        sender: crate::member_key::PublicKey,
+        sender: elsecall_membership::member_key::PublicKey,
     ) {
         let Ok(_activity) = self.activity.enter() else {
             let _ = protocol::send(
@@ -964,7 +964,7 @@ impl ConfigSync {
         &self,
         channel: &mut S,
         master: &MemberName,
-        sender: &crate::member_key::PublicKey,
+        sender: &elsecall_membership::member_key::PublicKey,
     ) -> Result<()> {
         let (purpose, manifest) = match protocol::receive(channel).await? {
             Message::Offer { purpose, manifest } => (purpose, manifest),

@@ -51,7 +51,7 @@ enum SyncCommand {
     /// it differs
     Push {
         #[arg(long)]
-        member: Option<crate::roster::MemberName>,
+        member: Option<elsecall_membership::roster::MemberName>,
     },
     /// This member's records of what synced: paths, sizes, fingerprints, outcomes
     History {

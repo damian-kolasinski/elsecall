@@ -88,7 +88,7 @@ fn unreadable(path: &Path) -> Failure {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::membership_store::*;
     use crate::roster::tests::member;
     use std::{fs, os::unix::fs::PermissionsExt};
 

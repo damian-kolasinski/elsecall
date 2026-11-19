@@ -1,14 +1,14 @@
 //! Signed requests to another member over the tailnet, with verified responses.
 use crate::{
-    member_key::MemberKey,
-    peer_auth::{self, SIGNATURE_HEADER},
-    roster::Member,
-};
-use crate::{
     peer_diagnostics::{self, Attempt, Kind, Phase},
     peer_transport::{self, Progress},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_membership::{
+    member_key::MemberKey,
+    peer_auth::{self, SIGNATURE_HEADER},
+    roster::Member,
+};
 use elsecall_wire::api::{ErrorResponse, Response, SCHEMA_VERSION};
 use http_body_util::{BodyExt, Full, Limited};
 use hyper::{Method, Request, body::Bytes, client::conn::http1};
@@ -451,7 +451,7 @@ fn random_unavailable() -> Failure {
 
 pub(crate) struct AcceptedChannel {
     pub(crate) stream: TokioIo<hyper::upgrade::Upgraded>,
-    pub(crate) acceptance: crate::peer_auth::ChannelProof,
+    pub(crate) acceptance: elsecall_membership::peer_auth::ChannelProof,
 }
 
 /// Run-only local relay: the service authenticates its roster-selected peer but
@@ -623,7 +623,7 @@ async fn channel_once(
             "Something else answers at that member's address, or its key changed. Check the member, then remove and enrol it again.",
         )
     };
-    let acceptance = crate::peer_auth::ChannelProof::new(
+    let acceptance = elsecall_membership::peer_auth::ChannelProof::new(
         run,
         key.public(),
         member.key,

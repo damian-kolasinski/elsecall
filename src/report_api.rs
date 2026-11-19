@@ -5,7 +5,6 @@
 use crate::{
     fleet::Fleet,
     load_log::buckets::Bucket,
-    membership_store::Membership,
     own_history::OwnHistory,
     peer_history::PeerHistory,
     report_protocol::{Cursor, FactsPage, FactsRequest, LoadRequest},
@@ -26,6 +25,7 @@ use axum::{
 };
 use elsecall_api_response as api_response;
 use elsecall_failure::{Failure, Result};
+use elsecall_membership::membership_store::Membership;
 use elsecall_wire::api;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};

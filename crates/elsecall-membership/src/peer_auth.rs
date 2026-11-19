@@ -24,7 +24,7 @@ const MAX_REMEMBERED_NONCES: usize = 100_000;
 
 pub type Nonce = [u8; 16];
 
-pub(crate) fn transcript(label: &str, parts: &[&[u8]]) -> Vec<u8> {
+pub fn transcript(label: &str, parts: &[&[u8]]) -> Vec<u8> {
     let mut out = Vec::with_capacity(64 + parts.iter().map(|p| p.len() + 4).sum::<usize>());
     out.extend_from_slice(label.as_bytes());
     out.push(0);
@@ -255,7 +255,7 @@ impl ReplayGuard {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::peer_auth::*;
 
     fn request<'a>(recipient: &'a PublicKey, body: &'a [u8]) -> Request<'a> {
         Request {
@@ -344,4 +344,4 @@ mod tests {
 }
 
 mod channel_proof;
-pub(crate) use channel_proof::ChannelProof;
+pub use channel_proof::ChannelProof;

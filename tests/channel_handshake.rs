@@ -9,7 +9,8 @@ use axum::{
     routing::post,
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use elsecall::{member_key::MemberKey, peer_auth, peer_client, roster::Member};
+use elsecall::peer_client;
+use elsecall_membership::{member_key::MemberKey, peer_auth, roster::Member};
 use elsecall_secure_channel::Ephemeral;
 use std::sync::Arc;
 #[derive(Clone)]

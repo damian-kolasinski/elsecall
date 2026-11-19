@@ -5,7 +5,6 @@
 use crate::{
     fleet::Fleet,
     peer_client,
-    roster::MemberName,
     scheduling::{run_id::RunId, service::Scheduler},
 };
 use axum::{
@@ -17,6 +16,7 @@ use axum::{
 };
 use elsecall_failure::Failure;
 use elsecall_local_state::local_access::LocalCaller;
+use elsecall_membership::roster::MemberName;
 use hyper_util::rt::TokioIo;
 use std::sync::Arc;
 

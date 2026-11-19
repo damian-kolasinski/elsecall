@@ -9,15 +9,14 @@ use crate::{
     authorized_keys,
     fleet_local_api::EnrollRequest,
     inbound_firewall::Rule,
-    member_code,
     remote_mac::{
         Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant,
     },
-    roster::Readiness,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
+use elsecall_membership::{member_code, roster::Readiness};
 use elsecall_tailnet::tailscale_bottle;
 use hyper::Method;
 use serde::{Deserialize, Serialize};

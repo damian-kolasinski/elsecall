@@ -4,13 +4,13 @@
 use crate::{
     fleet::Fleet,
     peer_client,
-    roster::Readiness,
     scheduling::{
         placed::{Members, OfferReply, PlacementOffer, Standing},
         quote::{Quote, QuoteRequest},
     },
 };
 use elsecall_failure::Result;
+use elsecall_membership::roster::Readiness;
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};

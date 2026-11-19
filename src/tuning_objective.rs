@@ -47,7 +47,7 @@ impl Noise {
             && self
                 .calibration
                 .keys()
-                .all(|m| m.parse::<crate::roster::MemberName>().is_ok())
+                .all(|m| m.parse::<elsecall_membership::roster::MemberName>().is_ok())
             && self.calibration.values().all(Calibration::valid)
     }
     pub fn read(path: &std::path::Path) -> elsecall_failure::Result<Self> {

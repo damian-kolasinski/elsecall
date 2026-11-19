@@ -171,7 +171,7 @@ impl MemberKey {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::member_key::*;
     use std::os::unix::fs::PermissionsExt;
 
     #[test]

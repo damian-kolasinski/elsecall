@@ -30,8 +30,6 @@ use crate::{
             self, MAXIMUM_EXECUTABLE, MAXIMUM_WAIT_SECONDS, Message, Os, SignedManifest, UpgradeId,
         },
     },
-    member_key::PublicKey,
-    roster::MemberName,
     scheduling::timestamp::Timestamp,
 };
 use elsecall_build_identity::{
@@ -39,6 +37,7 @@ use elsecall_build_identity::{
     executable_format::{self, Architecture},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_membership::{member_key::PublicKey, roster::MemberName};
 use serde::{Deserialize, Serialize};
 use std::{
     path::PathBuf,
@@ -410,7 +409,7 @@ impl Upgrades {
                 "Run elsecall fleet upgrade on the master.",
             ));
         }
-        let now = crate::peer_auth::now();
+        let now = elsecall_membership::peer_auth::now();
         if manifest.issued_at.abs_diff(now) > protocol::MANIFEST_WINDOW_SECONDS {
             return Err(Failure::new(
                 "manifest_expired",

@@ -11,13 +11,13 @@ use crate::{
         protocol::{self, Manifest, Message, Os, UpgradeId},
     },
     peer_client,
-    roster::{Member, MemberName},
 };
 use elsecall_build_identity::{
     build_identity::{Build, BuildId, Digest},
     executable_format::{self, Architecture},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_membership::roster::{Member, MemberName};
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -168,7 +168,7 @@ pub async fn upgrade(
             roster
                 .member(name)
                 .cloned()
-                .ok_or_else(|| crate::roster::not_a_member(name))?,
+                .ok_or_else(|| elsecall_membership::roster::not_a_member(name))?,
         ],
         None => roster
             .members()
@@ -316,7 +316,7 @@ async fn upgrade_member(
         os: Os::Macos,
         architectures: distributed.architectures.clone(),
         wait_seconds,
-        issued_at: crate::peer_auth::now(),
+        issued_at: elsecall_membership::peer_auth::now(),
     };
     let signed = manifest.sign(fleet.member_key());
     let from = match send(fleet, member, signed, bytes).await {

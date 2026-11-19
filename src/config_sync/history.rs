@@ -3,11 +3,11 @@
 //! content. Kept owner-only as JSON lines, the latest `KEPT` of them.
 use crate::{
     config_sync::{compare::Change, synced_path::SyncedPath},
-    roster::MemberName,
     scheduling::timestamp::Timestamp,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::private_files;
+use elsecall_membership::roster::MemberName;
 use serde::{Deserialize, Serialize};
 use std::{
     io::{BufRead, Write},

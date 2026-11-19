@@ -3,9 +3,7 @@
 //! authenticated response is signed by this member.
 use crate::{
     fleet::{AuthenticatedPeer, Fleet},
-    peer_auth::{RequestProof, SIGNATURE_HEADER},
     peer_client::RESPONSE_LIMIT,
-    roster::Roster,
 };
 use axum::{
     Extension, Json, Router,
@@ -17,6 +15,10 @@ use axum::{
     routing::{get, post},
 };
 use elsecall_failure::Failure;
+use elsecall_membership::{
+    peer_auth::{RequestProof, SIGNATURE_HEADER},
+    roster::Roster,
+};
 use elsecall_wire::api;
 use std::{sync::Arc, time::Duration};
 

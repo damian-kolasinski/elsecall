@@ -2,8 +2,6 @@ use crate::{
     fleet::Fleet,
     fleet_local_api,
     fleet_placement::FleetMembers,
-    member_key::MemberKey,
-    membership_store::MembershipStore,
     peer_api, peer_listener, placement_api,
     placement_host::PlacementHost,
     run_relay,
@@ -30,6 +28,7 @@ use axum::{
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::{local_access, paths::Paths, private_files};
 use elsecall_machine::inspection::Inspection;
+use elsecall_membership::{member_key::MemberKey, membership_store::MembershipStore};
 use elsecall_wire::api;
 use std::{
     fs,

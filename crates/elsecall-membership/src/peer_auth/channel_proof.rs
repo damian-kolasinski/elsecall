@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 /// the adapter that will own decryption. Only public values are serialized.
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct ChannelProof {
+pub struct ChannelProof {
     run: String,
     requester: PublicKey,
     responder: PublicKey,
@@ -20,7 +20,7 @@ pub(crate) struct ChannelProof {
 }
 
 impl ChannelProof {
-    pub(crate) fn new(
+    pub fn new(
         run: &str,
         requester: PublicKey,
         responder: PublicKey,
@@ -41,7 +41,7 @@ impl ChannelProof {
     }
     /// Recompute the existing signed transcript from the caller's own run and
     /// ephemeral. Never accept an arbitrary key-derivation context from IPC.
-    pub(crate) fn verify(&self, run: &str, public: &[u8; 32]) -> Option<([u8; 32], Vec<u8>)> {
+    pub fn verify(&self, run: &str, public: &[u8; 32]) -> Option<([u8; 32], Vec<u8>)> {
         if self.channel.len() != 130
             || self.response.len() != 86
             || self.run != run
@@ -79,7 +79,7 @@ impl ChannelProof {
         .context();
         Some((peer, context))
     }
-    pub(crate) fn keys(self, run: &str, ephemeral: Ephemeral) -> Option<Keys> {
+    pub fn keys(self, run: &str, ephemeral: Ephemeral) -> Option<Keys> {
         let (peer, context) = self.verify(run, &ephemeral.public)?;
         ephemeral.keys(&peer, &context, true)
     }

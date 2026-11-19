@@ -8,12 +8,11 @@ use axum::{
     routing::any,
 };
 use elsecall::{
-    member_key::MemberKey,
-    peer_auth, peer_client,
+    peer_client,
     peer_diagnostics::{self, Kind, Phase},
-    roster::Member,
     scheduling::timestamp::Timestamp,
 };
+use elsecall_membership::{member_key::MemberKey, peer_auth, roster::Member};
 use hyper::Method;
 use serde_json::{Value, json};
 use std::{

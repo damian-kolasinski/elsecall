@@ -31,7 +31,7 @@ pub struct State {
     #[serde(default)]
     pub service_rejection: Option<Failure>,
     #[serde(default)]
-    pub service_member: Option<crate::roster::MemberName>,
+    pub service_member: Option<elsecall_membership::roster::MemberName>,
     #[serde(default)]
     pub service_source_master: bool,
     pub key: Option<SyncKey>,

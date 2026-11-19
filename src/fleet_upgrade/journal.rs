@@ -6,12 +6,12 @@
 //! upgrade protocol.
 use crate::{
     fleet_upgrade::{member::WorkInFlight, protocol::UpgradeId},
-    roster::MemberName,
     scheduling::timestamp::Timestamp,
 };
 use elsecall_build_identity::build_identity::{Build, BuildId, Digest};
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::private_files;
+use elsecall_membership::roster::MemberName;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
