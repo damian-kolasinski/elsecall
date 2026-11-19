@@ -2468,6 +2468,14 @@ Documentation and CI files nothing names select no tests. A path no rule covers
 runs everything. It is a fast loop, not a replacement: `mise run check` must pass
 before work is submitted.
 
+That local run is the gate for a change: pull requests get no full CI run. CI runs
+Check (`.github/workflows/check.yml`: formatting, Clippy and the Rust tests, doctests
+included, but not the Python suites) on each change that lands on `main`,
+testing the newest commit when several land during one run, and on a release's tag,
+which publishes nothing until that run passed. While Check fails on `main`, one
+issue labelled `main-red` stays open (`.github/workflows/main-status.yml`): each
+failed run comments on it, and the next passing run closes it.
+
 The mise tasks use the consumer entry pattern in "Integrating a consumer".
 The repository contains no workload policy. Set label rules for `elsecall check`,
 `elsecall check affected` and `elsecall build`, and `when_unavailable = "run"` if desired, in personal
@@ -2507,7 +2515,7 @@ root. A service with either set logs `test_seam_in_use`. Upgrade tests install
 real services with `ELSECALL_SERVICE_MANAGER=process`, which runs the installed
 service as a plain background process instead of a LaunchAgent (logged as
 `test_seam_in_use` too; debug builds only). Socket tests require an
-execution environment that permits Unix sockets. macOS CI runs the same checks.
+execution environment that permits Unix sockets. CI runs the same checks on macOS.
 See [local-slice.md](docs/local-slice.md) for decisions, installed-system verification
 and limitations, [admission-slice.md](docs/admission-slice.md) for admission, leases,
 records and `run`, [fleet-membership.md](docs/fleet-membership.md) for fleet

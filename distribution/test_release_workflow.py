@@ -57,8 +57,14 @@ class ReleaseWorkflow(unittest.TestCase):
         triggers = check.split("\non:\n", 1)[1].split("\nconcurrency:\n", 1)[0]
         self.assertIn("\n  workflow_call:", "\n" + triggers)
         # A called workflow's github.workflow is the caller's name, so the
-        # release's run never queues behind main's run on the same commit.
-        self.assertRegex(check, r"\n  group: \$\{\{ github\.workflow \}\}-")
+        # release's run never queues behind main's runs. Group names ignore
+        # case, so Check's prefix must differ from the release's own group.
+        group = re.search(r"\n  group: (.+)", check).group(1)
+        self.assertEqual(group, "check-${{ github.workflow }}-${{ github.ref }}")
+        release_group = re.search(r"\n  group: (.+)", WORKFLOW.read_text(encoding="utf-8")).group(1)
+        self.assertNotEqual(group.split("$", 1)[0].lower(), release_group.split("$", 1)[0].lower())
+        # A release's run must finish; it is the gate.
+        self.assertIn("\n  cancel-in-progress: false", check)
 
     def test_the_build_smoke_tests_and_installs_the_archive(self):
         build = "\n".join(self.jobs["build"])

@@ -57,8 +57,8 @@ jobs:
       contents: read
     uses: ./.github/workflows/check.yml
 
-  # Packages, smoke-tests and installs the archive. A pull request's own Check
-  # run tests it, and a tag runs the suite in the tested job.
+  # Packages, smoke-tests and installs the archive. On a pull request that
+  # touches packaging it runs alone; on a tag, beside the suite in tested.
   build:
     needs: version
     # Ship only the native target this job runs. Elsecall supports macOS.
