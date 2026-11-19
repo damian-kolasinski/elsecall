@@ -405,6 +405,22 @@ impl RemoteMac for OpensshMac {
         Ok(())
     }
 
+    async fn guard_incoming(&mut self, programs: &[String]) -> Result<bool> {
+        let configuration = crate::macos::firewall_guard::configuration(programs)?;
+        let ran = self
+            .sudo(&crate::macos::firewall_guard::install_script(
+                &configuration,
+            ))
+            .await?;
+        match crate::macos::firewall_guard::installed(&ran.stdout) {
+            Some(changed) if ran.success => Ok(changed),
+            _ => Err(remote_failure(
+                "Installing Elsecall's firewall guard on the Mac",
+                &ran,
+            )),
+        }
+    }
+
     async fn authorize_key(&mut self, line: &str) -> Result<bool> {
         let output = self
             .checked(
@@ -690,7 +706,7 @@ fn parse_tailnet(output: &[u8]) -> RemoteTailnet {
         return RemoteTailnet::NotRunning { variant };
     };
     if let Some(node) = crate::macos::tailscale::online_node(status.as_bytes()) {
-        return RemoteTailnet::Online(node);
+        return RemoteTailnet::Online { variant, node };
     }
     // The tailnet it belongs to, logged out or awaiting approval.
     let domain = json["CurrentTailnet"]["MagicDNSSuffix"]
@@ -759,7 +775,7 @@ mod tests {
                 domain: Some("example.beta.tailscale.net".into())
             }
         );
-        let RemoteTailnet::Online(node) = parse_tailnet(
+        let RemoteTailnet::Online { node, .. } = parse_tailnet(
             br#"variant=/usr/local/bin/tailscale
 {"BackendState":"Running","Self":{"DNSName":"macbook-pro.example.ts.net.","TailscaleIPs":["100.64.0.20"],"KeyExpiry":"2027-05-17T10:00:00Z"}}"#,
         ) else {

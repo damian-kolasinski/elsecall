@@ -54,6 +54,8 @@ struct FakeMac {
     /// What the Mac's firewall does with incoming connections to Elsecall.
     firewall: Rule,
     opened: Vec<String>,
+    /// The programs the root firewall guard keeps allowed, once installed.
+    guarded: Option<Vec<String>>,
 }
 
 impl FakeMac {
@@ -83,6 +85,7 @@ impl FakeMac {
             logged_in_as: None,
             firewall: Rule::NotAllowed,
             opened: Vec::new(),
+            guarded: None,
         }
     }
 
@@ -164,12 +167,19 @@ impl RemoteMac for FakeMac {
                 });
             }
         }
-        Ok(RemoteTailnet::Online(TailnetNode {
-            name: self.name.into(),
-            domain: self.domain.clone(),
-            addresses: vec!["127.0.0.1".parse().unwrap()],
-            key_expiry: Some("2027-05-17T10:00:00Z".into()),
-        }))
+        Ok(RemoteTailnet::Online {
+            variant: if self.installed_tailscale.is_some() {
+                TailscaleVariant::AddMacDaemon
+            } else {
+                TailscaleVariant::App
+            },
+            node: TailnetNode {
+                name: self.name.into(),
+                domain: self.domain.clone(),
+                addresses: vec!["127.0.0.1".parse().unwrap()],
+                key_expiry: Some("2027-05-17T10:00:00Z".into()),
+            },
+        })
     }
     async fn install_tailscale(&mut self, bottle: &Bottle) -> Result<()> {
         assert_eq!(
@@ -229,6 +239,11 @@ impl RemoteMac for FakeMac {
             self.firewall = Rule::Allowed;
         }
         Ok(())
+    }
+    async fn guard_incoming(&mut self, programs: &[String]) -> Result<bool> {
+        let changed = self.guarded.as_deref() != Some(programs);
+        self.guarded = Some(programs.to_vec());
+        Ok(changed)
     }
     async fn authorize_key(&mut self, line: &str) -> Result<bool> {
         let existing = self.authorized_keys();
@@ -325,6 +340,8 @@ async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired(
         mac.opened,
         [mac.paths().executable().to_string_lossy().into_owned()]
     );
+    // And a root guard keeps it allowed after a console user denies it.
+    assert_eq!(mac.guarded.as_ref(), Some(&mac.opened));
     let keys = mac.authorized_keys();
     assert!(
         keys.starts_with("from=\"100.64.0.0/10,fd7a:115c:a1e0::/48\" ssh-ed25519 "),
@@ -341,6 +358,14 @@ async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired(
     assert_eq!(steps[3], (Step::Firewall, Outcome::Already));
     assert_eq!(steps[4], (Step::SshKey, Outcome::Already));
     assert_eq!(mac.opened.len(), 1, "allowed once");
+
+    // A member added before the guard existed gets it from Add Mac, which
+    // repairs a member: its rule is already allowed, so only the guard changes.
+    mac.guarded = None;
+    let repaired = add(&mut mac, &master, |_| ()).await.unwrap();
+    assert_eq!(outcomes(&repaired)[3], (Step::Firewall, Outcome::Done));
+    assert_eq!(mac.opened.len(), 1, "still allowed once");
+    assert!(mac.guarded.is_some());
     assert_eq!(serde_json::to_value(&again).unwrap()["readiness"], "ready");
     assert_eq!(alpha.view_of("bravo")["readiness"], "ready");
     assert_eq!(mac.authorized_keys().lines().count(), 1);
@@ -368,6 +393,7 @@ async fn a_mac_that_cannot_join_is_refused_before_anything_changes() {
     assert_eq!(refused.code, "unsupported_mac");
     for mac in [&other, &intel] {
         assert!(!mac.paths().executable().exists(), "nothing was installed");
+        assert!(mac.guarded.is_none(), "no guard either");
     }
     assert_eq!(alpha.fleet()["members"].as_array().unwrap().len(), 1);
 }
@@ -379,9 +405,12 @@ async fn without_a_master_key_the_mac_still_joins() {
     mac.firewall = Rule::Unfiltered;
     let report = add(&mut mac, &master(&alpha, None), |_| ()).await.unwrap();
     let steps = outcomes(&report);
-    assert_eq!(steps[3], (Step::Firewall, Outcome::Already));
+    // The firewall is off, so nothing is opened, but the guard is installed for
+    // when someone turns it on.
+    assert_eq!(steps[3], (Step::Firewall, Outcome::Done));
     assert!(matches!(steps[4], (Step::SshKey, Outcome::Skipped { .. })));
     assert!(mac.opened.is_empty());
+    assert!(mac.guarded.is_some());
     assert_eq!(alpha.view_of("bravo")["reachability"], "reachable");
 }
 
@@ -396,6 +425,7 @@ async fn a_firewall_that_blocks_everything_is_refused_before_anything_changes() 
     assert_eq!(refused.code, "firewall_blocks_all");
     assert!(!mac.paths().executable().exists());
     assert_eq!(mac.authorized_keys(), "");
+    assert!(mac.guarded.is_none());
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -449,6 +479,14 @@ async fn a_mac_without_tailscale_gets_it_and_joins_once_approved() {
             "/usr/local/bin/tailscaled".to_owned()
         ]
     );
+    assert_eq!(mac.guarded.as_ref(), Some(&mac.opened));
+    // Running it again on the member keeps both guarded: the daemon on the
+    // tailnet is still Add Mac's.
+    let again = add(&mut mac, &master(&alpha, Some(KEY)), |_| ())
+        .await
+        .unwrap();
+    assert_eq!(outcomes(&again)[3], (Step::Firewall, Outcome::Already));
+    assert_eq!(mac.guarded.as_ref(), Some(&mac.opened));
 }
 
 #[tokio::test(flavor = "multi_thread")]

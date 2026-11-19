@@ -261,8 +261,13 @@ pub async fn add<M: RemoteMac>(
     });
     // Elsecall's listener, and Add Mac's tailscaled so peers can connect directly
     // rather than through Tailscale's relays.
+    let programs: Vec<String> = std::iter::once(executable.as_str())
+        .chain(joined.daemon)
+        .map(str::to_owned)
+        .collect();
     let mut blocked = Vec::new();
-    for program in std::iter::once(executable.as_str()).chain(joined.daemon) {
+    for program in &programs {
+        let program = program.as_str();
         let rule = if program == executable {
             rule
         } else {
@@ -272,9 +277,8 @@ pub async fn add<M: RemoteMac>(
             blocked.push(program.to_owned());
         }
     }
-    let outcome = if blocked.is_empty() {
-        Outcome::Already
-    } else {
+    let opened = !blocked.is_empty();
+    if opened {
         mac.allow_incoming(&blocked).await?;
         for program in &blocked {
             if mac.incoming(program).await? != Rule::Allowed {
@@ -285,7 +289,14 @@ pub async fn add<M: RemoteMac>(
                 ));
             }
         }
+    }
+    // A console user who leaves the firewall's prompt unanswered and logs out
+    // turns an allowed program's rule to Block; the guard allows it again.
+    let guarded = mac.guard_incoming(&programs).await?;
+    let outcome = if opened || guarded {
         Outcome::Done
+    } else {
+        Outcome::Already
     };
     record(Step::Firewall, outcome);
 
@@ -491,11 +502,13 @@ async fn join_tailnet<M: RemoteMac>(
 ) -> Result<Joined> {
     let domain = master.tailnet_domain.as_str();
     let (fresh, daemon) = match mac.tailnet().await? {
-        RemoteTailnet::Online(node) => {
+        RemoteTailnet::Online { variant, node } => {
             return Ok(Joined {
                 node: same_tailnet(node, domain, host)?,
                 outcome: Outcome::Already,
-                daemon: None,
+                // A member Add Mac gave its daemon keeps it allowed, and guarded,
+                // when Add Mac runs again.
+                daemon: (variant == TailscaleVariant::AddMacDaemon).then_some(DAEMON),
             });
         }
         RemoteTailnet::LoggedOut {
@@ -554,7 +567,7 @@ async fn join_tailnet<M: RemoteMac>(
     let (link, approval) = match mac.start_tailscale_login(hostname.as_deref()).await? {
         Login::Online => {
             return match mac.tailnet().await? {
-                RemoteTailnet::Online(node) => Ok(Joined {
+                RemoteTailnet::Online { node, .. } => Ok(Joined {
                     node: same_tailnet(node, domain, host)?,
                     outcome: Outcome::Done,
                     daemon,
@@ -577,7 +590,7 @@ async fn join_tailnet<M: RemoteMac>(
     loop {
         // A read that hangs ends at the deadline rather than after its own bound.
         if let Ok(read) = tokio::time::timeout_at(deadline, mac.tailnet()).await
-            && let RemoteTailnet::Online(node) = read?
+            && let RemoteTailnet::Online { node, .. } = read?
         {
             return Ok(Joined {
                 node: same_tailnet(node, domain, host)?,

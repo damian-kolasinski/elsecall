@@ -71,7 +71,8 @@ runs without a desktop login, and installation on the second member.
   Firewall drops inbound tailnet connections to an executable it has no rule for, and
   adding one needs root. `install` and `doctor` report `member_listener_firewall` with
   the exact commands. [Adding a Mac](add-mac.md) adds the rule itself, with the
-  administrator password the operator gave it for that.
+  administrator password the operator gave it for that, and a root guard that allows
+  it again whenever a console user's unanswered firewall prompt turns it to Block.
 
 ## Automated evidence
 

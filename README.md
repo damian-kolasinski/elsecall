@@ -1717,7 +1717,11 @@ the Mac's host key for the rest of the command, it:
    `install`, unless the Mac already runs that build;
 3. lets the Application Firewall pass Elsecall, and Add Mac's `tailscaled`, when it
    filters and has no rule for them, then checks that it does (`firewall_unchanged`
-   otherwise);
+   otherwise), and installs a root LaunchDaemon, `dev.elsecall.firewall-guard`, that
+   allows them again within 30 seconds whenever their rule turns to Block, as it does
+   when a console user leaves the firewall's prompt unanswered and logs out (see
+   [Adding a Mac](docs/add-mac.md)). The master, and Macs joined by hand, have no
+   guard;
 4. adds the master's `~/.ssh/id_ed25519.pub` (or `id_ecdsa`, `id_rsa`) to the account's
    `authorized_keys`, accepted only from tailnet addresses and marked
    `elsecall-master:<master>`; without a key this step is skipped and says how to make
@@ -1946,7 +1950,9 @@ report `member_listener_firewall`: `unfiltered`, `allowed`, `unknown`, or `block
 with the commands to run. On an enrolled member, `doctor` is unhealthy while it is
 `blocked` or while fleet state is unavailable (`member_identity_error`). The rule belongs
 to the executable at `~/Library/Application Support/Elsecall/elsecall`; check `doctor`
-after each update, including `fleet upgrade`.
+after each update, including `fleet upgrade`. A Mac added with Add Mac has a root guard
+that allows the rule again whenever it turns to Block; run Add Mac again on a member
+added before it existed to install it.
 
 If the member key or fleet record is unreadable, the service still starts: `status` and
 `machine` keep working, the member listener stays closed, and every `fleet` command
