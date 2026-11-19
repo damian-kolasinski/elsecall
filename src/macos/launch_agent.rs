@@ -1,5 +1,5 @@
-use crate::installation::{ServiceManager, Session};
 use elsecall_failure::{Failure, Result};
+use elsecall_installation::installation::{ServiceManager, Session};
 use elsecall_local_state::{
     local_access::user_id,
     paths::{LABEL, Paths},

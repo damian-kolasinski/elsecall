@@ -28,9 +28,11 @@ pub fn routes(paths: Paths) -> Router {
 }
 
 async fn offer(State(paths): State<Paths>) -> Response {
-    let found = tokio::task::spawn_blocking(move || crate::window_release::installed_build(&paths))
-        .await
-        .expect("reading the window build does not panic");
+    let found = tokio::task::spawn_blocking(move || {
+        elsecall_installation::window_release::installed_build(&paths)
+    })
+    .await
+    .expect("reading the window build does not panic");
     match found {
         Ok(build) => Json(api::Response::new(Offer {
             build: build.map(|id| id.to_string()),

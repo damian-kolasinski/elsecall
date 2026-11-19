@@ -58,12 +58,12 @@ const ICON: &[u8] = include_bytes!("../assets/icon/Elsecall.icns");
 
 /// Sign before publication; restore the previous bundle if opening fails.
 pub fn publish(paths: &Paths, launcher: &dyn WindowLauncher) -> Result<()> {
-    let transaction = crate::installation::Transaction::begin(paths)?;
+    let transaction = elsecall_installation::installation::Transaction::begin(paths)?;
     publish_locked(&transaction, launcher)
 }
 
 pub fn publish_locked(
-    transaction: &crate::installation::Transaction,
+    transaction: &elsecall_installation::installation::Transaction,
     launcher: &dyn WindowLauncher,
 ) -> Result<()> {
     let placed = place_locked(transaction, launcher)?;
@@ -112,7 +112,7 @@ impl Placed {
 /// Signs the stored window into a staged bundle and swaps it in for the app,
 /// without opening it.
 pub fn place_locked(
-    transaction: &crate::installation::Transaction,
+    transaction: &elsecall_installation::installation::Transaction,
     launcher: &dyn WindowLauncher,
 ) -> Result<Placed> {
     let paths = transaction.paths();

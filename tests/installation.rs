@@ -1,6 +1,6 @@
 #![cfg(target_os = "macos")]
-use elsecall::installation::{self, ServiceManager, Session};
 use elsecall_failure::{Failure, Result};
+use elsecall_installation::installation::{self, ServiceManager, Session};
 use elsecall_local_state::paths::Paths;
 use std::{cell::RefCell, fs, path::Path};
 
@@ -463,7 +463,7 @@ fn session_follows_desktop_availability_then_sticks_unless_requested() {
 
 #[test]
 fn launch_agent_leaves_logging_to_the_service() {
-    use elsecall::installation::{ServiceManager, Session};
+    use elsecall_installation::installation::{ServiceManager, Session};
     let home = tempfile::tempdir_in("/tmp").unwrap();
     let paths = Paths::for_home(home.path()).unwrap();
     let bytes = elsecall::macos::launch_agent::LaunchAgent

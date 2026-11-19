@@ -23,10 +23,8 @@ pub mod fleet_upgrade_local_api;
 pub mod housekeeping;
 pub mod inbound_firewall;
 pub mod install_window;
-pub mod installation;
 pub mod inventory_reader;
 pub mod lan_address;
-pub mod lifecycle_holder;
 pub mod macos;
 pub mod mise_cli;
 pub mod nearby_cli;
@@ -65,7 +63,6 @@ pub mod uninstall;
 pub mod upgrade_drain;
 pub mod upgrade_helper_process;
 pub mod window_app;
-pub mod window_release;
 pub mod window_startup;
 pub mod workspace_check_api;
 

@@ -56,7 +56,7 @@ fn parse(text: &str) -> Option<ProcessIdentity> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::lifecycle_holder::*;
 
     #[test]
     fn only_a_recorded_holder_that_still_runs_counts() {

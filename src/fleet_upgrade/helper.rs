@@ -5,15 +5,13 @@
 //! is not, it installs the previous executable the same way and confirms that one,
 //! so the member is not left without a working service. It records the outcome in
 //! the upgrade journal, where the restarted service reports it to the master.
-use crate::{
-    fleet_upgrade::{
-        journal::{Journal, Phase},
-        protocol::UpgradeId,
-    },
-    installation::{ServiceManager, Transaction, ready::confirm},
+use crate::fleet_upgrade::{
+    journal::{Journal, Phase},
+    protocol::UpgradeId,
 };
 use elsecall_build_identity::build_identity::{Build, BuildId, Digest};
 use elsecall_failure::{Failure, Result};
+use elsecall_installation::installation::{ServiceManager, Transaction, ready::confirm};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use elsecall_machine::inspection::Health;
@@ -50,7 +48,7 @@ pub async fn run(paths: &Paths, manager: &dyn ServiceManager, id: &UpgradeId) ->
     let before = client::get::<Health>(&socket, "/v1/health").await.ok();
     // A new build must reach the fleet if the build it replaces did, or the master
     // could neither confirm it nor upgrade it again.
-    let fleet_before = crate::installation::ready::fleet_ready(paths).await;
+    let fleet_before = elsecall_installation::installation::ready::fleet_ready(paths).await;
     let incoming = journal.incoming();
     let staged = Digest::of_file(&incoming).ok() == Some(state.digest);
     // Held until the outcome is confirmed, rollback included, so other lifecycle

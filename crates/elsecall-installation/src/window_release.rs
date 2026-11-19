@@ -34,7 +34,7 @@ pub fn installed_build(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::window_release::*;
     #[test]
     fn a_sibling_window_is_stored_and_hashed() {
         let home = std::path::PathBuf::from(format!("/tmp/ec-ui-{}", std::process::id()));

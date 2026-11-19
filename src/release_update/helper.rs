@@ -4,12 +4,10 @@ use super::{
     selection::{CliSelection, Snapshot},
     store::{self, Store},
 };
-use crate::{
-    installation::{ServiceManager, Transaction},
-    window_app::{self, WindowLauncher},
-};
+use crate::window_app::{self, WindowLauncher};
 use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::{Failure, Result};
+use elsecall_installation::installation::{ServiceManager, Transaction};
 use elsecall_local_client as client;
 use elsecall_local_state::{paths::Paths, private_files};
 use std::{
@@ -102,7 +100,7 @@ pub async fn run(
             .as_ref()
             .expect("transaction")
             .install(&staged.executable, manager, None)?;
-        crate::installation::ready::confirm(
+        elsecall_installation::installation::ready::confirm(
             paths,
             &staged.digest.build_id(),
             paths.fleet_membership().exists(),
@@ -157,7 +155,7 @@ pub async fn run(
                         .as_ref()
                         .expect("changed in transaction")
                         .install(&store.backup().join("elsecall"), manager, None)?;
-                    crate::installation::ready::confirm(
+                    elsecall_installation::installation::ready::confirm(
                         paths,
                         &old_digest.expect("backed up build").build_id(),
                         false,

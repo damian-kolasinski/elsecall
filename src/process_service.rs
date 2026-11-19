@@ -3,8 +3,8 @@
 //! registering LaunchAgents. `ELSECALL_SERVICE_MANAGER=process` selects it in debug
 //! builds only; release builds always use launchd. It keeps nothing alive after a
 //! crash, which launchd would.
-use crate::installation::{ServiceManager, Session};
 use elsecall_failure::{Failure, Result};
+use elsecall_installation::installation::{ServiceManager, Session};
 use elsecall_local_state::{paths::Paths, private_files};
 use std::{
     os::unix::process::CommandExt,
@@ -15,7 +15,7 @@ use std::{
 
 pub const ENVIRONMENT: &str = "ELSECALL_SERVICE_MANAGER";
 /// The process ID of the running service, in the state directory.
-pub use crate::installation::PID_FILE;
+pub use elsecall_installation::installation::PID_FILE;
 
 /// Whether the environment asks for this manager instead of launchd. A release
 /// build refuses rather than falling back to launchd, which would register real

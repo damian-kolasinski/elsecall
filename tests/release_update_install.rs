@@ -1,7 +1,17 @@
 #![cfg(target_os = "macos")]
 //! The real installer, transaction, service restart and rollback; provider/OS adapters are fakes.
+use elsecall::{
+    release_update::{
+        self, Job, JobId, Phase, Release, ReleaseDownload, ReleaseVersion, StagedRelease, helper,
+        selection::{CliSelection, Snapshot},
+        store::Store,
+    },
+    window_app::{self, WindowLauncher},
+};
 use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::{Failure, Result};
+use elsecall_installation::installation::{self, ServiceManager, Session};
+use elsecall_local_state::paths::Paths;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -11,19 +21,6 @@ use std::{
         atomic::{AtomicUsize, Ordering},
     },
     time::Duration,
-};
-use {
-    elsecall::{
-        installation::{self, ServiceManager, Session},
-        release_update::{
-            self, Job, JobId, Phase, Release, ReleaseDownload, ReleaseVersion, StagedRelease,
-            helper,
-            selection::{CliSelection, Snapshot},
-            store::Store,
-        },
-        window_app::{self, WindowLauncher},
-    },
-    elsecall_local_state::paths::Paths,
 };
 
 struct Manager {
@@ -323,7 +320,7 @@ async fn helper_survives_the_service_restart(mode: Mode) {
     let mut manager = Manager::new(paths.clone(), (mode == Mode::Install).then_some(incoming));
     manager.unavailable_update_digest = (mode == Mode::UpdateApi).then_some(incoming);
     installation::install(&paths, &original, &manager, None).unwrap();
-    elsecall::installation::ready::confirm(&paths, &before.build_id(), true)
+    elsecall_installation::installation::ready::confirm(&paths, &before.build_id(), true)
         .await
         .unwrap();
     let old_window = Window {

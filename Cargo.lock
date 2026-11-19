@@ -1072,6 +1072,7 @@ dependencies = [
  "elsecall-failure",
  "elsecall-fleet",
  "elsecall-guidance",
+ "elsecall-installation",
  "elsecall-labels",
  "elsecall-load-log",
  "elsecall-local-client",
@@ -1203,6 +1204,23 @@ version = "0.3.0"
 dependencies = [
  "elsecall-failure",
  "serde_json",
+]
+
+[[package]]
+name = "elsecall-installation"
+version = "0.3.0"
+dependencies = [
+ "elsecall-build-identity",
+ "elsecall-failure",
+ "elsecall-local-client",
+ "elsecall-local-state",
+ "elsecall-machine",
+ "elsecall-os-processes",
+ "elsecall-scheduling",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

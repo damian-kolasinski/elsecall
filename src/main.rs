@@ -4,7 +4,6 @@ use elsecall::{
     fleet_cli,
     inbound_firewall::{Inbound, InboundFirewall},
     install_window,
-    installation::{self, ServiceManager},
     macos::{
         application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
         tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
@@ -12,6 +11,7 @@ use elsecall::{
     peer_listener,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_installation::installation::{self, ServiceManager};
 use elsecall_local_client as client;
 use elsecall_local_state::{local_access, paths::Paths};
 use elsecall_machine::inspection::{Health, Inspection, Machine};
@@ -412,9 +412,9 @@ async fn run(cli: Cli) -> Result<bool> {
                 &elsecall::release_update::helper::production_selection(&paths),
                 force,
                 if keep_mise {
-                    elsecall::installation::cli_request::Request::Keep
+                    elsecall_installation::installation::cli_request::Request::Keep
                 } else {
-                    elsecall::installation::cli_request::Request::Remove
+                    elsecall_installation::installation::cli_request::Request::Remove
                 },
             )?;
             let mut complete = uninstalled.complete();
