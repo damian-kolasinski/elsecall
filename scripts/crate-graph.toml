@@ -44,29 +44,6 @@ band = "feature"
 # The error envelope slices' HTTP routes answer with.
 modules = ["api_response"]
 
-[crates.trace]
-band = "lab"
-modules = ["trace_api", "trace_cli", "trace_snapshot"]
-
-[crates.replay]
-band = "lab"
-modules = ["replay_api", "replay_cli", "replay_placement"]
-
-[crates.simulation]
-band = "lab"
-# The simulator, the trace input it reads and the arrival density it applies.
-modules = ["simulation", "evaluation_day", "workload_input", "replay_load"]
-
-[crates.rehearsal]
-band = "lab"
-modules = ["rehearsal", "rehearsal_api", "tuning_trust", "tuning_trust_api", "tuning_objective"]
-
-[crates.tuning]
-band = "lab"
-modules = ["tuning", "tune_cli", "tuning_drift", "tuning_preflight", "tuning_preflight_cli", "busy_hour_calibration"]
-
-# --- adapters -----------------------------------------------------------------
-
 [crates.platform-macos]
 band = "adapter"
 modules = ["macos", "process_service"]
@@ -145,3 +122,8 @@ modules = ["installation", "lifecycle_holder", "window_release", "window_app", "
 band = "lab"
 # What the fleet did: the facts runs leave behind, the workload model fitted on them, and the reports built from both.
 modules = ["reporting::facts", "reporting::window", "reporting::leftovers", "report_protocol", "workload", "reporting", "report_api", "report_cli", "own_history", "peer_history"]
+
+[crates.tuning]
+band = "lab"
+# Tuning the scheduler: recording traces, replaying and simulating them, rehearsing on the fleet, and choosing settings from the results.
+modules = ["tuning", "tune_cli", "tuning_drift", "tuning_preflight", "tuning_preflight_cli", "busy_hour_calibration", "trace_api", "trace_cli", "trace_snapshot", "replay_api", "replay_cli", "replay_placement", "simulation", "evaluation_day", "workload_input", "replay_load", "rehearsal", "rehearsal_api", "tuning_trust", "tuning_trust_api", "tuning_objective"]

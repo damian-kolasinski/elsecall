@@ -2,16 +2,16 @@
 mod proposal;
 mod search;
 mod space;
+use crate::simulation::{self, Options};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_reports::workload::trace::Trace;
-use elsecall_simulation::simulation::{self, Options};
 use serde_json::{Value, json};
 use space::Settings;
 pub use space::Space;
 use std::{collections::BTreeSet, time::Instant};
 pub struct TuneOptions {
-    pub load_factor: elsecall_simulation::replay_load::LoadFactor,
+    pub load_factor: crate::replay_load::LoadFactor,
     pub space: Option<Space>,
     pub budget: usize,
     pub seed: u64,
@@ -39,7 +39,7 @@ fn evaluate(
     settings: &Settings,
     seed: u64,
     day: Option<Timestamp>,
-    load_factor: elsecall_simulation::replay_load::LoadFactor,
+    load_factor: crate::replay_load::LoadFactor,
 ) -> Result<Value> {
     let mut result = simulation::simulate(
         trace.clone(),
@@ -267,7 +267,7 @@ pub fn tune(trace: Trace, held_out: Option<Trace>, options: TuneOptions) -> Resu
             .is_some_and(|h| h["fidelity_evidence"]["trusted_for_tuning"] == true);
     let recorded_day_certificate=trusted.then(|| {
         let issued_at=Timestamp::now();
-        json!({"basis":"recorded_day_and_held_out","trace_digest":fidelity["trace_digest"],"held_out_trace_digest":held.as_ref().map(|h|&h["baseline"]["trace_digest"]),"build":fidelity["code_build"],"issued_at":issued_at,"expires_at":issued_at.after(elsecall_rehearsal::tuning_trust::MAX_AGE),"fidelity_digest":elsecall_contract::build_identity::Digest::of(&serde_json::to_vec(&fidelity["fidelity"]).expect("fidelity serializes")),"held_out_fidelity_digest":held.as_ref().map(|h|elsecall_contract::build_identity::Digest::of(&serde_json::to_vec(&h["fidelity_evidence"]).expect("fidelity serializes")))})
+        json!({"basis":"recorded_day_and_held_out","trace_digest":fidelity["trace_digest"],"held_out_trace_digest":held.as_ref().map(|h|&h["baseline"]["trace_digest"]),"build":fidelity["code_build"],"issued_at":issued_at,"expires_at":issued_at.after(crate::tuning_trust::MAX_AGE),"fidelity_digest":elsecall_contract::build_identity::Digest::of(&serde_json::to_vec(&fidelity["fidelity"]).expect("fidelity serializes")),"held_out_fidelity_digest":held.as_ref().map(|h|elsecall_contract::build_identity::Digest::of(&serde_json::to_vec(&h["fidelity_evidence"]).expect("fidelity serializes")))})
     });
     let sensitivity = sensitivity(&space, &candidates);
     let alternatives = order
@@ -282,7 +282,7 @@ pub fn tune(trace: Trace, held_out: Option<Trace>, options: TuneOptions) -> Resu
         json!({"tuning_version":2,"load_factor":options.load_factor,"ranking_basis":"point; envelopes report risk only","method":"seeded shuffled coordinate sweeps with random restarts; fixed finite grid; cached unique candidates; point and lower/upper envelopes per evaluation","seed":options.seed,"space":space,"budget":options.budget,"evaluated_candidates":candidates.len(),"sweeps":sweeps,"rejected_candidates":rejected,
         "baseline":candidates[0].1,"best":{"candidate":best,"settings":settings,"evaluation":report},"alternatives":alternatives,"candidates":ledger,"parameter_sensitivity":sensitivity,
         "recorded_day_certificate":recorded_day_certificate,"trusted_for_tuning":trusted,"proposal_status":if trusted{"awaiting_ab_rehearsal"}else{"untrusted"},"accepted_win":false,"trust_missing":trust_reasons,"fidelity_evidence":fidelity["fidelity"],
-        "objective_comparison":elsecall_rehearsal::tuning_objective::compare(&candidates[0].1["metrics"]["scheduling_objective"],&report["metrics"]["scheduling_objective"],None),"tuning_win":tuning_win,"wins_only_on_tuning_trace":only_tuning,"held_out":held,"proposed_change":proposal::render(&trace,settings)?,
+        "objective_comparison":crate::tuning_objective::compare(&candidates[0].1["metrics"]["scheduling_objective"],&report["metrics"]["scheduling_objective"],None),"tuning_win":tuning_win,"wins_only_on_tuning_trace":only_tuning,"held_out":held,"proposed_change":proposal::render(&trace,settings)?,
         "performance":{"search_elapsed_seconds":elapsed,"candidates_per_minute":candidates.len() as f64*60.0/elapsed,"scope":"Unique tuning evaluations including baseline and all three envelopes; excludes fidelity and held-out evaluation. Timing varies; settings/metrics are deterministic."},
         "limits":["Proposals only: no installed settings or consumer files are read or changed.","The primary objective is simulated per-request scheduling overhead; measured acceptance requires A/A noise and rehearsal.","Exploratory validation-needed proposals are never accepted tuning wins.","Grid search with a finite budget does not guarantee a global optimum; unevaluated sensitivities stay explicit."]}),
     )

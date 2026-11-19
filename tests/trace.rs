@@ -226,7 +226,7 @@ fn exports_real_overrun_shape_across_load_pages_without_losing_history() {
             61
         );
     }
-    elsecall_simulation::simulation::validate_trace(&trace).unwrap();
+    elsecall_tuning::simulation::validate_trace(&trace).unwrap();
 }
 
 #[test]
@@ -363,7 +363,7 @@ fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
     );
     let selected: Trace = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     assert_eq!(selected.since.millis(), start + 19 * 60_000 + 1);
-    elsecall_rehearsal::rehearsal::plan::Plan::new(&selected, 6.0).unwrap();
+    elsecall_tuning::rehearsal::plan::Plan::new(&selected, 6.0).unwrap();
     // Older arrivals stay as history, while no root crosses the chosen start.
     assert!(
         selected
@@ -438,7 +438,7 @@ fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
                 .iter()
                 .any(|s| s.at == tail_settings.at)
         );
-        elsecall_simulation::simulation::validate_trace(&exported).unwrap();
+        elsecall_tuning::simulation::validate_trace(&exported).unwrap();
     }
     let before = records.recent(100).unwrap().len();
     let response = alpha.run(&[
@@ -480,7 +480,7 @@ fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
     assert!(legacy.synthetic_workspace);
     assert!(!legacy.workspace_recorded);
     assert!(legacy.workspace.is_some());
-    elsecall_rehearsal::rehearsal::plan::Plan::new(&selected, 6.0).unwrap();
+    elsecall_tuning::rehearsal::plan::Plan::new(&selected, 6.0).unwrap();
 
     history[7].workspace_recorded = true;
     history[4].ended_at = Some(Timestamp::from_millis(start + 26 * 60_000));

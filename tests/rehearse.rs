@@ -84,7 +84,7 @@ fn fixture(directory: &Path, offsets: &[u64]) -> std::path::PathBuf {
     let demand:Vec<_>=["alpha","bravo"].into_iter().map(|m|json!({"member":m,"family":"build *","runs":10,"fitted_runs":10,"declared_cores":0.5,"process_tree_cores":0.25,"effective_cores":0.25,"interval_cores":[0.15,0.35],"fitted_minutes":10,"idle_minutes":3,"outside_baseline_cores":0.0,"residual_rmse_cores":0.01,"status":"identified"})).collect();
     let document = json!({"trace_version":1,"incomplete":false,"since":Timestamp::from_millis(start),"until":Timestamp::from_millis(start+offsets.iter().max().unwrap()+2000),"master":"alpha","members":[{"member":"alpha","load":[],"errors":[],"scheduler_settings":[]},{"member":"bravo","load":[],"errors":[],"scheduler_settings":[]}],"requests":requests,"leftovers":[],"demand":demand,"contention":[],"limits":[]});
     let trace: Trace = serde_json::from_value(document.clone()).unwrap();
-    elsecall_simulation::simulation::validate_trace(&trace).unwrap();
+    elsecall_tuning::simulation::validate_trace(&trace).unwrap();
     let path = directory.join("input.json");
     fs::write(&path, document.to_string()).unwrap();
     path
@@ -620,15 +620,15 @@ fn repeated_cleanup_of_a_rehearsal_with_a_remote_copy_is_successful() {
         .build()
         .unwrap();
     for member in [&alpha, &bravo] {
-        let reply: elsecall_rehearsal::rehearsal::protocol::Reply = runtime
+        let reply: elsecall_tuning::rehearsal::protocol::Reply = runtime
             .block_on(elsecall_host::client::post_large(
                 &elsecall_host::paths::Paths::for_home(alpha.home.path())
                     .unwrap()
                     .socket(),
                 "/v1/rehearsal",
-                &elsecall_rehearsal::rehearsal::protocol::Call {
+                &elsecall_tuning::rehearsal::protocol::Call {
                     member: member.name.into(),
-                    operation: elsecall_rehearsal::rehearsal::protocol::Action::Clean {
+                    operation: elsecall_tuning::rehearsal::protocol::Action::Clean {
                         session: session.into(),
                     },
                 },
@@ -1145,7 +1145,7 @@ fn compare_reports_live_metrics_uses_synthetic_sizes_and_restores_synced_setting
     );
     // A missing noise floor prevents acceptance. A known hard violation may
     // still reject the proposal, including slowdown caused by host contention.
-    let expected = elsecall_rehearsal::tuning_objective::compare(
+    let expected = elsecall_tuning::tuning_objective::compare(
         &data["baseline"]["metrics"]["scheduling_objective"],
         &data["proposal"]["metrics"]["scheduling_objective"],
         None,
@@ -1709,7 +1709,7 @@ fn aa_noise_file_freezes_work_and_compare_applies_the_overhead_acceptance_rule()
     assert!(aa.status.success(), "{aa:?}");
     let aa = members::json(&aa)["data"].clone();
     assert_eq!(aa["comparison"]["status"], "compared", "{aa}");
-    let noise = elsecall_rehearsal::tuning_objective::Noise::read(&noise_path).unwrap();
+    let noise = elsecall_tuning::tuning_objective::Noise::read(&noise_path).unwrap();
     assert!(noise.valid());
     assert_eq!(serde_json::to_value(&noise).unwrap(), aa["noise_floor"]);
     use std::os::unix::fs::PermissionsExt;
@@ -1745,7 +1745,7 @@ fn aa_noise_file_freezes_work_and_compare_applies_the_overhead_acceptance_rule()
     }
     let a = &ab["baseline"]["metrics"]["scheduling_objective"];
     let b = &ab["proposal"]["metrics"]["scheduling_objective"];
-    let expected = elsecall_rehearsal::tuning_objective::compare(a, b, Some(&noise));
+    let expected = elsecall_tuning::tuning_objective::compare(a, b, Some(&noise));
     assert_eq!(ab["comparison"]["accepted"], expected["accepted"]);
     assert_eq!(ab["comparison"]["deltas"], expected["deltas"]);
     assert!(ab["comparison"]["accepted"].is_boolean(), "{ab}");

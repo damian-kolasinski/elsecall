@@ -67,7 +67,7 @@ impl elsecall_reports::report_api::TrustEvidence for TuningTrust {
         paths: &'a elsecall_host::paths::Paths,
         fleet: &'a std::result::Result<Arc<elsecall_fleet::fleet::Fleet>, Failure>,
     ) -> futures_util::future::BoxFuture<'a, serde_json::Value> {
-        Box::pin(elsecall_rehearsal::tuning_trust_api::fleet_status(
+        Box::pin(elsecall_tuning::tuning_trust_api::fleet_status(
             paths, fleet,
         ))
     }
@@ -394,7 +394,7 @@ pub async fn serve_with_updates(
         housekeeper.clone(),
         Arc::new(scheduler.clone()),
     ));
-    let rehearsal = elsecall_rehearsal::rehearsal::member::Member::new(
+    let rehearsal = elsecall_tuning::rehearsal::member::Member::new(
         paths.clone(),
         scheduler.clone(),
         housekeeper.clone(),
@@ -457,11 +457,11 @@ pub async fn serve_with_updates(
                     caller_state,
                 ))
                 .merge(elsecall_reports::report_api::peer_routes(reporter.clone()))
-                .merge(elsecall_trace::trace_api::peer_routes(reporter.clone()))
-                .merge(elsecall_rehearsal::rehearsal_api::peer_routes(
+                .merge(elsecall_tuning::trace_api::peer_routes(reporter.clone()))
+                .merge(elsecall_tuning::rehearsal_api::peer_routes(
                     rehearsal.clone(),
                 ))
-                .merge(elsecall_rehearsal::tuning_trust_api::peer_routes(
+                .merge(elsecall_tuning::tuning_trust_api::peer_routes(
                     paths.clone(),
                 ))
                 .merge(elsecall_tools::tools_api::peer_routes());
@@ -475,7 +475,7 @@ pub async fn serve_with_updates(
             });
             let peer_routes = peer_api::routes(fleet.clone(), member_routes);
             peer_listener::start(fleet.clone(), members_listener, peer_routes).await;
-            elsecall_rehearsal::rehearsal_api::routes(fleet.clone(), rehearsal)
+            elsecall_tuning::rehearsal_api::routes(fleet.clone(), rehearsal)
                 .merge(elsecall_lifecycle::fleet_upgrade_local_api::routes(
                     distributor
                         .clone()
@@ -500,7 +500,7 @@ pub async fn serve_with_updates(
         configuration.housekeeping.interval,
     ));
     let trust_routes =
-        elsecall_rehearsal::tuning_trust_api::routes(paths.clone(), reporter.fleet.clone());
+        elsecall_tuning::tuning_trust_api::routes(paths.clone(), reporter.fleet.clone());
     let app = Router::new()
         .route("/v1/health", get(health))
         .route("/v1/machine", get(machine))
@@ -516,14 +516,14 @@ pub async fn serve_with_updates(
         })
         .with_state(inspection)
         .merge(trust_routes)
-        .merge(elsecall_replay::replay_api::routes(scheduler.clone()))
+        .merge(elsecall_tuning::replay_api::routes(scheduler.clone()))
         .merge(elsecall_runs::admission_api::routes(scheduler))
         .merge(elsecall_workspace::copies_api::routes(housekeeper))
         .merge(tools_routes)
         .merge(desired_routes)
         .merge(crate::ui_app::routes(paths.clone()))
         .merge(update_routes)
-        .merge(elsecall_trace::trace_api::routes(reporter.clone()))
+        .merge(elsecall_tuning::trace_api::routes(reporter.clone()))
         .merge(elsecall_reports::report_api::routes(reporter))
         .merge(relay)
         .merge(sync_routes)

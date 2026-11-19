@@ -18,7 +18,7 @@ pub async fn monitor(paths: &Paths, scheduler: &Scheduler) -> Result<()> {
     for day in days.into_iter().rev() {
         let since = Timestamp::from_millis(day);
         let until = Timestamp::from_millis(day + DAY);
-        if elsecall_rehearsal::tuning_trust::monitored(paths, since)? {
+        if crate::tuning_trust::monitored(paths, since)? {
             continue;
         }
         // Check only days for which this member actually recorded inputs.
@@ -35,11 +35,11 @@ pub async fn monitor(paths: &Paths, scheduler: &Scheduler) -> Result<()> {
             day.saturating_sub(14 * DAY)
                 .max(Timestamp::now().millis().saturating_sub(30 * DAY)),
         );
-        let trace = elsecall_trace::trace_cli::collect(paths, context, until).await?;
+        let trace = crate::trace_cli::collect(paths, context, until).await?;
         let simulation = tokio::task::spawn_blocking(move || {
-            elsecall_simulation::simulation::simulate(
+            crate::simulation::simulate(
                 trace,
-                elsecall_simulation::simulation::Options {
+                crate::simulation::Options {
                     fidelity: true,
                     day: Some(since),
                     ..Default::default()
@@ -47,12 +47,12 @@ pub async fn monitor(paths: &Paths, scheduler: &Scheduler) -> Result<()> {
             )
         })
         .await
-        .map_err(|_| elsecall_rehearsal::rehearsal::invalid("Drift fidelity task failed."))?;
+        .map_err(|_| crate::rehearsal::invalid("Drift fidelity task failed."))?;
         match simulation {
             Ok(simulation) => {
-                elsecall_rehearsal::tuning_trust::record_day(paths, since, &simulation["fidelity"])?
+                crate::tuning_trust::record_day(paths, since, &simulation["fidelity"])?
             }
-            Err(error) => elsecall_rehearsal::tuning_trust::record_day(
+            Err(error) => crate::tuning_trust::record_day(
                 paths,
                 since,
                 &serde_json::json!({"status":"blocked_by_missing_evidence","error":error.code,"blockers":[error.message]}),

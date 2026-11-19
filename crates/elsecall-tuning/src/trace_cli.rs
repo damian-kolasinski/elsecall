@@ -23,7 +23,7 @@ pub enum TraceCommand {
 pub struct ExportArgs {
     /// Select the busiest synthetic rehearsal workload starting with an idle fleet
     #[arg(long, conflicts_with_all = ["member", "local_history"])]
-    pub rehearsal_window: Option<elsecall_rehearsal::rehearsal::window::Busiest>,
+    pub rehearsal_window: Option<crate::rehearsal::window::Busiest>,
     /// Minimum interactive root arrivals for a rehearsal workload
     #[arg(long, default_value = "40", requires = "rehearsal_window")]
     pub rehearsal_min_interactive: std::num::NonZeroUsize,
@@ -86,9 +86,9 @@ pub async fn run(paths: &Paths, args: TraceArgs) -> Result<serde_json::Value> {
     }
     if let Some(policy) = args.rehearsal_window {
         if until < trace.until {
-            trace = elsecall_rehearsal::rehearsal::window::bound(&trace, start, until)?;
+            trace = crate::rehearsal::window::bound(&trace, start, until)?;
         }
-        let (selected, report) = elsecall_rehearsal::rehearsal::window::select(
+        let (selected, report) = crate::rehearsal::window::select(
             &trace,
             policy.with_minimum(args.rehearsal_min_interactive),
         )?;

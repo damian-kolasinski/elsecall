@@ -1,8 +1,8 @@
 //! Select arrival density from complete, observed rehearsals of the same workload.
+use crate::replay_load::LoadFactor;
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_reports::workload::trace::Trace;
-use elsecall_simulation::replay_load::LoadFactor;
 use serde::{Deserialize, Serialize};
 mod fit;
 use fit::Fit;
@@ -44,7 +44,7 @@ pub struct Target {
 }
 impl Target {
     pub fn observed(trace: &Trace, since: Timestamp, until: Timestamp) -> Result<Self> {
-        elsecall_simulation::simulation::validate_trace(trace)?;
+        crate::simulation::validate_trace(trace)?;
         if since >= until
             || since < trace.since
             || until > trace.until
@@ -299,8 +299,7 @@ pub fn calibrate_preflight(
     compress: f64,
     seed: u64,
 ) -> Result<(Option<LoadFactor>, Value)> {
-    let bounded =
-        elsecall_rehearsal::rehearsal::window::bound(source, selected.since, selected.until)?;
+    let bounded = crate::rehearsal::window::bound(source, selected.since, selected.until)?;
     calibrate_observations(
         &[workload_digest(selected), workload_digest(&bounded)],
         target,
@@ -342,7 +341,7 @@ fn calibrate_observations(
     let mut trials = Vec::new();
     let mut identity = None;
     for trace in observations {
-        elsecall_simulation::simulation::validate_trace(trace)?;
+        crate::simulation::validate_trace(trace)?;
         let recording = trace
             .rehearsal
             .as_ref()
@@ -533,7 +532,7 @@ mod tests {
             bucket.saturated_busy_seconds = 0;
             bucket.memory_pressure_seconds = 0;
         }
-        assert!(elsecall_simulation::simulation::validate_trace(&trace).is_ok());
+        assert!(crate::simulation::validate_trace(&trace).is_ok());
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
         let (workload, mut trace, target) = observed_fixture();
         let mut changed = trace.members[0].scheduler_settings[0].clone();
@@ -542,7 +541,7 @@ mod tests {
         changed.capacity.reserved =
             elsecall_contract::scheduling_model::capacity::Cores::from_millis(11_000);
         trace.members[0].scheduler_settings.push(changed);
-        assert!(elsecall_simulation::simulation::validate_trace(&trace).is_ok());
+        assert!(crate::simulation::validate_trace(&trace).is_ok());
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
     }
 
@@ -565,7 +564,7 @@ mod tests {
             resources.started_at = Some(trace.since.after(std::time::Duration::from_secs(50)));
             resources.ended_at = Some(trace.since.after(std::time::Duration::from_secs(60)));
         }
-        elsecall_simulation::simulation::validate_trace(&trace).unwrap();
+        crate::simulation::validate_trace(&trace).unwrap();
         let shape = target.rehearsal(&trace).unwrap();
         assert_eq!(shape.queue_max, 40.0);
         assert_eq!(shape.queue_p90, 0.0); // 20s * 6, not 50s * 6 of waiting
@@ -655,7 +654,7 @@ mod tests {
             elsecall_contract::scheduling_model::timestamp::Timestamp::from_millis(
                 trace.since.millis() - 1,
             );
-        assert!(elsecall_simulation::simulation::validate_trace(&trace).is_ok());
+        assert!(crate::simulation::validate_trace(&trace).is_ok());
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
     }
 

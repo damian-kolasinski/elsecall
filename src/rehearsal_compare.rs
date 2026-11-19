@@ -4,11 +4,11 @@ use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_host::client;
 use elsecall_host::paths::Paths;
-use elsecall_rehearsal::rehearsal::{
+use elsecall_scheduling::records::SchedulerSettings;
+use elsecall_tuning::rehearsal::{
     invalid,
     protocol::{Action, Reply},
 };
-use elsecall_scheduling::records::SchedulerSettings;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, time::Duration};
 
@@ -161,7 +161,7 @@ async fn settings(
     Ok(result)
 }
 pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
-    let mut signals = elsecall_rehearsal::rehearsal::cancellation::Signals::register()?;
+    let mut signals = elsecall_tuning::rehearsal::cancellation::Signals::register()?;
     let proposed = if args.aa {
         BTreeMap::new()
     } else {
@@ -176,7 +176,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
     let noise = args
         .noise
         .as_deref()
-        .map(elsecall_rehearsal::tuning_objective::Noise::read)
+        .map(elsecall_tuning::tuning_objective::Noise::read)
         .transpose()?;
     let trace = crate::rehearse_cli::source(&args)?;
     let source_digest = elsecall_contract::build_identity::Digest::of(
@@ -207,14 +207,14 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
                 .map_err(|e| Failure::io("Reserve A/A noise artifact", e))
         })
         .transpose()?;
-    let candidate = elsecall_simulation::simulation::CandidateSettings::parse(
+    let candidate = elsecall_tuning::simulation::CandidateSettings::parse(
         &trace,
         &proposed
             .iter()
             .map(|(k, v)| format!("{k}={v}"))
             .collect::<Vec<_>>(),
     )?;
-    let roster: elsecall_trace::trace_api::Members =
+    let roster: elsecall_tuning::trace_api::Members =
         client::post_large(&paths.socket(), "/v1/trace/members", &json!({})).await?;
     let original = snapshot(paths, &roster.members).await?;
     let before_fingerprints = fingerprints(&original);
@@ -368,7 +368,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
         Err(e) => (None, Some(e)),
     };
     if let Some(proposal) = &mut proposal {
-        elsecall_simulation::simulation::constrain_failures(
+        elsecall_tuning::simulation::constrain_failures(
             &mut proposal["metrics"],
             baseline["metrics"]["scheduling_objective"]["failures"]["count"].as_u64(),
             "measured baseline arm",
@@ -387,7 +387,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
             .zip(b["mean"].as_f64())
             .zip(a["p90"].as_f64().zip(b["p90"].as_f64()))
             .map(
-                |((am, bm), (ap, bp))| elsecall_rehearsal::tuning_objective::Noise {
+                |((am, bm), (ap, bp))| elsecall_tuning::tuning_objective::Noise {
                     noise_version: 1,
                     source_digest,
                     build: elsecall_contract::build_identity::this_build()
@@ -430,7 +430,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
 fn comparison(
     baseline: &Value,
     proposal: Option<&Value>,
-    noise: Option<&elsecall_rehearsal::tuning_objective::Noise>,
+    noise: Option<&elsecall_tuning::tuning_objective::Noise>,
 ) -> Value {
     let complete = |run: &Value| {
         run["recording_complete"] == true
@@ -462,7 +462,7 @@ fn comparison(
     let b = proposal
         .map(|p| &p["metrics"]["scheduling_objective"])
         .unwrap_or(&Value::Null);
-    let mut result = elsecall_rehearsal::tuning_objective::compare(a, b, noise);
+    let mut result = elsecall_tuning::tuning_objective::compare(a, b, noise);
     if !complete {
         result["accepted"] = Value::Null;
     }

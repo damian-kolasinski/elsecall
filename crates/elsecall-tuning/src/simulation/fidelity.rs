@@ -155,7 +155,7 @@ pub fn compare(
     if trace
         .placement_replay
         .as_ref()
-        .is_some_and(|p| p.mode == elsecall_replay::replay_placement::Mode::Current)
+        .is_some_and(|p| p.mode == crate::replay_placement::Mode::Current)
     {
         blockers.insert(
             "current placement is a counterfactual and cannot certify historical fidelity".into(),

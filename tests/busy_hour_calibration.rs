@@ -4,9 +4,9 @@ mod diagnostics;
 mod members;
 mod processes;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_replay::replay_placement::{Mode, ReplayPlacement};
 use elsecall_reports::workload::trace::Trace;
 use elsecall_tuning::busy_hour_calibration::{Target, calibrate};
+use elsecall_tuning::replay_placement::{Mode, ReplayPlacement};
 use members::{TestMember, enrol};
 use serde_json::json;
 use std::{
@@ -55,7 +55,7 @@ fn workload() -> Trace {
             "outcome":{"kind":"exited","exit_code":0},"decision":null
         })).unwrap());
     }
-    elsecall_simulation::simulation::validate_trace(&trace).unwrap();
+    elsecall_tuning::simulation::validate_trace(&trace).unwrap();
     trace
 }
 
@@ -151,7 +151,7 @@ fn exercise(mode: Mode) {
     .apply(&mut replay)
     .unwrap();
     let replay =
-        elsecall_rehearsal::rehearsal::window::bound(&replay, replay.since, replay.until).unwrap();
+        elsecall_tuning::rehearsal::window::bound(&replay, replay.since, replay.until).unwrap();
     let output = temp.path().join("complete.json");
     let result = rehearsal_command(&alpha, &input, &output, rules)
         .output()
@@ -260,7 +260,7 @@ fn exercise(mode: Mode) {
         // Current rules are part of experiment identity; historical arms cannot
         // be pooled merely because their request counts happen to match.
         let historical =
-            elsecall_rehearsal::rehearsal::window::bound(&original, original.since, original.until)
+            elsecall_tuning::rehearsal::window::bound(&original, original.since, original.until)
                 .unwrap();
         assert!(
             calibrate(

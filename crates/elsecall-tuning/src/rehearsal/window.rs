@@ -100,7 +100,7 @@ impl Blockers {
 }
 
 pub fn select(source: &Trace, policy: Busiest) -> Result<(Trace, Selection)> {
-    elsecall_simulation::simulation::validate_trace(source)?;
+    crate::simulation::validate_trace(source)?;
     let mut prepared = source.clone();
     prepared.requests.retain(|r| !super::internal(r));
     super::workspace::prepare(&mut prepared.requests);
@@ -366,7 +366,7 @@ pub fn explicit(
 /// Project arrival bounds while freezing work from all retained competitors.
 /// This is a synthetic-workload projection, never a fidelity input rewrite.
 pub fn bound(source: &Trace, since: Timestamp, until: Timestamp) -> Result<Trace> {
-    elsecall_simulation::simulation::validate_trace(source)?;
+    crate::simulation::validate_trace(source)?;
     if since < source.since || until > source.until || since >= until {
         return Err(elsecall_reports::report_facts::window::invalid(
             "Explicit arrival bounds must be nonempty and inside the source history.",
@@ -563,8 +563,8 @@ mod tests {
             full.request.duration_ms
         );
         assert_eq!(
-            elsecall_simulation::simulation::freeze_reference(&selected, &selected.requests[0]),
-            elsecall_simulation::simulation::freeze_reference(&t, &t.requests[0])
+            crate::simulation::freeze_reference(&selected, &selected.requests[0]),
+            crate::simulation::freeze_reference(&t, &t.requests[0])
         );
     }
     #[test]

@@ -1073,15 +1073,11 @@ dependencies = [
  "elsecall-openssh-mac",
  "elsecall-peers",
  "elsecall-platform-macos",
- "elsecall-rehearsal",
- "elsecall-replay",
  "elsecall-reports",
  "elsecall-runs",
  "elsecall-scheduling",
- "elsecall-simulation",
  "elsecall-sync",
  "elsecall-tools",
- "elsecall-trace",
  "elsecall-tuning",
  "elsecall-workspace",
  "futures-util",
@@ -1257,49 +1253,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-rehearsal"
-version = "0.3.0"
-dependencies = [
- "axum",
- "elsecall-contract",
- "elsecall-fleet",
- "elsecall-host",
- "elsecall-peers",
- "elsecall-reports",
- "elsecall-scheduling",
- "elsecall-simulation",
- "elsecall-workspace",
- "futures-util",
- "humantime",
- "hyper",
- "libc",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "elsecall-replay"
-version = "0.3.0"
-dependencies = [
- "axum",
- "clap",
- "elsecall-contract",
- "elsecall-host",
- "elsecall-reports",
- "elsecall-runs",
- "elsecall-scheduling",
- "humantime",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
-]
-
-[[package]]
 name = "elsecall-reports"
 version = "0.3.0"
 dependencies = [
@@ -1371,25 +1324,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-simulation"
-version = "0.3.0"
-dependencies = [
- "elsecall-contract",
- "elsecall-peers",
- "elsecall-replay",
- "elsecall-reports",
- "elsecall-runs",
- "elsecall-scheduling",
- "futures-util",
- "humantime",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "toml",
-]
-
-[[package]]
 name = "elsecall-sync"
 version = "0.3.0"
 dependencies = [
@@ -1443,7 +1377,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-trace"
+name = "elsecall-tuning"
 version = "0.3.0"
 dependencies = [
  "axum",
@@ -1451,32 +1385,21 @@ dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
- "elsecall-rehearsal",
- "elsecall-reports",
- "elsecall-scheduling",
- "libc",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "elsecall-tuning"
-version = "0.3.0"
-dependencies = [
- "clap",
- "elsecall-contract",
- "elsecall-host",
- "elsecall-rehearsal",
- "elsecall-replay",
+ "elsecall-peers",
  "elsecall-reports",
  "elsecall-runs",
  "elsecall-scheduling",
- "elsecall-simulation",
  "elsecall-sync",
- "elsecall-trace",
+ "elsecall-workspace",
+ "futures-util",
  "humantime",
+ "hyper",
+ "libc",
+ "rusqlite",
  "serde",
  "serde_json",
+ "sha2",
+ "tempfile",
  "tokio",
  "toml",
 ]

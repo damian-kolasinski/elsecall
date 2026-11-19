@@ -6,7 +6,7 @@ use std::{num::NonZeroUsize, path::PathBuf, time::Duration};
 #[derive(Args, Debug)]
 pub struct PreflightArgs {
     #[command(flatten)]
-    pub replay_placement: elsecall_replay::replay_placement::ReplayPlacement,
+    pub replay_placement: crate::replay_placement::ReplayPlacement,
     /// Complete installed-build rehearsal trace; repeat for each tested F
     #[arg(long, requires = "calibrate_busy_hours")]
     pub busy_rehearsal: Vec<PathBuf>,
@@ -20,7 +20,7 @@ pub struct PreflightArgs {
     pub busy_until: Option<String>,
     /// Replay arrivals F times closer; preserve all command work (1–32)
     #[arg(long, default_value = "1")]
-    pub load_factor: elsecall_simulation::replay_load::LoadFactor,
+    pub load_factor: crate::replay_load::LoadFactor,
     /// Existing full-fleet export; when omitted, collect history read-only
     #[arg(long)]
     pub trace: Option<PathBuf>,
@@ -31,7 +31,7 @@ pub struct PreflightArgs {
     pub until: Option<String>,
     /// busiest:DURATION or explicit (uses the given/source bounds)
     #[arg(long, default_value = "busiest:50m")]
-    pub rehearsal_window: elsecall_rehearsal::rehearsal::window::Busiest,
+    pub rehearsal_window: crate::rehearsal::window::Busiest,
     #[arg(long, default_value = "40")]
     pub min_interactive: NonZeroUsize,
     #[arg(long, default_value_t = 6.0)]
@@ -49,17 +49,16 @@ pub struct PreflightArgs {
 }
 pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
     let mut trace = if let Some(path) = &args.trace {
-        elsecall_simulation::workload_input::read(path)?
+        crate::workload_input::read(path)?
     } else {
         let now = Timestamp::now();
         let start =
             elsecall_reports::report_cli::since(args.since.as_deref().unwrap_or("7d"), now)?;
         // Collect through now, so every historical drain and sensitivity trial
         // can use the available evidence beyond the arrival cutoff.
-        elsecall_trace::trace_cli::collect(&elsecall_host::paths::Paths::current()?, start, now)
-            .await?
+        crate::trace_cli::collect(&elsecall_host::paths::Paths::current()?, start, now).await?
     };
-    elsecall_simulation::simulation::validate_trace(&trace)?;
+    crate::simulation::validate_trace(&trace)?;
     let placement = args.replay_placement.apply(&mut trace)?;
     let busy_hours = if args.calibrate_busy_hours {
         Some(crate::busy_hour_calibration::Target::observed(
@@ -75,7 +74,7 @@ pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
     let observed_rehearsals = args
         .busy_rehearsal
         .iter()
-        .map(|p| elsecall_simulation::workload_input::read(p))
+        .map(|p| crate::workload_input::read(p))
         .collect::<Result<Vec<_>>>()?;
     let start_text = if args.trace.is_some() {
         args.since.as_deref()
@@ -84,7 +83,7 @@ pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
     };
     let (start, end) =
         elsecall_reports::workload::bounds::within(&trace, start_text, args.until.as_deref())?;
-    let trace = elsecall_rehearsal::rehearsal::window::bound(&trace, start, end)?;
+    let trace = crate::rehearsal::window::bound(&trace, start, end)?;
     let mut result = tokio::task::spawn_blocking(move || {
         crate::tuning_preflight::check(
             trace,

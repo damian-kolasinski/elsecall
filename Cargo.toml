@@ -59,15 +59,11 @@ elsecall-lifecycle = { path = "crates/elsecall-lifecycle" }
 elsecall-openssh-mac = { path = "crates/elsecall-openssh-mac" }
 elsecall-peers = { path = "crates/elsecall-peers" }
 elsecall-platform-macos = { path = "crates/elsecall-platform-macos" }
-elsecall-rehearsal = { path = "crates/elsecall-rehearsal" }
-elsecall-replay = { path = "crates/elsecall-replay" }
 elsecall-reports = { path = "crates/elsecall-reports" }
 elsecall-runs = { path = "crates/elsecall-runs" }
 elsecall-scheduling = { path = "crates/elsecall-scheduling" }
-elsecall-simulation = { path = "crates/elsecall-simulation" }
 elsecall-sync = { path = "crates/elsecall-sync" }
 elsecall-tools = { path = "crates/elsecall-tools" }
-elsecall-trace = { path = "crates/elsecall-trace" }
 elsecall-tuning = { path = "crates/elsecall-tuning" }
 elsecall-workspace = { path = "crates/elsecall-workspace" }
 
@@ -117,15 +113,11 @@ elsecall-lifecycle.workspace = true
 elsecall-openssh-mac.workspace = true
 elsecall-peers.workspace = true
 elsecall-platform-macos.workspace = true
-elsecall-rehearsal.workspace = true
-elsecall-replay.workspace = true
 elsecall-reports.workspace = true
 elsecall-runs.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-simulation.workspace = true
 elsecall-sync.workspace = true
 elsecall-tools.workspace = true
-elsecall-trace.workspace = true
 elsecall-tuning.workspace = true
 elsecall-workspace.workspace = true
 futures-util.workspace = true

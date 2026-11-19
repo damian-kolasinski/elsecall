@@ -84,7 +84,7 @@ fn run3_arrivals_keep_post_window_drain_load_and_reject_genuine_holes() {
     request.fact.waited_ms = Some(0);
     request.fact.resources.as_mut().unwrap().started_at = Some(request.fact.requested_at);
     request.fact.resources.as_mut().unwrap().ended_at = Some(start.after(Duration::from_secs(120)));
-    let (selected, _) = elsecall_rehearsal::rehearsal::window::explicit(
+    let (selected, _) = elsecall_tuning::rehearsal::window::explicit(
         &source,
         start,
         start.after(Duration::from_secs(60)),
@@ -93,9 +93,9 @@ fn run3_arrivals_keep_post_window_drain_load_and_reject_genuine_holes() {
     .unwrap();
     assert_eq!(selected.members[0].load.len(), 3);
     assert_eq!(selected.until, start.after(Duration::from_secs(60)));
-    elsecall_simulation::simulation::validate_trace(&selected).unwrap();
+    elsecall_tuning::simulation::validate_trace(&selected).unwrap();
     source.members[0].load.remove(1);
-    let error = elsecall_rehearsal::rehearsal::window::explicit(
+    let error = elsecall_tuning::rehearsal::window::explicit(
         &source,
         start,
         start.after(Duration::from_secs(60)),
@@ -116,7 +116,7 @@ fn run4_housekeeping_is_background_without_demand_but_history_is_unchanged() {
     source.requests.push(internal);
     source.members[0].load[0].cpu_mean = Some(0.5);
     source.members[0].load[0].cpu_max = Some(0.5);
-    let (selected, _) = elsecall_rehearsal::rehearsal::window::explicit(
+    let (selected, _) = elsecall_tuning::rehearsal::window::explicit(
         &source,
         source.since,
         source.until,
@@ -126,7 +126,7 @@ fn run4_housekeeping_is_background_without_demand_but_history_is_unchanged() {
     assert_eq!(selected.requests.len(), 4);
     assert_eq!(source.requests.len(), 5);
     let modeled =
-        elsecall_simulation::simulation::simulate(selected.clone(), Default::default()).unwrap();
+        elsecall_tuning::simulation::simulate(selected.clone(), Default::default()).unwrap();
     // Measured CPU stays in the modeled minute after the unidentifiable internal
     // grant is removed: active replay plus inferred background totals 90 core-s.
     assert!(
@@ -290,11 +290,10 @@ fn load_factor_replays_closer_arrivals_through_the_production_scheduler() {
         r.fact.resources.as_mut().unwrap().ended_at =
             Some(r.fact.requested_at.after(Duration::from_secs(1)));
     }
-    let idle =
-        elsecall_simulation::simulation::simulate(source.clone(), Default::default()).unwrap();
-    let busy = elsecall_simulation::simulation::simulate(
+    let idle = elsecall_tuning::simulation::simulate(source.clone(), Default::default()).unwrap();
+    let busy = elsecall_tuning::simulation::simulate(
         source,
-        elsecall_simulation::simulation::Options {
+        elsecall_tuning::simulation::Options {
             load_factor: "4".parse().unwrap(),
             ..Default::default()
         },
