@@ -1065,12 +1065,10 @@ dependencies = [
  "chacha20poly1305",
  "clap",
  "ed25519-dalek",
- "elsecall-add-mac",
  "elsecall-admission",
  "elsecall-agent-skill",
  "elsecall-api-response",
  "elsecall-config-sync",
- "elsecall-config-sync-model",
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-fleet-upgrade",
@@ -1119,23 +1117,6 @@ dependencies = [
  "toml_edit",
  "tower",
  "x25519-dalek",
- "zeroize",
-]
-
-[[package]]
-name = "elsecall-add-mac"
-version = "0.3.0"
-dependencies = [
- "elsecall-contract",
- "elsecall-fleet",
- "elsecall-host",
- "elsecall-peers",
- "hyper",
- "libc",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
  "zeroize",
 ]
 
@@ -1197,7 +1178,6 @@ dependencies = [
  "base64 0.22.1",
  "clap",
  "elsecall-api-response",
- "elsecall-config-sync-model",
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
@@ -1220,16 +1200,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-config-sync-model"
-version = "0.3.0"
-dependencies = [
- "elsecall-contract",
- "elsecall-peers",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "elsecall-contract"
 version = "0.3.0"
 dependencies = [
@@ -1248,15 +1218,18 @@ version = "0.3.0"
 dependencies = [
  "axum",
  "elsecall-api-response",
- "elsecall-config-sync-model",
  "elsecall-contract",
+ "elsecall-host",
  "elsecall-peers",
  "elsecall-scheduling",
  "futures-util",
  "hyper",
+ "libc",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
+ "zeroize",
 ]
 
 [[package]]
@@ -1341,8 +1314,8 @@ dependencies = [
 name = "elsecall-openssh-mac"
 version = "0.3.0"
 dependencies = [
- "elsecall-add-mac",
  "elsecall-contract",
+ "elsecall-fleet",
  "elsecall-peers",
  "elsecall-platform-macos",
  "serde_json",
@@ -1385,7 +1358,6 @@ dependencies = [
  "base64 0.22.1",
  "elsecall-api-response",
  "elsecall-config-sync",
- "elsecall-config-sync-model",
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
@@ -1406,8 +1378,8 @@ name = "elsecall-platform-macos"
 version = "0.3.0"
 dependencies = [
  "base64 0.22.1",
- "elsecall-add-mac",
  "elsecall-contract",
+ "elsecall-fleet",
  "elsecall-host",
  "elsecall-installation",
  "elsecall-peers",
@@ -1567,8 +1539,8 @@ dependencies = [
 name = "elsecall-service-config"
 version = "0.3.0"
 dependencies = [
- "elsecall-config-sync-model",
  "elsecall-contract",
+ "elsecall-fleet",
  "elsecall-host",
  "elsecall-housekeeping",
  "elsecall-scheduling",
@@ -1683,8 +1655,8 @@ dependencies = [
 name = "elsecall-ui"
 version = "0.3.0"
 dependencies = [
- "elsecall-add-mac",
  "elsecall-contract",
+ "elsecall-fleet",
  "elsecall-host",
  "elsecall-peers",
  "elsecall-release-update",

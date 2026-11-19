@@ -1,11 +1,11 @@
 //! `elsecall fleet add`: adds a Mac from the master over SSH. It runs in the CLI's
 //! own process, which macOS lets reach the local network, unlike the service.
-use elsecall_add_mac::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_fleet::{
     add_mac::{self, Approval, Event, Master},
     authorized_keys,
     remote_mac::Build,
 };
-use elsecall_contract::failure::{Failure, Result};
 use elsecall_host::paths::Paths;
 use elsecall_openssh_mac::OpensshMac;
 use elsecall_peers::tailnet::{Configured, Tailnet};

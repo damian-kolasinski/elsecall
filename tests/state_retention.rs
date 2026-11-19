@@ -114,7 +114,7 @@ fn backup_retention_removes_content_and_empty_directories_and_applies_lowered_li
         state::{Backup, State},
         store::FileStore,
     };
-    use elsecall_config_sync_model::synced_path::SyncedPath;
+    use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
     use elsecall_host::private_files;
     let home = tempfile::tempdir().unwrap();
     let data = home.path().join("state");
@@ -182,7 +182,7 @@ fn retention_removes_recorded_cross_volume_backup_without_removing_its_neighbors
         state::{Backup, State},
         store::FileStore,
     };
-    use elsecall_config_sync_model::synced_path::SyncedPath;
+    use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
     use elsecall_host::private_files;
     let home = tempfile::tempdir().unwrap();
     let data = home.path().join("state");

@@ -51,12 +51,10 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 # The workspace's own crates.
-elsecall-add-mac = { path = "crates/elsecall-add-mac" }
 elsecall-admission = { path = "crates/elsecall-admission" }
 elsecall-agent-skill = { path = "crates/elsecall-agent-skill" }
 elsecall-api-response = { path = "crates/elsecall-api-response" }
 elsecall-config-sync = { path = "crates/elsecall-config-sync" }
-elsecall-config-sync-model = { path = "crates/elsecall-config-sync-model" }
 elsecall-contract = { path = "crates/elsecall-contract" }
 elsecall-fleet = { path = "crates/elsecall-fleet" }
 elsecall-fleet-upgrade = { path = "crates/elsecall-fleet-upgrade" }
@@ -123,11 +121,9 @@ base64.workspace = true
 chacha20poly1305.workspace = true
 clap.workspace = true
 ed25519-dalek.workspace = true
-elsecall-add-mac.workspace = true
 elsecall-admission.workspace = true
 elsecall-agent-skill.workspace = true
 elsecall-api-response.workspace = true
-elsecall-config-sync-model.workspace = true
 elsecall-config-sync.workspace = true
 elsecall-contract.workspace = true
 elsecall-fleet-upgrade.workspace = true

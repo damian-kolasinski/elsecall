@@ -32,4 +32,4 @@ serde_json.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]
-elsecall-config-sync-model.workspace = true
+elsecall-fleet.workspace = true

@@ -2,7 +2,7 @@
 //!
 //! The firewall keeps a rule per executable. Elsecall's binary has no Developer ID
 //! signature, so it is not allowed automatically; loopback is never filtered.
-use elsecall_add_mac::inbound_firewall::{Inbound, InboundFirewall, Rule};
+use elsecall_fleet::inbound_firewall::{Inbound, InboundFirewall, Rule};
 use std::{path::Path, process::Command};
 
 const TOOL: &str = "/usr/libexec/ApplicationFirewall/socketfilterfw";

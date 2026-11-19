@@ -211,7 +211,7 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
     let mut data: Value = client::send(&socket, method, route, body, TIMEOUT).await?;
     if left {
         // The master that added this Mac may no longer reach it over SSH.
-        if let Err(error) = elsecall_add_mac::authorized_keys::remove_ours(&paths.home) {
+        if let Err(error) = elsecall_fleet::authorized_keys::remove_ours(&paths.home) {
             data["master_ssh_key_error"] = serde_json::to_value(error).expect("serializable");
             return Ok((data, false));
         }

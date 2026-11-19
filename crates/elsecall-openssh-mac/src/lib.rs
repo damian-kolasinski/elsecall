@@ -7,12 +7,12 @@
 //! later commands never prompt, so a lost connection fails instead of asking.
 //! Commands run under `/bin/sh` on the Mac; sudo reads the password on standard
 //! input.
-use elsecall_add_mac::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_fleet::{
     askpass,
     inbound_firewall::Rule,
     remote_mac::{Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailscaleVariant},
 };
-use elsecall_contract::failure::{Failure, Result};
 use elsecall_peers::tailscale_bottle::Bottle;
 use elsecall_platform_macos::macos::application_firewall;
 use serde_json::Value;
@@ -480,7 +480,7 @@ fn tail(stderr: &str) -> String {
 /// Adds `line` to `$HOME/.ssh/authorized_keys` unless its key is there, printing
 /// `added` or `present`.
 fn authorize_script(line: &str) -> Result<String> {
-    let key = elsecall_add_mac::authorized_keys::key_of(line).ok_or_else(|| {
+    let key = elsecall_fleet::authorized_keys::key_of(line).ok_or_else(|| {
         Failure::new(
             "ssh_key_unreadable",
             "The master's SSH key line has no key.",
@@ -893,7 +893,7 @@ mod tests {
             "ssh-rsa AAAAOther",
         )
         .unwrap();
-        let line = elsecall_add_mac::authorized_keys::line(
+        let line = elsecall_fleet::authorized_keys::line(
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleMasterKey me@example.com",
             "mac-mini",
         )

@@ -46,7 +46,7 @@ pub fn uninstall(
         status: "uninstalled",
         mise,
         kept,
-        master_ssh_key_error: elsecall_add_mac::authorized_keys::remove_ours(&paths.home).err(),
+        master_ssh_key_error: elsecall_fleet::authorized_keys::remove_ours(&paths.home).err(),
     })
 }
 

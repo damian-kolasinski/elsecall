@@ -1,8 +1,8 @@
 //! `elsecall sync` commands: thin requests to the local service.
 use crate::config_sync_local_api::{HistoryRequest, PathRequest, PlanRequest, PushRequest};
 use clap::{Args, Subcommand};
-use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_contract::failure::{Failure, Result};
+use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
 use elsecall_host::client;
 use elsecall_host::paths::Paths;
 use serde_json::Value;

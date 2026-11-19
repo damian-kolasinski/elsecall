@@ -1,5 +1,5 @@
 //! This Mac's addresses on its local networks: what other Macs there reach it at.
-use elsecall_add_mac::lan_address::is_lan;
+use elsecall_fleet::lan_address::is_lan;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 /// Every IPv4 and routable IPv6 address on an interface that is up, without

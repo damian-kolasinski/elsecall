@@ -2,10 +2,10 @@
 //! Macs found nearby and the add's progress. Pure; the view draws it and the
 //! source feeds it.
 
-use elsecall_add_mac::add_mac::{AddReport, Approval, Event, Step};
-use elsecall_add_mac::nearby_macs::{Membership, NearbyMac, RemoteLogin};
-use elsecall_add_mac::remote_mac::LoginLink;
 use elsecall_contract::failure::Failure;
+use elsecall_fleet::add_mac::{AddReport, Approval, Event, Step};
+use elsecall_fleet::nearby_macs::{Membership, NearbyMac, RemoteLogin};
+use elsecall_fleet::remote_mac::LoginLink;
 use rune::TextEdit;
 use zeroize::Zeroizing;
 

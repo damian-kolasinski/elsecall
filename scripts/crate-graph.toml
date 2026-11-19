@@ -35,12 +35,6 @@ forbid = ["axum", "clap"]
 
 # --- foundation ---------------------------------------------------------------
 
-[crates.config-sync-model]
-band = "foundation"
-# The paths a fleet may mirror and the limits on them, which the service
-# configuration names and config sync enforces.
-modules = ["config_sync::synced_path", "config_sync::status"]
-
 [crates.workload-config]
 band = "feature"
 modules = ["workload_settings", "workload_configuration", "workload_migration"]
@@ -56,14 +50,6 @@ modules = ["remote_run", "sealed_run"]
 [crates.placement]
 band = "feature"
 modules = ["placement_api", "placement_authority", "placement_host", "placement_config_sync"]
-
-[crates.fleet]
-band = "feature"
-modules = ["fleet", "fleet_changes", "fleet_local_api", "fleet_view", "fleet_placement"]
-
-[crates.add-mac]
-band = "feature"
-modules = ["add_mac", "nearby_macs", "remote_mac", "askpass", "authorized_keys", "inbound_firewall", "lan_address"]
 
 [crates.service-config]
 band = "feature"
@@ -188,7 +174,7 @@ band = "entry"
 packages = ["elsecall-ui"]
 # The desktop app talks to the service through its contract, never through the
 # service's internals.
-may_depend_on = ["contract", "host", "peers", "add-mac", "release-update", "installation", "window", "workload-config"]
+may_depend_on = ["contract", "host", "peers", "fleet", "release-update", "installation", "window", "workload-config"]
 
 [crates.contract]
 band = "foundation"
@@ -209,3 +195,8 @@ modules = ["tailnet", "tailscale_bottle", "secure_channel", "roster", "member_ke
 band = "core"
 # Scheduling work on this member: admitting it, the records and estimates it learns from, the load log, outside pressure, and the operating system's processes it watches.
 modules = ["scheduling", "load_log", "outside_pressure", "outside_pressure_gate", "macos::process_group", "macos::process_usage", "macos::processes"]
+
+[crates.fleet]
+band = "feature"
+# The fleet: its members and their authority, adding a Mac to it, and the paths it may mirror between members.
+modules = ["fleet", "fleet_changes", "fleet_local_api", "fleet_view", "fleet_placement", "add_mac", "nearby_macs", "remote_mac", "askpass", "authorized_keys", "inbound_firewall", "lan_address", "config_sync::synced_path", "config_sync::status"]

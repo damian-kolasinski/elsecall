@@ -1,10 +1,10 @@
 use clap::{Parser, Subcommand};
 use elsecall::{fleet_cli, peer_listener};
-use elsecall_add_mac::inbound_firewall::{Inbound, InboundFirewall};
 use elsecall_admission::admission_cli::{self, LeaseCommand};
 use elsecall_contract::api;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::inspection::{Health, Inspection, Machine};
+use elsecall_fleet::inbound_firewall::{Inbound, InboundFirewall};
 use elsecall_host::client;
 use elsecall_host::{local_access, paths::Paths};
 use elsecall_installation::installation::{self, ServiceManager};
@@ -171,8 +171,8 @@ enum ServiceCommand {
 async fn main() -> ExitCode {
     // As OpenSSH's askpass program, for `fleet add`; it gets the prompt as its
     // only argument, so this comes before any parsing.
-    if let Some(socket) = std::env::var_os(elsecall_add_mac::askpass::SOCKET_VARIABLE) {
-        return ExitCode::from(elsecall_add_mac::askpass::answer(std::path::Path::new(
+    if let Some(socket) = std::env::var_os(elsecall_fleet::askpass::SOCKET_VARIABLE) {
+        return ExitCode::from(elsecall_fleet::askpass::answer(std::path::Path::new(
             &socket,
         )));
     }

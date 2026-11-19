@@ -4,11 +4,11 @@
 //! Every operation shares one connection to the system's daemon, so a network
 //! with many devices costs one descriptor. macOS Local Network privacy applies: a
 //! process it denies gets `local_network_denied`.
-use elsecall_add_mac::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_fleet::{
     lan_address::is_lan,
     nearby_macs::{Advertisement, LocalNetwork, Offer},
 };
-use elsecall_contract::failure::{Failure, Result};
 use std::{
     collections::{BTreeMap, BTreeSet},
     ffi::{CStr, CString, c_char, c_void},

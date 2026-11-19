@@ -77,7 +77,7 @@ fn pushed(applied: &Applied) -> Vec<PushedPath> {
 mod tests {
     use crate::placement_config_sync::*;
     use elsecall_config_sync::config_sync::history::{FileRecord, PathRecord};
-    use elsecall_config_sync_model::synced_path::SyncedPath;
+    use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
 
     fn file(change: Change, size: Option<u64>) -> FileRecord {
         FileRecord {

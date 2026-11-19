@@ -6,11 +6,11 @@ use crate::config_sync::{
     manifest::FileKey,
     state::Backup,
 };
-use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_contract::failure::Failure;
+use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
 use serde::{Deserialize, Serialize};
 
-pub use elsecall_config_sync_model::status::{
+pub use elsecall_fleet::config_sync_model::status::{
     BackupView, FileReport, PathState, SyncRole, SyncState, SyncSummary,
 };
 

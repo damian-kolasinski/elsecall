@@ -329,7 +329,7 @@ memory_pressure = "critical"
     }
 }
 
-pub use elsecall_config_sync_model::status::ServiceSummary as Summary;
+pub use elsecall_fleet::config_sync_model::status::ServiceSummary as Summary;
 
 /// Managed members start from their verified replica. A retained local file,
 /// including later edits to it, cannot override or break an accepted generation.

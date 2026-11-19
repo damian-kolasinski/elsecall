@@ -9,9 +9,9 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{any, post},
 };
-use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_contract::api;
 use elsecall_contract::failure::Failure;
+use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::sync::Arc;
 

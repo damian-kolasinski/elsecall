@@ -5,6 +5,7 @@
 //! Everything that can refuse runs before anything changes, and every step checks
 //! before it acts, so running it again continues where an earlier run stopped,
 //! and running it on a member repairs it.
+use crate::fleet_local_api::EnrollRequest;
 use crate::{
     authorized_keys,
     inbound_firewall::Rule,
@@ -13,7 +14,6 @@ use crate::{
     },
 };
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_fleet::fleet_local_api::EnrollRequest;
 use elsecall_host::client;
 use elsecall_host::paths::Paths;
 use elsecall_peers::tailscale_bottle;

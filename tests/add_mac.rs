@@ -6,14 +6,14 @@ mod diagnostics;
 mod members;
 mod processes;
 
-use elsecall_add_mac::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_fleet::{
     add_mac::{self, Approval, Event, Master, Outcome, Step},
     inbound_firewall::Rule,
     remote_mac::{
         Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant,
     },
 };
-use elsecall_contract::failure::{Failure, Result};
 use elsecall_host::paths::Paths;
 use elsecall_peers::tailscale_bottle::Bottle;
 use members::{TestMember, free_port};
@@ -247,7 +247,7 @@ impl RemoteMac for FakeMac {
     }
     async fn authorize_key(&mut self, line: &str) -> Result<bool> {
         let existing = self.authorized_keys();
-        let key = elsecall_add_mac::authorized_keys::key_of(line).unwrap();
+        let key = elsecall_fleet::authorized_keys::key_of(line).unwrap();
         if existing.contains(key) {
             return Ok(false);
         }

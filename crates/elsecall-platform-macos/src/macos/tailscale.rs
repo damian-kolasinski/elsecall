@@ -1,6 +1,6 @@
 //! Tailnet discovery through the Tailscale command-line interface.
-use elsecall_add_mac::remote_mac::TailnetNode;
 use elsecall_contract::failure::Result;
+use elsecall_fleet::remote_mac::TailnetNode;
 use elsecall_peers::tailnet::{Presence, Tailnet, is_tailnet_address, unavailable};
 use serde::Deserialize;
 use std::{

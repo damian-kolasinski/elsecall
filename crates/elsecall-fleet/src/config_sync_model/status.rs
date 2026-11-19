@@ -1,7 +1,7 @@
 //! A member's configuration sync state as `sync status`, member status and the
 //! fleet view show it. The fleet carries it between members, so it lives below
 //! both the fleet and config sync.
-use crate::synced_path::SyncedPath;
+use crate::config_sync_model::synced_path::SyncedPath;
 use elsecall_contract::failure::Failure;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_peers::roster::MemberName;

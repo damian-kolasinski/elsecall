@@ -14,8 +14,8 @@ workspace = true
 
 [dependencies]
 base64.workspace = true
-elsecall-add-mac.workspace = true
 elsecall-contract.workspace = true
+elsecall-fleet.workspace = true
 elsecall-host.workspace = true
 elsecall-installation.workspace = true
 elsecall-peers.workspace = true

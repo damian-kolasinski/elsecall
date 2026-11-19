@@ -2,9 +2,9 @@
 //! with paths, file names, sizes, short fingerprints and the outcome. Never
 //! content. Kept owner-only as JSON lines, the latest `KEPT` of them.
 use crate::config_sync::compare::Change;
-use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
+use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
 use elsecall_host::private_files;
 use elsecall_peers::roster::MemberName;
 use serde::{Deserialize, Serialize};

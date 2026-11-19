@@ -17,7 +17,6 @@ axum.workspace = true
 base64.workspace = true
 clap.workspace = true
 elsecall-api-response.workspace = true
-elsecall-config-sync-model.workspace = true
 elsecall-contract.workspace = true
 elsecall-fleet.workspace = true
 elsecall-host.workspace = true

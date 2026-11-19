@@ -15,12 +15,17 @@ workspace = true
 [dependencies]
 axum.workspace = true
 elsecall-api-response.workspace = true
-elsecall-config-sync-model.workspace = true
 elsecall-contract.workspace = true
+elsecall-host.workspace = true
 elsecall-peers.workspace = true
 elsecall-scheduling.workspace = true
 futures-util.workspace = true
 hyper.workspace = true
+libc.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

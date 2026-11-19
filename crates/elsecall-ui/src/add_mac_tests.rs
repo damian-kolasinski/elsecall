@@ -4,9 +4,9 @@
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
-use elsecall_add_mac::add_mac::{AddReport, Approval, Event, Step};
-use elsecall_add_mac::nearby_macs::NearbyMac;
-use elsecall_add_mac::remote_mac::LoginLink;
+use elsecall_fleet::add_mac::{AddReport, Approval, Event, Step};
+use elsecall_fleet::nearby_macs::NearbyMac;
+use elsecall_fleet::remote_mac::LoginLink;
 use rune::Tx;
 
 use super::{AppState, init, poll, render, scene_members};

@@ -11,8 +11,8 @@ publish = false
 workspace = true
 
 [dependencies]
-elsecall-add-mac.workspace = true
 elsecall-contract.workspace = true
+elsecall-fleet.workspace = true
 elsecall-host.workspace = true
 elsecall-peers.workspace = true
 elsecall-release-update.workspace = true

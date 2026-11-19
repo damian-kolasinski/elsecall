@@ -2,10 +2,10 @@
 //!
 //! It browses in the CLI's own process, which macOS lets use the local network
 //! when run from a terminal, over SSH or by an app the user allowed.
-use elsecall_add_mac::nearby_macs::{
+use elsecall_contract::failure::Result;
+use elsecall_fleet::nearby_macs::{
     KnownMember, LocalNetwork, Membership, NearbyMac, RemoteLogin, nearby,
 };
-use elsecall_contract::failure::Result;
 use elsecall_host::client;
 use elsecall_host::paths::Paths;
 use elsecall_platform_macos::macos::dns_sd::Bonjour;
