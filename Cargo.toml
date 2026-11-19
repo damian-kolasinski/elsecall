@@ -51,6 +51,7 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 elsecall = { path = "." }
+elsecall-sqlite-retention = { path = "crates/elsecall-sqlite-retention" }
 elsecall-secure-channel = { path = "crates/elsecall-secure-channel" }
 elsecall-run-admission = { path = "crates/elsecall-run-admission" }
 elsecall-rehearsal-identity = { path = "crates/elsecall-rehearsal-identity" }
@@ -94,6 +95,7 @@ elsecall-process.workspace = true
 elsecall-rehearsal-identity.workspace = true
 elsecall-run-admission.workspace = true
 elsecall-secure-channel.workspace = true
+elsecall-sqlite-retention.workspace = true
 futures-util.workspace = true
 getrandom.workspace = true
 hkdf.workspace = true

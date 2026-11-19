@@ -106,8 +106,6 @@ pub mod workspace_check_api;
 
 pub mod service_log;
 
-mod sqlite_retention;
-
 pub mod state_sizes;
 
 mod state_temps;

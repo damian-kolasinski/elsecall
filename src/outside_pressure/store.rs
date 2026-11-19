@@ -149,7 +149,7 @@ impl EpisodeStore {
                 [cutoff as i64],
             )
             .map_err(failure)?;
-        crate::sqlite_retention::reclaim(&connection).map_err(failure)
+        elsecall_sqlite_retention::reclaim(&connection).map_err(failure)
     }
 }
 
