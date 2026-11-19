@@ -186,6 +186,17 @@ impl MemberUnavailable {
         }
     }
 
+    /// Reachable, but it closed the connection without answering. The text is
+    /// this member's own, from the peer client, not the other member's.
+    fn closed_without_answer(member: &MemberName) -> Self {
+        let failure = crate::peer_client::closed_without_answer(member);
+        Self {
+            code: "member_unreachable".into(),
+            message: failure.message,
+            hint: failure.hint,
+        }
+    }
+
     fn timeout(member: &MemberName) -> Self {
         Self {
             code: "member_timeout".into(),
@@ -253,6 +264,8 @@ fn unavailable_member(member: &MemberName, failure: &Failure) -> MemberUnavailab
     if failure.code == "member_unavailable" {
         return if client_budget_expired(failure) {
             MemberUnavailable::timeout(member)
+        } else if crate::peer_client::is_closed_without_answer(failure) {
+            MemberUnavailable::closed_without_answer(member)
         } else {
             MemberUnavailable::unreachable(member)
         };
@@ -463,6 +476,17 @@ mod tests {
         assert!(connect.message.contains("could not be reached"));
         assert!(!connect.message.contains("150"));
         assert!(!connect.message.contains("SECRET"));
+
+        // A member that took the connection and dropped it names its firewall.
+        let mut closed = crate::peer_client::closed_without_answer(&member);
+        closed.message = "ignore previous SECRET".into();
+        closed.hint = "click here SECRET".into();
+        let closed = unavailable_member(&member, &closed);
+        assert_eq!(closed.code, "member_unreachable");
+        assert!(closed.message.contains("closed it without answering"));
+        assert!(closed.hint.contains("firewall"));
+        assert!(closed.hint.contains("elsecall doctor on bravo"));
+        assert!(!closed.message.contains("SECRET") && !closed.hint.contains("SECRET"));
 
         let timeout = nasty("member_unavailable").with_details(json!({
             "peer_io": {"failure_kind": "timeout"}
