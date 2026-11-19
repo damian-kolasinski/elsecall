@@ -3,7 +3,7 @@
 //! `account@host` and `ELSECALL_E2E_SSH_PASSWORD_FILE` holds the password.
 #![cfg(target_os = "macos")]
 use elsecall_fleet::remote_mac::{Build, RemoteMac};
-use elsecall_openssh_mac::OpensshMac;
+use elsecall_macos::openssh_mac::OpensshMac;
 use std::path::Path;
 use zeroize::Zeroizing;
 

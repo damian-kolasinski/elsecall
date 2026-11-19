@@ -44,15 +44,6 @@ band = "feature"
 # The error envelope slices' HTTP routes answer with.
 modules = ["api_response"]
 
-[crates.platform-macos]
-band = "adapter"
-modules = ["macos", "process_service"]
-
-[crates.openssh-mac]
-band = "adapter"
-# Adding a Mac over Remote Login: the remote side of add-mac.
-modules = ["openssh_mac"]
-
 [crates.service]
 band = "entry"
 # Router assembly and the peer listener: they mount routes from many slices and
@@ -127,3 +118,8 @@ modules = ["reporting::facts", "reporting::window", "reporting::leftovers", "rep
 band = "lab"
 # Tuning the scheduler: recording traces, replaying and simulating them, rehearsing on the fleet, and choosing settings from the results.
 modules = ["tuning", "tune_cli", "tuning_drift", "tuning_preflight", "tuning_preflight_cli", "busy_hour_calibration", "trace_api", "trace_cli", "trace_snapshot", "replay_api", "replay_cli", "replay_placement", "simulation", "evaluation_day", "workload_input", "replay_load", "rehearsal", "rehearsal_api", "tuning_trust", "tuning_trust_api", "tuning_objective"]
+
+[crates.macos]
+band = "adapter"
+# macOS adapters: the platform's services, and OpenSSH on a Mac.
+modules = ["macos", "process_service", "openssh_mac"]

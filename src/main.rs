@@ -8,11 +8,11 @@ use elsecall_host::client;
 use elsecall_host::{local_access, paths::Paths};
 use elsecall_lifecycle::install_window;
 use elsecall_lifecycle::installation::{self, ServiceManager};
-use elsecall_peers::tailnet;
-use elsecall_platform_macos::macos::{
+use elsecall_macos::macos::{
     application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
     tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
 };
+use elsecall_peers::tailnet;
 use elsecall_runs::admission_cli::{self, LeaseCommand};
 use elsecall_scheduling as scheduling;
 use elsecall_scheduling::os_processes::processes::MacProcesses;
@@ -365,9 +365,10 @@ async fn run(cli: Cli) -> Result<bool> {
             elsecall_sync::service_configuration::load(&paths, None).map(|c| c.logs)
         })?;
     }
-    let manager: Box<dyn ServiceManager> = if elsecall_platform_macos::process_service::requested()?
-    {
-        Box::new(elsecall_platform_macos::process_service::ProcessService::new(paths.clone()))
+    let manager: Box<dyn ServiceManager> = if elsecall_macos::process_service::requested()? {
+        Box::new(elsecall_macos::process_service::ProcessService::new(
+            paths.clone(),
+        ))
     } else {
         Box::new(LaunchAgent)
     };
@@ -453,7 +454,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 &*elsecall_lifecycle::release_update::helper::production_download(&paths)?,
                 &elsecall_lifecycle::release_update::helper::production_selection(&paths),
                 manager,
-                &elsecall_platform_macos::macos::window_launcher::MacWindowLauncher,
+                &elsecall_macos::macos::window_launcher::MacWindowLauncher,
             )
             .await?;
         }
@@ -649,7 +650,7 @@ async fn run(cli: Cli) -> Result<bool> {
             let speed: Arc<dyn elsecall_contract::scheduling_model::speed::SpeedMeter> =
                 match elsecall_host::machine_script::speed() {
                     Some(fixed) => Arc::new(fixed),
-                    None => Arc::new(elsecall_platform_macos::macos::core_benchmark::CoreBenchmark),
+                    None => Arc::new(elsecall_macos::macos::core_benchmark::CoreBenchmark),
                 };
             let (processes, exits) = MacProcesses::start()?;
             elsecall::server::serve(
@@ -661,7 +662,7 @@ async fn run(cli: Cli) -> Result<bool> {
                     processes,
                     exits,
                 },
-                Arc::new(elsecall_platform_macos::macos::process_sampler::MacProcessSampler),
+                Arc::new(elsecall_macos::macos::process_sampler::MacProcessSampler),
                 member_listener()?,
             )
             .await?;

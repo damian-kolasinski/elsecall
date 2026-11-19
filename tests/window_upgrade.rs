@@ -192,7 +192,7 @@ fn the_actual_macos_signer_keeps_the_release_identity_readable() {
     struct SignOnly;
     impl WindowLauncher for SignOnly {
         fn sign(&self, app: &Path) -> Result<()> {
-            elsecall_platform_macos::macos::window_launcher::MacWindowLauncher.sign(app)
+            elsecall_macos::macos::window_launcher::MacWindowLauncher.sign(app)
         }
         fn open(&self, _: &Path) -> Result<()> {
             Ok(())

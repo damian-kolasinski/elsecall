@@ -465,7 +465,7 @@ fn launch_agent_leaves_logging_to_the_service() {
     use elsecall_lifecycle::installation::{ServiceManager, Session};
     let home = tempfile::tempdir_in("/tmp").unwrap();
     let paths = Paths::for_home(home.path()).unwrap();
-    let bytes = elsecall_platform_macos::macos::launch_agent::LaunchAgent
+    let bytes = elsecall_macos::macos::launch_agent::LaunchAgent
         .configuration(&paths, Session::Desktop)
         .unwrap();
     let plist = plist::Value::from_reader(std::io::Cursor::new(bytes)).unwrap();
@@ -476,7 +476,7 @@ fn launch_agent_leaves_logging_to_the_service() {
 
 #[test]
 fn launch_agent_written_by_an_earlier_build_is_reported_stale() {
-    use elsecall_platform_macos::macos::launch_agent::LaunchAgent;
+    use elsecall_macos::macos::launch_agent::LaunchAgent;
     let (_home, paths, _) = fixture();
     assert_eq!(
         installation::launch_agent_current(&paths, &LaunchAgent),

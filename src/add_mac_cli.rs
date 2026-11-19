@@ -7,9 +7,9 @@ use elsecall_fleet::{
     remote_mac::Build,
 };
 use elsecall_host::paths::Paths;
-use elsecall_openssh_mac::OpensshMac;
+use elsecall_macos::macos::tailscale::TailscaleCli;
+use elsecall_macos::openssh_mac::OpensshMac;
 use elsecall_peers::tailnet::{Configured, Tailnet};
-use elsecall_platform_macos::macos::tailscale::TailscaleCli;
 use serde_json::Value;
 use std::{
     io::{BufRead, IsTerminal, Read, Write},

@@ -8,7 +8,7 @@ use elsecall_fleet::nearby_macs::{
 };
 use elsecall_host::client;
 use elsecall_host::paths::Paths;
-use elsecall_platform_macos::macos::dns_sd::Bonjour;
+use elsecall_macos::macos::dns_sd::Bonjour;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{net::IpAddr, time::Duration};

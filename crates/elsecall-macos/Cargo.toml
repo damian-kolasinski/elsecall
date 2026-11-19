@@ -1,5 +1,5 @@
 [package]
-name = "elsecall-platform-macos"
+name = "elsecall-macos"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -25,6 +25,6 @@ plist.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sysinfo.workspace = true
-
-[dev-dependencies]
 tempfile.workspace = true
+tokio.workspace = true
+zeroize.workspace = true

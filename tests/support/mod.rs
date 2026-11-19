@@ -115,7 +115,7 @@ impl Fixture {
                 processes,
                 exits,
             },
-            Arc::new(elsecall_platform_macos::macos::process_sampler::MacProcessSampler),
+            Arc::new(elsecall_macos::macos::process_sampler::MacProcessSampler),
             peer_listener::Settings {
                 tailnet: Arc::new(NoTailnet),
                 port: 1,

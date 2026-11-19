@@ -1070,9 +1070,8 @@ dependencies = [
  "elsecall-fleet",
  "elsecall-host",
  "elsecall-lifecycle",
- "elsecall-openssh-mac",
+ "elsecall-macos",
  "elsecall-peers",
- "elsecall-platform-macos",
  "elsecall-reports",
  "elsecall-runs",
  "elsecall-scheduling",
@@ -1194,14 +1193,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-openssh-mac"
+name = "elsecall-macos"
 version = "0.3.0"
 dependencies = [
+ "base64 0.22.1",
  "elsecall-contract",
  "elsecall-fleet",
+ "elsecall-host",
+ "elsecall-lifecycle",
  "elsecall-peers",
- "elsecall-platform-macos",
+ "elsecall-scheduling",
+ "libc",
+ "plist",
+ "serde",
  "serde_json",
+ "sysinfo",
  "tempfile",
  "tokio",
  "zeroize",
@@ -1231,25 +1237,6 @@ dependencies = [
  "tokio",
  "x25519-dalek",
  "zeroize",
-]
-
-[[package]]
-name = "elsecall-platform-macos"
-version = "0.3.0"
-dependencies = [
- "base64 0.22.1",
- "elsecall-contract",
- "elsecall-fleet",
- "elsecall-host",
- "elsecall-lifecycle",
- "elsecall-peers",
- "elsecall-scheduling",
- "libc",
- "plist",
- "serde",
- "serde_json",
- "sysinfo",
- "tempfile",
 ]
 
 [[package]]

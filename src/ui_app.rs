@@ -50,7 +50,7 @@ async fn update(State(paths): State<Paths>) -> Response {
     let launched = tokio::task::spawn_blocking(move || {
         elsecall_lifecycle::window_app::publish(
             &paths,
-            &elsecall_platform_macos::macos::window_launcher::MacWindowLauncher,
+            &elsecall_macos::macos::window_launcher::MacWindowLauncher,
         )
     })
     .await
