@@ -7,7 +7,6 @@ use super::{Entry, OnHandover, Phase, Scheduler};
 use crate::{
     leftovers::Leftovers,
     placed::{OfferReply, PlacedRecord, PlacementOffer, Reached, Side, SyncSummary, Warmth},
-    processes::ProcessIdentity,
     quote::{self, HeldWork, Quote, WaitingWork},
     record::{Decision, HoldBasis, HoldLimitRecord, Outcome, Record, SizeBasis, State, Verdict},
     run_phases::{RemoteFailurePhase, RunPhases},
@@ -18,6 +17,7 @@ use elsecall_contract::scheduling_model::{
     request::{self, Kind, Placement, Urgency},
     run_id::RunId,
 };
+use elsecall_host::processes::ProcessIdentity;
 use std::{collections::BTreeSet, time::Duration};
 
 /// How a hosted run ended, as its runner saw it.

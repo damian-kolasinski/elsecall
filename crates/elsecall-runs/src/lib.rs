@@ -11,6 +11,7 @@ pub mod placement_host;
 pub mod remote_run;
 pub mod run_relay;
 mod sealed_run;
+mod service_handover;
 pub mod workload_configuration;
 pub mod workload_migration;
 pub mod workload_settings;

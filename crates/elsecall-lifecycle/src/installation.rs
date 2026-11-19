@@ -1,6 +1,6 @@
 //! Installation policy; the service manager is supplied at the system boundary.
-use crate::lifecycle_holder;
 use elsecall_contract::failure::{Failure, Result};
+use elsecall_host::lifecycle_holder::{self, INSTALLATION_LOCK};
 use elsecall_host::{paths::Paths, private_files};
 
 pub mod cli_request;
@@ -82,10 +82,9 @@ fn owns_links(paths: &Paths) -> bool {
     linked(&paths.bin, &paths.executable()) || linked(&paths.agent, &paths.plist())
 }
 
-const INSTALLATION_LOCK: &str = "installation.lock";
-
 /// The lock every lifecycle operation holds, with its holder recorded in it until it
-/// is released, so [`operation_running`] can tell without taking the lock.
+/// is released, so [`lifecycle_holder::operation_running`] can tell without taking
+/// the lock.
 struct InstallationLock(fs::File);
 impl Drop for InstallationLock {
     fn drop(&mut self) {
@@ -104,14 +103,6 @@ fn installation_lock(paths: &Paths) -> Result<InstallationLock> {
         })?;
     lifecycle_holder::record(&mut lock);
     Ok(InstallationLock(lock))
-}
-
-/// Whether an install, update, upgrade, restart or uninstall is replacing the
-/// service in the state directory `data`: from before it stops the service until it
-/// has confirmed the new one. Asking never takes the lock, so it cannot make such
-/// an operation fail.
-pub fn operation_running(data: &Path) -> bool {
-    lifecycle_holder::running(&data.join(INSTALLATION_LOCK))
 }
 
 fn link(link: &Path, target: &Path) -> Result<()> {

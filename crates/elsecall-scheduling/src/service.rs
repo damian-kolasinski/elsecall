@@ -34,7 +34,6 @@ use crate::{
     parameters::Parameters,
     placed::{Members, PlacedGrant, Side},
     pre_run_sync::PreRunSync,
-    processes::{self, ProcessIdentity, ProcessInfo, ProcessTable},
     record::{
         Candidate, Decision, HoldBasis as RecordBasis, HoldLimitRecord, Outcome, Record, SizeBasis,
         State, Verdict,
@@ -53,6 +52,7 @@ use elsecall_contract::scheduling_model::{
     timestamp::Timestamp,
     workload_metadata::{CensorReason, Observation},
 };
+use elsecall_host::processes::{self, ProcessIdentity, ProcessInfo, ProcessTable};
 use placing::Placing;
 use quotes::Quotes;
 use serde::Serialize;

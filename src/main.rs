@@ -5,6 +5,7 @@ use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::inspection::{Health, Inspection, Machine};
 use elsecall_fleet::inbound_firewall::{Inbound, InboundFirewall};
 use elsecall_host::client;
+use elsecall_host::os_processes::processes::MacProcesses;
 use elsecall_host::{local_access, paths::Paths};
 use elsecall_lifecycle::install_window;
 use elsecall_lifecycle::installation::{self, ServiceManager};
@@ -15,7 +16,6 @@ use elsecall_macos::macos::{
 use elsecall_peers::tailnet;
 use elsecall_runs::admission_cli::{self, LeaseCommand};
 use elsecall_scheduling as scheduling;
-use elsecall_scheduling::os_processes::processes::MacProcesses;
 use serde::Serialize;
 use std::{process::ExitCode, sync::Arc, time::Duration};
 

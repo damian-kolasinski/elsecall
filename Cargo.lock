@@ -1270,7 +1270,6 @@ dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
- "elsecall-lifecycle",
  "elsecall-peers",
  "elsecall-scheduling",
  "elsecall-sync",

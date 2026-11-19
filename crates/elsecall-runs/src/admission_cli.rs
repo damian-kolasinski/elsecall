@@ -4,6 +4,7 @@ pub mod options;
 pub mod resolution;
 
 use crate::admission_api::{self, MAXIMUM_LISTED};
+use crate::service_handover;
 use crate::workload_settings::{WhenUnavailable, WorkloadSettings};
 use clap::Subcommand;
 use elsecall_contract::failure::{Failure, Result};
@@ -16,7 +17,6 @@ use elsecall_contract::scheduling_model::{
 };
 use elsecall_host::client::{self as client, Wait};
 use elsecall_host::{local_access, paths::Paths, run_id_file::RunIdFile};
-use elsecall_lifecycle::service_handover;
 use elsecall_scheduling::{
     estimates,
     messages::{Grant, Release, Runs},

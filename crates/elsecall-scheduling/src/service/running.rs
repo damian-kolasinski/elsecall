@@ -3,7 +3,6 @@ use super::{Book, Entry, Phase, Scheduler, not_found, stopping};
 use crate::{
     messages::{CommandStarted, Release, Released, RunEnded},
     placed::{PlacedReport, Reached, Side},
-    processes,
     record::{MAXIMUM_CPU_MS, Outcome},
     run_phases::{RemoteFailurePhase, RunPhases},
 };
@@ -12,6 +11,7 @@ use elsecall_contract::scheduling_model::{
     request::{self, Kind},
     run_id::RunId,
 };
+use elsecall_host::processes;
 
 impl Scheduler {
     /// Active run `id` requested by the process `peer`. The peer is compared by

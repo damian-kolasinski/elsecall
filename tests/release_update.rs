@@ -11,6 +11,7 @@ use elsecall_contract::scheduling_model::{
     run_id::{RandomRunIds, RunId},
     speed::SpeedMeter,
 };
+use elsecall_host::processes::{ProcessIdentity, ProcessInfo, ProcessTable};
 use elsecall_host::{paths::Paths, private_files};
 use elsecall_lifecycle::release_update::{
     self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
@@ -22,7 +23,6 @@ use elsecall_scheduling::{
     clock::SystemClock,
     placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},
     pre_run_sync::{PreRunSync, Synced},
-    processes::{ProcessIdentity, ProcessInfo, ProcessTable},
     service::{Adapters, Driving, HostedEnd, Runtime, Scheduler, SchedulerConfiguration},
 };
 use std::{

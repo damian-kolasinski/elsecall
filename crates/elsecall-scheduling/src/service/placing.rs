@@ -11,12 +11,12 @@ use crate::{
         OfferReply, PlacedGrant, PlacedRecord, PlacementOffer, Reached, Side, Warmth, WorkspaceRef,
     },
     pre_run_sync::{self, Done, Failed, PreRunSyncRecord, SyncFailure},
-    processes::ProcessIdentity,
     quote::{self, HeldWork},
     record::{Candidate, Decision, Outcome, SizeBasis, Verdict},
 };
 use elsecall_contract::failure::Failure;
 use elsecall_contract::scheduling_model::{run_id::RunId, timestamp::Timestamp};
+use elsecall_host::processes::ProcessIdentity;
 use std::{collections::BTreeSet, sync::Weak, time::Duration};
 use tokio::time::Instant;
 use tokio::{sync::oneshot, task::AbortHandle};

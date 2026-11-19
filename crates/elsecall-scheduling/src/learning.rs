@@ -234,7 +234,6 @@ pub mod tests {
     fn samples_take_out_the_sync_and_skip_old_or_unfinished_runs() {
         use crate::{
             placed::{PlacedRecord, Reached, SyncSummary},
-            processes::ProcessIdentity,
             record::{Outcome, State},
         };
         use elsecall_contract::scheduling_model::{
@@ -242,6 +241,7 @@ pub mod tests {
             run_id::RunId,
             settings::{AppliedRule, Settings, Source},
         };
+        use elsecall_host::processes::ProcessIdentity;
         let day = 24 * 60 * 60 * 1000;
         let now = Timestamp::from_millis(100 * day);
         let record = |at: u64, outcome: Option<Outcome>, placed: Option<PlacedRecord>| Record {

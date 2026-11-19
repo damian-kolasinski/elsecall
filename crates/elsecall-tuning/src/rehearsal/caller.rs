@@ -9,7 +9,7 @@ use elsecall_contract::scheduling_model::{
     timestamp::Timestamp,
 };
 use elsecall_host::paths::Paths;
-use elsecall_scheduling::processes::ProcessIdentity;
+use elsecall_host::processes::ProcessIdentity;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -129,7 +129,7 @@ impl Caller {
             .map_err(|e| Failure::io("Start synthetic request", e))?;
         let original_identity = child
             .id()
-            .and_then(elsecall_scheduling::os_processes::processes::describe)
+            .and_then(elsecall_host::os_processes::processes::describe)
             .map(|p| p.identity);
         Ok(Self {
             child,

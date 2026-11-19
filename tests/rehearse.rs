@@ -783,7 +783,7 @@ fn service_restart_cleans_workers_even_after_their_caller_was_killed() {
     }
     for worker in workers {
         assert!(
-            !elsecall_scheduling::os_processes::processes::describe(worker.pid)
+            !elsecall_host::os_processes::processes::describe(worker.pid)
                 .is_some_and(|p| p.identity == worker),
             "surviving synthetic worker {worker:?}"
         );
@@ -910,7 +910,7 @@ fn live_cleanup_stops_a_worker_after_only_its_caller_is_killed() {
     let result = members::json(&result)["data"].clone();
     for worker in record.processes {
         assert!(
-            !elsecall_scheduling::os_processes::processes::describe(worker.pid)
+            !elsecall_host::os_processes::processes::describe(worker.pid)
                 .is_some_and(|p| p.identity == worker)
         );
     }
@@ -1823,7 +1823,7 @@ fn cpu_contention_in_a_real_rehearsal_reports_overhead_slowdown_and_zero_admissi
             .find_map(|r| {
                 r.processes.iter().copied().find(|p| {
                     p.pid != r.requested_by.pid
-                        && elsecall_scheduling::os_processes::processes::describe(p.pid)
+                        && elsecall_host::os_processes::processes::describe(p.pid)
                             .is_some_and(|p| p.parent == r.requested_by.pid)
                 })
             });

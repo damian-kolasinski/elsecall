@@ -1,10 +1,8 @@
 //! What survives a service restart: grants whose processes still run keep their
 //! capacity, so it is never handed out twice; everything else is closed.
-use crate::{
-    processes::ProcessIdentity,
-    record::{Outcome, Record, State},
-};
+use crate::record::{Outcome, Record, State};
 use elsecall_contract::scheduling_model::{capacity::Cores, run_id::RunId, timestamp::Timestamp};
+use elsecall_host::processes::ProcessIdentity;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A surviving grant and the nested grants that share its capacity.

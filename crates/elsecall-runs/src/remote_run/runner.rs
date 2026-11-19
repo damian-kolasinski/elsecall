@@ -15,8 +15,8 @@ use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::run_admission::{self as run_admission, Admission};
 use elsecall_contract::scheduling_model::run_id::RunId;
 use elsecall_contract::wire::Frame;
+use elsecall_host::os_processes::process_usage;
 use elsecall_scheduling::leftovers::Leftovers;
-use elsecall_scheduling::os_processes::process_usage;
 use elsecall_workspace::{
     confined::{Confined, Create},
     copies::Claim,

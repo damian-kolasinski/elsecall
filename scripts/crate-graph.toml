@@ -55,10 +55,12 @@ modules = ["failure", "api", "wire", "guidance", "run_admission", "labels", "reh
 
 [crates.host]
 band = "core"
-# This machine's local plumbing: starting child processes, the state directory
-# and its private files, SQLite retention, the service log, the client for the
-# local service, and scripted machine observations for tests.
-modules = ["child_start", "command_capture", "paths", "private_files", "local_access", "state_temps", "run_id_file", "sqlite_retention", "service_log", "client", "machine_script"]
+# This machine's local plumbing: starting child processes and knowing the
+# operating system's, the state directory and its private files, the lock
+# lifecycle operations hold, SQLite retention, the service log, the client for
+# the local service, and scripted machine observations for tests.
+# `macos::{processes, process_group, process_usage}` are under `os_processes::`.
+modules = ["child_start", "command_capture", "paths", "private_files", "local_access", "state_temps", "run_id_file", "sqlite_retention", "service_log", "client", "machine_script", "lifecycle_holder", "scheduling::processes", "macos::processes", "macos::process_group", "macos::process_usage"]
 
 [crates.peers]
 band = "core"
@@ -71,9 +73,8 @@ band = "core"
 # Scheduling work on this member: admitting it, the records and estimates it
 # learns from, the load log, outside pressure, and the operating system's
 # processes it watches. The library's `scheduling` module is this crate's root
-# (`scheduling::service` is `elsecall_scheduling::service`), and
-# `macos::{process_group, process_usage, processes}` are under `os_processes::`.
-modules = ["scheduling", "load_log", "outside_pressure", "outside_pressure_gate", "macos::process_group", "macos::process_usage", "macos::processes"]
+# (`scheduling::service` is `elsecall_scheduling::service`).
+modules = ["scheduling", "load_log", "outside_pressure", "outside_pressure_gate"]
 
 # --- feature ------------------------------------------------------------------
 
@@ -95,7 +96,7 @@ modules = ["fleet", "fleet_changes", "fleet_local_api", "fleet_view", "fleet_pla
 band = "feature"
 # Running commands on the fleet: admitting a run, placing it on a member,
 # running it remotely, and the workload configuration that shapes it.
-modules = ["admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "remote_run", "sealed_run", "placement_api", "placement_authority", "placement_host", "placement_config_sync", "workload_settings", "workload_configuration", "workload_migration"]
+modules = ["admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "remote_run", "sealed_run", "placement_api", "placement_authority", "placement_host", "placement_config_sync", "workload_settings", "workload_configuration", "workload_migration", "service_handover"]
 
 [crates.sync]
 band = "feature"
@@ -113,7 +114,7 @@ modules = ["workspace", "housekeeping", "fleet_callers", "fleet_copies", "copies
 band = "feature"
 # Elsecall's own lifecycle: installing it, its window, updating it and the
 # fleet, starting and stopping the service, and the agent skill it installs.
-modules = ["installation", "lifecycle_holder", "window_release", "window_app", "window_startup", "install_window", "release_update", "release_update_api", "release_update_cli", "fleet_upgrade", "fleet_upgrade_api", "fleet_upgrade_local_api", "upgrade_drain", "upgrade_helper_process", "service_handover", "agent_skill"]
+modules = ["installation", "window_release", "window_app", "window_startup", "install_window", "release_update", "release_update_api", "release_update_cli", "fleet_upgrade", "fleet_upgrade_api", "fleet_upgrade_local_api", "upgrade_drain", "upgrade_helper_process", "agent_skill"]
 
 [crates.tools]
 band = "feature"

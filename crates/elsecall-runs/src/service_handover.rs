@@ -7,7 +7,6 @@
 //! stopped or starting. Such a request now waits for the handover and asks the new
 //! service again, so scripts and agents never see the handover. Anything else, such
 //! as a service that is simply not running, fails at once as before.
-use crate::installation;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::guidance;
 use std::{future::Future, path::Path, time::Duration};
@@ -28,11 +27,11 @@ const SETTLED: Duration = Duration::from_secs(5);
 
 /// Whether `failure` came from a handover in progress, given the service's state
 /// directory `data`.
-pub fn interrupted(failure: &Failure, data: &Path) -> bool {
+pub(crate) fn interrupted(failure: &Failure, data: &Path) -> bool {
     match failure.code.as_str() {
         // Only an update that closed admission for its install answers this.
         "update_in_progress" => true,
-        "service_unavailable" => installation::operation_running(data),
+        "service_unavailable" => elsecall_host::lifecycle_holder::operation_running(data),
         _ => false,
     }
 }
@@ -40,7 +39,7 @@ pub fn interrupted(failure: &Failure, data: &Path) -> bool {
 /// Makes `attempt` until it is not interrupted by a handover, or until one
 /// handover outlasts [`BOUND`]; then its failure stands. Says on stderr when it
 /// starts waiting for a handover.
-pub async fn through<T, F, A>(data: &Path, mut attempt: A) -> Result<T>
+pub(crate) async fn through<T, F, A>(data: &Path, mut attempt: A) -> Result<T>
 where
     A: FnMut() -> F,
     F: Future<Output = Result<T>>,
@@ -97,7 +96,7 @@ mod tests {
             .arg("30")
             .spawn()
             .unwrap();
-        let identity = elsecall_scheduling::os_processes::processes::describe(child.id())
+        let identity = elsecall_host::os_processes::processes::describe(child.id())
             .unwrap()
             .identity;
         std::fs::write(

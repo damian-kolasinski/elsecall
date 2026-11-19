@@ -5,10 +5,10 @@ use super::{Entry, OnHandover, Phase, Scheduler};
 use crate::{
     messages::Grant,
     placed::{PlacedGrant, Side},
-    processes,
     record::{Record, State},
 };
 use elsecall_contract::failure::{Failure, Result};
+use elsecall_host::processes;
 use std::{collections::BTreeSet, time::Duration};
 
 impl Scheduler {

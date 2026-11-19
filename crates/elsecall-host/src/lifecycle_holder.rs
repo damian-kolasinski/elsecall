@@ -8,8 +8,8 @@
 //! A process is recorded by its ID and start time, so a recorded holder that died
 //! without clearing the record (killed, or a crash) is never mistaken for a later
 //! process that reuses its ID.
-use elsecall_scheduling::os_processes::processes;
-use elsecall_scheduling::processes::ProcessIdentity;
+use crate::os_processes::processes;
+use crate::processes::ProcessIdentity;
 use std::{
     fs::File,
     io::{Seek, Write},
@@ -18,7 +18,7 @@ use std::{
 
 /// Records this process as the holder of `lock`, which it has just locked. The
 /// record is advisory: a failed write only means a handover is not recognized.
-pub(crate) fn record(lock: &mut File) {
+pub fn record(lock: &mut File) {
     let Some(this) = processes::describe(std::process::id()) else {
         return;
     };
@@ -29,13 +29,24 @@ pub(crate) fn record(lock: &mut File) {
 }
 
 /// Clears the record before `lock` is released.
-pub(crate) fn clear(lock: &File) {
+pub fn clear(lock: &File) {
     let _ = lock.set_len(0);
+}
+
+/// The lock every lifecycle operation holds, in the state directory.
+pub const INSTALLATION_LOCK: &str = "installation.lock";
+
+/// Whether an install, update, upgrade, restart or uninstall is replacing the
+/// service in the state directory `data`: from before it stops the service until it
+/// has confirmed the new one. Asking never takes the lock, so it cannot make such
+/// an operation fail.
+pub fn operation_running(data: &Path) -> bool {
+    running(&data.join(INSTALLATION_LOCK))
 }
 
 /// Whether the holder recorded in the lock file at `path` still runs, other than
 /// this process.
-pub(crate) fn running(path: &Path) -> bool {
+fn running(path: &Path) -> bool {
     let Ok(text) = std::fs::read_to_string(path) else {
         return false;
     };

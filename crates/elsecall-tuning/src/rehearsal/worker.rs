@@ -191,8 +191,8 @@ mod progress_tests {
                 0
             );
         }
-        elsecall_scheduling::os_processes::process_usage::wait_exited(child.id()).unwrap();
-        let cpu = elsecall_scheduling::os_processes::process_usage::cpu_time(child.id()).unwrap();
+        elsecall_host::os_processes::process_usage::wait_exited(child.id()).unwrap();
+        let cpu = elsecall_host::os_processes::process_usage::cpu_time(child.id()).unwrap();
         assert!(child.wait().unwrap().success());
         (started.elapsed(), cpu)
     }
@@ -238,7 +238,7 @@ mod cpu_tests {
     use super::*;
     #[tokio::test]
     async fn slower_instruction_service_does_not_inflate_the_cpu_budget() {
-        use elsecall_scheduling::os_processes::process_usage;
+        use elsecall_host::os_processes::process_usage;
         use std::{fs, process::Command};
         let c = calibrate(elsecall_contract::inspection::CoreCounts {
             performance: 1,
@@ -280,7 +280,7 @@ mod cpu_tests {
 
     #[tokio::test]
     async fn fractional_and_multicore_fixed_work_consumes_the_calibrated_cpu_budget() {
-        use elsecall_scheduling::os_processes::process_usage;
+        use elsecall_host::os_processes::process_usage;
         use std::{fs, process::Command};
         let c = calibrate(elsecall_contract::inspection::CoreCounts {
             performance: 4,

@@ -4,7 +4,6 @@ use crate::{
     load::Gate,
     placed::{PlacedRecord, Reached, Side, SyncSummary, Warmth},
     placement::{CopyState, Estimate, Source, Start},
-    processes::ProcessIdentity,
     record::{
         Arrival, ArrivalEstimate, Candidate, Decision, HoldBasis, HoldLimitRecord, Outcome, Record,
         State, Verdict,
@@ -17,6 +16,7 @@ use elsecall_contract::scheduling_model::{
     run_id::RunId,
     timestamp::Timestamp,
 };
+use elsecall_host::processes::ProcessIdentity;
 use std::time::Duration;
 
 pub const MINUTE: u64 = 60_000;

@@ -13,7 +13,6 @@ use crate::{
         self, Ahead, Copy, Expectation, Held, Learned, LearnedRun, LearnedTime, Level, Observation,
         Source, Wanted,
     },
-    processes::ProcessIdentity,
     record::{Arrival, Candidate, Decision, Outcome, Scoring, State, Verdict},
 };
 use elsecall_contract::inspection::{CoreCounts, LoadSample, MemoryPressure, ThermalState};
@@ -23,6 +22,7 @@ use elsecall_contract::scheduling_model::{
     run_id::RunId,
     timestamp::Timestamp,
 };
+use elsecall_host::processes::ProcessIdentity;
 use std::time::Duration;
 
 fn cores(n: f64) -> Cores {

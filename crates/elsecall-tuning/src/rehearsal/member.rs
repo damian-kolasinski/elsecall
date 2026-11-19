@@ -290,7 +290,7 @@ impl Member {
     async fn settle_groups(
         &self,
         id: &str,
-        callers: &[elsecall_scheduling::processes::ProcessIdentity],
+        callers: &[elsecall_host::processes::ProcessIdentity],
     ) -> Result<()> {
         let records = self.scheduler.active_records()?;
         let mut groups = callers.to_vec();
@@ -323,20 +323,17 @@ impl Member {
                 )
                 .collect();
             let alive = || {
-                elsecall_scheduling::os_processes::process_group::members(caller.pid)
+                elsecall_host::os_processes::process_group::members(caller.pid)
                     .iter()
                     .any(|m| witnesses.contains(&m.identity))
             };
             if alive() {
-                elsecall_scheduling::os_processes::process_group::signal(caller.pid, libc::SIGTERM);
+                elsecall_host::os_processes::process_group::signal(caller.pid, libc::SIGTERM);
             }
             let deadline = Instant::now() + Duration::from_secs(5);
             while alive() {
                 if Instant::now() >= deadline {
-                    elsecall_scheduling::os_processes::process_group::signal(
-                        caller.pid,
-                        libc::SIGKILL,
-                    );
+                    elsecall_host::os_processes::process_group::signal(caller.pid, libc::SIGKILL);
                     break;
                 }
                 tokio::time::sleep(Duration::from_millis(20)).await;

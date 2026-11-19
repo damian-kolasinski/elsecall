@@ -396,7 +396,7 @@ async fn report(socket: &std::path::Path, grant: &Grant, ended: RunEnded) {
     let data = socket
         .parent()
         .expect("socket lives in the state directory");
-    let posted = elsecall_lifecycle::service_handover::through(data, || {
+    let posted = crate::service_handover::through(data, || {
         client::post::<(), _>(socket, &route, &ended, Wait::Bounded)
     })
     .await;

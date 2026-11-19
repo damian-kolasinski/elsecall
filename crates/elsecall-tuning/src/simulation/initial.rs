@@ -6,11 +6,11 @@ use super::{
 };
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
+use elsecall_host::processes::ProcessIdentity;
 use elsecall_reports::workload::trace::{Request, Trace};
 use elsecall_scheduling::{
     messages::Grant,
     placed::{PlacedRecord, Reached, Side, SyncSummary},
-    processes::ProcessIdentity,
     record::{Record, State},
     service::Scheduler,
 };

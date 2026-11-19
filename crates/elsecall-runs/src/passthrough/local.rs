@@ -7,8 +7,8 @@ use crate::passthrough::{
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::run_admission::Admission;
 use elsecall_host::client::{self as client, Wait};
+use elsecall_host::os_processes::process_usage;
 use elsecall_scheduling::messages::CommandStarted;
-use elsecall_scheduling::os_processes::process_usage;
 use std::{
     ffi::OsStr,
     os::unix::{ffi::OsStrExt, fs::PermissionsExt, process::ExitStatusExt},

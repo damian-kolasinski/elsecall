@@ -7,9 +7,9 @@ use elsecall_contract::inspection::{
     CoreCounts, Inspection, LoadAverage, LoadSample, Machine, MachineInspector, Memory,
     MemoryPressure, ThermalState,
 };
+use elsecall_host::os_processes::processes::MacProcesses;
 use elsecall_host::{paths::Paths, private_files};
 use elsecall_peers::tailnet::{Presence, Tailnet};
-use elsecall_scheduling::os_processes::processes::MacProcesses;
 use elsecall_scheduling::service::Adapters;
 use serde_json::Value;
 use std::{

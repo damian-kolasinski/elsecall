@@ -2,8 +2,8 @@
 //! identities of synthetic callers, never consumer inputs or secret values.
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
+use elsecall_host::processes::ProcessIdentity;
 use elsecall_host::{paths::Paths, private_files};
-use elsecall_scheduling::processes::ProcessIdentity;
 use serde::{Deserialize, Serialize};
 use std::{
     io::Read,

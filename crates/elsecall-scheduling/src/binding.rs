@@ -1,7 +1,7 @@
 //! Which processes requests are bound to, so a process's exit reaches every
 //! request it waits for or holds.
-use crate::processes::{self, ProcessIdentity, ProcessTable};
 use elsecall_contract::scheduling_model::run_id::RunId;
+use elsecall_host::processes::{self, ProcessIdentity, ProcessTable};
 use std::collections::{BTreeSet, HashMap};
 
 #[derive(Default)]
@@ -88,7 +88,7 @@ impl Bindings {
 #[cfg(test)]
 pub(crate) mod fake {
     //! A process table whose processes the test starts and ends.
-    use crate::processes::{ProcessIdentity, ProcessInfo, ProcessTable};
+    use elsecall_host::processes::{ProcessIdentity, ProcessInfo, ProcessTable};
     use std::{collections::HashMap, sync::Mutex};
 
     #[derive(Default)]

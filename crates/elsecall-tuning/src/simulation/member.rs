@@ -222,11 +222,11 @@ mod tests {
         request::{AdmissionRequest, Kind, Placement, Urgency},
         run_id::RunId,
     };
+    use elsecall_host::processes::ProcessIdentity;
     use elsecall_scheduling::{
         clock::VirtualClock,
         fixtures,
         placed::Side,
-        processes::ProcessIdentity,
         record::{Outcome, State},
     };
     use std::time::Duration;
