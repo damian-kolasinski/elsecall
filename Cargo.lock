@@ -1069,6 +1069,7 @@ dependencies = [
  "elsecall-labels",
  "elsecall-process",
  "elsecall-rehearsal-identity",
+ "elsecall-run-admission",
  "futures-util",
  "getrandom 0.3.4",
  "hkdf",
@@ -1117,6 +1118,14 @@ dependencies = [
 [[package]]
 name = "elsecall-rehearsal-identity"
 version = "0.3.0"
+
+[[package]]
+name = "elsecall-run-admission"
+version = "0.3.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "elsecall-ui"

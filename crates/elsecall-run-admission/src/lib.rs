@@ -41,7 +41,7 @@ impl Admission {
 
 #[cfg(test)]
 mod tests {
-    use super::Admission;
+    use crate::Admission;
 
     #[test]
     fn the_variable_says_what_the_status_file_says() {

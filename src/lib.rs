@@ -77,7 +77,6 @@ pub mod report_cli;
 pub mod report_protocol;
 pub mod reporting;
 pub mod roster;
-pub mod run_admission;
 pub mod run_id_file;
 pub mod run_relay;
 pub mod scheduling;

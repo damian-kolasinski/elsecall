@@ -8,7 +8,6 @@ pub mod remote;
 mod signals;
 pub mod status_file;
 
-use crate::run_admission::Admission;
 use crate::{
     admission_cli::{
         self,
@@ -34,6 +33,7 @@ use crate::{
 };
 use clap::Args;
 use elsecall_failure::{Failure, Result};
+use elsecall_run_admission::Admission;
 use executor::{CommandLine, Executor, Exit, Finished, RunContext, RunFailure, Running};
 use local::LocalExecutor;
 use remote::RemoteExecutor;

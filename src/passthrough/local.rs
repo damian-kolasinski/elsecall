@@ -7,10 +7,10 @@ use crate::{
         executor::{CommandLine, Executor, Exit, Finished, RunContext, RunResult, Running},
         signals,
     },
-    run_admission::Admission,
     scheduling::messages::CommandStarted,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_run_admission::Admission;
 use std::{
     ffi::OsStr,
     os::unix::{ffi::OsStrExt, fs::PermissionsExt, process::ExitStatusExt},

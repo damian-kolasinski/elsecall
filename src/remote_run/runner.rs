@@ -13,7 +13,6 @@ use crate::{
         output::{self, Window},
         protocol::{Exited, RunMessage, Start, Stream},
     },
-    run_admission::{self, Admission},
     scheduling::{leftovers::Leftovers, run_id::RunId},
     wire::Frame,
     workspace::{
@@ -30,6 +29,7 @@ use crate::{
     },
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_run_admission::{self as run_admission, Admission};
 use std::{
     ffi::{OsStr, OsString},
     os::{

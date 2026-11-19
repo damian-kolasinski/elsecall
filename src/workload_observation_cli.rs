@@ -29,7 +29,7 @@ pub async fn run(args: WorkloadArgs, paths: &Paths) -> Result<serde_json::Value>
     // This is an opt-out/context check only. PID/grant authorization is always
     // enforced by the server; an inherited outer ID is unsafe in bypass modes.
     if !matches!(
-        std::env::var(crate::run_admission::VARIABLE).as_deref(),
+        std::env::var(elsecall_run_admission::VARIABLE).as_deref(),
         Ok("granted" | "nested")
     ) {
         return Err(invalid(
