@@ -21,9 +21,7 @@ use crate::uninstalled::{self, Bundle};
 use crate::view;
 use crate::window_upgrade::{self, UpgradeState, WindowUpgrade};
 use crate::workload_policy::{Policy, ReadError};
-use elsecall_release_update::release_update::{
-    Job, Phase as ReleasePhase, Status as ReleaseStatus,
-};
+use elsecall_lifecycle::release_update::{Job, Phase as ReleasePhase, Status as ReleaseStatus};
 
 const CHROME: Chrome = Chrome {
     full_size_content: false,
@@ -281,7 +279,7 @@ impl AppState {
             && job.release.version == status.current_version
             && matches!(
                 fleet.state,
-                elsecall_release_update::release_update::FollowUpState::Distributing { .. }
+                elsecall_lifecycle::release_update::FollowUpState::Distributing { .. }
             )
     }
     pub(crate) fn release_notice(&self) -> Option<String> {
@@ -411,7 +409,7 @@ pub(crate) fn run() {
     let mut args = std::env::args().skip(1).collect::<Vec<_>>();
     let mut ready = if args
         .first()
-        .is_some_and(|arg| arg == elsecall_window::window_startup::READY_ARGUMENT)
+        .is_some_and(|arg| arg == elsecall_lifecycle::window_startup::READY_ARGUMENT)
     {
         if args.len() < 2 {
             eprintln!("elsecall-ui: missing startup socket");
@@ -428,7 +426,7 @@ pub(crate) fn run() {
         .args(args)
         .on_ready(move |_| {
             if let Some(socket) = ready.take()
-                && elsecall_window::window_startup::acknowledge(&socket).is_err()
+                && elsecall_lifecycle::window_startup::acknowledge(&socket).is_err()
             {
                 // The launcher timed out and restored the previous bundle.
                 std::process::exit(1);
@@ -521,7 +519,7 @@ fn init() -> AppState {
         release_status: None,
         release_feed: Arc::new(Latest::default()),
         release_start: Latest::default(),
-        opened_at_ms: elsecall_release_update::release_update::now_millis(),
+        opened_at_ms: elsecall_lifecycle::release_update::now_millis(),
         release_disconnected: false,
         bundle: Arc::new(uninstalled::RunningBundle::current()),
         add_mac: AddMac::default(),
@@ -535,7 +533,7 @@ fn init() -> AppState {
 
 fn own_build() -> Option<String> {
     let path = std::env::current_exe().ok()?;
-    elsecall_window::window_app::running_build(&path)
+    elsecall_lifecycle::window_app::running_build(&path)
         .ok()
         .map(|build| build.to_string())
 }
@@ -805,7 +803,7 @@ fn scene_upgrade_failed(state: &mut AppState) {
 }
 
 fn release_fixture(phase: Option<ReleasePhase>) -> ReleaseSnapshot {
-    use elsecall_release_update::release_update::{JobId, Release, ReleaseVersion};
+    use elsecall_lifecycle::release_update::{JobId, Release, ReleaseVersion};
     let release = Release {
         version: ReleaseVersion::try_from("0.1.1".to_owned()).expect("fixture version"),
     };
@@ -835,7 +833,7 @@ fn release_fixture(phase: Option<ReleasePhase>) -> ReleaseSnapshot {
 /// The master updated itself and now gives its build to the members, which still
 /// run the previous release.
 fn scene_release_fleet(state: &mut AppState) {
-    use elsecall_release_update::release_update::{
+    use elsecall_lifecycle::release_update::{
         FleetFollowUp, FollowUpState, JobId, Release, ReleaseVersion,
     };
     scene_outdated_member(state);
@@ -1336,7 +1334,7 @@ mod tests {
         assert_eq!(rt.state.rows().len(), 3);
         rt.state
             .apply_release(Ok(release_fixture(Some(ReleasePhase::Failed {
-                error: elsecall_release_update::release_update::invalid(
+                error: elsecall_lifecycle::release_update::invalid(
                     "The release could not be verified.",
                 ),
                 rolled_back: false,
@@ -1353,8 +1351,7 @@ mod tests {
         rt.frame(0.0);
         click_upgrade(&mut rt);
         let mut second = first.clone();
-        second.id =
-            elsecall_release_update::release_update::JobId::try_from("b".repeat(32)).unwrap();
+        second.id = elsecall_lifecycle::release_update::JobId::try_from("b".repeat(32)).unwrap();
         second.started_at_ms = 30;
         reply.send(Ok(second.clone())).unwrap();
         ready
@@ -1365,7 +1362,7 @@ mod tests {
         // An old poll arriving after the new request cannot put the previous failure back.
         rt.state
             .apply_release(Ok(release_fixture(Some(ReleasePhase::Failed {
-                error: elsecall_release_update::release_update::invalid("old failure"),
+                error: elsecall_lifecycle::release_update::invalid("old failure"),
                 rolled_back: false,
             }))));
         assert!(rt.state.updating());

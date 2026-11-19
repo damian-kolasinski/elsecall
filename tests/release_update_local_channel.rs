@@ -3,7 +3,7 @@
 //! here with throwaway local keys and read from a directory or a loopback server.
 //! The only fakes are the release's executables, which report a version.
 use elsecall_host::paths::Paths;
-use elsecall_release_update::release_update::{
+use elsecall_lifecycle::release_update::{
     Release, ReleaseCatalog, ReleaseDownload, ReleaseVersion,
     local_channel::{self, LocalChannel, LocalDownload, Packslip},
 };
@@ -153,8 +153,7 @@ impl Fixture {
     fn stage(
         &self,
         version: &str,
-    ) -> elsecall_contract::failure::Result<elsecall_release_update::release_update::StagedRelease>
-    {
+    ) -> elsecall_contract::failure::Result<elsecall_lifecycle::release_update::StagedRelease> {
         let stage = self
             .paths
             .home

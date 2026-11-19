@@ -242,7 +242,7 @@ async fn upgrade(
             })
         })
         .transpose()?;
-    let request = elsecall_fleet_upgrade::fleet_upgrade::master::UpgradeRequest {
+    let request = elsecall_lifecycle::fleet_upgrade::master::UpgradeRequest {
         member,
         wait_seconds: wait.as_secs(),
         executable,

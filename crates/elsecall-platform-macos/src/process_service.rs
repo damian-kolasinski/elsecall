@@ -5,7 +5,7 @@
 //! crash, which launchd would.
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_host::{paths::Paths, private_files};
-use elsecall_installation::installation::{ServiceManager, Session};
+use elsecall_lifecycle::installation::{ServiceManager, Session};
 use std::{
     os::unix::process::CommandExt,
     path::{Path, PathBuf},
@@ -15,7 +15,7 @@ use std::{
 
 pub const ENVIRONMENT: &str = "ELSECALL_SERVICE_MANAGER";
 /// The process ID of the running service, in the state directory.
-pub use elsecall_installation::installation::PID_FILE;
+pub use elsecall_lifecycle::installation::PID_FILE;
 
 /// Whether the environment asks for this manager instead of launchd. A release
 /// build refuses rather than falling back to launchd, which would register real

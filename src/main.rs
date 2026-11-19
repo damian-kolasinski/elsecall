@@ -6,7 +6,8 @@ use elsecall_contract::inspection::{Health, Inspection, Machine};
 use elsecall_fleet::inbound_firewall::{Inbound, InboundFirewall};
 use elsecall_host::client;
 use elsecall_host::{local_access, paths::Paths};
-use elsecall_installation::installation::{self, ServiceManager};
+use elsecall_lifecycle::install_window;
+use elsecall_lifecycle::installation::{self, ServiceManager};
 use elsecall_peers::tailnet;
 use elsecall_platform_macos::macos::{
     application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
@@ -15,7 +16,6 @@ use elsecall_platform_macos::macos::{
 use elsecall_runs::admission_cli::{self, LeaseCommand};
 use elsecall_scheduling as scheduling;
 use elsecall_scheduling::os_processes::processes::MacProcesses;
-use elsecall_window::install_window;
 use serde::Serialize;
 use std::{process::ExitCode, sync::Arc, time::Duration};
 
@@ -55,7 +55,7 @@ enum Command {
     /// Open the fleet window installed with this CLI release
     Ui,
     /// Check for and install signed Elsecall releases
-    Update(elsecall_release_update::release_update_cli::UpdateArgs),
+    Update(elsecall_lifecycle::release_update_cli::UpdateArgs),
     #[command(hide = true)]
     UpdateHelper {
         #[arg(long)]
@@ -142,7 +142,7 @@ enum Command {
     Tune(elsecall_tuning::tune_cli::TuneArgs),
     /// Print the agent guide matching this build, or install it as a skill for the
     /// coding agents on this machine
-    Skill(elsecall_agent_skill::cli::SkillArgs),
+    Skill(elsecall_lifecycle::agent_skill::cli::SkillArgs),
 }
 #[derive(Subcommand)]
 enum ConfigCommand {
@@ -267,12 +267,12 @@ async fn main() -> ExitCode {
         }
         // The guide is text unless --json; nothing here needs the service.
         Command::Skill(args) => {
-            return match elsecall_agent_skill::cli::run(args) {
-                Ok(elsecall_agent_skill::cli::Printed::Text(text)) => {
+            return match elsecall_lifecycle::agent_skill::cli::run(args) {
+                Ok(elsecall_lifecycle::agent_skill::cli::Printed::Text(text)) => {
                     print!("{text}");
                     ExitCode::SUCCESS
                 }
-                Ok(elsecall_agent_skill::cli::Printed::Json(data, complete)) => {
+                Ok(elsecall_lifecycle::agent_skill::cli::Printed::Json(data, complete)) => {
                     output(data);
                     if complete {
                         ExitCode::SUCCESS
@@ -405,7 +405,7 @@ async fn run(cli: Cli) -> Result<bool> {
                     .expect("serializable firewall state");
             data["window"] = serde_json::to_value(window).expect("serializable window state");
             // Agents learn the installed build from its skill (README "Agent skill").
-            data["agent_skill"] = elsecall_agent_skill::set_up_found(&paths.home);
+            data["agent_skill"] = elsecall_lifecycle::agent_skill::set_up_found(&paths.home);
             output(data);
             return Ok(complete);
         }
@@ -413,17 +413,17 @@ async fn run(cli: Cli) -> Result<bool> {
             let uninstalled = elsecall::uninstall::uninstall(
                 &paths,
                 manager,
-                &elsecall_release_update::release_update::helper::production_selection(&paths),
+                &elsecall_lifecycle::release_update::helper::production_selection(&paths),
                 force,
                 if keep_mise {
-                    elsecall_installation::installation::cli_request::Request::Keep
+                    elsecall_lifecycle::installation::cli_request::Request::Keep
                 } else {
-                    elsecall_installation::installation::cli_request::Request::Remove
+                    elsecall_lifecycle::installation::cli_request::Request::Remove
                 },
             )?;
             let mut complete = uninstalled.complete();
             let mut data = serde_json::to_value(uninstalled).expect("serializable uninstall");
-            let (skills, removed) = elsecall_agent_skill::remove_all(&paths);
+            let (skills, removed) = elsecall_lifecycle::agent_skill::remove_all(&paths);
             complete &= removed;
             data["agent_skill"] = skills;
             output(data);
@@ -441,17 +441,17 @@ async fn run(cli: Cli) -> Result<bool> {
         }
         Command::Update(args) => {
             let (data, complete) =
-                elsecall_release_update::release_update_cli::run(&paths, args).await?;
+                elsecall_lifecycle::release_update_cli::run(&paths, args).await?;
             output(data);
             return Ok(complete);
         }
         Command::UpdateHelper { id } => {
-            let id = elsecall_release_update::release_update::JobId::try_from(id)?;
-            elsecall_release_update::release_update::helper::run(
+            let id = elsecall_lifecycle::release_update::JobId::try_from(id)?;
+            elsecall_lifecycle::release_update::helper::run(
                 &paths,
                 &id,
-                &*elsecall_release_update::release_update::helper::production_download(&paths)?,
-                &elsecall_release_update::release_update::helper::production_selection(&paths),
+                &*elsecall_lifecycle::release_update::helper::production_download(&paths)?,
+                &elsecall_lifecycle::release_update::helper::production_selection(&paths),
                 manager,
                 &elsecall_platform_macos::macos::window_launcher::MacWindowLauncher,
             )
@@ -621,7 +621,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 "configuration_sync": service_configurations,
                 "paths": {"executable": paths.bin, "launch_agent": paths.agent, "socket": paths.socket(), "log": paths.log()},
                 "next_step": next_step,
-                "agent_skill": elsecall_agent_skill::health(&paths.home),
+                "agent_skill": elsecall_lifecycle::agent_skill::health(&paths.home),
             }));
             return Ok(healthy);
         }
@@ -634,7 +634,7 @@ async fn run(cli: Cli) -> Result<bool> {
         }
         Command::Serve => {
             // After an upgrade, the stubs an older build wrote point at this one.
-            elsecall_agent_skill::refresh_if_installed(&paths);
+            elsecall_lifecycle::agent_skill::refresh_if_installed(&paths);
             let machine: Arc<dyn elsecall_contract::inspection::MachineInspector> =
                 if let Some(file) = elsecall_host::machine_script::load_file() {
                     Arc::new(elsecall_host::machine_script::ScriptedLoad {
@@ -712,7 +712,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 )
             })?;
             let phase =
-                elsecall_fleet_upgrade::fleet_upgrade::helper::run(&paths, manager, &id).await?;
+                elsecall_lifecycle::fleet_upgrade::helper::run(&paths, manager, &id).await?;
             output(phase);
         }
     }

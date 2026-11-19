@@ -16,12 +16,12 @@ use elsecall_contract::scheduling_model::{
 };
 use elsecall_host::client::{self as client, Wait};
 use elsecall_host::{local_access, paths::Paths, run_id_file::RunIdFile};
+use elsecall_lifecycle::service_handover;
 use elsecall_scheduling::{
     estimates,
     messages::{Grant, Release, Runs},
     record::Record,
 };
-use elsecall_service_lifecycle::service_handover;
 use environment::{CallerEnvironment, Mode};
 use options::{CallerOptions, RequestOptions, UnavailableAction};
 use resolution::{Layers, resolve};

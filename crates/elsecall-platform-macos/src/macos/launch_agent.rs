@@ -3,7 +3,7 @@ use elsecall_host::{
     local_access::user_id,
     paths::{LABEL, Paths},
 };
-use elsecall_installation::installation::{ServiceManager, Session};
+use elsecall_lifecycle::installation::{ServiceManager, Session};
 use std::{
     path::Path,
     process::{Command, Stdio},

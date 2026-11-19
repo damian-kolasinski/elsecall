@@ -3,13 +3,13 @@
 use elsecall_contract::build_identity::Digest;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_host::paths::Paths;
-use elsecall_installation::installation::{self, ServiceManager, Session};
-use elsecall_release_update::release_update::{
+use elsecall_lifecycle::installation::{self, ServiceManager, Session};
+use elsecall_lifecycle::release_update::{
     self, Job, JobId, Phase, Release, ReleaseDownload, ReleaseVersion, StagedRelease, helper,
     selection::{CliSelection, Snapshot},
     store::Store,
 };
-use elsecall_window::window_app::{self, WindowLauncher};
+use elsecall_lifecycle::window_app::{self, WindowLauncher};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -318,7 +318,7 @@ async fn helper_survives_the_service_restart(mode: Mode) {
     let mut manager = Manager::new(paths.clone(), (mode == Mode::Install).then_some(incoming));
     manager.unavailable_update_digest = (mode == Mode::UpdateApi).then_some(incoming);
     installation::install(&paths, &original, &manager, None).unwrap();
-    elsecall_installation::installation::ready::confirm(&paths, &before.build_id(), true)
+    elsecall_lifecycle::installation::ready::confirm(&paths, &before.build_id(), true)
         .await
         .unwrap();
     let old_window = Window {

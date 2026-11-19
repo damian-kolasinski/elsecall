@@ -28,7 +28,7 @@ async fn requests_a_handover_interrupts_wait_for_the_new_service() {
     // An install takes the installation lock and stops the service, as launchd
     // does: the queued request is turned away, and a request made while the
     // service is away finds nothing to connect to.
-    let install = elsecall_installation::installation::Transaction::begin(&fx.paths).unwrap();
+    let install = elsecall_lifecycle::installation::Transaction::begin(&fx.paths).unwrap();
     // SAFETY: the service under test handles SIGTERM as its shutdown signal.
     unsafe { libc::kill(std::process::id() as i32, libc::SIGTERM) };
     assert!(fx.stopped_within(processes::WAIT).await);

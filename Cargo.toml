@@ -51,30 +51,25 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 # The workspace's own crates.
-elsecall-agent-skill = { path = "crates/elsecall-agent-skill" }
 elsecall-api-response = { path = "crates/elsecall-api-response" }
 elsecall-contract = { path = "crates/elsecall-contract" }
 elsecall-fleet = { path = "crates/elsecall-fleet" }
-elsecall-fleet-upgrade = { path = "crates/elsecall-fleet-upgrade" }
 elsecall-host = { path = "crates/elsecall-host" }
-elsecall-installation = { path = "crates/elsecall-installation" }
+elsecall-lifecycle = { path = "crates/elsecall-lifecycle" }
 elsecall-openssh-mac = { path = "crates/elsecall-openssh-mac" }
 elsecall-peers = { path = "crates/elsecall-peers" }
 elsecall-platform-macos = { path = "crates/elsecall-platform-macos" }
 elsecall-rehearsal = { path = "crates/elsecall-rehearsal" }
-elsecall-release-update = { path = "crates/elsecall-release-update" }
 elsecall-replay = { path = "crates/elsecall-replay" }
 elsecall-report-facts = { path = "crates/elsecall-report-facts" }
 elsecall-reporting = { path = "crates/elsecall-reporting" }
 elsecall-runs = { path = "crates/elsecall-runs" }
 elsecall-scheduling = { path = "crates/elsecall-scheduling" }
-elsecall-service-lifecycle = { path = "crates/elsecall-service-lifecycle" }
 elsecall-simulation = { path = "crates/elsecall-simulation" }
 elsecall-sync = { path = "crates/elsecall-sync" }
 elsecall-tools = { path = "crates/elsecall-tools" }
 elsecall-trace = { path = "crates/elsecall-trace" }
 elsecall-tuning = { path = "crates/elsecall-tuning" }
-elsecall-window = { path = "crates/elsecall-window" }
 elsecall-workload = { path = "crates/elsecall-workload" }
 elsecall-workspace = { path = "crates/elsecall-workspace" }
 
@@ -107,8 +102,8 @@ test = false
 [features]
 # Follow a local release channel instead of the published releases, for testing
 # the update path against local builds. scripts/local-release.sh builds with it;
-# the release workflow never does. See crates/elsecall-release-update/src/release_update/channel.rs.
-local-release-channel = ["elsecall-release-update/local-release-channel"]
+# the release workflow never does. See crates/elsecall-lifecycle/src/release_update/channel.rs.
+local-release-channel = ["elsecall-lifecycle/local-release-channel"]
 
 [dependencies]
 axum.workspace = true
@@ -116,30 +111,25 @@ base64.workspace = true
 chacha20poly1305.workspace = true
 clap.workspace = true
 ed25519-dalek.workspace = true
-elsecall-agent-skill.workspace = true
 elsecall-api-response.workspace = true
 elsecall-contract.workspace = true
-elsecall-fleet-upgrade.workspace = true
 elsecall-fleet.workspace = true
 elsecall-host.workspace = true
-elsecall-installation.workspace = true
+elsecall-lifecycle.workspace = true
 elsecall-openssh-mac.workspace = true
 elsecall-peers.workspace = true
 elsecall-platform-macos.workspace = true
 elsecall-rehearsal.workspace = true
-elsecall-release-update.workspace = true
 elsecall-replay.workspace = true
 elsecall-report-facts.workspace = true
 elsecall-reporting.workspace = true
 elsecall-runs.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-service-lifecycle.workspace = true
 elsecall-simulation.workspace = true
 elsecall-sync.workspace = true
 elsecall-tools.workspace = true
 elsecall-trace.workspace = true
 elsecall-tuning.workspace = true
-elsecall-window.workspace = true
 elsecall-workload.workspace = true
 elsecall-workspace.workspace = true
 futures-util.workspace = true

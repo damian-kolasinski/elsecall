@@ -3,7 +3,7 @@
 //! installer added and which would otherwise keep `elsecall` on the PATH.
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_host::paths::Paths;
-use elsecall_installation::installation::{
+use elsecall_lifecycle::installation::{
     self, InstalledParts, Kept, ServiceManager,
     cli_request::{CliRequest, Request, Selection},
 };
@@ -54,12 +54,12 @@ pub fn uninstall(
 pub struct InstalledSlices;
 impl InstalledParts for InstalledSlices {
     fn helper_active(&self, paths: &Paths) -> Result<bool> {
-        elsecall_release_update::release_update::store::active_helper(paths)
+        elsecall_lifecycle::release_update::store::active_helper(paths)
     }
     fn remove(&self, paths: &Paths) -> Result<()> {
-        elsecall_fleet_upgrade::fleet_upgrade::journal::Journal::new(&paths.data).remove()?;
-        elsecall_release_update::release_update::store::remove(paths)?;
-        elsecall_window::window_app::remove_locked(paths);
+        elsecall_lifecycle::fleet_upgrade::journal::Journal::new(&paths.data).remove()?;
+        elsecall_lifecycle::release_update::store::remove(paths)?;
+        elsecall_lifecycle::window_app::remove_locked(paths);
         Ok(())
     }
 }

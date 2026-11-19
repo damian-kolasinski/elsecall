@@ -1,9 +1,9 @@
 //! Align only Elsecall's existing global mise request, preserving unrelated settings.
 use super::{ISSUER, Release, StagedRelease, TOOL, invalid};
+use crate::installation::cli_request::Selection;
 use elsecall_contract::build_identity::Digest;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_host::paths::Paths;
-use elsecall_installation::installation::cli_request::Selection;
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
@@ -175,7 +175,7 @@ impl MiseSelection {
         )
     }
 }
-impl elsecall_installation::installation::cli_request::CliRequest for MiseSelection {
+impl crate::installation::cli_request::CliRequest for MiseSelection {
     fn forget(&self) -> Selection {
         let Some(mise) = super::tools::find_mise(&self.paths) else {
             return Selection::NoMise;

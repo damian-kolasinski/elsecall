@@ -104,8 +104,8 @@ pub async fn serve(
     process_sampler: Arc<dyn elsecall_scheduling::outside_pressure::ProcessSampler>,
     members_listener: peer_listener::Settings,
 ) -> Result<()> {
-    elsecall_release_update::release_update::rehearsal::startup()?;
-    let updates = elsecall_release_update::release_update::service::UpdateAdapters::production(
+    elsecall_lifecycle::release_update::rehearsal::startup()?;
+    let updates = elsecall_lifecycle::release_update::service::UpdateAdapters::production(
         !elsecall_platform_macos::process_service::requested()?,
     )?;
     serve_with_updates(
@@ -125,7 +125,7 @@ pub async fn serve_with_updates(
     scheduling: Adapters,
     process_sampler: Arc<dyn elsecall_scheduling::outside_pressure::ProcessSampler>,
     members_listener: peer_listener::Settings,
-    updates: elsecall_release_update::release_update::service::UpdateAdapters,
+    updates: elsecall_lifecycle::release_update::service::UpdateAdapters,
 ) -> Result<()> {
     private_files::owned_tree(&paths.home, &paths.data)?;
     private_files::directory(&paths.data)?;
@@ -310,14 +310,14 @@ pub async fn serve_with_updates(
     };
     // Upgrades need fleet state; a broken upgrade record refuses only upgrades.
     let upgrades = match &fleet {
-        Ok(fleet) => elsecall_fleet_upgrade::fleet_upgrade::member::Upgrades::open(
-            elsecall_fleet_upgrade::fleet_upgrade::journal::Journal::new(&paths.data),
+        Ok(fleet) => elsecall_lifecycle::fleet_upgrade::member::Upgrades::open(
+            elsecall_lifecycle::fleet_upgrade::journal::Journal::new(&paths.data),
             paths.executable(),
             fleet.clone(),
-            Arc::new(elsecall_fleet_upgrade::upgrade_drain::SchedulerWork(
+            Arc::new(elsecall_lifecycle::upgrade_drain::SchedulerWork(
                 scheduler.clone(),
             )),
-            Arc::new(elsecall_fleet_upgrade::upgrade_helper_process::HelperProcess),
+            Arc::new(elsecall_lifecycle::upgrade_helper_process::HelperProcess),
             build.clone(),
         )
         .map(Arc::new),
@@ -326,14 +326,14 @@ pub async fn serve_with_updates(
     let automatic_updates = updates.automatic;
     // The CLI's `fleet upgrade` and a release update's fleet half share one distributor.
     let distributor = fleet.as_ref().ok().map(|fleet| {
-        elsecall_fleet_upgrade::fleet_upgrade::distributor::Distributor::new(
+        elsecall_lifecycle::fleet_upgrade::distributor::Distributor::new(
             fleet.clone(),
             paths.executable(),
         )
     });
-    let updates = elsecall_release_update::release_update::service::UpdateService::open(
+    let updates = elsecall_lifecycle::release_update::service::UpdateService::open(
         paths.clone(),
-        elsecall_release_update::release_update::ReleaseVersion::running(),
+        elsecall_lifecycle::release_update::ReleaseVersion::running(),
         build.build.clone(),
         updates.catalog,
         updates.launcher,
@@ -358,8 +358,8 @@ pub async fn serve_with_updates(
             )
         });
     let update_routes = match updates {
-        Ok(updates) => elsecall_release_update::release_update_api::routes(updates),
-        Err(error) => elsecall_release_update::release_update_api::unavailable(error),
+        Ok(updates) => elsecall_lifecycle::release_update_api::routes(updates),
+        Err(error) => elsecall_lifecycle::release_update_api::unavailable(error),
     };
     let catalog = Arc::new(Catalog::open(
         &paths.data.join("copies.sqlite"),
@@ -472,13 +472,13 @@ pub async fn serve_with_updates(
                     member_routes.merge(elsecall_sync::config_sync_api::routes(sync.clone()));
             }
             member_routes = member_routes.merge(match &upgrades {
-                Ok(upgrades) => elsecall_fleet_upgrade::fleet_upgrade_api::routes(upgrades.clone()),
-                Err(error) => elsecall_fleet_upgrade::fleet_upgrade_api::unavailable(error.clone()),
+                Ok(upgrades) => elsecall_lifecycle::fleet_upgrade_api::routes(upgrades.clone()),
+                Err(error) => elsecall_lifecycle::fleet_upgrade_api::unavailable(error.clone()),
             });
             let peer_routes = peer_api::routes(fleet.clone(), member_routes);
             peer_listener::start(fleet.clone(), members_listener, peer_routes).await;
             elsecall_rehearsal::rehearsal_api::routes(fleet.clone(), rehearsal)
-                .merge(elsecall_fleet_upgrade::fleet_upgrade_local_api::routes(
+                .merge(elsecall_lifecycle::fleet_upgrade_local_api::routes(
                     distributor
                         .clone()
                         .expect("a readable fleet has a distributor"),
@@ -548,7 +548,7 @@ pub async fn serve_with_updates(
         tokio::select! {
             _ = terminate.recv() => (),
             _ = tokio::signal::ctrl_c() => (),
-            _ = elsecall_service_lifecycle::service_relaunch::when_idle(restart_sync, restart_scheduler) => {
+            _ = elsecall_lifecycle::service_relaunch::when_idle(restart_sync, restart_scheduler) => {
                 restarting.store(true, std::sync::atomic::Ordering::SeqCst);
             }
         }
@@ -565,7 +565,7 @@ pub async fn serve_with_updates(
     result?;
     if relaunch.load(std::sync::atomic::Ordering::SeqCst) {
         elsecall_host::service_log!("{{\"event\":\"service_configuration_relaunch\"}}");
-        return elsecall_service_lifecycle::service_relaunch::execute(&service_lock);
+        return elsecall_lifecycle::service_relaunch::execute(&service_lock);
     }
     Ok(())
 }

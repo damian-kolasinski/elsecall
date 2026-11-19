@@ -224,6 +224,9 @@ def main(argv: list[str]) -> int:
         own = flattened.get(member) if inside else None
         text = (ROOT / file).read_text()
         new = rewrite(text, flattened, merged, inside, own)
+        if own and not file.endswith("/src/lib.rs"):
+            # The member's modules move a folder down, under its module.
+            new = re.sub(r'(include_(?:str|bytes)!\(\s*")(?=\.\./)', r"\1../", new)
         if new != text:
             (ROOT / file).write_text(new)
     manifest = merge_manifests(merged, members)

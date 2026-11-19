@@ -4,8 +4,8 @@
 use elsecall_contract::build_identity::Digest;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_host::paths::Paths;
-use elsecall_installation::installation::{self, ServiceManager, Session, Transaction};
-use elsecall_window::{
+use elsecall_lifecycle::installation::{self, ServiceManager, Session, Transaction};
+use elsecall_lifecycle::{
     install_window::{self, Window},
     window_app::{self, WindowLauncher},
 };

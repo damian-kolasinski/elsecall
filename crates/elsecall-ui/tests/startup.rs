@@ -1,5 +1,5 @@
 //! Launch the actual UI process and require its native-window readiness handshake.
-use elsecall_window::window_startup::{READY_ARGUMENT, WindowStartup};
+use elsecall_lifecycle::window_startup::{READY_ARGUMENT, WindowStartup};
 use std::{
     process::{Command, Stdio},
     time::Duration,

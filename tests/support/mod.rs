@@ -120,8 +120,7 @@ impl Fixture {
                 tailnet: Arc::new(NoTailnet),
                 port: 1,
             },
-            elsecall_release_update::release_update::service::UpdateAdapters::production(false)
-                .unwrap(),
+            elsecall_lifecycle::release_update::service::UpdateAdapters::production(false).unwrap(),
         )));
         let deadline = Instant::now() + crate::processes::WAIT;
         loop {

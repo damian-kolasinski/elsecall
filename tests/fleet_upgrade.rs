@@ -14,11 +14,11 @@ use elsecall_contract::scheduling_model::{
     request::{AdmissionRequest, Kind, Placement, Urgency},
 };
 use elsecall_contract::{build_identity::Digest, executable_format::Architecture};
-use elsecall_fleet_upgrade::fleet_upgrade::{
+use elsecall_host::paths::Paths;
+use elsecall_lifecycle::fleet_upgrade::{
     member::UpgradeStatus,
     protocol::{self, Manifest, Message, Os, UpgradeId},
 };
-use elsecall_host::paths::Paths;
 use elsecall_peers::peer_client;
 use members::{TestMember, enrol, json};
 use serde_json::Value;

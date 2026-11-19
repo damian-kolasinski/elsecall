@@ -29,7 +29,7 @@ pub fn routes(paths: Paths) -> Router {
 
 async fn offer(State(paths): State<Paths>) -> Response {
     let found = tokio::task::spawn_blocking(move || {
-        elsecall_installation::window_release::installed_build(&paths)
+        elsecall_lifecycle::window_release::installed_build(&paths)
     })
     .await
     .expect("reading the window build does not panic");
@@ -48,7 +48,7 @@ async fn offer(State(paths): State<Paths>) -> Response {
 
 async fn update(State(paths): State<Paths>) -> Response {
     let launched = tokio::task::spawn_blocking(move || {
-        elsecall_window::window_app::publish(
+        elsecall_lifecycle::window_app::publish(
             &paths,
             &elsecall_platform_macos::macos::window_launcher::MacWindowLauncher,
         )

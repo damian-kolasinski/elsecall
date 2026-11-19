@@ -70,7 +70,7 @@ impl crate::window_upgrade::WindowUpgrade for SocketWindowUpgrade {
         replace_window_at(&paths.socket())
     }
 
-    fn start_release(&self) -> Result<elsecall_release_update::release_update::Job, String> {
+    fn start_release(&self) -> Result<elsecall_lifecycle::release_update::Job, String> {
         let paths = elsecall_host::paths::Paths::current().map_err(|error| error.message)?;
         start_release_at(&paths.socket())
     }
@@ -81,7 +81,7 @@ impl crate::window_upgrade::WindowUpgrade for SocketWindowUpgrade {
 
 fn start_release_at(
     socket: &std::path::Path,
-) -> Result<elsecall_release_update::release_update::Job, String> {
+) -> Result<elsecall_lifecycle::release_update::Job, String> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()

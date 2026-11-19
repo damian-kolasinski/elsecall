@@ -9,12 +9,12 @@ use crate::fleet_upgrade::{
     journal::{Journal, Phase},
     protocol::UpgradeId,
 };
+use crate::installation::{ServiceManager, Transaction, ready::confirm};
 use elsecall_contract::build_identity::{Build, BuildId, Digest};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::inspection::Health;
 use elsecall_host::client;
 use elsecall_host::paths::Paths;
-use elsecall_installation::installation::{ServiceManager, Transaction, ready::confirm};
 use std::path::Path;
 
 fn log(event: &str, id: &UpgradeId, detail: serde_json::Value) {
@@ -48,7 +48,7 @@ pub async fn run(paths: &Paths, manager: &dyn ServiceManager, id: &UpgradeId) ->
     let before = client::get::<Health>(&socket, "/v1/health").await.ok();
     // A new build must reach the fleet if the build it replaces did, or the master
     // could neither confirm it nor upgrade it again.
-    let fleet_before = elsecall_installation::installation::ready::fleet_ready(paths).await;
+    let fleet_before = crate::installation::ready::fleet_ready(paths).await;
     let incoming = journal.incoming();
     let staged = Digest::of_file(&incoming).ok() == Some(state.digest);
     // Held until the outcome is confirmed, rollback included, so other lifecycle

@@ -12,7 +12,7 @@ use elsecall_contract::scheduling_model::{
     speed::SpeedMeter,
 };
 use elsecall_host::{paths::Paths, private_files};
-use elsecall_release_update::release_update::{
+use elsecall_lifecycle::release_update::{
     self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
     service::{HelperLauncher, UpdateService},
     store::Store,
@@ -255,7 +255,7 @@ async fn api_and_real_cli_check_start_and_follow_the_same_durable_job() {
     let task = tokio::spawn(
         axum::serve(
             listener,
-            elsecall_release_update::release_update_api::routes(service.clone()),
+            elsecall_lifecycle::release_update_api::routes(service.clone()),
         )
         .into_future(),
     );
