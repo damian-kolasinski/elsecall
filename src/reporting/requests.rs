@@ -5,8 +5,9 @@ use crate::{
         facts::{Fact, PlacementKind},
         statistics::{Distribution, seconds},
     },
-    scheduling::{record::Verdict, request::Kind},
+    scheduling::record::Verdict,
 };
+use elsecall_scheduling_model::request::Kind;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
@@ -200,15 +201,15 @@ pub fn work(facts: &[Fact], members: &[&str]) -> BTreeMap<String, Work> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        scheduling::fixtures::{self, Run},
-        scheduling::{
-            placement::Source,
-            record::{Outcome, Verdict},
-            request::{AtDeadline, Placement, Urgency},
-            run_id::RunId,
-            timestamp::Timestamp,
-        },
+    use crate::scheduling::{
+        fixtures::{self, Run},
+        placement::Source,
+        record::{Outcome, Verdict},
+    };
+    use elsecall_scheduling_model::{
+        request::{AtDeadline, Placement, Urgency},
+        run_id::RunId,
+        timestamp::Timestamp,
     };
 
     fn facts() -> Vec<Fact> {

@@ -1,15 +1,13 @@
 //! What the operator can do about a blocked member, as one line an agent can act
 //! on. Elsecall never stops the process itself: it is not Elsecall's work, and
 //! a root daemon needs privileges the service does not have.
-use crate::{
-    outside_pressure::{
-        blocked::{Blocked, OutsideProcess, Reason},
-        sampling::Owner,
-        warning::{Concern, Warning},
-    },
-    scheduling::timestamp::Timestamp,
+use crate::outside_pressure::{
+    blocked::{Blocked, OutsideProcess, Reason},
+    sampling::Owner,
+    warning::{Concern, Warning},
 };
 use elsecall_machine::inspection::MemoryPressure;
+use elsecall_scheduling_model::timestamp::Timestamp;
 
 /// Processes whose restart ends the user's session or the machine's: the
 /// remedy for them is a reboot, never a kill.

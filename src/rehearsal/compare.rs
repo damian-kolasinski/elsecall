@@ -5,11 +5,12 @@ use crate::{
         protocol::{Action, Reply},
     },
     rehearse_cli::{self, RehearseArgs},
-    scheduling::{records::SchedulerSettings, timestamp::Timestamp},
+    scheduling::records::SchedulerSettings,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, time::Duration};
 

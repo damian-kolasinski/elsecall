@@ -11,12 +11,12 @@ use crate::{
         leftovers::Leftovers,
         placed::{OfferReply, PlacementOffer, Reached, SyncSummary, Warmth},
         quote::{CopyQuote, MAXIMUM_WORKSPACES, Quote, QuoteRequest},
-        run_id::RunId,
         run_phases::RemoteFailurePhase,
         service::{HostedEnd, HostedExit, Scheduler},
     },
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::run_id::RunId;
 use elsecall_workspace::{
     copies::Copies,
     location::{CopyLocation, Locations},
@@ -142,7 +142,7 @@ impl PlacementHost {
     /// This member's quote for `master`'s placement decision.
     pub fn quote(&self, master: &str, request: &QuoteRequest) -> Result<Quote> {
         if request.workspaces.len() > MAXIMUM_WORKSPACES {
-            return Err(crate::scheduling::request::invalid(
+            return Err(elsecall_scheduling_model::request::invalid(
                 "A quote may ask about at most 16 workspaces.",
             ));
         }
@@ -233,7 +233,10 @@ fn summary(stats: &MemberStats) -> SyncSummary {
 }
 
 impl Host for PlacementHost {
-    fn observation(&self, run: &RunId) -> Option<crate::workload_metadata::Observation> {
+    fn observation(
+        &self,
+        run: &RunId,
+    ) -> Option<elsecall_scheduling_model::workload_metadata::Observation> {
         self.scheduler
             .record(run)
             .ok()

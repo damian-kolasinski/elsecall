@@ -7,9 +7,9 @@ use crate::{
     scheduling::{
         leftovers::{Ending, Leftovers},
         processes::ProcessIdentity,
-        timestamp::Timestamp,
     },
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workspace::copies::Lingering;
 use futures_util::future::BoxFuture;
 use std::{

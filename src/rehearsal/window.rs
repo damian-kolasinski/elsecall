@@ -1,6 +1,7 @@
 //! Choose a synthetic rehearsal population, without hiding competing work.
-use crate::{scheduling::timestamp::Timestamp, workload::trace::Trace};
+use crate::workload::trace::Trace;
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{collections::BTreeMap, num::NonZeroUsize};
 
@@ -419,18 +420,20 @@ fn slice(source: &Trace, window: &Candidate) -> Trace {
 mod tests {
     use super::*;
     use crate::{
-        scheduling::fixtures::{T0, base, bucket},
         scheduling::{
-            capacity::{Capacity, Cores},
+            fixtures::{T0, base, bucket},
             parameters::Parameters,
             record::{HoldBasis, HoldLimitRecord, Outcome},
             records::SchedulerSettings,
-            request::Urgency,
         },
         workload::{
             demand::Demand,
             trace::{Member, Request},
         },
+    };
+    use elsecall_scheduling_model::{
+        capacity::{Capacity, Cores},
+        request::Urgency,
     };
     use std::time::Duration;
     fn fixture() -> Trace {
@@ -573,7 +576,7 @@ mod tests {
         background.fact.deferrable = true;
         background.urgency = Urgency::Deferrable {
             deadline: t.until,
-            at_deadline: crate::scheduling::request::AtDeadline::Start,
+            at_deadline: elsecall_scheduling_model::request::AtDeadline::Start,
         };
         t.requests.push(background);
         let (selected, report) = choose(&t).unwrap();
@@ -604,7 +607,7 @@ mod tests {
         carry.fact.deferrable = true;
         carry.urgency = Urgency::Deferrable {
             deadline: t.until,
-            at_deadline: crate::scheduling::request::AtDeadline::Start,
+            at_deadline: elsecall_scheduling_model::request::AtDeadline::Start,
         };
         carry.fact.requested_at = Timestamp::from_millis(T0 + 4 * 60_000);
         // Admission/setup spans the boundary before command execution starts.
@@ -698,7 +701,7 @@ mod tests {
         background.fact.deferrable = true;
         background.urgency = Urgency::Deferrable {
             deadline: populated.until,
-            at_deadline: crate::scheduling::request::AtDeadline::Start,
+            at_deadline: elsecall_scheduling_model::request::AtDeadline::Start,
         };
         populated.requests.push(background);
         assert!(select(&populated, "busiest:4m".parse().unwrap()).is_err());

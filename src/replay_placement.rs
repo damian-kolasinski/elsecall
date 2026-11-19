@@ -1,10 +1,9 @@
 //! Read-only placement counterfactuals. Keep measured work, label families and
 //! urgency fixed; only the placement component of current consumer rules applies.
-use crate::{
-    scheduling::request::Placement, workload::trace::Trace, workload_settings::RulePlacement,
-};
+use crate::{workload::trace::Trace, workload_settings::RulePlacement};
 use clap::Args;
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::request::Placement;
 use std::{io::Read, path::PathBuf};
 
 pub use crate::workload::format::{Mode, Provenance};
@@ -70,7 +69,8 @@ impl ReplayPlacement {
                         .and_then(|l| configuration.rule_for(l));
                     // Consumer default placement is pinned. Deferrable work is
                     // pinned by the admission contract even in a counterfactual.
-                    r.placement_request = if r.fact.kind == crate::scheduling::request::Kind::Run
+                    r.placement_request = if r.fact.kind
+                        == elsecall_scheduling_model::request::Kind::Run
                         && !r.fact.deferrable
                         && rule.and_then(|r| r.placement) == Some(RulePlacement::Placeable)
                     {
@@ -113,7 +113,8 @@ pub fn split(trace: &Trace) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{scheduling::fixtures, scheduling::timestamp::Timestamp, workload::trace::Request};
+    use crate::{scheduling::fixtures, workload::trace::Request};
+    use elsecall_scheduling_model::timestamp::Timestamp;
     fn trace() -> Trace {
         let mut r = Request::of(&fixtures::pinned(1, "acme test Checkout", "master", 1.0)).unwrap();
         r.fact.family = Some("acme test *".into());

@@ -1,11 +1,12 @@
 //! Execution physics, separate from admission/placement's own estimates.
 use crate::{
-    scheduling::{placed::Warmth, timestamp::Timestamp},
+    scheduling::placed::Warmth,
     workload::{
         demand::{family, interval, median, overlap},
         trace::{Request, Trace},
     },
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
@@ -336,7 +337,7 @@ pub fn reference(trace: &Trace, request: &Request) -> Option<(f64, bool)> {
             } => Some((*milliseconds, *identified)),
         };
     }
-    if request.fact.kind == crate::scheduling::request::Kind::Lease {
+    if request.fact.kind == elsecall_scheduling_model::request::Kind::Lease {
         return request.fact.run_ms.map(|ms| (ms as f64, true));
     }
     if request.fact.completed && request.fact.run_ms.is_some() && request.fact.member.is_some() {
@@ -381,7 +382,7 @@ pub fn reference_speed(trace: &Trace, request: &Request) -> Option<f64> {
         .member
         .as_deref()
         .unwrap_or(match &request.placement_request {
-            crate::scheduling::request::Placement::Member(target) => target.as_str(),
+            elsecall_scheduling_model::request::Placement::Member(target) => target.as_str(),
             _ => request.fact.calling_member.as_str(),
         });
     let at = request
@@ -440,7 +441,7 @@ pub fn ideal_from_reference(
     request: &Request,
     reference: Option<(f64, bool)>,
 ) -> Option<f64> {
-    use crate::scheduling::request::Kind;
+    use elsecall_scheduling_model::request::Kind;
     if let Some(recording) = &trace.rehearsal {
         return recording
             .ideal_ms
@@ -507,7 +508,7 @@ pub fn ideal_from_reference(
     best.filter(|v| v.is_finite() && *v > 0.0)
 }
 
-pub fn original_kind(trace: &Trace, request: &Request) -> crate::scheduling::request::Kind {
+pub fn original_kind(trace: &Trace, request: &Request) -> elsecall_scheduling_model::request::Kind {
     trace
         .rehearsal
         .as_ref()
@@ -526,7 +527,8 @@ mod tests {
     use super::*;
     #[test]
     fn ideal_respects_frozen_capacity_placement_availability_and_cold_runtime() {
-        use crate::scheduling::{capacity::Cores, record::WorkspaceIdentity, request::Placement};
+        use crate::scheduling::record::WorkspaceIdentity;
+        use elsecall_scheduling_model::{capacity::Cores, request::Placement};
         let mut t = crate::simulation::engine::tests::trace();
         t.requests.truncate(1);
         let r = &mut t.requests[0];
@@ -647,7 +649,7 @@ mod tests {
         r.fact.resources.as_mut().unwrap().ended_at = Some(trace.until);
         trace.members[0].load[0].cpu_mean = Some(0.75);
         trace.members[0].load[0].weighted_cores =
-            crate::scheduling::capacity::Cores::from_millis(2000);
+            elsecall_scheduling_model::capacity::Cores::from_millis(2000);
         trace.rehearsal = Some(crate::workload::recording::Recording {
             calibration: BTreeMap::new(),
             ideal_ms: Default::default(),

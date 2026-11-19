@@ -1,5 +1,6 @@
 //! Arrival density, independent of command work and rehearsal compression.
-use crate::{scheduling::timestamp::Timestamp, workload::trace::Trace};
+use crate::workload::trace::Trace;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{collections::BTreeMap, time::Duration};
 
 pub use crate::workload::format::{LoadFactor, MAXIMUM};
@@ -55,7 +56,9 @@ pub(crate) fn replay(
             resources.started_at = resources.started_at.map(move_time);
             resources.ended_at = resources.ended_at.map(move_time);
         }
-        if let crate::scheduling::request::Urgency::Deferrable { deadline, .. } = &mut r.urgency {
+        if let elsecall_scheduling_model::request::Urgency::Deferrable { deadline, .. } =
+            &mut r.urgency
+        {
             *deadline = move_time(*deadline);
         }
         if let Some(d) = &mut r.decision {

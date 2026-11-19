@@ -1,6 +1,6 @@
 //! UTC day selection shared by offline scheduling tools.
-use crate::scheduling::timestamp::Timestamp;
 use elsecall_failure::Result;
+use elsecall_scheduling_model::timestamp::Timestamp;
 pub(crate) fn day(value: Option<String>) -> Result<Option<Timestamp>> {
     value
         .map(|d| {

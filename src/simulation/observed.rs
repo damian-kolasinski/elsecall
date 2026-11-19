@@ -8,7 +8,8 @@ use super::{
     model::{self, Envelope},
     timeline::{Minute, Reserve},
 };
-use crate::{scheduling::timestamp::Timestamp, workload::trace::Trace};
+use crate::workload::trace::Trace;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde_json::Value;
 pub fn summarize(trace: &Trace) -> Value {
     let outcomes = trace

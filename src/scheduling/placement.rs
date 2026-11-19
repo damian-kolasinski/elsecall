@@ -48,7 +48,6 @@
 //! milliseconds, and records exactly what it scored with (`Inputs`), so the same
 //! inputs and parameters always score the same, also when read back from a record.
 use crate::scheduling::{
-    capacity::Cores,
     learning::{self, Conversions, RunHistory},
     load::Gate,
     loss_history::{LossHistory, Losses},
@@ -56,6 +55,9 @@ use crate::scheduling::{
     parameters::{Admission, Placement},
     placed::{Warmth, WorkspaceRef},
     sync_history::{SyncBasis, SyncHistory},
+};
+use elsecall_scheduling_model::{
+    capacity::Cores,
     timestamp::{millis, seconds, whole_millis},
 };
 use serde::{Deserialize, Serialize};
@@ -1224,10 +1226,11 @@ fn score(observation: Observation, wanted: &Wanted, typical: f64) -> Scored {
 mod tests {
     use super::*;
     use crate::scheduling::{
-        admission::QueueCounts, capacity::Capacity, learning::RunSample, parameters::Parameters,
-        sync_history::SyncSample, timestamp::Timestamp,
+        admission::QueueCounts, learning::RunSample, parameters::Parameters,
+        sync_history::SyncSample,
     };
     use elsecall_machine::inspection::{CoreCounts, LoadSample, MemoryPressure, ThermalState};
+    use elsecall_scheduling_model::{capacity::Capacity, timestamp::Timestamp};
 
     fn cores(n: f64) -> Cores {
         Cores::from_f64(n).unwrap()

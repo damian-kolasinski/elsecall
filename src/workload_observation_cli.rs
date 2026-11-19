@@ -1,12 +1,11 @@
 //! A wrapper's one terminal assertion, posted from inside its admitted command.
-use crate::{
-    scheduling::{request::invalid, run_id::RunId},
-    workload_metadata::parse_observation,
-};
 use clap::{Args, Subcommand};
 use elsecall_failure::Result;
 use elsecall_local_client::{self as client, Wait};
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling_model::{
+    request::invalid, run_id::RunId, workload_metadata::parse_observation,
+};
 
 #[derive(Args, Debug)]
 pub struct WorkloadArgs {

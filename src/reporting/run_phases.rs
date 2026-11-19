@@ -5,8 +5,9 @@ use crate::{
         facts::Fact,
         statistics::{Distribution, seconds},
     },
-    scheduling::{request::Kind, run_phases::RemoteFailurePhase},
+    scheduling::run_phases::RemoteFailurePhase,
 };
+use elsecall_scheduling_model::request::Kind;
 use serde::Serialize;
 use std::collections::BTreeMap;
 

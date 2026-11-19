@@ -69,7 +69,7 @@ impl SpeedHistory {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::speed::*;
 
     #[test]
     fn implausible_reported_speeds_are_dropped() {

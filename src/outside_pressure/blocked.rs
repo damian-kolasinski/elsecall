@@ -1,9 +1,10 @@
 //! What a member reports while outside pressure holds its admission gate closed.
 use crate::{
     outside_pressure::sampling::{Memory, Owner},
-    scheduling::{load::Gate, timestamp::Timestamp},
+    scheduling::load::Gate,
 };
 use elsecall_machine::inspection::MemoryPressure;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// Why the gate is closed, when something outside Elsecall closes it.

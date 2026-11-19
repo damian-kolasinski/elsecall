@@ -127,7 +127,6 @@ mod socket_io;
 
 mod send_inactivity;
 
-pub mod workload_metadata;
 pub mod workload_observation_cli;
 
 pub mod release_update;

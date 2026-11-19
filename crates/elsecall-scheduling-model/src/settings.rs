@@ -1,7 +1,7 @@
 //! Where a request's properties came from: the caller's flags, the caller's
 //! environment, a label rule in the consumer configuration, or defaults. Records
 //! keep it so `explain` shows which rule applied and what overrode it.
-use crate::scheduling::request::{Urgency, invalid};
+use crate::request::{Urgency, invalid};
 use elsecall_failure::Result;
 use serde::{Deserialize, Serialize};
 
@@ -87,8 +87,8 @@ impl Settings {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::scheduling::{request::AtDeadline, timestamp::Timestamp};
+    use crate::settings::*;
+    use crate::{request::AtDeadline, timestamp::Timestamp};
 
     fn interactive() -> Settings {
         Settings {

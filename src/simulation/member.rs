@@ -8,7 +8,6 @@ use super::{
 use crate::{
     load_log::LoadLog,
     scheduling::{
-        capacity::Capacity,
         clock::Clock,
         parameters::Parameters,
         records::SchedulerSettings,
@@ -16,6 +15,7 @@ use crate::{
     },
 };
 use elsecall_failure::Result;
+use elsecall_scheduling_model::capacity::Capacity;
 use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -215,17 +215,19 @@ fn start_scheduler(
 mod tests {
     use super::*;
     use crate::{
-        scheduling::fixtures,
         scheduling::{
-            capacity::Cores,
             clock::VirtualClock,
+            fixtures,
             placed::Side,
             processes::ProcessIdentity,
             record::{Outcome, State},
-            request::{AdmissionRequest, Kind, Placement, Urgency},
-            run_id::RunId,
         },
         simulation::model::Envelope,
+    };
+    use elsecall_scheduling_model::{
+        capacity::Cores,
+        request::{AdmissionRequest, Kind, Placement, Urgency},
+        run_id::RunId,
     };
     use std::time::Duration;
 

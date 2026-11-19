@@ -4,7 +4,8 @@ use super::{
     execution::{Active, advance},
     member::Member,
 };
-use crate::{scheduling::timestamp::Timestamp, workload::trace::Trace};
+use crate::workload::trace::Trace;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -184,12 +185,12 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn reserve_follows_admitted_work_after_midnight_while_day_timelines_stop() {
-        use crate::scheduling::{
+        use crate::simulation::adapters::Occupancy;
+        use elsecall_scheduling_model::{
             capacity::Cores,
             request::{AdmissionRequest, Kind, Placement, Urgency},
             run_id::RunId,
         };
-        use crate::simulation::adapters::Occupancy;
         use std::time::Duration;
         let mut trace = crate::simulation::engine::tests::trace();
         let midnight = trace.since.after(Duration::from_secs(86400));

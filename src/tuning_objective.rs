@@ -34,7 +34,7 @@ impl Noise {
             && !self.ideals.is_empty()
             && self.ideals.len() <= 10_000
             && self.ideals.iter().all(|(id, v)| {
-                crate::scheduling::run_id::RunId::parse(id).is_some()
+                elsecall_scheduling_model::run_id::RunId::parse(id).is_some()
                     && v.is_none_or(|v| v.is_finite() && v > 0.0)
             })
             && self.baseline_settings.len() == self.calibration.len()

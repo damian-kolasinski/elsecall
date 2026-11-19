@@ -1,9 +1,7 @@
 //! Bounded session load capture. Normal minute totals cannot prove in-window
 //! coverage because they also include observations before a rehearsal began.
-use crate::{
-    load_log::{buckets::Bucket, minute::Second},
-    scheduling::timestamp::Timestamp,
-};
+use crate::load_log::{buckets::Bucket, minute::Second};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 mod summary;
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -67,8 +65,8 @@ impl Recorder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::{capacity::Cores, gate::Gate};
     use elsecall_machine::inspection::{MemoryPressure, ThermalState};
+    use elsecall_scheduling_model::{capacity::Cores, gate::Gate};
     fn sample(at: u64, queued: usize) -> Second {
         Second {
             at: Timestamp::from_millis(at),

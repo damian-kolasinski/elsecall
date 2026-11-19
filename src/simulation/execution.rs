@@ -10,10 +10,7 @@ use crate::{
     scheduling::{
         messages::{Grant, Release, RunEnded},
         placed::{PlacedReport, Reached, SyncSummary, Warmth},
-        request::Kind,
-        run_id::RunId,
         service::HostedEnd,
-        timestamp::Timestamp,
     },
     workload::{
         demand::family,
@@ -21,6 +18,7 @@ use crate::{
     },
 };
 use elsecall_failure::Result;
+use elsecall_scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
 use serde::Serialize;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -655,13 +653,10 @@ pub(super) fn advance(
 #[cfg(test)]
 mod family_tests {
     use crate::scheduling::{
-        capacity::{Capacity, Cores},
         clock::VirtualClock,
         messages::{CommandStarted, RunEnded},
         parameters::Parameters,
         record::State,
-        request::{AdmissionRequest, Kind, Placement, Urgency},
-        run_id::RunId,
     };
     use crate::simulation::{Options, simulate};
     use crate::simulation::{
@@ -669,6 +664,11 @@ mod family_tests {
         member::{FleetAdapters, Member},
         model::Envelope,
         settings::Settings,
+    };
+    use elsecall_scheduling_model::{
+        capacity::{Capacity, Cores},
+        request::{AdmissionRequest, Kind, Placement, Urgency},
+        run_id::RunId,
     };
     use std::{
         sync::{Arc, Mutex},

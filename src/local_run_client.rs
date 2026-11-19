@@ -1,9 +1,10 @@
 //! Local attach negotiation. An actual legacy 101 continues on this same
 //! connection; negotiation never repeats a peer attach or command execution.
-use crate::{remote_run::link::Link, scheduling::run_id::RunId, sealed_run};
+use crate::{remote_run::link::Link, sealed_run};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::{local_access, private_files};
+use elsecall_scheduling_model::run_id::RunId;
 use elsecall_secure_channel::{Ephemeral, SecureStream};
 use elsecall_wire::api::ErrorResponse;
 use http_body_util::{BodyExt, Full, Limited};

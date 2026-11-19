@@ -10,9 +10,9 @@ use axum::{
 use elsecall::{
     peer_client,
     peer_diagnostics::{self, Kind, Phase},
-    scheduling::timestamp::Timestamp,
 };
 use elsecall_membership::{member_key::MemberKey, peer_auth, roster::Member};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use hyper::Method;
 use serde_json::{Value, json};
 use std::{

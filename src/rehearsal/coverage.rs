@@ -11,8 +11,8 @@ impl Gap {
         format!(
             "missing_drain_load: {}: {}..{}",
             self.member,
-            crate::scheduling::timestamp::Timestamp::from_millis(self.since),
-            crate::scheduling::timestamp::Timestamp::from_millis(self.until)
+            elsecall_scheduling_model::timestamp::Timestamp::from_millis(self.since),
+            elsecall_scheduling_model::timestamp::Timestamp::from_millis(self.until)
         )
     }
 }

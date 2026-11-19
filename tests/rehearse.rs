@@ -3,7 +3,8 @@
 mod diagnostics;
 mod members;
 mod processes;
-use elsecall::{scheduling::timestamp::Timestamp, workload::trace::Trace};
+use elsecall::workload::trace::Trace;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use members::{TestMember, enrol};
 use serde_json::{Value, json};
 use std::{
@@ -1384,11 +1385,9 @@ fn seed_recorded_day(
 ) {
     use elsecall::{
         load_log::{minute::Minute, store::LoadStore},
-        scheduling::{
-            capacity::Cores,
-            records::{Records, SchedulerSettings},
-        },
+        scheduling::records::{Records, SchedulerSettings},
     };
+    use elsecall_scheduling_model::capacity::Cores;
     let records = Records::open(&member.data().join("records.sqlite")).unwrap();
     let current = records
         .scheduler_settings(
@@ -1413,7 +1412,7 @@ fn seed_recorded_day(
         load.append(&row).unwrap();
         if active {
             let mut record = template.clone();
-            record.run_id = elsecall::scheduling::run_id::RunId::parse(&format!(
+            record.run_id = elsecall_scheduling_model::run_id::RunId::parse(&format!(
                 "r-{:012x}",
                 day.millis() / 1000 + minute
             ))

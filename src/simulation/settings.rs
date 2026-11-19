@@ -9,17 +9,17 @@
 //! consumer configuration's glob syntax and first matching rule wins, in argument
 //! order. Duplicate keys are errors, as with production parameter overrides.
 use crate::{
-    scheduling::{
-        capacity::{Capacity, Cores},
-        parameters::{Overrides, Parameters},
-        request::{MAXIMUM_HOLD_LIMIT, Urgency},
-    },
+    scheduling::parameters::{Overrides, Parameters},
     workload::trace::{Request, Trace},
     workload_settings::WorkloadSettings,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_labels::pattern as label_pattern;
 use elsecall_membership::roster::MemberName;
+use elsecall_scheduling_model::{
+    capacity::{Capacity, Cores},
+    request::{MAXIMUM_HOLD_LIMIT, Urgency},
+};
 use std::{collections::BTreeMap, time::Duration};
 
 #[derive(Debug)]
@@ -197,7 +197,7 @@ fn reserve_floor(member: &str, reserved: Cores, baseline: &Capacity) -> Result<(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::{request::AtDeadline, timestamp::Timestamp};
+    use elsecall_scheduling_model::{request::AtDeadline, timestamp::Timestamp};
 
     fn trace() -> Trace {
         let mut trace = crate::simulation::engine::tests::trace();

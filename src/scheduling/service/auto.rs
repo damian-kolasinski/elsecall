@@ -29,12 +29,10 @@ use crate::scheduling::{
     pre_run_sync::{Fallback, PreRunSyncRecord, SyncFailure},
     quote::{self, MAXIMUM_WORKSPACES, Quote, QuoteRequest},
     record::{Arrival, Candidate, Decision, Scoring, Verdict},
-    request::Kind,
-    run_id::RunId,
     sync_history::{self, SyncHistory},
-    timestamp::Timestamp,
 };
 use elsecall_failure::Failure;
+use elsecall_scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
 use futures_util::future::join_all;
 use std::{collections::BTreeSet, sync::Weak, time::Duration};
 use tokio::time::Instant;

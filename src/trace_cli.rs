@@ -2,7 +2,6 @@
 use crate::{
     report_cli::since,
     reporting::window::invalid,
-    scheduling::timestamp::Timestamp,
     trace_api::{Members, PageRequest},
     workload::trace::{self, Member, Page, Trace},
 };
@@ -10,6 +9,7 @@ use clap::{Args, Subcommand};
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{collections::BTreeSet, io::Write, os::unix::fs::OpenOptionsExt, path::PathBuf};
 
 #[derive(Args, Debug)]

@@ -6,8 +6,8 @@ use crate::scheduling::{
     leftovers::{Ending, Leftovers},
     placed::Side,
     record::Record,
-    timestamp::Timestamp,
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -75,7 +75,7 @@ impl LeftoverFact {
                 .cpu_ms
                 .is_none_or(|cpu| cpu <= longest.saturating_mul(MOST_CORES))
             && self.member == member
-            && crate::scheduling::run_id::RunId::parse(&self.run_id).is_some()
+            && elsecall_scheduling_model::run_id::RunId::parse(&self.run_id).is_some()
             && text(&self.calling_member, 255)
             && self
                 .label

@@ -8,8 +8,8 @@ use super::{
     warning::{Concern, Warning},
     watcher::{WarningReport, Watcher},
 };
-use crate::scheduling::timestamp::Timestamp;
 use elsecall_failure::Result;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{
     ops::Range,
     path::PathBuf,

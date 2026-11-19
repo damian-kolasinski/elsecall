@@ -1,14 +1,13 @@
 //! The `fleet_busy` failure: why a request did not start, what holds the member,
 //! and when trying again is likely to succeed.
 use crate::scheduling::{
-    capacity::Cores,
     estimates::{self, Holding},
     load::Gate,
-    request::Kind,
-    run_id::RunId,
-    timestamp::Timestamp,
 };
 use elsecall_failure::Failure;
+use elsecall_scheduling_model::{
+    capacity::Cores, request::Kind, run_id::RunId, timestamp::Timestamp,
+};
 use serde::Serialize;
 use std::time::Duration;
 

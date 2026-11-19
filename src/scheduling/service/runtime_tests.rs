@@ -443,10 +443,8 @@ async fn draining_active_internal_work_respects_short_preparation_limit_and_neve
 
 #[tokio::test(start_paused = true)]
 async fn workload_reports_obey_pending_nested_requester_barriers_and_pid_identity() {
-    use crate::{
-        scheduling::{binding::fake::FakeProcesses, messages::CommandStarted},
-        workload_metadata::{Observation, Workload},
-    };
+    use crate::scheduling::{binding::fake::FakeProcesses, messages::CommandStarted};
+    use elsecall_scheduling_model::workload_metadata::{Observation, Workload};
     let home = tempfile::tempdir().unwrap();
     let clock = Arc::new(VirtualClock::new(Timestamp::from_millis(1_000)));
     let processes = Arc::new(FakeProcesses::default());
@@ -556,7 +554,7 @@ async fn workload_reports_obey_pending_nested_requester_barriers_and_pid_identit
 
 #[tokio::test(start_paused = true)]
 async fn workload_metadata_does_not_change_learned_size_hold_or_admission_decisions() {
-    use crate::workload_metadata::parse_workload;
+    use elsecall_scheduling_model::workload_metadata::parse_workload;
     let mut decisions = Vec::new();
     for structured in [false, true] {
         let home = tempfile::tempdir().unwrap();
@@ -671,7 +669,11 @@ async fn structured_placement_requires_acknowledgement_without_retry_or_attach()
             Box::pin(async { panic!("required-member admission does not quote") })
         }
     }
-    for ack in [None, Some(99), Some(crate::workload_metadata::VERSION)] {
+    for ack in [
+        None,
+        Some(99),
+        Some(elsecall_scheduling_model::workload_metadata::VERSION),
+    ] {
         let home = tempfile::tempdir().unwrap();
         let offers = Arc::new(Mutex::new(Vec::new()));
         let (_, exits) = mpsc::unbounded_channel();
@@ -704,7 +706,7 @@ async fn structured_placement_requires_acknowledgement_without_retry_or_attach()
             root: "/repo".into(),
             common_dir: "/repo/.git".into(),
         });
-        declared.workload = Some(crate::workload_metadata::Workload::Opaque {});
+        declared.workload = Some(elsecall_scheduling_model::workload_metadata::Workload::Opaque {});
         let result = scheduler.request(100, declared).await;
         let id = RunId::parse("r-000000000001").unwrap();
         assert_eq!(
@@ -713,7 +715,7 @@ async fn structured_placement_requires_acknowledgement_without_retry_or_attach()
             "no metadata stripping or admission retry"
         );
         assert!(offers.lock().unwrap()[0].workload.is_some());
-        if ack == Some(crate::workload_metadata::VERSION) {
+        if ack == Some(elsecall_scheduling_model::workload_metadata::VERSION) {
             assert!(result.is_ok());
             assert_eq!(scheduler.placed_member(100, &id).unwrap(), "peer");
         } else {

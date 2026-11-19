@@ -12,10 +12,10 @@ use crate::{
         gathering::{Facts, MAXIMUM_FACTS, MemberHistory},
         window::{FINE_BUCKETS, Window},
     },
-    scheduling::speed::PLAUSIBLE,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_membership::roster::Member;
+use elsecall_scheduling_model::speed::PLAUSIBLE;
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};
@@ -202,7 +202,7 @@ impl MemberHistory for PeerHistory {
                 .is_some_and(|code| !crate::reporting::facts::is_code(code))
                 || result
                     .coverage_since
-                    .is_some_and(|at| at > crate::scheduling::timestamp::Timestamp::now())
+                    .is_some_and(|at| at > elsecall_scheduling_model::timestamp::Timestamp::now())
                 || result.attempts.len() > 1000
                 || result.attempts.iter().any(|a| {
                     a.at < window.since

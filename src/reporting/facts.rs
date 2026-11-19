@@ -2,13 +2,15 @@
 //! these to the member that reports, so they carry no paths, processes or
 //! warnings: only labels, member names, times, outcomes and estimates.
 use crate::scheduling::{
-    capacity::Cores,
     learning::RunSample,
     placed::{Side, Warmth},
     placement::{Level, Source},
     record::{Outcome, Record, Verdict},
-    request::{Kind, Placement, Urgency},
     run_phases::RunPhases,
+};
+use elsecall_scheduling_model::{
+    capacity::Cores,
+    request::{Kind, Placement, Urgency},
     timestamp::Timestamp,
 };
 use serde::{Deserialize, Serialize};
@@ -31,9 +33,9 @@ pub struct Fact {
     pub kind: Kind,
     pub label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub workload: Option<crate::workload_metadata::Workload>,
+    pub workload: Option<elsecall_scheduling_model::workload_metadata::Workload>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub plan_observation: Option<crate::workload_metadata::Observation>,
+    pub plan_observation: Option<elsecall_scheduling_model::workload_metadata::Observation>,
     #[serde(default)]
     pub synthetic: bool,
     #[serde(default)]
@@ -131,7 +133,7 @@ impl Fact {
         self.plan_observation
             .as_ref()
             .is_none_or(|o| o.validate(self.workload.as_ref()).is_ok())
-            && crate::scheduling::run_id::RunId::parse(&self.run_id).is_some()
+            && elsecall_scheduling_model::run_id::RunId::parse(&self.run_id).is_some()
             && self.resources.as_ref().is_none_or(|r| {
                 r.cpu_ms
                     .is_none_or(|ms| ms <= crate::scheduling::record::MAXIMUM_CPU_MS)

@@ -1,6 +1,7 @@
 //! Select arrival density from complete, observed rehearsals of the same workload.
-use crate::{replay_load::LoadFactor, scheduling::timestamp::Timestamp, workload::trace::Trace};
+use crate::{replay_load::LoadFactor, workload::trace::Trace};
 use elsecall_failure::Result;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 mod fit;
 use fit::Fit;
@@ -536,8 +537,8 @@ mod tests {
         let (workload, mut trace, target) = observed_fixture();
         let mut changed = trace.members[0].scheduler_settings[0].clone();
         changed.at = trace.since.after(std::time::Duration::from_secs(1));
-        changed.capacity.capacity = crate::scheduling::capacity::Cores::ONE;
-        changed.capacity.reserved = crate::scheduling::capacity::Cores::from_millis(11_000);
+        changed.capacity.capacity = elsecall_scheduling_model::capacity::Cores::ONE;
+        changed.capacity.reserved = elsecall_scheduling_model::capacity::Cores::from_millis(11_000);
         trace.members[0].scheduler_settings.push(changed);
         assert!(crate::simulation::validate_trace(&trace).is_ok());
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
@@ -545,7 +546,8 @@ mod tests {
 
     #[test]
     fn placeable_remote_admissions_count_in_master_queue_without_sync_time() {
-        use crate::{reporting::facts::PlacementKind, scheduling::request::Placement};
+        use crate::reporting::facts::PlacementKind;
+        use elsecall_scheduling_model::request::Placement;
         let (workload, mut trace, mut target) = observed_fixture();
         for demands in trace.rehearsal.as_mut().unwrap().demand.values_mut() {
             demands.insert(trace.members[1].member.clone(), 2.0);
@@ -648,7 +650,7 @@ mod tests {
     fn observed_calibration_rejects_carry_in_before_computing_offsets() {
         let (workload, mut trace, target) = observed_fixture();
         trace.requests[0].fact.requested_at =
-            crate::scheduling::timestamp::Timestamp::from_millis(trace.since.millis() - 1);
+            elsecall_scheduling_model::timestamp::Timestamp::from_millis(trace.since.millis() - 1);
         assert!(crate::simulation::validate_trace(&trace).is_ok());
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
     }

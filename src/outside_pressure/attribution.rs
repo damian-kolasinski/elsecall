@@ -11,13 +11,11 @@
 //! memory it is the [`LISTED`] leading outside processes: resident sizes count
 //! shared pages once per process, so hundreds of ordinary daemons and apps sum
 //! to more than any grant even on an idle Mac.
-use crate::{
-    outside_pressure::{
-        blocked::{OutsideProcess, Reason},
-        sampling::{Owner, Usage},
-    },
-    scheduling::timestamp::Timestamp,
+use crate::outside_pressure::{
+    blocked::{OutsideProcess, Reason},
+    sampling::{Owner, Usage},
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::collections::{HashMap, HashSet};
 
 /// Outside processes named per blocked state.

@@ -1,9 +1,9 @@
 //! Offline readiness over the production planner, simulator and tuner.
 use elsecall::{
-    scheduling::timestamp::Timestamp,
     tuning_preflight::{self, Options},
     workload::trace::Trace,
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde_json::{Value, json};
 use std::{num::NonZeroUsize, time::Duration};
 fn fixture() -> Trace {
@@ -196,7 +196,7 @@ fn same_request_reports_terminal_reference_demand_and_hold_problems_together() {
     r.fact.resources.as_mut().unwrap().ended_at = None;
     r.outcome = None;
     r.hold_limit = None;
-    r.urgency = elsecall::scheduling::request::Urgency::Interactive {
+    r.urgency = elsecall_scheduling_model::request::Urgency::Interactive {
         hold_limit_ms: None,
     };
     let result = tuning_preflight::check(source, options()).unwrap();

@@ -11,8 +11,9 @@ use crate::{
         attribution::Attribution,
         blocked::{Blocked, Reason},
     },
-    scheduling::{load::Gate, timestamp::Timestamp},
+    scheduling::load::Gate,
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::time::Duration;
 
 /// How long the gate must stay closed before the member counts as blocked.

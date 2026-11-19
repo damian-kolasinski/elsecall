@@ -2,15 +2,13 @@
 //! restart does not restart a six-hour window and reports can name what
 //! warned after it stopped. Rounds are kept for [`trend::KEPT`], warnings for
 //! [`RETENTION`] after they end. Processes are kept by name only.
-use crate::{
-    outside_pressure::{
-        sampling::Owner,
-        trend::{self, Round, Seen},
-        warning::{Warning, WarningEpisode},
-    },
-    scheduling::timestamp::Timestamp,
+use crate::outside_pressure::{
+    sampling::Owner,
+    trend::{self, Round, Seen},
+    warning::{Warning, WarningEpisode},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use rusqlite::{Connection, params};
 use std::{
     collections::HashSet, fs::OpenOptions, os::unix::fs::OpenOptionsExt, path::Path, sync::Mutex,

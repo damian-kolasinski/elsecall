@@ -2,18 +2,16 @@
 //! candidates of each round, and raises and ends early warnings as the trends
 //! say. It runs whether or not the gate is open: the point is to warn before an
 //! outside process closes it.
-use crate::{
-    outside_pressure::{
-        attribution::{self, OwnWork},
-        detector::GateSource,
-        sampling::{ProcessSampler, Snapshot, Usage, usage_between},
-        trend::{self, Round, Seen},
-        trend_store::TrendStore,
-        warning::{Warning, WarningEpisode},
-    },
-    scheduling::timestamp::Timestamp,
+use crate::outside_pressure::{
+    attribution::{self, OwnWork},
+    detector::GateSource,
+    sampling::{ProcessSampler, Snapshot, Usage, usage_between},
+    trend::{self, Round, Seen},
+    trend_store::TrendStore,
+    warning::{Warning, WarningEpisode},
 };
 use elsecall_failure::Result;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{
     path::Path,

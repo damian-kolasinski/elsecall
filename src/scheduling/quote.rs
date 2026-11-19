@@ -3,12 +3,10 @@
 //! copies of the workspaces being placed. A quote crosses members, so the master
 //! bounds what it believes.
 use crate::scheduling::{
-    capacity::Cores,
     messages::MemberState,
     placed::{Warmth, WorkspaceRef},
-    request::Kind,
-    run_id::RunId,
 };
+use elsecall_scheduling_model::{capacity::Cores, request::Kind, run_id::RunId};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -108,7 +106,8 @@ pub fn millis(duration: Duration) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::{admission::QueueCounts, capacity::Capacity, load::Gate};
+    use crate::scheduling::{admission::QueueCounts, load::Gate};
+    use elsecall_scheduling_model::capacity::Capacity;
 
     #[test]
     fn the_master_believes_only_plausible_bounded_answers() {

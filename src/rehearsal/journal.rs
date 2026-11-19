@@ -1,8 +1,9 @@
 //! Owner-only recovery state. It contains only synthetic scratch paths and
 //! identities of synthetic callers, never consumer inputs or secret values.
-use crate::scheduling::{processes::ProcessIdentity, timestamp::Timestamp};
+use crate::scheduling::processes::ProcessIdentity;
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::{
     io::Read,

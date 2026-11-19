@@ -27,7 +27,7 @@ struct Document {
 #[serde(deny_unknown_fields)]
 pub struct Temporary {
     pub session: String,
-    pub until: crate::scheduling::timestamp::Timestamp,
+    pub until: elsecall_scheduling_model::timestamp::Timestamp,
     pub members: BTreeMap<MemberName, Projection>,
     /// Length of the original document prefix. Older leases lacked this field.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -36,7 +36,7 @@ pub struct Temporary {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Projection {
-    pub reserved: crate::scheduling::capacity::Cores,
+    pub reserved: elsecall_scheduling_model::capacity::Cores,
     pub parameters: crate::scheduling::parameters::Parameters,
 }
 
@@ -128,7 +128,7 @@ impl Configuration {
                 || temporary.members.len() > 64
                 || temporary.members.is_empty()
                 || temporary.until
-                    > crate::scheduling::timestamp::Timestamp::now()
+                    > elsecall_scheduling_model::timestamp::Timestamp::now()
                         .after(std::time::Duration::from_secs(3630))
             {
                 return Err(invalid("Invalid bounded rehearsal settings lease."));
@@ -163,7 +163,7 @@ impl Configuration {
         }
         let mut resolved = settings(&merged)?;
         if let Some(temporary) = &self.rehearsal
-            && temporary.until > crate::scheduling::timestamp::Timestamp::now()
+            && temporary.until > elsecall_scheduling_model::timestamp::Timestamp::now()
             && let Some(projection) = temporary.members.get(name)
         {
             resolved.parameters = projection.parameters.clone();
@@ -237,7 +237,7 @@ mod tests {
             let bytes = config
                 .with_temporary(Temporary {
                     session: "0123456789abcdef01234567".into(),
-                    until: crate::scheduling::timestamp::Timestamp::now()
+                    until: elsecall_scheduling_model::timestamp::Timestamp::now()
                         .after(std::time::Duration::from_secs(60)),
                     members: BTreeMap::from([(
                         "alpha".parse().unwrap(),
@@ -425,7 +425,7 @@ pub fn compare(
 #[serde(deny_unknown_fields)]
 pub struct RehearsalSettings {
     pub session: String,
-    pub until: Option<crate::scheduling::timestamp::Timestamp>,
+    pub until: Option<elsecall_scheduling_model::timestamp::Timestamp>,
     #[serde(default)]
     pub settings: std::collections::BTreeMap<String, String>,
 }

@@ -105,8 +105,9 @@ fn enable(member: &TestMember) -> Value {
 
 #[test]
 fn removing_a_lease_retries_partial_delivery_without_another_generation() {
-    use elsecall::{scheduling::timestamp::Timestamp, service_configuration::RehearsalSettings};
+    use elsecall::service_configuration::RehearsalSettings;
     use elsecall_local_state::paths::Paths;
+    use elsecall_scheduling_model::timestamp::Timestamp;
     let alpha = TestMember::start("alpha");
     let beta = TestMember::start("beta");
     enrol(&alpha, &beta);

@@ -7,10 +7,11 @@ use super::{
 };
 use crate::{
     outside_pressure::Reason,
-    scheduling::{load, parameters::Parameters, timestamp::Timestamp},
+    scheduling::{load, parameters::Parameters},
 };
 use elsecall_failure::Result;
 use elsecall_machine::inspection::MemoryPressure;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,

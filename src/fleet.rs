@@ -138,7 +138,7 @@ pub struct CopiesUsage {
     pub disk: Option<CopiesDisk>,
     /// The latest pass since the service started.
     #[serde(default)]
-    pub last_pass_at: Option<crate::scheduling::timestamp::Timestamp>,
+    pub last_pass_at: Option<elsecall_scheduling_model::timestamp::Timestamp>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -471,7 +471,7 @@ impl Fleet {
             .map(|report| tokio::task::spawn_blocking(move || report.usage()));
         let load = self.load_report().map(|log| {
             tokio::task::spawn_blocking(move || {
-                log.summary(crate::scheduling::timestamp::Timestamp::now())
+                log.summary(elsecall_scheduling_model::timestamp::Timestamp::now())
             })
         });
         let sync = self

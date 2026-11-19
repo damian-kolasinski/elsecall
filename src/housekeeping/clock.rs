@@ -1,6 +1,6 @@
 //! The wall clock housekeeping judges idleness by: a port, so tests can stand at
 //! the boundary of an idle period without waiting days.
-use crate::scheduling::timestamp::Timestamp;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{path::PathBuf, sync::Arc};
 
 pub trait Clock: Send + Sync {

@@ -7,11 +7,9 @@
 //! macOS weighs for memory pressure, wherever the kernel allows it: this user's
 //! processes. `ps` is asked for the executable's name only (`-c -o comm`), never
 //! its arguments or environment.
-use crate::{
-    outside_pressure::sampling::{Memory, Owner, ProcessSampler, ProcessUse},
-    scheduling::timestamp::Timestamp,
-};
+use crate::outside_pressure::sampling::{Memory, Owner, ProcessSampler, ProcessUse};
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{process::Command, time::Duration};
 
 const PS: &str = "/bin/ps";

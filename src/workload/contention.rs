@@ -34,7 +34,7 @@ pub fn derive(facts: &[Fact], loads: &[(&str, &[Bucket])]) -> Vec<Curve> {
         // family -> (label, warmth, other load, run seconds)
         let mut groups: BTreeMap<String, Vec<(&str, String, f64, f64)>> = BTreeMap::new();
         for f in &work {
-            if !f.completed || f.kind != crate::scheduling::request::Kind::Run {
+            if !f.completed || f.kind != elsecall_scheduling_model::request::Kind::Run {
                 continue;
             }
             let (Some(name), Some(label), Some((start, end)), Some(ms)) = (

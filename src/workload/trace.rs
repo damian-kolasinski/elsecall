@@ -5,10 +5,12 @@ use crate::{
     scheduling::{
         leftovers::{Ending, Leftovers},
         record::{Decision, HoldLimitRecord, Outcome, Record},
-        request::{Placement, Urgency},
-        timestamp::Timestamp,
     },
     workload::{contention::Curve, demand::Demand},
+};
+use elsecall_scheduling_model::{
+    request::{Placement, Urgency},
+    timestamp::Timestamp,
 };
 use serde::{Deserialize, Serialize};
 
@@ -355,13 +357,13 @@ pub fn internal(request: &Request) -> bool {
         || matches!(
             request.fact.label.as_deref(),
             Some("elsecall housekeeping" | "elsecall fidelity drift")
-        ) && (request.placement_request == crate::scheduling::request::Placement::Pinned
+        ) && (request.placement_request == elsecall_scheduling_model::request::Placement::Pinned
             || request.fact.deferrable)
 }
 
 /// Structural placement constraints are independent of occupancy and proposals.
 pub fn structural_members(trace: &Trace, request: &Request) -> Vec<String> {
-    use crate::scheduling::request::Placement;
+    use elsecall_scheduling_model::request::Placement;
     trace
         .members
         .iter()
@@ -502,8 +504,8 @@ mod tests {
         use crate::scheduling::{
             leftovers::{Ending, Leftovers},
             records::Records,
-            timestamp::Timestamp,
         };
+        use elsecall_scheduling_model::timestamp::Timestamp;
         let temp = tempfile::tempdir().unwrap();
         let db = Records::open(&temp.path().join("records.sqlite")).unwrap();
         let mut r = fixtures::placed(Run {
@@ -547,7 +549,8 @@ mod tests {
 
     #[test]
     fn carry_in_and_equal_time_pagination_read_without_mutating_history() {
-        use crate::scheduling::{records::Records, timestamp::Timestamp};
+        use crate::scheduling::records::Records;
+        use elsecall_scheduling_model::timestamp::Timestamp;
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("records.sqlite");
         let db = Records::open(&path).unwrap();

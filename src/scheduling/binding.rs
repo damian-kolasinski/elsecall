@@ -1,9 +1,7 @@
 //! Which processes requests are bound to, so a process's exit reaches every
 //! request it waits for or holds.
-use crate::scheduling::{
-    processes::{self, ProcessIdentity, ProcessTable},
-    run_id::RunId,
-};
+use crate::scheduling::processes::{self, ProcessIdentity, ProcessTable};
+use elsecall_scheduling_model::run_id::RunId;
 use std::collections::{BTreeSet, HashMap};
 
 #[derive(Default)]

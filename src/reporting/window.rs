@@ -1,6 +1,7 @@
 //! The period a report covers, and the widths it compares members' load in.
-use crate::scheduling::{records::RETENTION, timestamp::Timestamp};
+use crate::scheduling::records::RETENTION;
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::time::Duration;
 
 const MINUTE_MS: u64 = 60_000;

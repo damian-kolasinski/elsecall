@@ -150,7 +150,7 @@ fn report() -> Option<String> {
                 out,
                 "\n=== test diagnostics: t+{:.3}s at {}, load {:.2} {:.2} {:.2}",
                 c.started.elapsed().as_secs_f64(),
-                elsecall::scheduling::timestamp::Timestamp::now(),
+                elsecall_scheduling_model::timestamp::Timestamp::now(),
                 load[0],
                 load[1],
                 load[2]

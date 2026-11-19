@@ -13,7 +13,6 @@ use crate::{
         gathering::{self, Source},
         window::{Window, invalid},
     },
-    scheduling::timestamp::Timestamp,
 };
 use axum::{
     Extension, Json, Router,
@@ -26,6 +25,7 @@ use axum::{
 use elsecall_api_response as api_response;
 use elsecall_failure::{Failure, Result};
 use elsecall_membership::membership_store::Membership;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_wire::api;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};

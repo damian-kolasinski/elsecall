@@ -2,7 +2,6 @@
 use crate::{
     load_log::buckets::Bucket,
     scheduling::{
-        capacity::{Capacity, Cores},
         load::Gate,
         placed::{PlacedRecord, Reached, Side, SyncSummary, Warmth},
         placement::{CopyState, Estimate, Source, Start},
@@ -11,12 +10,15 @@ use crate::{
             Arrival, ArrivalEstimate, Candidate, Decision, HoldBasis, HoldLimitRecord, Outcome,
             Record, State, Verdict,
         },
-        request::{Kind, Placement, Urgency},
-        run_id::RunId,
-        timestamp::Timestamp,
     },
 };
 use elsecall_machine::inspection::ThermalState;
+use elsecall_scheduling_model::{
+    capacity::{Capacity, Cores},
+    request::{Kind, Placement, Urgency},
+    run_id::RunId,
+    timestamp::Timestamp,
+};
 use std::time::Duration;
 
 pub const MINUTE: u64 = 60_000;

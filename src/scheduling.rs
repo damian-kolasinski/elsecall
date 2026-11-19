@@ -2,12 +2,10 @@
 pub mod admission;
 pub mod binding;
 pub mod busy;
-pub mod capacity;
 pub mod clock;
 pub mod estimates;
 #[cfg(test)]
 pub(crate) mod fixtures;
-pub mod gate;
 pub mod learning;
 pub mod leftovers;
 pub mod load;
@@ -23,12 +21,7 @@ pub mod record;
 pub mod records;
 pub mod recovery;
 pub mod replay;
-pub mod request;
-pub mod run_id;
 pub mod run_phases;
 pub mod service;
-pub mod settings;
 pub mod settings_identity;
-pub mod speed;
 pub mod sync_history;
-pub mod timestamp;

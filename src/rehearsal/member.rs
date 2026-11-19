@@ -7,15 +7,10 @@ use super::{
     protocol::{Action, Job, Launch, Reply, valid_session, valid_workspace},
     scratch,
 };
-use crate::{
-    housekeeping::pass::Housekeeper,
-    scheduling::{
-        request::{Placement, Urgency},
-        service::Scheduler,
-    },
-};
+use crate::{housekeeping::pass::Housekeeper, scheduling::service::Scheduler};
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling_model::request::{Placement, Urgency};
 use std::{
     fs,
     path::PathBuf,
@@ -30,7 +25,7 @@ use tokio::{sync::Mutex, time::Instant};
 struct Session {
     id: String,
     root: PathBuf,
-    until: crate::scheduling::timestamp::Timestamp,
+    until: elsecall_scheduling_model::timestamp::Timestamp,
     seed: u64,
     expires: Instant,
     stopped: bool,
@@ -110,7 +105,7 @@ impl Member {
                     .scheduler
                     .settings_history(
                         since,
-                        crate::scheduling::timestamp::Timestamp::now()
+                        elsecall_scheduling_model::timestamp::Timestamp::now()
                             .after(Duration::from_millis(1)),
                     )?
                     .last()
@@ -158,7 +153,7 @@ impl Member {
                 return Err(invalid("Invalid rehearsal lifetime or workspace identity."));
             }
             let expires = Instant::now() + Duration::from_millis(limit_ms);
-            let until = crate::scheduling::timestamp::Timestamp::now()
+            let until = elsecall_scheduling_model::timestamp::Timestamp::now()
                 .after(Duration::from_millis(limit_ms));
             let internal_pause = self.scheduler.pause_internal()?;
             self.scheduler.drain_internal(expires).await?;

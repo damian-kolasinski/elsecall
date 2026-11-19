@@ -6,13 +6,11 @@
 //! identity busy for hours, while a daemon that spins or leaks does. In the
 //! 2026-11-10 incident, a hung `fseventsd` held one core in every idle minute
 //! for two days, and its memory grew until pressure closed the gate.
-use crate::{
-    outside_pressure::{
-        sampling::Owner,
-        warning::{Concern, Warning},
-    },
-    scheduling::timestamp::Timestamp,
+use crate::outside_pressure::{
+    sampling::Owner,
+    warning::{Concern, Warning},
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{collections::BTreeMap, time::Duration};
 
 /// How often processes are sampled for trends.

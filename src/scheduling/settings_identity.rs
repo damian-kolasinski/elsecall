@@ -1,6 +1,7 @@
 //! Identity of active, public scheduling settings, independent of document form,
 //! sync generation, service start time and transient machine load.
-use super::{capacity::Capacity, parameters::Parameters};
+use super::parameters::Parameters;
+use elsecall_scheduling_model::capacity::Capacity;
 
 pub fn fingerprint(parameters: &Parameters, capacity: Capacity) -> String {
     let bytes = serde_json::to_vec(&("elsecall/scheduling-settings/v1", parameters, capacity))
@@ -14,8 +15,8 @@ pub fn fingerprint(parameters: &Parameters, capacity: Capacity) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::capacity::Cores;
     use elsecall_machine::inspection::CoreCounts;
+    use elsecall_scheduling_model::capacity::Cores;
 
     #[test]
     fn identity_covers_parameters_capacity_and_reserve() {

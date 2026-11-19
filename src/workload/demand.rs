@@ -345,11 +345,9 @@ pub fn disagreement(d: &Demand) -> bool {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::reporting::facts::ResourceUse;
     use crate::scheduling::fixtures::{self, T0};
-    use crate::{
-        reporting::facts::ResourceUse,
-        scheduling::{capacity::Cores, timestamp::Timestamp},
-    };
+    use elsecall_scheduling_model::{capacity::Cores, timestamp::Timestamp};
     pub fn run(n: u64, name: &str, start: u64, end: u64, size: f64) -> Fact {
         let mut f = Fact::of(&fixtures::pinned(
             n,

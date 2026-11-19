@@ -14,14 +14,13 @@ use crate::{
     },
     scheduling::{
         placed::{PlacedReport, Reached, SyncSummary},
-        run_id::RunId,
         run_phases::RemoteFailurePhase,
-        timestamp::Timestamp,
     },
     workload_settings::WorkloadSettings,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client::{self as client, Wait};
+use elsecall_scheduling_model::{run_id::RunId, timestamp::Timestamp};
 use elsecall_wire::wire::Frame;
 use elsecall_workspace::{
     confined::Confined,
@@ -45,7 +44,7 @@ use tokio::sync::mpsc;
 
 /// Runs commands on another member, through the local service's relay.
 pub struct RemoteExecutor {
-    pub workload: Option<crate::workload_metadata::Workload>,
+    pub workload: Option<elsecall_scheduling_model::workload_metadata::Workload>,
     pub socket: PathBuf,
     pub located: Located,
     pub configuration: WorkloadSettings,
@@ -399,8 +398,8 @@ fn forward_signals(outbox: Outbox) -> Vec<tokio::task::JoinHandle<()>> {
 }
 
 pub struct RemoteRun {
-    workload: Option<crate::workload_metadata::Workload>,
-    plan_observation: Option<crate::workload_metadata::Observation>,
+    workload: Option<elsecall_scheduling_model::workload_metadata::Workload>,
+    plan_observation: Option<elsecall_scheduling_model::workload_metadata::Observation>,
     link: Link,
     execution_started: Instant,
     merged: bool,
@@ -914,7 +913,7 @@ mod tests {
     /// optional telemetry must not turn a confirmed exit into HolderExited.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn invalid_peer_observations_preserve_exit_and_later_return_failure() {
-        use crate::workload_metadata::{Observation, parse_workload};
+        use elsecall_scheduling_model::workload_metadata::{Observation, parse_workload};
         use serde_json::json;
         let plan = parse_workload(&json!({"kind":"sequential","planned_units":3,"stop_policy":"continue_all","estimate_key":"a".repeat(64),"variant_key":"b".repeat(64)}).to_string()).unwrap();
         let cases = vec![

@@ -26,13 +26,11 @@ pub mod run_time;
 pub use run_time::{Basis, Conversions, RunEstimate, RunEstimates, RunHistory};
 
 use crate::scheduling::{
-    capacity::Cores,
     parameters::Estimates,
     placed::Side,
     record::{Outcome, Record},
-    request::Kind,
-    timestamp::Timestamp,
 };
+use elsecall_scheduling_model::{capacity::Cores, request::Kind, timestamp::Timestamp};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -121,7 +119,7 @@ pub fn samples_of(
 /// plan its wrapper saw through, or the prefix it stopped after. A run that did
 /// not exit, or whose wrapper reported no coverage, covers no known number.
 fn observed_units(record: &Record) -> Option<u32> {
-    use crate::workload_metadata::Observation;
+    use elsecall_scheduling_model::workload_metadata::Observation;
     if !matches!(record.outcome, Some(Outcome::Exited { .. })) {
         return None;
     }
@@ -242,6 +240,8 @@ pub(crate) mod tests {
             placed::{PlacedRecord, Reached, SyncSummary},
             processes::ProcessIdentity,
             record::{Outcome, State},
+        };
+        use elsecall_scheduling_model::{
             request::{Placement, Urgency},
             run_id::RunId,
             settings::{AppliedRule, Settings, Source},
@@ -363,8 +363,10 @@ pub(crate) mod tests {
         // exited.
         let observed = |outcome: Outcome, observation: &str| {
             let mut run = record(99 * day, Some(outcome), None);
-            run.plan_observation =
-                Some(crate::workload_metadata::parse_observation(observation).unwrap());
+            run.plan_observation = Some(
+                elsecall_scheduling_model::workload_metadata::parse_observation(observation)
+                    .unwrap(),
+            );
             run
         };
         let exited = Outcome::Exited { exit_code: 0 };

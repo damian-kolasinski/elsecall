@@ -3,8 +3,8 @@
 //!
 //! A sample names processes only: never their arguments, environment or paths,
 //! which can hold secrets.
-use crate::scheduling::timestamp::Timestamp;
 use elsecall_failure::Result;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
 

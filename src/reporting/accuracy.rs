@@ -16,9 +16,9 @@ use crate::{
         parameters::Parameters,
         placed::Warmth,
         placement::Level,
-        request::Kind,
     },
 };
+use elsecall_scheduling_model::request::Kind;
 use serde::Serialize;
 use std::collections::BTreeMap;
 

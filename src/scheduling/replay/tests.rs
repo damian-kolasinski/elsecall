@@ -4,7 +4,6 @@
 use super::*;
 use crate::scheduling::{
     admission::QueueCounts,
-    capacity::{Capacity, Cores},
     learning::Conversions,
     load,
     messages::MemberState,
@@ -16,11 +15,14 @@ use crate::scheduling::{
     },
     processes::ProcessIdentity,
     record::{Arrival, Candidate, Decision, Outcome, Scoring, State, Verdict},
+};
+use elsecall_machine::inspection::{CoreCounts, LoadSample, MemoryPressure, ThermalState};
+use elsecall_scheduling_model::{
+    capacity::{Capacity, Cores},
     request::{Kind, Placement, Urgency},
     run_id::RunId,
     timestamp::Timestamp,
 };
-use elsecall_machine::inspection::{CoreCounts, LoadSample, MemoryPressure, ThermalState};
 use std::time::Duration;
 
 fn cores(n: f64) -> Cores {

@@ -14,10 +14,11 @@ use crate::{
         run_phases::{self, PhaseMetrics},
         window::Window,
     },
-    scheduling::{parameters::Parameters, timestamp::Timestamp},
+    scheduling::parameters::Parameters,
 };
 use elsecall_failure::Failure;
 use elsecall_labels::pattern as label_pattern;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 

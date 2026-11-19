@@ -13,8 +13,8 @@
 use crate::scheduling::{
     placed::{Interruption, Side},
     record::{Outcome, Record},
-    timestamp::{Timestamp, millis},
 };
+use elsecall_scheduling_model::timestamp::{Timestamp, millis};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, time::Duration};
 

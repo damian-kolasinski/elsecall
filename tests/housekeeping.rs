@@ -7,18 +7,16 @@ mod diagnostics;
 mod members;
 mod processes;
 
-use elsecall::{
-    housekeeping::{
-        caller_state::CallerState,
-        callers::Nobody,
-        catalog::Catalog,
-        clock::{Clock, FileClock},
-        pass::{Housekeeper, Parts},
-        settings::Settings,
-        volumes::Statfs,
-    },
-    scheduling::timestamp::Timestamp,
+use elsecall::housekeeping::{
+    caller_state::CallerState,
+    callers::Nobody,
+    catalog::Catalog,
+    clock::{Clock, FileClock},
+    pass::{Housekeeper, Parts},
+    settings::Settings,
+    volumes::Statfs,
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workspace::{
     copies::Copies,
     framed_link::FramedLink,

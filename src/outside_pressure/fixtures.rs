@@ -1,5 +1,5 @@
 //! Fixed outside-pressure episodes the report's tests compute from.
-use crate::scheduling::timestamp::Timestamp;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::time::Duration;
 
 /// A blocked episode by memory pressure from `since` to `until` (`None` while it

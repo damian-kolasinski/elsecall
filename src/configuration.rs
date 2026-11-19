@@ -2,15 +2,12 @@
 use crate::{
     housekeeping::settings::{self, Settings as Housekeeping},
     remote_run::leftovers::Cap,
-    scheduling::{
-        capacity::Cores,
-        parameters::{
-            AdmissionOverrides, EstimatesOverrides, Overrides, Parameters, PlacementOverrides,
-        },
-        request::AtDeadline,
+    scheduling::parameters::{
+        AdmissionOverrides, EstimatesOverrides, Overrides, Parameters, PlacementOverrides,
     },
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::{capacity::Cores, request::AtDeadline};
 use elsecall_workspace::location::Setting;
 use serde::Deserialize;
 use std::{
@@ -304,7 +301,7 @@ fn housekeeping(section: HousekeepingSection) -> std::result::Result<Housekeepin
         defaults.interval,
         "[housekeeping] interval must be a duration such as \"1h\", at most 7 days.",
     )?;
-    if interval > crate::scheduling::request::MAXIMUM_DEADLINE {
+    if interval > elsecall_scheduling_model::request::MAXIMUM_DEADLINE {
         return Err("[housekeeping] interval must be a duration such as \"1h\", at most 7 days.");
     }
     let min_free_percent = section

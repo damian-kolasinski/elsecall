@@ -77,7 +77,7 @@ pub mod seconds {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             match value {
-                Some(value) => super::serialize(value, serializer),
+                Some(value) => crate::timestamp::seconds::serialize(value, serializer),
                 None => serializer.serialize_none(),
             }
         }
@@ -113,7 +113,7 @@ pub mod millis {
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             match value {
-                Some(value) => super::serialize(value, serializer),
+                Some(value) => crate::timestamp::millis::serialize(value, serializer),
                 None => serializer.serialize_none(),
             }
         }
@@ -134,7 +134,7 @@ pub fn whole_millis(duration: Duration) -> Duration {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::timestamp::*;
 
     #[test]
     fn round_trips_rfc3339() {

@@ -9,8 +9,8 @@ use crate::{
         facts::{Fact, PlacementKind},
         load::{has_room, overloaded, peak_load_per_cpu, weighted_mean},
     },
-    scheduling::{request::Kind, timestamp::Timestamp},
 };
+use elsecall_scheduling_model::{request::Kind, timestamp::Timestamp};
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 
@@ -192,10 +192,11 @@ pub fn overload(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        scheduling::fixtures::{self, MINUTE, T0, bucket},
-        scheduling::{record::Record, request::Placement},
+    use crate::scheduling::{
+        fixtures::{self, MINUTE, T0, bucket},
+        record::Record,
     };
+    use elsecall_scheduling_model::request::Placement;
 
     /// A run on `member` requested at `at` ms that held it for `run` seconds.
     fn ran(n: u64, label: &str, member: &str, at: u64, run: f64) -> Record {

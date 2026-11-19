@@ -11,9 +11,10 @@ use crate::{
         outside::OutsideHistory,
         window::Window,
     },
-    scheduling::{service::Scheduler, timestamp::Timestamp},
+    scheduling::service::Scheduler,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use futures_util::future::BoxFuture;
 use std::{sync::Arc, time::Duration};
 

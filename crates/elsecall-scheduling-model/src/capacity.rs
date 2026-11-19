@@ -99,7 +99,7 @@ impl Capacity {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::capacity::*;
 
     #[test]
     fn parses_decimal_sizes_exactly() {

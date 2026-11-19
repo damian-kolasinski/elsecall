@@ -4,10 +4,10 @@
 //!
 //! It answers the members holding copies, and is cleaned up when a workspace is
 //! deleted, when a member removed its copy, or when a member left the fleet.
-use crate::{
-    housekeeping::exchange::{Answer, Question, WorkspaceAnswer, WorkspaceState, valid_path},
-    scheduling::timestamp::Timestamp,
+use crate::housekeeping::exchange::{
+    Answer, Question, WorkspaceAnswer, WorkspaceState, valid_path,
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workspace::push_cache::{self, CacheFiles, StateFile};
 use serde::Serialize;
 use std::{

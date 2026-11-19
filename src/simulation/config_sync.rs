@@ -1,10 +1,8 @@
 //! Recorded pre-run configuration I/O at the real scheduler's sync boundary.
 use super::world::World;
-use crate::scheduling::{
-    pre_run_sync::{PreRunSync, Synced},
-    run_id::RunId,
-};
+use crate::scheduling::pre_run_sync::{PreRunSync, Synced};
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::run_id::RunId;
 use futures_util::future::BoxFuture;
 use std::{
     sync::{Arc, Mutex},
@@ -113,10 +111,11 @@ mod tests {
     use super::*;
     use crate::{
         reporting::facts::PlacementKind,
-        scheduling::{placed::Warmth, record::WorkspaceIdentity, request::Placement},
+        scheduling::{placed::Warmth, record::WorkspaceIdentity},
         simulation::{Options, simulate},
         workload::trace::{PreRunAttempt, Trace, TraceOutcome},
     };
+    use elsecall_scheduling_model::request::Placement;
     fn trace() -> Trace {
         let mut trace = crate::simulation::engine::tests::trace();
         trace.requests.truncate(1);
@@ -186,11 +185,9 @@ mod tests {
     async fn successful_pre_run_retries_are_recorded_before_busy_and_acceptance() {
         use crate::{
             scheduling::{
-                capacity::Cores,
                 clock::{Clock, VirtualClock},
                 messages::RunEnded,
                 placed::WorkspaceRef,
-                request::{AdmissionRequest, Kind, Urgency},
             },
             simulation::{
                 adapters::Registry,
@@ -198,6 +195,10 @@ mod tests {
                 model::Envelope,
                 settings::Settings,
             },
+        };
+        use elsecall_scheduling_model::{
+            capacity::Cores,
+            request::{AdmissionRequest, Kind, Urgency},
         };
         let mut trace = trace();
         let id = RunId::parse(&trace.requests[0].fact.run_id).unwrap();

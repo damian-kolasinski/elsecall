@@ -26,7 +26,6 @@ use crate::{
         admission::{Admission, Class},
         binding::{Bindings, Lost},
         busy::{self, Situation, Work},
-        capacity::{Capacity, Cores},
         clock::{Clock, SystemClock},
         estimates::{self, HoldBasis},
         learning,
@@ -43,15 +42,18 @@ use crate::{
         },
         records::Records,
         recovery,
-        request::{self, AdmissionRequest, AtDeadline, Kind, Placement, Urgency, WorkRequest},
-        run_id::{RandomRunIds, RunId, RunIds},
-        speed::{SpeedHistory, SpeedMeter},
-        timestamp::Timestamp,
     },
 };
 use auto::Auto;
 use elsecall_failure::{Failure, Result};
 use elsecall_machine::inspection::{CoreCounts, MachineInspector};
+use elsecall_scheduling_model::{
+    capacity::{Capacity, Cores},
+    request::{self, AdmissionRequest, AtDeadline, Kind, Placement, Urgency, WorkRequest},
+    run_id::{RandomRunIds, RunId, RunIds},
+    speed::{SpeedHistory, SpeedMeter},
+    timestamp::Timestamp,
+};
 use placing::Placing;
 use quotes::Quotes;
 use serde::Serialize;
@@ -661,12 +663,9 @@ impl Scheduler {
                 let history_at = if restoring { self.clock.now() } else { now };
                 let (runs, syncs, losses) =
                     self.auto_history(request.label.as_deref(), family, history_at);
-                let runs = runs.with_plan(
-                    request
-                        .workload
-                        .as_ref()
-                        .and_then(crate::workload_metadata::Workload::planned_units),
-                );
+                let runs = runs.with_plan(request.workload.as_ref().and_then(
+                    elsecall_scheduling_model::workload_metadata::Workload::planned_units,
+                ));
                 Some(Box::new(Auto {
                     workspace,
                     runs,
@@ -1383,7 +1382,7 @@ impl Scheduler {
             .started_at
             .map(|started| now.since(started).as_millis() as u64);
         if record.workload.is_some() && record.plan_observation.is_none() {
-            use crate::workload_metadata::{CensorReason, Observation};
+            use elsecall_scheduling_model::workload_metadata::{CensorReason, Observation};
             record.plan_observation = Some(match &outcome {
                 _ if record.started_at.is_none() => Observation::Unknown {},
                 Outcome::Signaled { .. } => Observation::Censored {
@@ -1908,7 +1907,7 @@ mod pending_snapshot_tests {
                 SchedulerConfiguration::default(),
                 Adapters {
                     machine: Arc::new(ObservedMachine),
-                    speed: Arc::new(crate::scheduling::speed::FixedSpeed(1.0)),
+                    speed: Arc::new(elsecall_scheduling_model::speed::FixedSpeed(1.0)),
                     processes,
                     exits,
                 },

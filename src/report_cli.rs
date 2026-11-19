@@ -2,12 +2,12 @@
 use crate::{
     report_api::ReportRequest,
     reporting::window::{MAXIMUM_PERIOD, invalid},
-    scheduling::timestamp::Timestamp,
 };
 use clap::Args;
 use elsecall_failure::Result;
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::time::Duration;
 
 #[derive(Args, Debug)]

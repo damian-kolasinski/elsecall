@@ -1,15 +1,15 @@
 //! Harness objective and constraints, evaluated on arrival-window roots only.
 use super::engine::{Outcome, Trial};
 use crate::{
-    scheduling::{
-        placed::Warmth,
-        request::{Kind, Placement},
-        timestamp::Timestamp,
-    },
+    scheduling::placed::Warmth,
     workload::{
         demand::median,
         trace::{Request, Trace},
     },
+};
+use elsecall_scheduling_model::{
+    request::{Kind, Placement},
+    timestamp::Timestamp,
 };
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};

@@ -1,6 +1,6 @@
 //! The admission policy of one member: which work holds capacity and which waiting
 //! request starts next. Pure state; time, load and processes are the caller's.
-use crate::scheduling::{capacity::Cores, run_id::RunId};
+use elsecall_scheduling_model::{capacity::Cores, run_id::RunId};
 use std::collections::{BTreeSet, HashMap, VecDeque};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -183,9 +183,12 @@ pub use crate::peer_diagnostics::StreamFailure;
 /// assertion independently, so it cannot erase valid exit/CPU/phase facts.
 pub fn received_observation(
     value: Option<Box<serde_json::value::RawValue>>,
-    workload: Option<&crate::workload_metadata::Workload>,
-) -> (Option<crate::workload_metadata::Observation>, bool) {
-    use crate::workload_metadata::{MAXIMUM_JSON_BYTES, Observation};
+    workload: Option<&elsecall_scheduling_model::workload_metadata::Workload>,
+) -> (
+    Option<elsecall_scheduling_model::workload_metadata::Observation>,
+    bool,
+) {
+    use elsecall_scheduling_model::workload_metadata::{MAXIMUM_JSON_BYTES, Observation};
     let Some(value) = value else {
         return (None, false);
     };

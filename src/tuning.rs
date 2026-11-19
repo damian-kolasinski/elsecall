@@ -3,11 +3,11 @@ mod proposal;
 mod search;
 mod space;
 use crate::{
-    scheduling::timestamp::Timestamp,
     simulation::{self, Options},
     workload::trace::Trace,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde_json::{Value, json};
 use space::Settings;
 pub use space::Space;

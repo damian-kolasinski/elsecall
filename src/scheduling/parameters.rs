@@ -615,7 +615,7 @@ mod text {
 /// estimates decide with.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct SchedulerConfiguration {
-    pub reserved: crate::scheduling::capacity::Cores,
+    pub reserved: elsecall_scheduling_model::capacity::Cores,
     pub parameters: Parameters,
 }
 

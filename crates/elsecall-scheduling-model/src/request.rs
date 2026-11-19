@@ -1,5 +1,5 @@
 //! Work requests: what a caller asks for, and the rules that make one valid.
-use crate::scheduling::{capacity::Cores, settings::Settings, timestamp::Timestamp};
+use crate::{capacity::Cores, settings::Settings, timestamp::Timestamp};
 use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -205,7 +205,7 @@ impl WorkspaceRef {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::request::*;
 
     fn request() -> AdmissionRequest {
         AdmissionRequest {

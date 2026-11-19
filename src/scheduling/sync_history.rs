@@ -16,8 +16,8 @@ use crate::scheduling::{
     parameters::Estimates,
     placed::{Side, Warmth, WorkspaceRef},
     record::Record,
-    timestamp::Timestamp,
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

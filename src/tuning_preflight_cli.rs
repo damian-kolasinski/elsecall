@@ -1,7 +1,7 @@
 //! CLI adapter for the offline readiness check. Collection uses read-only trace routes.
-use crate::scheduling::timestamp::Timestamp;
 use clap::Args;
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{num::NonZeroUsize, path::PathBuf, time::Duration};
 #[derive(Args, Debug)]
 pub struct PreflightArgs {

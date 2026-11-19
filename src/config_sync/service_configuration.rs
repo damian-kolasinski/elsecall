@@ -1,6 +1,6 @@
 //! Service configuration planning, opt-in and application status.
 use super::*;
-use crate::scheduling::timestamp::Timestamp;
+use elsecall_scheduling_model::timestamp::Timestamp;
 
 impl ConfigSync {
     /// Loads the last accepted service settings before any work is admitted.
@@ -234,8 +234,8 @@ impl ConfigSync {
                                 "Proposal names an unenrolled member.",
                             ));
                         }
-                        let reserve =
-                            crate::scheduling::capacity::Cores::parse(value).ok_or_else(|| {
+                        let reserve = elsecall_scheduling_model::capacity::Cores::parse(value)
+                            .ok_or_else(|| {
                                 crate::scheduling::service::invalid_rehearsal(
                                     "Invalid proposal reserve.",
                                 )

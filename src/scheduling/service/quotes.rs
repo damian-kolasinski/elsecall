@@ -128,12 +128,8 @@ impl Quotes {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::{
-        admission::QueueCounts,
-        capacity::{Capacity, Cores},
-        load::Gate,
-        placed::Warmth,
-    };
+    use crate::scheduling::{admission::QueueCounts, load::Gate, placed::Warmth};
+    use elsecall_scheduling_model::capacity::{Capacity, Cores};
 
     fn quote(free: u32, copies: &[(&str, Warmth)]) -> Quote {
         Quote {

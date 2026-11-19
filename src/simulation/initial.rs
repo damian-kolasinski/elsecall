@@ -10,14 +10,12 @@ use crate::{
         placed::{PlacedRecord, Reached, Side, SyncSummary},
         processes::ProcessIdentity,
         record::{Record, State},
-        request::Kind,
-        run_id::RunId,
         service::Scheduler,
-        timestamp::Timestamp,
     },
     workload::trace::{Request, Trace},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
@@ -257,20 +255,22 @@ mod tests {
     use super::*;
     use crate::{
         load_log::LoadLog,
-        scheduling::fixtures,
         scheduling::{
-            capacity::Cores,
             clock::{Clock, VirtualClock},
+            fixtures,
             load::Gate,
             placed::{OfferReply, PlacementOffer, Warmth},
             record::Outcome,
-            request::{Kind, Placement},
             service::{Adapters, Driving, Runtime, SchedulerConfiguration},
         },
         simulation::{
             adapters::{Channel, ConfigurationSync, Ids, Observation, Registry, Speed, World},
             model::Envelope,
         },
+    };
+    use elsecall_scheduling_model::{
+        capacity::Cores,
+        request::{Kind, Placement},
     };
     use std::sync::Mutex;
     use tokio::sync::mpsc;

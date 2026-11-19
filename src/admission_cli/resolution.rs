@@ -7,14 +7,14 @@ use crate::{
         environment::CallerEnvironment,
         options::{Declared, UrgencyChoice},
     },
-    scheduling::{
-        request::{AdmissionRequest, Kind, Placement, Urgency, invalid},
-        settings::{AppliedRule, Settings, Source},
-        timestamp::Timestamp,
-    },
     workload_settings::{LabelRule, RulePlacement, RuleUrgency, WhenUnavailable, WorkloadSettings},
 };
 use elsecall_failure::Result;
+use elsecall_scheduling_model::{
+    request::{AdmissionRequest, Kind, Placement, Urgency, invalid},
+    settings::{AppliedRule, Settings, Source},
+    timestamp::Timestamp,
+};
 
 /// Everything a request's properties may come from.
 pub struct Layers<'a> {
@@ -201,7 +201,7 @@ pub fn when_unavailable(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::{capacity::Cores, request::AtDeadline};
+    use elsecall_scheduling_model::{capacity::Cores, request::AtDeadline};
     use std::time::Duration;
 
     fn now() -> Timestamp {

@@ -1078,6 +1078,7 @@ dependencies = [
  "elsecall-process",
  "elsecall-rehearsal-identity",
  "elsecall-run-admission",
+ "elsecall-scheduling-model",
  "elsecall-secure-channel",
  "elsecall-service-log",
  "elsecall-sqlite-retention",
@@ -1235,6 +1236,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "elsecall-scheduling-model"
+version = "0.3.0"
+dependencies = [
+ "elsecall-failure",
+ "elsecall-labels",
+ "elsecall-machine",
+ "humantime",
+ "libc",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "elsecall-secure-channel"
 version = "0.3.0"
 dependencies = [
@@ -1283,6 +1297,7 @@ dependencies = [
  "elsecall-local-client",
  "elsecall-local-state",
  "elsecall-membership",
+ "elsecall-scheduling-model",
  "elsecall-wire",
  "libc",
  "png 0.18.1",

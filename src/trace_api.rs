@@ -7,7 +7,6 @@ use crate::{
         gathering::Source,
         window::{Window, invalid},
     },
-    scheduling::timestamp::Timestamp,
     workload::trace::Page,
 };
 use axum::{
@@ -19,6 +18,7 @@ use axum::{
     routing::post,
 };
 use elsecall_failure::Result;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_wire::api;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};

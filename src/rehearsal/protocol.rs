@@ -1,5 +1,5 @@
 //! Bounded, master-authorized rehearsal operations; never arbitrary commands.
-use crate::scheduling::{
+use elsecall_scheduling_model::{
     capacity::Cores,
     request::{Placement, Urgency},
     timestamp::Timestamp,

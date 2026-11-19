@@ -18,9 +18,9 @@ use crate::{
         outside,
         window::Window,
     },
-    scheduling::timestamp::Timestamp,
 };
 use elsecall_machine::inspection::MemoryPressure;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 
@@ -424,7 +424,7 @@ mod tests {
             },
             {
                 let mut r = cancelled(7, "other", 0, 7000);
-                r.placement = crate::scheduling::request::Placement::Placeable;
+                r.placement = elsecall_scheduling_model::request::Placement::Placeable;
                 r
             },
             {

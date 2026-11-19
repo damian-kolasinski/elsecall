@@ -2,11 +2,7 @@
 //! member. Negotiated callers own run decryption; the service relays sealed bytes.
 //! Legacy callers retain the plaintext relay. Both paths carry the caller/member
 //! run protocol, including end-to-end heartbeats.
-use crate::{
-    fleet::Fleet,
-    peer_client,
-    scheduling::{run_id::RunId, service::Scheduler},
-};
+use crate::{fleet::Fleet, peer_client, scheduling::service::Scheduler};
 use axum::{
     Extension, Router,
     extract::{Path, Request, State},
@@ -17,6 +13,7 @@ use axum::{
 use elsecall_failure::Failure;
 use elsecall_local_state::local_access::LocalCaller;
 use elsecall_membership::roster::MemberName;
+use elsecall_scheduling_model::run_id::RunId;
 use hyper_util::rt::TokioIo;
 use std::sync::Arc;
 

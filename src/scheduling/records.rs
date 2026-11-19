@@ -2,10 +2,9 @@
 use crate::scheduling::{
     estimates,
     record::{Record, State},
-    run_id::RunId,
-    timestamp::Timestamp,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::{run_id::RunId, timestamp::Timestamp};
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -24,7 +23,7 @@ pub use elsecall_sqlite_retention::RETENTION;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SchedulerSettings {
     pub at: Timestamp,
-    pub capacity: crate::scheduling::capacity::Capacity,
+    pub capacity: elsecall_scheduling_model::capacity::Capacity,
     pub parameters: crate::scheduling::parameters::Parameters,
 }
 
@@ -487,10 +486,8 @@ mod tests {
     use super::*;
     #[test]
     fn settings_history_preserves_baseline_changes_and_retention() {
-        use crate::scheduling::{
-            capacity::{Capacity, Cores},
-            parameters::Parameters,
-        };
+        use crate::scheduling::parameters::Parameters;
+        use elsecall_scheduling_model::capacity::{Capacity, Cores};
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("settings.sqlite");
         let records = Records::open(&path).unwrap();
@@ -565,9 +562,9 @@ mod tests {
             0
         );
     }
-    use crate::scheduling::{
+    use crate::scheduling::record::Outcome;
+    use elsecall_scheduling_model::{
         capacity::Cores,
-        record::Outcome,
         request::{Kind, Placement, Urgency},
     };
 
@@ -673,10 +670,8 @@ mod tests {
 
     #[test]
     fn learning_reads_families_and_every_label_without_decisions() {
-        use crate::scheduling::{
-            record::{Decision, Verdict},
-            settings::{AppliedRule, Settings, Source},
-        };
+        use crate::scheduling::record::{Decision, Verdict};
+        use elsecall_scheduling_model::settings::{AppliedRule, Settings, Source};
         let dir = tempfile::tempdir().unwrap();
         let records = Records::open(&dir.path().join("records.sqlite")).unwrap();
         let exited = Some(Outcome::Exited { exit_code: 0 });

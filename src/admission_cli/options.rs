@@ -1,14 +1,12 @@
 //! Request properties and caller choices as callers write them on the command line.
-use crate::{
-    scheduling::{
-        capacity::Cores,
-        request::{AtDeadline, invalid},
-        timestamp::Timestamp,
-    },
-    workload_settings::WhenUnavailable,
-};
+use crate::workload_settings::WhenUnavailable;
 use clap::{Args, ValueEnum};
 use elsecall_failure::Result;
+use elsecall_scheduling_model::{
+    capacity::Cores,
+    request::{AtDeadline, invalid},
+    timestamp::Timestamp,
+};
 use std::{path::PathBuf, time::Duration};
 
 /// Options shared by every work request. Values are parsed here rather than by
@@ -98,7 +96,7 @@ pub enum UrgencyChoice {
 pub struct Declared {
     pub size: Option<Cores>,
     pub label: Option<String>,
-    pub workload: Option<crate::workload_metadata::Workload>,
+    pub workload: Option<elsecall_scheduling_model::workload_metadata::Workload>,
     pub urgency: Option<UrgencyChoice>,
     pub hold_limit: Option<Duration>,
     pub deadline: Option<Timestamp>,
@@ -145,7 +143,7 @@ impl RequestOptions {
             workload: self
                 .workload
                 .as_deref()
-                .map(crate::workload_metadata::parse_workload)
+                .map(elsecall_scheduling_model::workload_metadata::parse_workload)
                 .transpose()?,
             urgency,
             hold_limit,

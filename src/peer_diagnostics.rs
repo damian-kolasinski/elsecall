@@ -1,8 +1,8 @@
 //! Bounded private peer-attempt history. No endpoints, request bodies, signatures,
 //! paths or server error text are retained; a verified refusal keeps only its
 //! stable code. A failed retry remains observable.
-use crate::scheduling::timestamp::Timestamp;
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use std::{

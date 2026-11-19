@@ -51,7 +51,7 @@ impl<'de> Deserialize<'de> for RunId {
 
 #[cfg(test)]
 mod tests {
-    use super::RunId;
+    use crate::run_id::RunId;
 
     #[test]
     fn generated_ids_parse_and_others_do_not() {

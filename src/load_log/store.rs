@@ -1,6 +1,7 @@
 //! Minutes of load in SQLite, one row per minute, for [`RETENTION`].
-use crate::{load_log::minute::Minute, scheduling::timestamp::Timestamp};
+use crate::load_log::minute::Minute;
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use rusqlite::{Connection, params};
 use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt, path::Path, sync::Mutex, time::Duration};
 
@@ -109,7 +110,7 @@ impl LoadStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::capacity::Cores;
+    use elsecall_scheduling_model::capacity::Cores;
 
     fn minute(at: u64) -> Minute {
         Minute {

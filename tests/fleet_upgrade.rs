@@ -15,13 +15,13 @@ use elsecall::{
         protocol::{self, Manifest, Message, Os, UpgradeId},
     },
     peer_client,
-    scheduling::{
-        capacity::Cores,
-        request::{AdmissionRequest, Kind, Placement, Urgency},
-    },
 };
 use elsecall_build_identity::{build_identity::Digest, executable_format::Architecture};
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling_model::{
+    capacity::Cores,
+    request::{AdmissionRequest, Kind, Placement, Urgency},
+};
 use members::{TestMember, enrol, json};
 use serde_json::Value;
 use std::{

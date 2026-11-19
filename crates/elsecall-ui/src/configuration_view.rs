@@ -2,9 +2,9 @@
 
 use std::time::Duration;
 
-use elsecall::scheduling::request::AtDeadline;
 use elsecall::workload_configuration::FILE_NAME;
 use elsecall::workload_settings::{LabelRule, RulePlacement, RuleUrgency, WhenUnavailable};
+use elsecall_scheduling_model::request::AtDeadline;
 use rune::{El, Latest, ScrollSpec, TextEdit, Waker, col, el, row, text};
 use rune_kit::{Button, ButtonVariant, Kit, SegmentedControl, TextInput};
 

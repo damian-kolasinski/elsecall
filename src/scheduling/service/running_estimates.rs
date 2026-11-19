@@ -15,9 +15,8 @@ use crate::scheduling::{
     placed::{Reached, Side},
     placement::{LearnedRun, LearnedTime, Source},
     record::Record,
-    request::Kind,
-    run_id::RunId,
 };
+use elsecall_scheduling_model::{request::Kind, run_id::RunId};
 use std::{
     collections::{HashMap, HashSet},
     time::Duration,

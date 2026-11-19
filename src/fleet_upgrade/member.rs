@@ -30,7 +30,6 @@ use crate::{
             self, MAXIMUM_EXECUTABLE, MAXIMUM_WAIT_SECONDS, Message, Os, SignedManifest, UpgradeId,
         },
     },
-    scheduling::timestamp::Timestamp,
 };
 use elsecall_build_identity::{
     build_identity::{Build, Digest},
@@ -38,6 +37,7 @@ use elsecall_build_identity::{
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_membership::{member_key::PublicKey, roster::MemberName};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::{
     path::PathBuf,

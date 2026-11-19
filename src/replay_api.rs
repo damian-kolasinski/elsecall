@@ -3,7 +3,6 @@
 use crate::scheduling::{
     replay::{self, Change, Replay},
     service::Scheduler,
-    timestamp::Timestamp,
 };
 use axum::{
     Json, Router,
@@ -14,6 +13,7 @@ use axum::{
     routing::post,
 };
 use elsecall_failure::Failure;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_wire::api;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

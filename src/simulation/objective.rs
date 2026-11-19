@@ -1,9 +1,7 @@
 //! Per-request normalized scheduling objective. No ratio of aggregate latencies.
 use super::{engine::Trial, metrics::distribution};
-use crate::{
-    scheduling::{request::Kind, timestamp::Timestamp},
-    workload::trace::{Trace, TraceOutcome},
-};
+use crate::workload::trace::{Trace, TraceOutcome};
+use elsecall_scheduling_model::{request::Kind, timestamp::Timestamp};
 use serde_json::{Value, json};
 
 pub fn summarize(trace: &Trace, trial: &Trial, since: Timestamp, until: Timestamp) -> Value {
@@ -178,7 +176,7 @@ mod tests {
         trace.requests.truncate(2);
         let start = trace.since;
         for (i, r) in trace.requests.iter_mut().enumerate() {
-            r.fact.size = crate::scheduling::capacity::Cores::from_millis(250);
+            r.fact.size = elsecall_scheduling_model::capacity::Cores::from_millis(250);
             r.fact.requested_at = start;
             r.fact.member = Some("a".into());
             r.fact.deferrable = false;

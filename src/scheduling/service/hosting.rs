@@ -5,17 +5,19 @@
 //! capacity until its runner ends it.
 use super::{Entry, OnHandover, Phase, Scheduler};
 use crate::scheduling::{
-    capacity::Cores,
     leftovers::Leftovers,
     placed::{OfferReply, PlacedRecord, PlacementOffer, Reached, Side, SyncSummary, Warmth},
     processes::ProcessIdentity,
     quote::{self, HeldWork, Quote, WaitingWork},
     record::{Decision, HoldBasis, HoldLimitRecord, Outcome, Record, SizeBasis, State, Verdict},
-    request::{self, Kind, Placement, Urgency},
-    run_id::RunId,
     run_phases::{RemoteFailurePhase, RunPhases},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::{
+    capacity::Cores,
+    request::{self, Kind, Placement, Urgency},
+    run_id::RunId,
+};
 use std::{collections::BTreeSet, time::Duration};
 
 /// How a hosted run ended, as its runner saw it.
@@ -204,7 +206,7 @@ impl Scheduler {
         self.persist(&mut entry);
         book.entries.insert(offer.run_id.clone(), entry);
         Ok(OfferReply::Accepted {
-            workload_contract: Some(crate::workload_metadata::VERSION),
+            workload_contract: Some(elsecall_scheduling_model::workload_metadata::VERSION),
             state: self.state_of(&book),
             copy: copy.into(),
             location: location.into(),

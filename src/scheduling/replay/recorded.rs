@@ -6,15 +6,13 @@
 //! the recorded parameters must first reproduce the recorded verdict exactly.
 use super::Change;
 use crate::scheduling::{
-    capacity::Cores,
     load::{self, Gate},
     messages::MemberState,
     parameters::{Admission, Parameters},
     placement::{self, Contender, Estimate, Level, Observation, Scored, Wanted},
     record::{ArrivalEstimate, Candidate, Record},
-    request::Placement,
-    timestamp::Timestamp,
 };
+use elsecall_scheduling_model::{capacity::Cores, request::Placement, timestamp::Timestamp};
 use serde::{Serialize, de::DeserializeOwned};
 use std::time::Duration;
 

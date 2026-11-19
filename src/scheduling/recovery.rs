@@ -1,12 +1,10 @@
 //! What survives a service restart: grants whose processes still run keep their
 //! capacity, so it is never handed out twice; everything else is closed.
 use crate::scheduling::{
-    capacity::Cores,
     processes::ProcessIdentity,
     record::{Outcome, Record, State},
-    run_id::RunId,
-    timestamp::Timestamp,
 };
+use elsecall_scheduling_model::{capacity::Cores, run_id::RunId, timestamp::Timestamp};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A surviving grant and the nested grants that share its capacity.
@@ -57,12 +55,13 @@ pub fn plan(
         }
         if record.workload.is_some() && record.plan_observation.is_none() {
             record.plan_observation = Some(if record.state == State::Running {
-                crate::workload_metadata::Observation::Censored {
+                elsecall_scheduling_model::workload_metadata::Observation::Censored {
                     coverage: None,
-                    reason: crate::workload_metadata::CensorReason::ServiceRestart,
+                    reason:
+                        elsecall_scheduling_model::workload_metadata::CensorReason::ServiceRestart,
                 }
             } else {
-                crate::workload_metadata::Observation::Unknown {}
+                elsecall_scheduling_model::workload_metadata::Observation::Unknown {}
             });
         }
         record.outcome = Some(match record.state {
@@ -100,7 +99,7 @@ pub fn plan(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::request::{Kind, Placement, Urgency};
+    use elsecall_scheduling_model::request::{Kind, Placement, Urgency};
 
     fn process(pid: u32) -> ProcessIdentity {
         ProcessIdentity { pid, started_us: 1 }

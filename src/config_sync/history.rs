@@ -1,13 +1,11 @@
 //! Records of what synced: each issued generation, each push and each application,
 //! with paths, file names, sizes, short fingerprints and the outcome. Never
 //! content. Kept owner-only as JSON lines, the latest `KEPT` of them.
-use crate::{
-    config_sync::{compare::Change, synced_path::SyncedPath},
-    scheduling::timestamp::Timestamp,
-};
+use crate::config_sync::{compare::Change, synced_path::SyncedPath};
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::private_files;
 use elsecall_membership::roster::MemberName;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::{
     io::{BufRead, Write},

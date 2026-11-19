@@ -4,24 +4,22 @@
 //! service runs it off the async runtime.
 mod service_settings;
 
-use crate::{
-    config_sync::{
-        compare::{self, Change, FileDifference},
-        disk::{self, FingerprintCache, Home, LiveTree, Location},
-        fingerprint::{Fingerprint, SyncKey},
-        history::{Event, History, PathRecord, Record},
-        manifest::{FileKey, FileNode, Manifest, Tree},
-        pins::{Pin, Pins},
-        report::{self, Applied, BackupView, PathReport, PathState, SyncRole, SyncSummary},
-        state::{Backup, State},
-        store::ReplicaStore,
-        synced_path::SyncedPath,
-    },
-    scheduling::timestamp::Timestamp,
+use crate::config_sync::{
+    compare::{self, Change, FileDifference},
+    disk::{self, FingerprintCache, Home, LiveTree, Location},
+    fingerprint::{Fingerprint, SyncKey},
+    history::{Event, History, PathRecord, Record},
+    manifest::{FileKey, FileNode, Manifest, Tree},
+    pins::{Pin, Pins},
+    report::{self, Applied, BackupView, PathReport, PathState, SyncRole, SyncSummary},
+    state::{Backup, State},
+    store::ReplicaStore,
+    synced_path::SyncedPath,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::private_files;
 use elsecall_membership::roster::MemberName;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workspace::confined::Confined;
 use std::{
     collections::{BTreeMap, BTreeSet},

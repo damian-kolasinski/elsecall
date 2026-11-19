@@ -84,7 +84,7 @@ pub struct VersionSkew {
 #[derive(Debug, Clone, Serialize)]
 pub struct PlacedRunSummary {
     pub run_id: String,
-    pub started_at: Option<crate::scheduling::timestamp::Timestamp>,
+    pub started_at: Option<elsecall_scheduling_model::timestamp::Timestamp>,
     pub warnings: Vec<String>,
 }
 
@@ -370,13 +370,11 @@ fn without_roster(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        outside_pressure::{
-            sampling::Owner,
-            warning::{Concern, Warning},
-        },
-        scheduling::timestamp::Timestamp,
+    use crate::outside_pressure::{
+        sampling::Owner,
+        warning::{Concern, Warning},
     };
+    use elsecall_scheduling_model::timestamp::Timestamp;
     use serde_json::json;
 
     fn fseventsd() -> Warning {

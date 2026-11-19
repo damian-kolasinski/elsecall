@@ -1,14 +1,13 @@
 //! Recorded days are monitored as the service's own pinned deferrable work.
 //! Missing inputs are retained as not_checkable, never a successful validation.
-use crate::scheduling::{
-    capacity::Cores,
-    messages::RunEnded,
-    request::{AdmissionRequest, AtDeadline, Kind, Placement, Urgency},
-    service::Scheduler,
-    timestamp::Timestamp,
-};
+use crate::scheduling::{messages::RunEnded, service::Scheduler};
 use elsecall_failure::Result;
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling_model::{
+    capacity::Cores,
+    request::{AdmissionRequest, AtDeadline, Kind, Placement, Urgency},
+    timestamp::Timestamp,
+};
 use std::{sync::Arc, time::Duration};
 const DAY: u64 = 86_400_000;
 pub async fn monitor(paths: &Paths, scheduler: &Scheduler) -> Result<()> {

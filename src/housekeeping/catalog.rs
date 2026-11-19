@@ -1,8 +1,9 @@
 //! The member's durable account of its copies: where each lives and whose it is,
 //! when it was last used, what it and each object store last measured, every
 //! removal with its reason, and removals still being deleted.
-use crate::{housekeeping::clock::Clock, scheduling::timestamp::Timestamp};
+use crate::housekeeping::clock::Clock;
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workspace::{
     copies::UseLog,
     location::{CopyLocation, Setting},

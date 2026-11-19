@@ -127,7 +127,7 @@ impl Recording {
         }
         missing
     }
-    pub fn original_kind(&self, request: &Request) -> crate::scheduling::request::Kind {
+    pub fn original_kind(&self, request: &Request) -> elsecall_scheduling_model::request::Kind {
         self.requests
             .as_array()
             .into_iter()
@@ -193,7 +193,7 @@ pub fn deserialize<'de, D: serde::Deserializer<'de>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scheduling::timestamp::Timestamp;
+    use elsecall_scheduling_model::timestamp::Timestamp;
 
     /// A one-member, one-request rehearsal trace whose recording is complete.
     fn complete() -> Trace {

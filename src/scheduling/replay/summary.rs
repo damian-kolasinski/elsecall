@@ -7,6 +7,8 @@ use super::{
 use crate::scheduling::{
     placement::Level,
     record::{Record, Verdict},
+};
+use elsecall_scheduling_model::{
     run_id::RunId,
     timestamp::{Timestamp, seconds},
 };

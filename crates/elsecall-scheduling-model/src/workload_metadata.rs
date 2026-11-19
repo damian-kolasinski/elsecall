@@ -1,6 +1,6 @@
 //! Optional declarations about operations inside one admitted command. These are
 //! observations, never authorization, resource policy, or process outcomes.
-use crate::scheduling::request::invalid;
+use crate::request::invalid;
 use elsecall_failure::Result;
 use serde::{Deserialize, Serialize};
 
@@ -197,7 +197,7 @@ pub fn parse_observation(json: &str) -> Result<Observation> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::workload_metadata::*;
     fn workload() -> Workload {
         Workload::Sequential {
             planned_units: 3.try_into().unwrap(),

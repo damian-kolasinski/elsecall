@@ -76,4 +76,4 @@ impl<M: MachineInspector> MachineInspector for ScriptedLoad<M> {
     }
 }
 
-pub use crate::scheduling::speed::FixedSpeed;
+pub use elsecall_scheduling_model::speed::FixedSpeed;

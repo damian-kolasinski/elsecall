@@ -5,11 +5,13 @@ use crate::scheduling::{
     placed::{PlacedReport, Reached, Side},
     processes,
     record::{MAXIMUM_CPU_MS, Outcome},
-    request::{self, Kind},
-    run_id::RunId,
     run_phases::{RemoteFailurePhase, RunPhases},
 };
 use elsecall_failure::Result;
+use elsecall_scheduling_model::{
+    request::{self, Kind},
+    run_id::RunId,
+};
 
 impl Scheduler {
     /// Active run `id` requested by the process `peer`. The peer is compared by
@@ -101,7 +103,7 @@ impl Scheduler {
         &self,
         peer: u32,
         id: &RunId,
-        observation: crate::workload_metadata::Observation,
+        observation: elsecall_scheduling_model::workload_metadata::Observation,
     ) -> Result<()> {
         let lineage = processes::lineage(&*self.processes, peer);
         let mut book = self.book();

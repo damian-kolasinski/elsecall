@@ -7,9 +7,9 @@ use crate::{
         minute::{memory_rank, thermal_rank, worst},
     },
     reporting::statistics::{mean, nearest_rank, sorted},
-    scheduling::timestamp::Timestamp,
 };
 use elsecall_machine::inspection::{MemoryPressure, ThermalState};
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 

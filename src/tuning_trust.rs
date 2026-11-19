@@ -1,9 +1,10 @@
 //! Durable simulator certificates and drift revocation. Passing days never clear
 //! a revocation: only a subsequent successful rehearsal can do that.
-use crate::{scheduling::timestamp::Timestamp, workload::trace::Trace};
+use crate::workload::trace::Trace;
 use elsecall_build_identity::build_identity::{Build, Digest};
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::time::Duration;

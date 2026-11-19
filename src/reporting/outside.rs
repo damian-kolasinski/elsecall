@@ -10,8 +10,8 @@ use crate::{
         warning::{Concern, WarningEpisode},
     },
     reporting::{blocked::Pressure, window::Window},
-    scheduling::timestamp::Timestamp,
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 
 /// The most episodes one answer carries, the longest kept, so the largest fits

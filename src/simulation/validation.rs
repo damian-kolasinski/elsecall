@@ -2,15 +2,15 @@
 //! evidence is allowed; the fidelity gate identifies it without inventing data.
 use crate::{
     reporting::facts::{PlacementKind, is_code},
-    scheduling::{
-        capacity::Capacity,
-        request::{Kind, MAXIMUM_DEADLINE, MAXIMUM_HOLD_LIMIT, Placement, Urgency},
-        run_id::RunId,
-        speed::PLAUSIBLE,
-    },
     workload::trace::{Trace, TraceOutcome, VERSION},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::{
+    capacity::Capacity,
+    request::{Kind, MAXIMUM_DEADLINE, MAXIMUM_HOLD_LIMIT, Placement, Urgency},
+    run_id::RunId,
+    speed::PLAUSIBLE,
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 const DAY: u64 = 86_400_000;
@@ -293,7 +293,7 @@ pub fn trace(t: &Trace) -> Result<()> {
             Placement::Pinned => PlacementKind::Pinned,
             Placement::Placeable => PlacementKind::Placeable,
             Placement::Member(m) => {
-                if !name(m) || m.len() > crate::scheduling::request::MAXIMUM_MEMBER {
+                if !name(m) || m.len() > elsecall_scheduling_model::request::MAXIMUM_MEMBER {
                     return Err(bad("invalid required member name"));
                 }
                 PlacementKind::Required
@@ -476,12 +476,12 @@ mod tests {
     use super::*;
     use crate::{
         scheduling::fixtures::{self, T0},
-        scheduling::timestamp::Timestamp,
         workload::{
             contention::{Curve, Point},
             trace::{Member, Request},
         },
     };
+    use elsecall_scheduling_model::timestamp::Timestamp;
     fn fixture() -> Trace {
         let mut record = fixtures::pinned(1, "work", "mini", 2.0);
         record.decision = None;
@@ -530,7 +530,7 @@ mod tests {
     #[test]
     fn malformed_physics_and_zero_capacity_cannot_reach_simulator_arithmetic() {
         let mut t = fixture();
-        t.members[0].load[0].weighted_cores = crate::scheduling::capacity::Cores::ZERO;
+        t.members[0].load[0].weighted_cores = elsecall_scheduling_model::capacity::Cores::ZERO;
         assert!(trace(&t).is_err());
         t = fixture();
         t.members[0].load[0].cpu_mean = Some(f64::NAN);

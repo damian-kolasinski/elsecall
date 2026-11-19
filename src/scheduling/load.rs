@@ -1,6 +1,7 @@
 //! Whether outside load lets a member admit new work.
-use crate::scheduling::{capacity::Cores, parameters::Admission};
+use crate::scheduling::parameters::Admission;
 use elsecall_machine::inspection::{LoadSample, MemoryPressure};
+use elsecall_scheduling_model::capacity::Cores;
 use std::collections::VecDeque;
 
 /// Samples averaged for saturation; at one sample a second, about three seconds.
@@ -13,7 +14,7 @@ pub struct LoadHistory {
     unavailable: bool,
 }
 
-pub use super::gate::Gate;
+pub use elsecall_scheduling_model::gate::Gate;
 
 impl LoadHistory {
     pub fn record(&mut self, sample: LoadSample) {

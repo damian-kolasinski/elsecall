@@ -6,13 +6,9 @@ pub mod resolution;
 use crate::admission_api::{self, MAXIMUM_LISTED};
 use crate::{
     scheduling::{
-        capacity::Cores,
         estimates,
         messages::{Grant, Release, Runs},
         record::Record,
-        request::{AdmissionRequest, Kind, Urgency, invalid},
-        run_id::RunId,
-        timestamp::Timestamp,
     },
     service_handover,
     workload_settings::{WhenUnavailable, WorkloadSettings},
@@ -22,6 +18,12 @@ use elsecall_failure::{Failure, Result};
 use elsecall_guidance::{self as guidance, Unmanaged};
 use elsecall_local_client::{self as client, Wait};
 use elsecall_local_state::{local_access, paths::Paths, run_id_file::RunIdFile};
+use elsecall_scheduling_model::{
+    capacity::Cores,
+    request::{AdmissionRequest, Kind, Urgency, invalid},
+    run_id::RunId,
+    timestamp::Timestamp,
+};
 use environment::{CallerEnvironment, Mode};
 use options::{CallerOptions, RequestOptions, UnavailableAction};
 use resolution::{Layers, resolve};

@@ -6,13 +6,13 @@ use crate::{
         plan::{Arrival, Plan},
         protocol::{Action, Call, Job, Reply},
     },
-    scheduling::{request::Urgency, timestamp::Timestamp},
     trace_api::Members,
 };
 use clap::Args;
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling_model::{request::Urgency, timestamp::Timestamp};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 use tokio::time::Instant;

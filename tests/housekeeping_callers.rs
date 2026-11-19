@@ -19,10 +19,10 @@ use elsecall::{
         volumes::Statfs,
     },
     peer_client,
-    scheduling::timestamp::Timestamp,
 };
 use elsecall_failure::Result;
 use elsecall_local_state::paths::Paths;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workspace::{
     copies::Copies,
     location::{CopyLocation, Locations, Setting},

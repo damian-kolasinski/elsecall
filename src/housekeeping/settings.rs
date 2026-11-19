@@ -1,17 +1,17 @@
 //! The operator's housekeeping settings, from `[housekeeping]` in `config.toml`.
-use crate::scheduling::request::AtDeadline;
+use elsecall_scheduling_model::request::AtDeadline;
 use serde::Serialize;
 use std::time::Duration;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct Settings {
     /// How often a pass runs, as deferrable, pinned work; also its deadline.
-    #[serde(with = "crate::scheduling::timestamp::seconds")]
+    #[serde(with = "elsecall_scheduling_model::timestamp::seconds")]
     pub interval: Duration,
     /// What a pass that could not start within its interval does.
     pub at_deadline: AtDeadline,
     /// Copies not used for this long are removed.
-    #[serde(with = "crate::scheduling::timestamp::seconds")]
+    #[serde(with = "elsecall_scheduling_model::timestamp::seconds")]
     pub idle_after: Duration,
     /// Whether copies whose workspace the calling member deleted are removed.
     pub remove_deleted_workspaces: bool,

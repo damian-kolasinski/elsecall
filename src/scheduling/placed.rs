@@ -2,20 +2,18 @@
 //! and what both record. The master holds placed requests; the member it names
 //! either admits one at once or refuses it.
 use crate::scheduling::{
-    capacity::Cores,
     leftovers::Leftovers,
     messages::MemberState,
     quote::{Quote, QuoteRequest},
     record::SizeBasis,
-    run_id::RunId,
-    timestamp::Timestamp,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_scheduling_model::{capacity::Cores, run_id::RunId, timestamp::Timestamp};
 use futures_util::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-pub use crate::scheduling::request::WorkspaceRef;
+pub use elsecall_scheduling_model::request::WorkspaceRef;
 
 /// What the master asks a member to admit.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -25,7 +23,7 @@ pub struct PlacementOffer {
     pub size: Cores,
     pub label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub workload: Option<crate::workload_metadata::Workload>,
+    pub workload: Option<elsecall_scheduling_model::workload_metadata::Workload>,
     pub workspace: WorkspaceRef,
     /// How long the request may still take to start, sync included.
     pub start_within_ms: u64,

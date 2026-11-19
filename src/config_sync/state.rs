@@ -2,17 +2,15 @@
 //! fingerprint key, the manifest it holds (issued, if it is master; applied
 //! otherwise), a manifest being applied, what it last wrote at each synced path,
 //! and the backups of local edits. It holds fingerprints and names, never content.
-use crate::{
-    config_sync::{
-        compare::Change,
-        fingerprint::{Fingerprint, SyncKey},
-        manifest::{Manifest, Tree},
-        synced_path::SyncedPath,
-    },
-    scheduling::timestamp::Timestamp,
+use crate::config_sync::{
+    compare::Change,
+    fingerprint::{Fingerprint, SyncKey},
+    manifest::{Manifest, Tree},
+    synced_path::SyncedPath,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::private_files;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,

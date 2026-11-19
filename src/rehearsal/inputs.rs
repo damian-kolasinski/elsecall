@@ -1,17 +1,15 @@
 //! Freeze per-request rehearsal inputs once, using the same contract for
 //! workload selection and execution planning.
 use super::{invalid, plan::Arrival, protocol::Launch};
-use crate::{
-    scheduling::{
-        request::{Kind, Placement, Urgency},
-        timestamp::Timestamp,
-    },
-    workload::{
-        demand::Demand,
-        trace::{Request, Trace, TraceOutcome},
-    },
+use crate::workload::{
+    demand::Demand,
+    trace::{Request, Trace, TraceOutcome},
 };
 use elsecall_failure::Result;
+use elsecall_scheduling_model::{
+    request::{Kind, Placement, Urgency},
+    timestamp::Timestamp,
+};
 use std::collections::BTreeMap;
 
 pub(crate) struct Inputs<'a> {

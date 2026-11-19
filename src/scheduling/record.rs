@@ -1,16 +1,15 @@
 //! What Elsecall remembers about each request: the request, the decision and its
 //! inputs, and the outcome. Never arguments, environment values or secrets.
 use crate::scheduling::{
-    admission::QueueCounts,
+    admission::QueueCounts, load::Gate, parameters::Parameters, processes::ProcessIdentity,
+};
+use elsecall_machine::inspection::LoadSample;
+use elsecall_scheduling_model::{
     capacity::{Capacity, Cores},
-    load::Gate,
-    parameters::Parameters,
-    processes::ProcessIdentity,
     request::{Kind, Placement, Urgency},
     run_id::RunId,
     timestamp::{Timestamp, seconds},
 };
-use elsecall_machine::inspection::LoadSample;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -20,9 +19,9 @@ pub struct Record {
     pub kind: Kind,
     pub label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub workload: Option<crate::workload_metadata::Workload>,
+    pub workload: Option<elsecall_scheduling_model::workload_metadata::Workload>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub plan_observation: Option<crate::workload_metadata::Observation>,
+    pub plan_observation: Option<elsecall_scheduling_model::workload_metadata::Observation>,
     #[serde(default)]
     pub synthetic: bool,
     /// Service-owned work, established from the local requester identity.
@@ -82,7 +81,7 @@ pub struct Record {
     /// Where the request's properties came from, including the label rule that
     /// applied; absent in records from before label rules and for hosted work.
     #[serde(default)]
-    pub settings: Option<crate::scheduling::settings::Settings>,
+    pub settings: Option<elsecall_scheduling_model::settings::Settings>,
     /// How many more times the lease's holder acquired it while it was active;
     /// each of those acquires returned this lease.
     #[serde(default)]
@@ -221,7 +220,10 @@ pub struct Scoring {
     pub scored_at: Timestamp,
     /// The size scored, before a member shrank a learned size to fit.
     pub size: Cores,
-    #[serde(rename = "hold_left_ms", with = "crate::scheduling::timestamp::millis")]
+    #[serde(
+        rename = "hold_left_ms",
+        with = "elsecall_scheduling_model::timestamp::millis"
+    )]
     pub hold_left: Duration,
     /// The member the scoring chose. A request already waiting somewhere moves
     /// to it only by the moving margin, so it can differ from where it ran.
@@ -243,7 +245,7 @@ pub struct Arrival {
     #[serde(
         default,
         rename = "hold_left_ms",
-        with = "crate::scheduling::timestamp::millis::optional",
+        with = "elsecall_scheduling_model::timestamp::millis::optional",
         skip_serializing_if = "Option::is_none"
     )]
     pub hold_left: Option<Duration>,

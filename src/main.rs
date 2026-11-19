@@ -565,7 +565,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 elsecall::outside_pressure::remedy::next_step(
                     &first.member,
                     &first.blocked,
-                    elsecall::scheduling::timestamp::Timestamp::now(),
+                    elsecall_scheduling_model::timestamp::Timestamp::now(),
                 )
             } else if service_configurations
                 .as_ref()
@@ -582,7 +582,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 elsecall::outside_pressure::remedy::warning_step(
                     &first.member,
                     &first.warning,
-                    elsecall::scheduling::timestamp::Timestamp::now(),
+                    elsecall_scheduling_model::timestamp::Timestamp::now(),
                 )
             } else {
                 "No action needed.".to_owned()
@@ -637,7 +637,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 } else {
                     Arc::new(MacMachine::default())
                 };
-            let speed: Arc<dyn elsecall::scheduling::speed::SpeedMeter> =
+            let speed: Arc<dyn elsecall_scheduling_model::speed::SpeedMeter> =
                 match elsecall::machine_script::speed() {
                     Some(fixed) => Arc::new(fixed),
                     None => Arc::new(elsecall::macos::core_benchmark::CoreBenchmark),

@@ -1,9 +1,10 @@
 //! Early warnings about outside processes, as a report shows them per member:
 //! each warning that held in the period and how long it had held. Pure.
 use crate::{
-    outside_pressure::warning::Warning, reporting::outside::OutsideHistory,
-    reporting::window::Window, scheduling::timestamp::Timestamp,
+    outside_pressure::warning::Warning,
+    reporting::{outside::OutsideHistory, window::Window},
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

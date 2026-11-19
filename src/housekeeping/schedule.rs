@@ -5,16 +5,15 @@
 //! tries again. Each attempt leaves a record labelled `elsecall housekeeping`.
 use crate::{
     housekeeping::pass::Housekeeper,
-    scheduling::{
-        capacity::Cores,
-        messages::RunEnded,
-        request::{AdmissionRequest, Kind, Placement, Urgency},
-        run_id::RunId,
-        service::Scheduler,
-        timestamp::Timestamp,
-    },
+    scheduling::{messages::RunEnded, service::Scheduler},
 };
 use elsecall_failure::Result;
+use elsecall_scheduling_model::{
+    capacity::Cores,
+    request::{AdmissionRequest, Kind, Placement, Urgency},
+    run_id::RunId,
+    timestamp::Timestamp,
+};
 use futures_util::future::BoxFuture;
 use std::{sync::Arc, time::Duration};
 

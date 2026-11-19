@@ -17,8 +17,8 @@ use crate::{
         outside_warnings::PeriodWarning,
         overload::{How, Overload},
     },
-    scheduling::timestamp::Timestamp,
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 
 /// At most this many findings, the most severe first.
@@ -936,10 +936,9 @@ mod tests {
         scheduling::{
             placement::Source,
             record::{Outcome, Verdict},
-            request::Placement,
-            timestamp::Timestamp,
         },
     };
+    use elsecall_scheduling_model::{request::Placement, timestamp::Timestamp};
 
     /// A fleet with one of every problem.
     fn troubled() -> Gathered {
@@ -1247,7 +1246,7 @@ mod tests {
             let mut gathered = troubled();
             // Two pinned checks and a lease ran on the mini during it.
             let mut lease = fixtures::pinned(11, "warm", "mini", 120.0);
-            lease.kind = crate::scheduling::request::Kind::Lease;
+            lease.kind = elsecall_scheduling_model::request::Kind::Lease;
             gathered.facts = [
                 fixtures::pinned(9, "check", "mini", 30.0),
                 fixtures::pinned(10, "check", "mini", 30.0),
@@ -1589,10 +1588,10 @@ mod tests {
         outcome: Outcome,
     ) -> crate::scheduling::record::Record {
         let mut record = fixtures::base(n, label, member);
-        record.kind = crate::scheduling::request::Kind::Lease;
-        record.urgency = crate::scheduling::request::Urgency::Deferrable {
+        record.kind = elsecall_scheduling_model::request::Kind::Lease;
+        record.urgency = elsecall_scheduling_model::request::Urgency::Deferrable {
             deadline: incident_at(at + 1800),
-            at_deadline: crate::scheduling::request::AtDeadline::Start,
+            at_deadline: elsecall_scheduling_model::request::AtDeadline::Start,
         };
         record.requested_at = incident_at(at);
         record.ended_at = Some(incident_at(at + waited));
@@ -1623,7 +1622,7 @@ mod tests {
                 code: "deadline_skipped".into(),
             },
         );
-        housekeeping.kind = crate::scheduling::request::Kind::Run;
+        housekeeping.kind = elsecall_scheduling_model::request::Kind::Run;
         housekeeping.internal = true;
         let records = [
             queued(

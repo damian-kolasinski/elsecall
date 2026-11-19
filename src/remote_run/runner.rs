@@ -13,10 +13,11 @@ use crate::{
         output::{self, Window},
         protocol::{Exited, RunMessage, Start, Stream},
     },
-    scheduling::{leftovers::Leftovers, run_id::RunId},
+    scheduling::leftovers::Leftovers,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_run_admission::{self as run_admission, Admission};
+use elsecall_scheduling_model::run_id::RunId;
 use elsecall_wire::wire::Frame;
 use elsecall_workspace::{
     confined::{Confined, Create},
@@ -96,7 +97,10 @@ pub trait Host: Send + Sync {
     fn started(&self, run: &RunId, pid: u32);
     fn ended(&self, run: &RunId, ending: Ending);
     /// The command's validated assertion, received through its local grant.
-    fn observation(&self, _run: &RunId) -> Option<crate::workload_metadata::Observation> {
+    fn observation(
+        &self,
+        _run: &RunId,
+    ) -> Option<elsecall_scheduling_model::workload_metadata::Observation> {
         None
     }
     /// Processes the command left running, as they run and once they ended;

@@ -2,7 +2,8 @@
 //! after it exited ("leftovers"). They are not admitted work: the run's capacity
 //! is released at its end, and they run on as outside load until they end on their
 //! own or are stopped.
-use crate::scheduling::{processes::ProcessIdentity, timestamp::Timestamp};
+use crate::scheduling::processes::ProcessIdentity;
+use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 
 /// The leftovers of one placed run, while they run and once they ended.

@@ -167,7 +167,8 @@ mod progress_tests {
             .arg(script)
             .args(["0.7", "17", "0"])
             .arg(
-                (crate::scheduling::timestamp::Timestamp::now().millis() as f64 / 1000.0 + 20.0)
+                (elsecall_scheduling_model::timestamp::Timestamp::now().millis() as f64 / 1000.0
+                    + 20.0)
                     .to_string(),
             )
             .arg(work.to_string())
@@ -257,7 +258,8 @@ mod cpu_tests {
                 .arg(path)
                 .args(["0.5", "17", "0"])
                 .arg(
-                    (crate::scheduling::timestamp::Timestamp::now().millis() as f64 / 1000.0
+                    (elsecall_scheduling_model::timestamp::Timestamp::now().millis() as f64
+                        / 1000.0
                         + 20.0)
                         .to_string(),
                 )
@@ -301,7 +303,8 @@ mod cpu_tests {
                 .arg(&path)
                 .args(["1.5", "17", "0"])
                 .arg(
-                    (crate::scheduling::timestamp::Timestamp::now().millis() as f64 / 1000.0
+                    (elsecall_scheduling_model::timestamp::Timestamp::now().millis() as f64
+                        / 1000.0
                         + 30.0)
                         .to_string(),
                 )

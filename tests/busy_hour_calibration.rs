@@ -6,9 +6,9 @@ mod processes;
 use elsecall::{
     busy_hour_calibration::{Target, calibrate},
     replay_placement::{Mode, ReplayPlacement},
-    scheduling::timestamp::Timestamp,
     workload::trace::Trace,
 };
+use elsecall_scheduling_model::timestamp::Timestamp;
 use members::{TestMember, enrol};
 use serde_json::json;
 use std::{
