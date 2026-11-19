@@ -1,6 +1,6 @@
 #![cfg(target_os = "macos")]
-//! The README's entry pattern, a script that re-execs itself through Elsecall at
-//! its top, run as a consumer would: the README's guard and entry lines verbatim,
+//! The integration guide's entry pattern, a script that re-execs itself through
+//! Elsecall at its top, run as a consumer would: the guide's guard and entry lines verbatim,
 //! the real CLI, and real member services where admission is involved. Each mode
 //! must run the script's body exactly once, run its pre-admission check once, and
 //! let a signal to the script's original PID stop it.
@@ -18,7 +18,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-const README: &str = include_str!("../README.md");
+/// The integration guide `elsecall skill show integrate` prints.
+const README: &str = include_str!("../skill/elsecall/references/integrate.md");
 
 /// The README's `sh` block that starts with `first_line`.
 fn readme_block(first_line: &str) -> &'static str {
@@ -27,7 +28,9 @@ fn readme_block(first_line: &str) -> &'static str {
         .skip(1)
         .map(|block| block.split("\n```").next().unwrap())
         .find(|block| block.starts_with(first_line))
-        .unwrap_or_else(|| panic!("README has no sh block starting with {first_line}"))
+        .unwrap_or_else(|| {
+            panic!("the integration guide has no sh block starting with {first_line}")
+        })
 }
 
 /// The README's line in `block` that starts with `prefix`.
@@ -35,7 +38,9 @@ fn readme_line(block: &str, prefix: &str) -> String {
     block
         .lines()
         .find(|line| line.starts_with(prefix))
-        .unwrap_or_else(|| panic!("README block has no line starting with {prefix}"))
+        .unwrap_or_else(|| {
+            panic!("the integration guide's block has no line starting with {prefix}")
+        })
         .to_owned()
 }
 
