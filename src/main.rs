@@ -132,7 +132,7 @@ enum Command {
     #[command(
         after_help = "Asks every member for its requests and load history over the member channel; a member that cannot answer is named and the rest of the report stands. README \"Fleet reports\" defines every metric."
     )]
-    Report(elsecall::report_cli::ReportArgs),
+    Report(elsecall_reporting::report_cli::ReportArgs),
     /// Export a versioned workload trace and empirical resource models
     Trace(elsecall::trace_cli::TraceArgs),
     /// Replay workload traces through the real scheduler on a virtual fleet
@@ -680,7 +680,7 @@ async fn run(cli: Cli) -> Result<bool> {
         }
         Command::Runs { limit } => output(admission_cli::runs(&paths, limit).await?),
         Command::Explain { run_id } => output(admission_cli::explain(&paths, &run_id).await?),
-        Command::Report(args) => output(elsecall::report_cli::run(&paths, args).await?),
+        Command::Report(args) => output(elsecall_reporting::report_cli::run(&paths, args).await?),
         Command::Trace(args) => output(elsecall::trace_cli::run(&paths, args).await?),
         Command::Rehearse(args) => {
             let result = elsecall::rehearse_cli::run(&paths, args).await?;

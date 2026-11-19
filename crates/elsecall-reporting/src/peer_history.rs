@@ -294,7 +294,7 @@ impl MemberHistory for PeerHistory {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::peer_history::*;
     use elsecall_scheduling::fixtures::bucket;
 
     #[test]

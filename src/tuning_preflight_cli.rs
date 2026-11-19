@@ -52,7 +52,8 @@ pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
         crate::workload_input::read(path)?
     } else {
         let now = Timestamp::now();
-        let start = crate::report_cli::since(args.since.as_deref().unwrap_or("7d"), now)?;
+        let start =
+            elsecall_reporting::report_cli::since(args.since.as_deref().unwrap_or("7d"), now)?;
         // Collect through now, so every historical drain and sensitivity trial
         // can use the available evidence beyond the arrival cutoff.
         crate::trace_cli::collect(&elsecall_local_state::paths::Paths::current()?, start, now)

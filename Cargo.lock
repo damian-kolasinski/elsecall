@@ -1090,6 +1090,7 @@ dependencies = [
  "elsecall-remote-run",
  "elsecall-replay",
  "elsecall-report-facts",
+ "elsecall-reporting",
  "elsecall-run-admission",
  "elsecall-scheduling",
  "elsecall-scheduling-model",
@@ -1486,6 +1487,37 @@ dependencies = [
  "elsecall-scheduling",
  "elsecall-scheduling-model",
  "serde",
+]
+
+[[package]]
+name = "elsecall-reporting"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "clap",
+ "elsecall-api-response",
+ "elsecall-failure",
+ "elsecall-fleet",
+ "elsecall-labels",
+ "elsecall-load-log",
+ "elsecall-local-client",
+ "elsecall-local-state",
+ "elsecall-machine",
+ "elsecall-membership",
+ "elsecall-outside-pressure",
+ "elsecall-peer-diagnostics",
+ "elsecall-peer-transport",
+ "elsecall-report-facts",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-wire",
+ "elsecall-workload",
+ "futures-util",
+ "humantime",
+ "hyper",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

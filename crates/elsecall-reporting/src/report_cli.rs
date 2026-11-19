@@ -68,7 +68,7 @@ pub async fn run(paths: &Paths, args: ReportArgs) -> Result<serde_json::Value> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::report_cli::*;
 
     const DAY: u64 = 86_400_000;
 
@@ -104,7 +104,7 @@ mod tests {
         assert_eq!(request.member.as_deref(), Some("devbox"));
         for bad in ["30s", "1y", "soon"] {
             assert_eq!(
-                super::request(args(bad), now).unwrap_err().code,
+                crate::report_cli::request(args(bad), now).unwrap_err().code,
                 "invalid_request"
             );
         }

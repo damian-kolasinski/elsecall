@@ -85,7 +85,7 @@ fn asked_window(since_ms: u64, until_ms: u64) -> Result<Window> {
 
 impl Reporter {
     /// The members a report asks: this one first, then the fleet's others.
-    pub(crate) fn fleet(&self) -> gathering::Fleet {
+    pub fn fleet(&self) -> gathering::Fleet {
         let this_member = self.own.scheduler.name();
         let mut fleet = gathering::Fleet {
             this_member: this_member.clone(),
@@ -283,7 +283,7 @@ async fn peer_io(body: Bytes) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::report_api::*;
     use elsecall_machine::inspection::{MemoryPressure, ThermalState};
     use elsecall_peer_transport::peer_client::RESPONSE_LIMIT;
     use elsecall_report_facts::{
