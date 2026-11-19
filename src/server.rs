@@ -1,4 +1,4 @@
-use crate::{peer_api, peer_listener, placement_api, placement_host::PlacementHost, run_relay};
+use crate::{peer_api, peer_listener, run_relay};
 use axum::{
     Json, Router,
     extract::State,
@@ -21,6 +21,7 @@ use elsecall_housekeeping::{
 use elsecall_local_state::{local_access, paths::Paths, private_files};
 use elsecall_machine::inspection::Inspection;
 use elsecall_membership::{member_key::MemberKey, membership_store::MembershipStore};
+use elsecall_placement::{placement_api, placement_host::PlacementHost};
 use elsecall_scheduling::service::{Adapters, Scheduler};
 use elsecall_wire::api;
 use elsecall_workspace::{copies::Copies, location::Locations, object_sources::ObjectSources};
@@ -213,9 +214,9 @@ pub async fn serve_with_updates(
         ));
     }
     // Placed runs bring their member's synced configuration up to date first.
-    let pre_run = Arc::new(crate::placement_config_sync::PlacementConfigSync::new(
-        config_sync.clone(),
-    ));
+    let pre_run = Arc::new(
+        elsecall_placement::placement_config_sync::PlacementConfigSync::new(config_sync.clone()),
+    );
     let (scheduler, _scheduling) = Scheduler::start(
         &paths.records(),
         (&configuration).into(),

@@ -31,7 +31,7 @@ pub fn routes(fleet: Arc<Fleet>, placement: Router<Arc<Fleet>>) -> Router {
         .route("/peer/v1/roster", get(roster).put(offer))
         .route(
             "/peer/v1/placement/probe",
-            post(crate::placement_authority::probe),
+            post(elsecall_placement::placement_authority::probe),
         )
         .merge(placement)
         .fallback(|| async {

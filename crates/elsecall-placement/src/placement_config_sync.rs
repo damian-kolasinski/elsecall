@@ -75,7 +75,7 @@ fn pushed(applied: &Applied) -> Vec<PushedPath> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::placement_config_sync::*;
     use elsecall_config_sync::config_sync::history::{FileRecord, PathRecord};
     use elsecall_config_sync_model::synced_path::SyncedPath;
 
@@ -122,6 +122,9 @@ mod tests {
                 }],
             }
         );
-        assert_eq!(super::synced(None), Synced::NothingSynced);
+        assert_eq!(
+            crate::placement_config_sync::synced(None),
+            Synced::NothingSynced
+        );
     }
 }

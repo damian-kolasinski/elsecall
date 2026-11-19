@@ -51,6 +51,7 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 elsecall = { path = "." }
+elsecall-placement = { path = "crates/elsecall-placement" }
 elsecall-rehearsal = { path = "crates/elsecall-rehearsal" }
 elsecall-openssh-mac = { path = "crates/elsecall-openssh-mac" }
 elsecall-fleet-upgrade = { path = "crates/elsecall-fleet-upgrade" }
@@ -153,6 +154,7 @@ elsecall-os-processes.workspace = true
 elsecall-outside-pressure.workspace = true
 elsecall-peer-diagnostics.workspace = true
 elsecall-peer-transport.workspace = true
+elsecall-placement.workspace = true
 elsecall-platform-macos.workspace = true
 elsecall-process.workspace = true
 elsecall-rehearsal.workspace = true
