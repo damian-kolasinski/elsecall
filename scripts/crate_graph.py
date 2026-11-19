@@ -15,15 +15,17 @@ reads its manifest, and fails on:
 - `edge`: a crate depending on a crate in a higher band, closing a cycle within
   its band, or leaving its `may_depend_on`.
 - `testedge`: the same for test code, which compiles with its crate: an upward
-  test dependency builds a crate twice. A crate shares fixtures behind a
-  `test-support` feature instead.
+  test dependency builds a crate twice. A crate shares fixtures as an
+  ordinary `fixtures` module instead.
 - `extern`: a framework its band forbids (`forbid`), such as axum in the
   foundation.
 - `lines`: a foundation crate over its band's `max_lines`.
 - `name`: a crate named for no responsibility (`common`, `types`, ...).
 - `manifest`: a crate's manifest not inheriting the workspace (version, edition,
   rust-version, license, lints), publishable, naming a dependency other than
-  `name.workspace = true`, or depending on a higher band.
+  `name.workspace = true`, or depending on a higher band; or any package's
+  tests turning on a workspace crate's features, which would build that crate
+  and everything above it once for `cargo build` and again for `cargo test`.
 - `environment`: `CARGO_BIN_EXE_*` outside a package's own tests, or
   `CARGO_MANIFEST_DIR` in foundation or core production code, which ties shared
   build caches to one checkout.
@@ -50,9 +52,6 @@ LIBRARY = "elsecall"
 # Crate names that say where code sits rather than what it owns.
 CATCH_ALL = shape.CATCH_ALL | {"types", "base", "prelude", "lib", "stuff", "general"}
 INHERITED = ("version", "edition", "rust-version", "license")
-# A module other crates' tests may use, behind the crate's test-support feature.
-GATED = re.compile(r'#\[cfg\(any\(test,\s*feature\s*=\s*"test-support"\)\)\]\s*pub\s+mod\s+(\w+)')
-
 
 # --- The plan -----------------------------------------------------------------
 
@@ -624,11 +623,18 @@ def manifest_findings(root: Path, plan: Plan, packages: dict[str, str], files: d
                     if target.is_file():
                         workspace_names[key] = tomllib.loads(target.read_text(encoding="utf-8"))["package"]["name"]
     for directory, package in sorted(packages.items()):
+        manifest_path = f"{directory}/Cargo.toml" if directory else "Cargo.toml"
+        if not (root / manifest_path).is_file():
+            continue
+        manifest = tomllib.loads((root / manifest_path).read_text(encoding="utf-8"))
+        for table in ["dev-dependencies"] + [f"target.{p}.dev-dependencies" for p in manifest.get("target", {})]:
+            entries = manifest.get(table, {}) if "." not in table else manifest["target"][table.split(".")[1]].get("dev-dependencies", {})
+            for name, spec in entries.items():
+                if isinstance(spec, dict) and spec.get("features") and extracted(plan, workspace_names.get(name, name)):
+                    found.append(Finding(True, manifest_path, f"`{table}.{name}` turns on features only for tests: `cargo build` and `cargo test` would then build it, and every crate above it, twice. Give every build what the tests need"))
         if not directory:
             continue
         crate = plan.packages.get(package) or extracted(plan, package)
-        manifest_path = f"{directory}/Cargo.toml"
-        manifest = tomllib.loads((root / manifest_path).read_text(encoding="utf-8"))
         if crate is None:
             continue  # reported as unassigned
         if package not in plan.packages and directory != f"crates/{package}":
@@ -664,28 +670,11 @@ def manifest_findings(root: Path, plan: Plan, packages: dict[str, str], files: d
                 if table != "dev-dependencies" and source.may_depend_on is not None and target not in source.may_depend_on:
                     found.append(Finding(True, manifest_path, f"`{table}.{name}` is not in `{crate}`'s may_depend_on"))
     directories = sorted(packages, key=len, reverse=True)
-    # Test-support modules, and the packages whose code names them.
-    gated: dict[str, set[str]] = defaultdict(set)
-    for path, text in files.items():
-        if path.startswith("crates/"):
-            for match in GATED.finditer(text):
-                gated[path.split("/")[1]].add(match.group(1))
     for path, text in sorted(files.items()):
         directory = next((d for d in directories if d == "" or path.startswith(d + "/")), None)
         if directory is None:
             continue
         package = packages[directory]
-        manifest = tomllib.loads((root / directory / "Cargo.toml").read_text(encoding="utf-8")) if (root / directory / "Cargo.toml").is_file() else {}
-        for provider, modules in gated.items():
-            if provider == package:
-                continue
-            ident = provider.replace("-", "_")
-            for module in modules:
-                if not re.search(rf"\b{ident}::(?:\w+::)*(?:\{{[^}}]*\b{module}\b|{module}\b)", text):
-                    continue
-                specs = [manifest.get(t, {}).get(provider) for t in ("dependencies", "dev-dependencies")]
-                if not any(isinstance(s, dict) and "test-support" in s.get("features", []) for s in specs):
-                    found.append(Finding(True, path, f"uses {provider}'s test-support module `{module}`: give {package} `{provider} = {{ workspace = true, features = [\"test-support\"] }}` under [dev-dependencies] (scripts/test_support.py does)"))
         inside = path[len(directory) + 1 :] if directory else path
         own_tests = inside.startswith("tests/")
         if directory and re.search(rf"(?<![\w:]){LIBRARY}::", "\n".join(l for _, l in [(0, x) for x in blank(list(enumerate(text.splitlines(), 1))).splitlines()])):

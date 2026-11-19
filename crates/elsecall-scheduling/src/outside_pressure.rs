@@ -31,7 +31,6 @@ pub mod trend_store;
 pub mod warning;
 pub mod watcher;
 
-#[cfg(any(test, feature = "test-support"))]
 pub mod fixtures;
 #[cfg(test)]
 mod tests;

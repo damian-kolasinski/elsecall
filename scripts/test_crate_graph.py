@@ -210,6 +210,11 @@ class Manifests(unittest.TestCase):
         messages = self.check({"crates/elsecall-failure": manifest})
         self.assertTrue(any("higher feature band" in m for m in messages), messages)
 
+    def test_tests_may_not_turn_on_a_workspace_crates_features(self):
+        manifest = self.GOOD + '\n[dev-dependencies]\nelsecall-scheduling = { workspace = true, features = ["fixtures"] }\n'
+        messages = self.check({"crates/elsecall-failure": manifest})
+        self.assertTrue(any("twice" in m for m in messages), messages)
+
     def test_target_tables_and_the_binary_package_are_checked_too(self):
         manifest = self.GOOD + "\n[target.'cfg(unix)'.dependencies]\nlibc = \"0.2\"\nelsecall.workspace = true\n"
         messages = self.check({"crates/elsecall-failure": manifest})

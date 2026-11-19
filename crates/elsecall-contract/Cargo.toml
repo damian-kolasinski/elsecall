@@ -12,10 +12,6 @@ doctest = false
 [lints]
 workspace = true
 
-[features]
-# Fixtures other crates' tests build with.
-test-support = []
-
 [dependencies]
 base64.workspace = true
 humantime.workspace = true

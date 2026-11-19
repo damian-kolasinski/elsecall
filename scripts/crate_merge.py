@@ -29,7 +29,6 @@ ROOT = Path(__file__).resolve().parent.parent
 PLAN = ROOT / "scripts" / "crate-graph.toml"
 LIBRARY = "elsecall"
 FEATURE_NOTES = {
-    "test-support": "Fixtures other crates' tests build with.",
     "local-release-channel": "Follow a local release channel; the binary's feature of that name turns it on.",
 }
 

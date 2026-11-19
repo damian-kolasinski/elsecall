@@ -345,7 +345,6 @@ pub fn disagreement(d: &Demand) -> bool {
 }
 
 /// Facts and buckets the demand model is fitted on in tests, its own and reports'.
-#[cfg(any(test, feature = "test-support"))]
 pub mod fixtures {
     use super::*;
     use elsecall_contract::scheduling_model::{capacity::Cores, timestamp::Timestamp};

@@ -16,6 +16,3 @@ workspace = true
 elsecall-contract.workspace = true
 elsecall-scheduling.workspace = true
 serde.workspace = true
-
-[dev-dependencies]
-elsecall-scheduling = { workspace = true, features = ["test-support"] }

@@ -6,7 +6,6 @@ pub mod binding;
 pub mod busy;
 pub mod clock;
 pub mod estimates;
-#[cfg(any(test, feature = "test-support"))]
 pub mod fixtures;
 pub mod learning;
 pub mod leftovers;

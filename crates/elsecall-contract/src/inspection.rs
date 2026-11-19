@@ -131,7 +131,6 @@ impl Inspection {
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
 impl Machine {
     /// A machine with plausible values, as an inspection reports them.
     pub fn fixture() -> Self {
