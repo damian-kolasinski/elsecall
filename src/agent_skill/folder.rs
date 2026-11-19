@@ -1,49 +1,42 @@
-//! The skill folder `setup` writes: one `SKILL.md` that points the agent at
-//! `elsecall skill show`. Elsecall replaces or removes only a `SKILL.md` it wrote,
-//! which it recognises by its marker line.
+//! One skill folder named `elsecall`: what is in it, and writing or removing what
+//! Elsecall puts there. Elsecall writes and removes only its own files, in a plain
+//! folder, and never follows a link.
+use super::{
+    guide,
+    stub::{self, Owner},
+};
 use serde::Serialize;
-use std::{io, path::Path};
+use std::{
+    io,
+    path::{Path, PathBuf},
+};
 
 /// The skill's name, and its folder's name in an agent's skills folder.
 pub const NAME: &str = "elsecall";
 const FILE: &str = "SKILL.md";
-const MARKER: &str = "<!-- Written by `elsecall skill setup`";
-
-pub const STUB: &str = "---
-name: elsecall
-description: Run builds, tests and other heavy commands through Elsecall, which admits work when this Mac has room and can place it on another Mac in the fleet, and adopt it in a repository's scripts. Use when a repository's scripts call `elsecall` or source an Elsecall guard, when asked to run work on another fleet member, or when integrating a project with Elsecall.
----
-<!-- Written by `elsecall skill setup`; running it again updates it, and `elsecall skill remove` removes it. -->
-
-# Elsecall
-
-Run `elsecall skill show` and follow the guide it prints. It comes from the installed `elsecall`, so it describes that version's commands; `elsecall skill show NAME` prints each topic the guide names.
-";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum State {
-    /// No skill named elsecall.
+    /// No skill: no folder, or one holding only hidden files such as `.DS_Store`.
     Missing,
-    /// What this build's `setup` writes.
+    /// This build's stub, or a newer build's.
     Current,
-    /// What another build's `setup` wrote.
+    /// An older build's stub.
     Outdated,
+    /// A whole copy `elsecall skill install` exported.
+    Exported,
     /// A skill named elsecall that Elsecall did not write.
     Foreign,
-    /// A folder or `SKILL.md` that is a link to somewhere else. Elsecall never
-    /// writes through it or removes it, even with --force.
+    /// The folder or its `SKILL.md` is a link to somewhere else.
     Linked,
 }
 
 impl State {
     pub fn ours(self) -> bool {
-        matches!(self, State::Current | State::Outdated)
+        matches!(self, State::Current | State::Outdated | State::Exported)
     }
 }
-
-/// Where `write` stages the new file; a leftover from an interrupted write is ours.
-const STAGED: &str = ".SKILL.md.elsecall-new";
 
 fn is_link(path: &Path) -> io::Result<bool> {
     match std::fs::symlink_metadata(path) {
@@ -53,20 +46,26 @@ fn is_link(path: &Path) -> io::Result<bool> {
     }
 }
 
-/// A folder or `SKILL.md` that is a link is someone else's arrangement: Elsecall
-/// writes and removes only plain files in a plain folder.
+fn hidden(name: &std::ffi::OsStr) -> bool {
+    name.as_encoded_bytes().starts_with(b".")
+}
+
 pub fn state(folder: &Path) -> io::Result<State> {
     if is_link(folder)? || is_link(&folder.join(FILE))? {
         return Ok(State::Linked);
     }
     match std::fs::read_to_string(folder.join(FILE)) {
-        Ok(text) if text == STUB => Ok(State::Current),
-        Ok(text) if text.lines().any(|line| line.starts_with(MARKER)) => Ok(State::Outdated),
-        Ok(_) => Ok(State::Foreign),
+        Ok(text) => Ok(match stub::owner(&text) {
+            Owner::Stub(_) if text == stub::text() => State::Current,
+            Owner::Stub(version) if version > stub::VERSION => State::Current,
+            Owner::Stub(_) => State::Outdated,
+            Owner::Exported => State::Exported,
+            Owner::Foreign => State::Foreign,
+        }),
         Err(e) if e.kind() == io::ErrorKind::NotFound => match std::fs::read_dir(folder) {
             Ok(entries) => {
                 for entry in entries {
-                    if entry?.file_name() != STAGED {
+                    if !hidden(&entry?.file_name()) {
                         return Ok(State::Foreign);
                     }
                 }
@@ -86,39 +85,99 @@ fn gone(result: io::Result<()>) -> io::Result<()> {
     }
 }
 
-/// Writes this build's `SKILL.md`, replacing the file whole.
-pub fn write(folder: &Path) -> io::Result<()> {
-    std::fs::create_dir_all(folder)?;
-    let staged = folder.join(STAGED);
-    // A fresh file, never one a leftover or a link would put elsewhere.
-    gone(std::fs::remove_file(&staged))?;
-    let written = std::fs::OpenOptions::new()
+/// A fresh file, never one a leftover or a link would put elsewhere.
+fn create(path: &Path, text: &str) -> io::Result<()> {
+    gone(std::fs::remove_file(path))?;
+    let mut file = std::fs::OpenOptions::new()
         .write(true)
         .create_new(true)
-        .open(&staged)
-        .and_then(|mut file| io::Write::write_all(&mut file, STUB.as_bytes()))
-        .and_then(|()| std::fs::rename(&staged, folder.join(FILE)));
+        .open(path)?;
+    io::Write::write_all(&mut file, text.as_bytes())
+}
+
+/// Writes the stub as the folder's `SKILL.md`, replacing that file whole and
+/// leaving any other file in the folder.
+pub fn write_stub(folder: &Path) -> io::Result<()> {
+    std::fs::create_dir_all(folder)?;
+    let staged = folder.join(format!(".{FILE}.elsecall-new"));
+    let written =
+        create(&staged, &stub::text()).and_then(|()| std::fs::rename(&staged, folder.join(FILE)));
     if written.is_err() {
         let _ = std::fs::remove_file(&staged);
     }
     written
 }
 
-/// Removes what Elsecall wrote, and the folder once nothing else is in it. A
-/// file already gone counts as removed.
-pub fn remove(folder: &Path) -> io::Result<()> {
-    gone(std::fs::remove_file(folder.join(FILE)))?;
-    gone(std::fs::remove_file(folder.join(STAGED)))?;
-    match std::fs::remove_dir(folder) {
-        Err(e)
-            if !matches!(
-                e.kind(),
-                io::ErrorKind::DirectoryNotEmpty | io::ErrorKind::NotFound
-            ) =>
-        {
-            Err(e)
+/// Puts `files` in place as the whole folder: written beside it, then renamed
+/// over it, so an agent never reads half a folder. Only for a folder that is
+/// missing or Elsecall's own.
+pub fn replace(folder: &Path, files: &[(String, String)]) -> io::Result<()> {
+    let parent = folder.parent().expect("a skill folder has a parent");
+    std::fs::create_dir_all(parent)?;
+    let staging = |what: &str| parent.join(format!(".{NAME}.{what}-{}", std::process::id()));
+    let (fresh, old) = (staging("new"), staging("old"));
+    let _ = std::fs::remove_dir_all(&fresh);
+    let result = (|| {
+        for (path, text) in files {
+            let path = fresh.join(path);
+            std::fs::create_dir_all(path.parent().expect("inside the folder"))?;
+            create(&path, text)?;
         }
-        _ => Ok(()),
+        match std::fs::rename(folder, &old) {
+            Ok(()) => {}
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e),
+        }
+        std::fs::rename(&fresh, folder)?;
+        gone(std::fs::remove_dir_all(&old))
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_dir_all(&fresh);
+        if !folder.exists() {
+            let _ = std::fs::rename(&old, folder);
+        }
+    }
+    result
+}
+
+/// The whole skill, as `elsecall skill install` exports it.
+pub fn exported() -> Vec<(String, String)> {
+    guide::files()
+        .into_iter()
+        .map(|(path, text)| (path, text.to_owned()))
+        .collect()
+}
+
+/// The files Elsecall may have put in a folder: its `SKILL.md`, an exported
+/// copy's references, and leftovers of an interrupted write.
+fn ours(folder: &Path) -> Vec<PathBuf> {
+    let mut paths: Vec<PathBuf> = exported()
+        .into_iter()
+        .map(|(path, _)| folder.join(path))
+        .collect();
+    paths.push(folder.join(format!(".{FILE}.elsecall-new")));
+    paths
+}
+
+/// Removes what Elsecall wrote, then the folder if nothing but hidden files is
+/// left. A file already gone counts as removed.
+pub fn remove(folder: &Path) -> io::Result<()> {
+    for path in ours(folder) {
+        gone(std::fs::remove_file(path))?;
+    }
+    let _ = std::fs::remove_dir(folder.join("references"));
+    match std::fs::read_dir(folder) {
+        Ok(entries) => {
+            let names: Vec<_> = entries
+                .map(|e| e.map(|e| e.file_name()))
+                .collect::<io::Result<_>>()?;
+            if names.iter().all(|name| hidden(name)) {
+                gone(std::fs::remove_dir_all(folder))?;
+            }
+            Ok(())
+        }
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e),
     }
 }
 
@@ -126,70 +185,52 @@ pub fn remove(folder: &Path) -> io::Result<()> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn a_folder_is_missing_then_current_then_outdated_after_another_build() {
+    fn folder() -> (tempfile::TempDir, PathBuf) {
         let home = tempfile::tempdir().unwrap();
         let folder = home.path().join(NAME);
+        (home, folder)
+    }
+
+    #[test]
+    fn a_stub_is_missing_then_current_then_outdated_after_an_older_build() {
+        let (_home, folder) = folder();
         assert_eq!(state(&folder).unwrap(), State::Missing);
         std::fs::create_dir(&folder).unwrap();
-        assert_eq!(state(&folder).unwrap(), State::Missing, "an empty folder");
-        write(&folder).unwrap();
+        std::fs::write(folder.join(".DS_Store"), "").unwrap();
+        assert_eq!(state(&folder).unwrap(), State::Missing, "only hidden files");
+        write_stub(&folder).unwrap();
         assert_eq!(state(&folder).unwrap(), State::Current);
-        let older = STUB.replace("each topic", "every reference");
-        std::fs::write(folder.join(FILE), older).unwrap();
+        let older = stub::text()
+            .replace("elsecall-stub: \"1\"", "elsecall-stub: \"0\"")
+            .replace("never retry", "do not retry");
+        std::fs::write(folder.join(FILE), &older).unwrap();
         assert_eq!(state(&folder).unwrap(), State::Outdated);
-        write(&folder).unwrap();
-        assert_eq!(std::fs::read_to_string(folder.join(FILE)).unwrap(), STUB);
+        let newer = older.replace("elsecall-stub: \"0\"", "elsecall-stub: \"9\"");
+        std::fs::write(folder.join(FILE), newer).unwrap();
+        assert_eq!(state(&folder).unwrap(), State::Current, "a newer build's");
         remove(&folder).unwrap();
-        assert!(!folder.exists());
+        assert!(!folder.exists(), "the hidden file went with it");
     }
 
     #[test]
-    fn a_leftover_of_an_interrupted_write_is_still_ours() {
-        let home = tempfile::tempdir().unwrap();
-        let folder = home.path().join(NAME);
-        std::fs::create_dir(&folder).unwrap();
-        std::fs::write(folder.join(STAGED), "half").unwrap();
-        assert_eq!(state(&folder).unwrap(), State::Missing);
-        write(&folder).unwrap();
+    fn an_exported_copy_is_ours_and_a_stub_replaces_it_whole() {
+        let (_home, folder) = folder();
+        replace(&folder, &exported()).unwrap();
+        assert_eq!(state(&folder).unwrap(), State::Exported);
+        assert!(folder.join("references/integrate.md").is_file());
+        replace(&folder, &[(FILE.to_owned(), stub::text())]).unwrap();
         assert_eq!(state(&folder).unwrap(), State::Current);
-        assert!(!folder.join(STAGED).exists());
-        std::fs::write(folder.join(STAGED), "half").unwrap();
-        remove(&folder).unwrap();
-        assert!(!folder.exists());
-        remove(&folder).unwrap();
-    }
-
-    #[test]
-    fn links_are_foreign_and_a_staged_link_is_never_written_through() {
-        let home = tempfile::tempdir().unwrap();
-        let elsewhere = home.path().join("elsewhere");
-        std::fs::create_dir(&elsewhere).unwrap();
-        let linked = home.path().join("linked").join(NAME);
-        std::fs::create_dir(linked.parent().unwrap()).unwrap();
-        std::os::unix::fs::symlink(&elsewhere, &linked).unwrap();
-        assert_eq!(state(&linked).unwrap(), State::Linked, "a linked folder");
-
-        let folder = home.path().join(NAME);
-        std::fs::create_dir(&folder).unwrap();
-        let outside = home.path().join("outside.md");
-        std::os::unix::fs::symlink(&outside, folder.join(FILE)).unwrap();
-        assert_eq!(state(&folder).unwrap(), State::Linked, "a linked SKILL.md");
-
-        std::fs::remove_file(folder.join(FILE)).unwrap();
-        std::os::unix::fs::symlink(&outside, folder.join(STAGED)).unwrap();
-        write(&folder).unwrap();
-        assert!(
-            !outside.exists(),
-            "the staged link was replaced, not followed"
-        );
-        assert_eq!(state(&folder).unwrap(), State::Current);
+        assert!(!folder.join("references").exists());
+        let siblings: Vec<_> = std::fs::read_dir(folder.parent().unwrap())
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(siblings, [NAME], "no staging folder left behind");
     }
 
     #[test]
     fn a_skill_elsecall_did_not_write_is_foreign_and_its_files_stay() {
-        let home = tempfile::tempdir().unwrap();
-        let folder = home.path().join(NAME);
+        let (_home, folder) = folder();
         std::fs::create_dir(&folder).unwrap();
         std::fs::write(folder.join("notes.md"), "mine").unwrap();
         assert_eq!(
@@ -199,12 +240,34 @@ mod tests {
         );
         std::fs::write(folder.join(FILE), "---\nname: elsecall\n---\nmine\n").unwrap();
         assert_eq!(state(&folder).unwrap(), State::Foreign);
-        assert!(!state(&folder).unwrap().ours());
-        write(&folder).unwrap();
+        write_stub(&folder).unwrap();
         remove(&folder).unwrap();
         assert_eq!(
             std::fs::read_to_string(folder.join("notes.md")).unwrap(),
             "mine"
         );
+    }
+
+    #[test]
+    fn links_are_linked_and_a_staged_link_is_never_written_through() {
+        let (home, folder) = folder();
+        let elsewhere = home.path().join("elsewhere");
+        std::fs::create_dir(&elsewhere).unwrap();
+        std::os::unix::fs::symlink(&elsewhere, &folder).unwrap();
+        assert_eq!(state(&folder).unwrap(), State::Linked, "a linked folder");
+        std::fs::remove_file(&folder).unwrap();
+
+        std::fs::create_dir(&folder).unwrap();
+        let outside = home.path().join("outside.md");
+        std::os::unix::fs::symlink(&outside, folder.join(FILE)).unwrap();
+        assert_eq!(state(&folder).unwrap(), State::Linked, "a linked SKILL.md");
+        std::fs::remove_file(folder.join(FILE)).unwrap();
+        std::os::unix::fs::symlink(&outside, folder.join(format!(".{FILE}.elsecall-new"))).unwrap();
+        write_stub(&folder).unwrap();
+        assert!(
+            !outside.exists(),
+            "the staged link was replaced, not followed"
+        );
+        assert_eq!(state(&folder).unwrap(), State::Current);
     }
 }

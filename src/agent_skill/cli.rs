@@ -1,9 +1,10 @@
-//! `elsecall skill`: print the guide, and install it for the agents on this machine.
+//! `elsecall skill`: print the guide, set it up for the agents on this machine,
+//! and the reports `install`, `uninstall` and `doctor` include.
 use super::{
     agents::{self, Agent},
     folder::{self, State},
     guide,
-    targets::{self, Failed, Outcome, Target},
+    targets::{self, Done, Outcome, Target},
 };
 use crate::{
     failure::{Failure, Result},
@@ -38,7 +39,7 @@ pub enum SkillCommand {
         /// Report what would change without changing anything
         #[arg(long)]
         dry_run: bool,
-        /// Replace a skill named elsecall that Elsecall didn't write
+        /// Replace a skill named elsecall that Elsecall didn't write (never a link)
         #[arg(long)]
         force: bool,
     },
@@ -49,8 +50,12 @@ pub enum SkillCommand {
         /// Only AGENT; repeat for more [default: every agent]
         #[arg(long = "agent", value_enum)]
         agents: Vec<Agent>,
+        /// Report what would change without changing anything
+        #[arg(long)]
+        dry_run: bool,
     },
-    /// Write the skill folder for an agent setup doesn't know, and print where it is
+    /// Write the whole skill folder for an agent setup doesn't know, and print
+    /// where it is; run it again after upgrading
     Install {
         /// Write it to PATH/elsecall [default: Elsecall's data folder/skill]
         #[arg(long)]
@@ -65,6 +70,8 @@ pub enum Printed {
     Json(Value, bool),
 }
 
+const LOADED: &str = "New agent sessions load the skill; sessions running now don't.";
+
 pub fn run(args: SkillArgs) -> Result<Printed> {
     match args.command {
         SkillCommand::Show { name, json } => show(name.as_deref(), json),
@@ -72,48 +79,48 @@ pub fn run(args: SkillArgs) -> Result<Printed> {
             agents,
             dry_run,
             force,
-        } => setup(&Paths::current()?.home, &agents, dry_run, force),
+        } => {
+            let home = Paths::current()?.home;
+            let chosen: Vec<Agent> = if agents.is_empty() {
+                agents::ALL.into_iter().filter(|a| a.found(&home)).collect()
+            } else {
+                agents
+            };
+            if chosen.is_empty() {
+                return Err(Failure::new(
+                    "no_agents_found",
+                    "No coding agent Elsecall knows was found for this account.",
+                    "Name one with --agent claude, codex or opencode, or run elsecall skill install and point your agent at the folder it prints.",
+                ));
+            }
+            let (data, complete) = setup(&home, &chosen, dry_run, force);
+            Ok(Printed::Json(data, complete))
+        }
         SkillCommand::Status => {
             let home = Paths::current()?.home;
-            let targets = targets::inspect(&home, &agents::ALL).map_err(unreadable)?;
-            let agents: Vec<Value> = targets.iter().map(|t| entry(&home, t)).collect();
+            let agents: Vec<Value> = targets::inspect(&home, &agents::ALL)
+                .iter()
+                .map(|target| entry(&home, target))
+                .collect();
             Ok(Printed::Json(json!({ "agents": agents }), true))
         }
-        SkillCommand::Remove { agents } => {
+        SkillCommand::Remove { agents, dry_run } => {
             let home = Paths::current()?.home;
             let chosen = if agents.is_empty() {
                 agents::ALL.to_vec()
             } else {
                 agents
             };
-            let targets = targets::inspect(&home, &chosen).map_err(unreadable)?;
-            let outcomes =
-                targets::remove(&targets).map_err(|failed| unwritable(failed, "removed"))?;
-            let agents = described(&home, &targets, &outcomes);
-            Ok(Printed::Json(json!({ "agents": agents }), true))
+            let (data, complete) = remove(&home, &chosen, dry_run);
+            Ok(Printed::Json(data, complete))
         }
-        SkillCommand::Install { dir } => {
-            let root = match dir {
-                Some(dir) => {
-                    std::path::absolute(&dir).map_err(|e| unwritable((dir, e), "written"))?
-                }
-                None => Paths::current()?.data.join("skill"),
-            };
-            let target = root.join(folder::NAME);
-            match folder::state(&target).map_err(|e| unreadable((target.clone(), e)))? {
-                State::Foreign | State::Linked => return Err(foreign(&target)),
-                State::Current => {}
-                State::Missing | State::Outdated => folder::write(&target)
-                    .map_err(|e| unwritable((target.clone(), e), "written"))?,
-            }
-            Ok(Printed::Json(json!({ "path": target }), true))
-        }
+        SkillCommand::Install { dir } => install(dir),
     }
 }
 
 fn show(name: Option<&str>, json: bool) -> Result<Printed> {
     let text = match name {
-        None => guide::GUIDE,
+        None => guide::guide(),
         Some(name) => {
             guide::topic(name)
                 .ok_or_else(|| {
@@ -137,90 +144,131 @@ fn show(name: Option<&str>, json: bool) -> Result<Printed> {
     })
 }
 
-fn setup(home: &Path, named: &[Agent], dry_run: bool, force: bool) -> Result<Printed> {
-    let chosen: Vec<Agent> = if named.is_empty() {
-        agents::ALL.into_iter().filter(|a| a.found(home)).collect()
-    } else {
-        named.to_vec()
-    };
-    if chosen.is_empty() {
-        return Err(Failure::new(
-            "no_agents_found",
-            "No coding agent Elsecall knows was found for this account.",
-            "Name one with --agent claude, codex or opencode, or run elsecall skill install and point your agent at the folder it prints.",
-        ));
-    }
-    let targets = targets::inspect(home, &chosen).map_err(unreadable)?;
-    let outcomes =
-        targets::setup(&targets, dry_run, force).map_err(|failed| unwritable(failed, "written"))?;
-    let skipped = |o: &Outcome| matches!(o, Outcome::SkippedForeign | Outcome::SkippedLinked);
-    let complete = !outcomes.iter().any(skipped);
-    let mut data = json!({ "dry_run": dry_run, "agents": described(home, &targets, &outcomes) });
-    if outcomes.contains(&Outcome::SkippedForeign) {
+/// `setup` for `chosen`, and whether it left no conflict or failure.
+pub fn setup(home: &Path, chosen: &[Agent], dry_run: bool, force: bool) -> (Value, bool) {
+    let targets = targets::inspect(home, chosen);
+    let outcomes = targets::setup(&targets, dry_run, force);
+    let complete = settled(&outcomes);
+    let mut data = json!({
+        "dry_run": dry_run,
+        "agents": described(home, &targets, &outcomes),
+        "note": LOADED,
+    });
+    let conflicts: Vec<State> = targets
+        .iter()
+        .zip(&outcomes)
+        .filter(|(_, outcome)| outcome.done == Done::Conflict)
+        .filter_map(|(target, _)| target.before.as_ref().ok().copied())
+        .collect();
+    if conflicts.contains(&State::Foreign) {
         data["hint"] = json!(
             "A skill named elsecall that Elsecall did not write was left alone. Run elsecall skill setup --force to replace its SKILL.md."
         );
-    } else if !complete {
+    } else if conflicts.contains(&State::Linked) {
         data["hint"] = json!(
             "A linked skill folder was left alone. Remove the link, then run elsecall skill setup again."
         );
     }
-    Ok(Printed::Json(data, complete))
+    (data, complete)
+}
+
+/// `remove` for `chosen`, and whether nothing failed.
+pub fn remove(home: &Path, chosen: &[Agent], dry_run: bool) -> (Value, bool) {
+    let targets = targets::inspect(home, chosen);
+    let outcomes = targets::remove(&targets, dry_run);
+    let complete = settled(&outcomes);
+    let data = json!({ "dry_run": dry_run, "agents": described(home, &targets, &outcomes) });
+    (data, complete)
+}
+
+fn settled(outcomes: &[Outcome]) -> bool {
+    !outcomes
+        .iter()
+        .any(|o| matches!(o.done, Done::Conflict | Done::Failed))
+}
+
+fn install(dir: Option<PathBuf>) -> Result<Printed> {
+    let root = match dir {
+        Some(dir) => std::path::absolute(&dir).map_err(|e| unwritable(&dir, &e))?,
+        None => Paths::current()?.data.join("skill"),
+    };
+    let target = root.join(folder::NAME);
+    let state = folder::state(&target).map_err(|e| unwritable(&target, &e))?;
+    if matches!(state, State::Foreign | State::Linked) {
+        return Err(Failure::new(
+            "skill_foreign",
+            format!("{} holds a skill Elsecall did not write.", target.display()),
+            "Choose another --dir, or remove that folder if it is no longer needed.",
+        ));
+    }
+    folder::replace(&target, &folder::exported()).map_err(|e| unwritable(&target, &e))?;
+    let note = "This copy does not update itself: run elsecall skill install again after upgrading Elsecall.";
+    Ok(Printed::Json(json!({ "path": target, "note": note }), true))
+}
+
+fn unwritable(folder: &Path, e: &std::io::Error) -> Failure {
+    Failure::new(
+        "skill_write_failed",
+        format!(
+            "The skill in {} could not be written: {e}.",
+            folder.display()
+        ),
+        "Check the folder's permissions, then run the command again.",
+    )
 }
 
 fn entry(home: &Path, target: &Target) -> Value {
-    json!({
+    let mut item = json!({
         "agent": target.agent,
         "label": target.agent.label(),
         "found": target.agent.found(home),
-        "skill": { "path": target.folder, "state": target.before },
-    })
+        "skill": { "path": target.folder },
+    });
+    match &target.before {
+        Ok(state) => item["skill"]["state"] = json!(state),
+        Err(error) => {
+            item["skill"]["state"] = json!("unreadable");
+            item["skill"]["error"] = json!(error);
+        }
+    }
+    item
 }
 
-/// Each agent's entry, what was done to it, and why it was skipped if it was.
+/// Each agent's entry and what was done to it.
 fn described(home: &Path, targets: &[Target], outcomes: &[Outcome]) -> Vec<Value> {
     targets
         .iter()
         .zip(outcomes)
         .map(|(target, outcome)| {
             let mut item = entry(home, target);
-            item["changed"] = json!(*outcome == Outcome::Changed);
-            match outcome {
-                Outcome::SkippedForeign => item["skipped"] = json!("foreign"),
-                Outcome::SkippedLinked => item["skipped"] = json!("linked"),
-                Outcome::Unchanged | Outcome::Changed => {}
+            item["result"] = json!(outcome.done);
+            if let Some(error) = &outcome.error {
+                item["error"] = json!(error);
             }
             item
         })
         .collect()
 }
 
-fn unreadable((folder, e): Failed) -> Failure {
-    Failure::new(
-        "skill_unreadable",
+/// What `elsecall doctor` reports: each agent found, its skill, and a warning
+/// naming the fix when one lacks it. Writes nothing.
+pub fn health(home: &Path) -> Value {
+    let found: Vec<Agent> = agents::ALL.into_iter().filter(|a| a.found(home)).collect();
+    let targets = targets::inspect(home, &found);
+    let lacking: Vec<&str> = targets
+        .iter()
+        .filter(|t| !matches!(t.before, Ok(State::Current | State::Outdated)))
+        .map(|t| t.agent.label())
+        .collect();
+    let warning = (!lacking.is_empty()).then(|| {
         format!(
-            "The skill folder {} could not be read: {e}.",
-            folder.display()
-        ),
-        "Check the folder's permissions, then run the command again.",
-    )
-}
-
-fn unwritable((folder, e): Failed, what: &str) -> Failure {
-    Failure::new(
-        "skill_write_failed",
-        format!(
-            "The skill in {} could not be {what}: {e}.",
-            folder.display()
-        ),
-        "Check the folder's permissions, then run the command again.",
-    )
-}
-
-fn foreign(target: &Path) -> Failure {
-    Failure::new(
-        "skill_foreign",
-        format!("{} holds a skill Elsecall did not write.", target.display()),
-        "Choose another --dir, or remove that folder if it is no longer needed.",
-    )
+            "{} {} no current Elsecall skill: run elsecall skill setup.",
+            lacking.join(", "),
+            if lacking.len() == 1 { "has" } else { "have" }
+        )
+    });
+    json!({
+        "agents": targets.iter().map(|t| entry(home, t)).collect::<Vec<_>>(),
+        "warning": warning,
+    })
 }

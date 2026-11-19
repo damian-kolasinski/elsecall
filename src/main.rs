@@ -392,6 +392,8 @@ async fn run(cli: Cli) -> Result<bool> {
                 serde_json::to_value(ApplicationFirewall.inbound(&paths.executable()))
                     .expect("serializable firewall state");
             data["window"] = serde_json::to_value(window).expect("serializable window state");
+            // Agents learn the installed build from its skill (README "Agent skill").
+            data["agent_skill"] = elsecall::agent_skill::set_up_found(&paths.home);
             output(data);
             return Ok(complete);
         }
@@ -408,7 +410,9 @@ async fn run(cli: Cli) -> Result<bool> {
                 },
             )?;
             let complete = uninstalled.complete();
-            output(uninstalled);
+            let mut data = serde_json::to_value(uninstalled).expect("serializable uninstall");
+            data["agent_skill"] = elsecall::agent_skill::remove_all(&paths.home);
+            output(data);
             return Ok(complete);
         }
         Command::Ui => {
@@ -602,6 +606,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 "configuration_sync": service_configurations,
                 "paths": {"executable": paths.bin, "launch_agent": paths.agent, "socket": paths.socket(), "log": paths.log()},
                 "next_step": next_step,
+                "agent_skill": elsecall::agent_skill::health(&paths.home),
             }));
             return Ok(healthy);
         }
@@ -613,6 +618,8 @@ async fn run(cli: Cli) -> Result<bool> {
             output(wait_ready(&paths).await?);
         }
         Command::Serve => {
+            // After an upgrade, the stubs an older build wrote point at this one.
+            elsecall::agent_skill::refresh_if_installed(&paths);
             let machine: Arc<dyn elsecall::inspection::MachineInspector> =
                 if let Some(file) = elsecall::machine_script::load_file() {
                     Arc::new(elsecall::machine_script::ScriptedLoad {

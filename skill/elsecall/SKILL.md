@@ -1,3 +1,8 @@
+---
+name: elsecall
+description: Run builds, tests and other heavy commands through Elsecall, which admits work when this Mac has room and can place it on another Mac in the fleet, and adopt it in a repository's scripts. Use when a repository's scripts call `elsecall` or source an Elsecall guard, when asked to run work on another fleet member, or when integrating a project with Elsecall.
+---
+
 # Elsecall
 
 Elsecall admits heavy work onto this Mac only when it has room, and can place it on another Mac in the same fleet. Run builds, tests and other heavy commands through it when a repository's scripts already do, or when the operator asks.
@@ -15,6 +20,6 @@ Elsecall admits heavy work onto this Mac only when it has room, and can place it
 
 ## Topics
 
-`elsecall skill show NAME` prints a topic:
+`elsecall skill show NAME` prints a topic (in an exported copy of this skill, `references/NAME.md`):
 
 - `integrate`: adopt Elsecall in a repository's scripts (the guard, entry lines, per-command prefixes, leases), failure lines, environment controls, precedence, run IDs, and outputs a placed run brings back.

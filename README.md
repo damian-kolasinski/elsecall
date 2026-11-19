@@ -251,11 +251,11 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall doctor` | Installation integrity, launchd registration, API connectivity, relevant paths and recovery guidance |
 | `elsecall skill show [NAME]` | The agent guide matching this binary, or its topic NAME, as text (see "Agent skill") |
 | `elsecall skill setup [--agent AGENT] [--dry-run] [--force]` | Install or update the agent skill for the coding agents on this machine |
-| `elsecall skill status` / `remove [--agent AGENT]` | Whether each agent has the skill; remove what `setup` wrote |
-| `elsecall skill install [--dir PATH]` | Write the skill folder for an agent `setup` does not know, and print where |
+| `elsecall skill status` / `remove [--agent AGENT] [--dry-run]` | Whether each agent has the skill; remove what Elsecall wrote |
+| `elsecall skill install [--dir PATH]` | Write the whole skill folder for an agent `setup` does not know, and print where |
 | `elsecall service restart` | Stop/start the registered service and wait for readiness |
-| `elsecall install [--open]` | Install/update and wait for readiness; in a desktop session, put the fleet window in place as an app and, with `--open`, open it (see "Desktop UI") |
-| `elsecall uninstall [--force] [--keep-mise]` | Stop the service, remove its installation and window, and remove Elsecall's request from mise's global configuration (see "Uninstall") |
+| `elsecall install [--open]` | Install/update and wait for readiness; set the agent skill up for the coding agents found (see "Agent skill"); in a desktop session, put the fleet window in place as an app and, with `--open`, open it (see "Desktop UI") |
+| `elsecall uninstall [--force] [--keep-mise]` | Stop the service, remove its installation, window and agent skills, and remove Elsecall's request from mise's global configuration (see "Uninstall") |
 | `elsecall run [options] -- COMMAND...` | Run a command once this machine has room, passing its I/O, signals and exit code through (see "Running commands") |
 | `elsecall lease acquire [options]` | Wait for capacity, then hold it for the calling script (see "Admission and leases") |
 | `elsecall lease release [RUN_ID]` | Release one lease, or every lease of the calling script |
@@ -1123,26 +1123,37 @@ upgrade is deferred.
 Agents are Elsecall's main users, so the binary carries their guide. `elsecall
 skill show` prints it as text and `elsecall skill show NAME` prints one of the
 topics it names; both describe this build's commands. The sources are in
-[skill/](skill/).
+[skill/elsecall/](skill/elsecall/).
 
-`elsecall skill setup` installs a skill named `elsecall` for the coding agents it
-finds: Claude Code in `~/.claude/skills/elsecall`, and Codex and OpenCode in
-`~/.agents/skills/elsecall`. `--agent claude|codex|opencode` (repeatable) picks
-them instead. The skill holds only a `SKILL.md` that tells the agent to run
-`elsecall skill show`, so the guide it reads always matches the installed build,
-and running `setup` again after an update refreshes the skill itself.
-`elsecall skill status` reports each agent's skill as `missing`, `current`,
-`outdated`, `foreign` (a skill named `elsecall` that Elsecall did not write) or
-`linked` (the folder or its `SKILL.md` is a link to somewhere else). `setup`
-replaces a foreign `SKILL.md` only with `--force`, never writes through a link,
-and `--dry-run` reports what it would change. When it leaves a skill alone, that
-agent's entry says `skipped` (`foreign` or `linked`), the document carries a
-`hint`, and the command exits 1; with no agent found and none named it fails with
-`no_agents_found`. `elsecall skill remove` deletes only what `setup` wrote. For any
-other agent, `elsecall skill install [--dir PATH]` writes the folder (by default
-under `~/Library/Application Support/Elsecall/skill`) and prints its absolute path.
-Installing Elsecall does not set the skill up; run `elsecall skill setup` once, and
-`elsecall skill remove` before uninstalling.
+`elsecall install` sets the skill up for the coding agents it finds, and
+`elsecall skill setup` does it on demand: Claude Code reads it from
+`~/.claude/skills/elsecall`, Codex and OpenCode from `~/.agents/skills/elsecall`.
+`--agent claude|codex|opencode` (repeatable) picks agents instead of finding them
+by their settings folders. What `setup` writes is a stub `SKILL.md` that tells the
+agent to run `elsecall skill show`, so the guide an agent reads always matches the
+installed build. Its frontmatter carries `elsecall-stub: "N"`, a version raised
+whenever the stub's own text changes, and an upgrade needs no command: when the
+service starts on a new build, it brings stubs an older build wrote up to date.
+It installs nothing where there was none, and never replaces a newer stub or a
+copy `skill install` exported. New agent sessions load the skill; sessions running
+at the time don't.
+
+`elsecall skill status` reports each agent's skill as `missing` (also a folder
+holding only hidden files), `current`, `outdated`, `exported` (a whole copy from
+`skill install`), `foreign` (a skill named `elsecall` that Elsecall did not
+write), `linked` (the folder or its `SKILL.md` is a link to somewhere else) or
+`unreadable`. `setup` and `remove` report each agent's `result`: `installed`,
+`updated`, `unchanged`, `removed`, `conflict` or `failed`; one agent's failure
+does not stop the others. `setup` replaces a foreign `SKILL.md` only with
+`--force` and never writes through a link; when it leaves a conflict or a failure
+it exits 1, with a `hint` for a conflict. With no agent found and none named it
+fails with `no_agents_found`. `remove` deletes only what Elsecall wrote, and
+`uninstall` does the same. Both take `--dry-run`, which writes nothing.
+`elsecall doctor` warns, under `agent_skill`, of an agent found without a current
+skill. For any other agent, `elsecall skill install [--dir PATH]` writes the whole
+skill folder (by default under `~/Library/Application Support/Elsecall/skill`) and
+prints its absolute path; that copy does not update itself, so run it again after
+upgrading.
 
 ## Integrating a consumer
 
@@ -1156,8 +1167,9 @@ elsecall skill show integrate
 It covers the two-line guard, entry lines that admit a whole script, per-command
 prefixes and leases, failure lines, environment controls, precedence, run IDs, and
 the outputs a placed run brings back. Its source is
-[skill/integrate.md](skill/integrate.md). `elsecall skill setup` makes it known to
-the coding agents on this machine (see "Agent skill").
+[skill/elsecall/references/integrate.md](skill/elsecall/references/integrate.md).
+Installing Elsecall makes it known to the coding agents on this machine (see
+"Agent skill").
 
 ## Service configuration
 
@@ -2237,7 +2249,9 @@ request records, receipt, socket, locks, current and rotated logs, member key, f
 record, the service's own state (load, outside-pressure, peer-I/O and tuning databases,
 caller caches, and onboarding operations earlier builds kept), and the fleet window's
 `~/Applications/Elsecall.app` when Elsecall published it (another application at that
-path is kept). An open window closes itself within a few seconds, once it can reach
+path is kept), and the agent skill stubs and exported copies Elsecall wrote into
+each agent's skills folder (reported under `agent_skill`; other skills are kept).
+An open window closes itself within a few seconds, once it can reach
 neither the service nor its app. While the
 machine is enrolled in a fleet, uninstall refuses with `fleet_member` unless given
 `--force`, because a reinstalled machine has a new key and must be enrolled again.

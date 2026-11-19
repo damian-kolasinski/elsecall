@@ -1,6 +1,7 @@
 #![cfg(target_os = "macos")]
-//! `elsecall skill`: the guide this build carries, and the skill folders `setup`
-//! writes into each coding agent's skills folder.
+//! `elsecall skill`: the guide this build carries, the stubs `setup` writes into
+//! each coding agent's skills folder, the refresh an upgrade does by itself, and
+//! what `doctor` reports. Every check runs in a scratch HOME.
 mod processes;
 use serde_json::Value;
 use std::{fs, path::Path, process::Output};
@@ -12,37 +13,54 @@ fn home() -> tempfile::TempDir {
         .unwrap()
 }
 
-fn skill(home: &Path, args: &[&str]) -> Output {
+fn elsecall(home: &Path, args: &[&str]) -> Output {
     crate::processes::command(env!("CARGO_BIN_EXE_elsecall"))
         .env("HOME", home)
         .current_dir(home)
-        .arg("skill")
         .args(args)
         .output()
         .unwrap()
+}
+
+fn skill(home: &Path, args: &[&str]) -> Output {
+    let mut all = vec!["skill"];
+    all.extend_from_slice(args);
+    elsecall(home, &all)
 }
 
 fn json(output: &Output) -> Value {
     serde_json::from_slice(&output.stdout).unwrap_or_else(|_| panic!("not JSON: {output:?}"))
 }
 
-/// Each agent's skill state, in the order Elsecall lists agents.
-fn states(document: &Value) -> Vec<(String, String)> {
+/// Each agent's (name, value at `field` under its entry), as Elsecall lists them.
+fn each(document: &Value, field: &[&str]) -> Vec<(String, String)> {
     document["data"]["agents"]
         .as_array()
         .unwrap()
         .iter()
         .map(|a| {
+            let value = field.iter().fold(a, |v, key| &v[*key]);
             (
                 a["agent"].as_str().unwrap().to_owned(),
-                a["skill"]["state"].as_str().unwrap().to_owned(),
+                value.as_str().unwrap_or_default().to_owned(),
             )
         })
         .collect()
 }
 
-fn pair(agent: &str, state: &str) -> (String, String) {
-    (agent.to_owned(), state.to_owned())
+fn pairs(items: &[(&str, &str)]) -> Vec<(String, String)> {
+    items
+        .iter()
+        .map(|(a, b)| ((*a).to_owned(), (*b).to_owned()))
+        .collect()
+}
+
+fn states(home: &Path) -> Vec<(String, String)> {
+    each(&json(&skill(home, &["status"])), &["skill", "state"])
+}
+
+fn read(path: &Path) -> String {
+    fs::read_to_string(path).unwrap()
 }
 
 #[test]
@@ -51,8 +69,9 @@ fn the_guide_and_its_topics_print_as_text_or_one_json_document() {
     let guide = skill(home.path(), &["show"]);
     assert!(guide.status.success(), "{guide:?}");
     let text = String::from_utf8(guide.stdout).unwrap();
-    assert!(text.starts_with("# Elsecall\n"), "{text}");
+    assert!(text.starts_with("# Elsecall\n"), "no frontmatter: {text}");
     assert!(text.contains("elsecall skill show NAME"));
+    assert!(!text.contains("](references/"));
 
     let topic = skill(home.path(), &["show", "integrate"]);
     assert!(topic.status.success());
@@ -73,26 +92,25 @@ fn the_guide_and_its_topics_print_as_text_or_one_json_document() {
 }
 
 #[test]
-fn setup_installs_the_skill_for_the_agents_found_and_status_reports_it() {
+fn setup_installs_a_stub_for_the_agents_found_and_a_second_run_changes_nothing() {
     let home = home();
     let root = home.path();
     fs::create_dir(root.join(".claude")).unwrap();
     fs::create_dir(root.join(".codex")).unwrap();
-
-    let before = json(&skill(root, &["status"]));
     assert_eq!(
-        states(&before),
-        [
-            pair("claude", "missing"),
-            pair("codex", "missing"),
-            pair("opencode", "missing")
-        ]
+        states(root),
+        pairs(&[
+            ("claude", "missing"),
+            ("codex", "missing"),
+            ("opencode", "missing")
+        ])
     );
-    assert_eq!(before["data"]["agents"][2]["found"], false);
 
-    let dry = skill(root, &["setup", "--dry-run"]);
-    assert!(dry.status.success(), "{dry:?}");
-    assert_eq!(json(&dry)["data"]["agents"][0]["changed"], true);
+    let dry = json(&skill(root, &["setup", "--dry-run"]));
+    assert_eq!(
+        each(&dry, &["result"]),
+        pairs(&[("claude", "installed"), ("codex", "installed")])
+    );
     assert!(
         !root.join(".claude/skills").exists(),
         "a dry run writes nothing"
@@ -100,44 +118,55 @@ fn setup_installs_the_skill_for_the_agents_found_and_status_reports_it() {
 
     let setup = skill(root, &["setup"]);
     assert!(setup.status.success(), "{setup:?}");
-    let written = fs::read_to_string(root.join(".claude/skills/elsecall/SKILL.md")).unwrap();
-    assert!(written.starts_with("---\nname: elsecall\n"));
-    assert!(written.contains("Run `elsecall skill show`"));
-    assert_eq!(
-        fs::read_to_string(root.join(".agents/skills/elsecall/SKILL.md")).unwrap(),
-        written
+    assert!(
+        json(&setup)["data"]["note"]
+            .as_str()
+            .unwrap()
+            .contains("New agent sessions")
     );
+    let stub = read(&root.join(".claude/skills/elsecall/SKILL.md"));
+    assert!(stub.starts_with("---\nname: elsecall\ndescription: Run builds,"));
+    assert!(stub.contains("  elsecall-stub: \"1\"\n"));
+    assert!(stub.contains("Run `elsecall skill show`"));
+    assert_eq!(read(&root.join(".agents/skills/elsecall/SKILL.md")), stub);
     assert_eq!(
-        states(&json(&skill(root, &["status"]))),
-        [
-            pair("claude", "current"),
-            pair("codex", "current"),
-            pair("opencode", "current")
-        ],
+        states(root),
+        pairs(&[
+            ("claude", "current"),
+            ("codex", "current"),
+            ("opencode", "current")
+        ]),
         "OpenCode reads the folder Codex does"
     );
 
-    // An older build's skill is refreshed by setup.
-    fs::write(
-        root.join(".claude/skills/elsecall/SKILL.md"),
-        written.replace("each topic", "every reference"),
+    let again = json(&skill(root, &["setup"]));
+    assert_eq!(
+        each(&again, &["result"]),
+        pairs(&[("claude", "unchanged"), ("codex", "unchanged")])
+    );
+
+    // A whole copy `install` exported, put where an agent reads it, is updated.
+    let exported = root.join("exported");
+    assert!(
+        skill(root, &["install", "--dir", exported.to_str().unwrap()])
+            .status
+            .success()
+    );
+    fs::remove_dir_all(root.join(".claude/skills/elsecall")).unwrap();
+    fs::rename(
+        exported.join("elsecall"),
+        root.join(".claude/skills/elsecall"),
     )
     .unwrap();
-    assert_eq!(
-        states(&json(&skill(root, &["status"])))[0],
-        pair("claude", "outdated")
-    );
-    let again = json(&skill(root, &["setup"]));
-    assert_eq!(again["data"]["agents"][0]["changed"], true);
-    assert_eq!(again["data"]["agents"][1]["changed"], false);
-    assert_eq!(
-        fs::read_to_string(root.join(".claude/skills/elsecall/SKILL.md")).unwrap(),
-        written
-    );
+    assert_eq!(states(root)[0], pairs(&[("claude", "exported")])[0]);
+    let replaced = json(&skill(root, &["setup", "--agent", "claude"]));
+    assert_eq!(replaced["data"]["agents"][0]["result"], "updated");
+    assert!(!root.join(".claude/skills/elsecall/references").exists());
+    assert_eq!(read(&root.join(".claude/skills/elsecall/SKILL.md")), stub);
 }
 
 #[test]
-fn a_skill_elsecall_did_not_write_is_kept_unless_forced_and_never_removed() {
+fn a_skill_elsecall_did_not_write_is_a_conflict_unless_forced_and_never_removed() {
     let home = home();
     let root = home.path();
     let theirs = root.join(".agents/skills/elsecall");
@@ -146,154 +175,199 @@ fn a_skill_elsecall_did_not_write_is_kept_unless_forced_and_never_removed() {
 
     let dry = skill(root, &["setup", "--agent", "codex", "--dry-run"]);
     assert_eq!(dry.status.code(), Some(1), "{dry:?}");
-    assert_eq!(json(&dry)["data"]["agents"][0]["skipped"], "foreign");
+    assert_eq!(json(&dry)["data"]["agents"][0]["result"], "conflict");
 
     let refused = skill(root, &["setup", "--agent", "codex", "--agent", "claude"]);
     assert_eq!(refused.status.code(), Some(1), "{refused:?}");
     let document = json(&refused);
-    assert_eq!(document["data"]["agents"][0]["skill"]["state"], "foreign");
-    assert_eq!(document["data"]["agents"][0]["changed"], false);
-    assert_eq!(document["data"]["agents"][0]["skipped"], "foreign");
+    assert_eq!(
+        each(&document, &["result"]),
+        pairs(&[("codex", "conflict"), ("claude", "installed")])
+    );
     assert!(
         document["data"]["hint"]
             .as_str()
             .unwrap()
             .contains("--force")
     );
-    assert_eq!(
-        document["data"]["agents"][1]["changed"], true,
-        "claude still set up"
-    );
-    assert!(
-        fs::read_to_string(theirs.join("SKILL.md"))
-            .unwrap()
-            .contains("mine")
-    );
+    assert!(read(&theirs.join("SKILL.md")).contains("mine"));
 
+    let dry_remove = json(&skill(root, &["remove", "--dry-run"]));
+    assert_eq!(dry_remove["data"]["agents"][0]["result"], "removed");
+    assert!(root.join(".claude/skills/elsecall/SKILL.md").exists());
     let removed = json(&skill(root, &["remove"]));
     assert_eq!(
-        states(&removed),
-        [
-            pair("claude", "current"),
-            pair("codex", "foreign"),
-            pair("opencode", "foreign")
-        ]
+        each(&removed, &["result"]),
+        pairs(&[
+            ("claude", "removed"),
+            ("codex", "unchanged"),
+            ("opencode", "unchanged")
+        ])
     );
     assert!(!root.join(".claude/skills/elsecall").exists());
     assert!(
         theirs.join("SKILL.md").exists(),
-        "only what setup wrote goes"
+        "only what Elsecall wrote goes"
     );
 
     let forced = skill(root, &["setup", "--agent", "codex", "--force"]);
     assert!(forced.status.success(), "{forced:?}");
-    assert!(
-        fs::read_to_string(theirs.join("SKILL.md"))
-            .unwrap()
-            .contains("elsecall skill setup")
-    );
+    assert!(read(&theirs.join("SKILL.md")).contains("elsecall-stub"));
 }
 
 #[test]
-fn setup_with_no_agent_found_says_how_to_name_one_and_install_writes_a_folder() {
-    let home = home();
-    let none = skill(home.path(), &["setup"]);
-    assert_eq!(none.status.code(), Some(1));
-    assert_eq!(json(&none)["error"]["code"], "no_agents_found");
-
-    let elsewhere = home.path().join("agent-skills");
-    let installed = json(&skill(
-        home.path(),
-        &["install", "--dir", elsewhere.to_str().unwrap()],
-    ));
-    assert_eq!(
-        installed["data"]["path"],
-        elsewhere.join("elsecall").to_str().unwrap()
-    );
-    assert!(elsewhere.join("elsecall/SKILL.md").exists());
-}
-
-#[test]
-fn a_linked_skills_folder_is_written_and_removed_once() {
+fn links_are_never_written_through_and_a_linked_skills_folder_is_written_once() {
     let home = home();
     let root = home.path();
+    let kept = root.join("project/skills/elsecall");
+    fs::create_dir_all(&kept).unwrap();
+    fs::write(kept.join("SKILL.md"), "kept here\n").unwrap();
     fs::create_dir_all(root.join(".claude/skills")).unwrap();
+    std::os::unix::fs::symlink(&kept, root.join(".claude/skills/elsecall")).unwrap();
+    let forced = skill(root, &["setup", "--agent", "claude", "--force"]);
+    assert_eq!(forced.status.code(), Some(1), "{forced:?}");
+    let document = json(&forced);
+    assert_eq!(document["data"]["agents"][0]["skill"]["state"], "linked");
+    assert_eq!(document["data"]["agents"][0]["result"], "conflict");
+    assert!(skill(root, &["remove"]).status.success());
+    assert_eq!(read(&kept.join("SKILL.md")), "kept here\n");
+
+    fs::remove_file(root.join(".claude/skills/elsecall")).unwrap();
     fs::create_dir(root.join(".codex")).unwrap();
     fs::create_dir(root.join(".agents")).unwrap();
     std::os::unix::fs::symlink(root.join(".claude/skills"), root.join(".agents/skills")).unwrap();
-
-    let setup = skill(root, &["setup"]);
-    assert!(setup.status.success(), "{setup:?}");
+    assert!(skill(root, &["setup"]).status.success());
     assert_eq!(
-        states(&json(&skill(root, &["status"]))),
-        [
-            pair("claude", "current"),
-            pair("codex", "current"),
-            pair("opencode", "current")
-        ]
+        states(root),
+        pairs(&[
+            ("claude", "current"),
+            ("codex", "current"),
+            ("opencode", "current")
+        ])
     );
-
     let removed = skill(root, &["remove"]);
     assert!(removed.status.success(), "{removed:?}");
     assert!(!root.join(".claude/skills/elsecall").exists());
 }
 
 #[test]
-fn a_linked_skill_folder_is_never_written_through_or_removed() {
+fn an_upgrade_refreshes_older_stubs_and_installs_nothing_where_nothing_was() {
     let home = home();
     let root = home.path();
-    let kept = root.join("project/skills/elsecall");
-    fs::create_dir_all(&kept).unwrap();
-    fs::write(
-        kept.join("SKILL.md"),
-        "---\nname: elsecall\n---\nkept here\n",
-    )
-    .unwrap();
-    fs::create_dir_all(root.join(".claude/skills")).unwrap();
-    std::os::unix::fs::symlink(&kept, root.join(".claude/skills/elsecall")).unwrap();
+    fs::create_dir(root.join(".claude")).unwrap();
+    fs::create_dir(root.join(".codex")).unwrap();
+    assert!(skill(root, &["setup"]).status.success());
+    let current = read(&root.join(".claude/skills/elsecall/SKILL.md"));
+    let older = current
+        .replace("elsecall-stub: \"1\"", "elsecall-stub: \"0\"")
+        .replace("never retry", "do not retry");
+    fs::write(root.join(".claude/skills/elsecall/SKILL.md"), &older).unwrap();
+    let newer = older.replace("elsecall-stub: \"0\"", "elsecall-stub: \"9\"");
+    fs::write(root.join(".agents/skills/elsecall/SKILL.md"), &newer).unwrap();
+    assert_eq!(states(root)[0], pairs(&[("claude", "outdated")])[0]);
 
-    let forced = skill(root, &["setup", "--agent", "claude", "--force"]);
-    assert_eq!(forced.status.code(), Some(1), "{forced:?}");
-    let document = json(&forced);
-    assert_eq!(document["data"]["agents"][0]["skill"]["state"], "linked");
-    assert_eq!(document["data"]["agents"][0]["skipped"], "linked");
-    assert!(
-        document["data"]["hint"]
-            .as_str()
-            .unwrap()
-            .contains("Remove the link")
-    );
-
-    assert!(skill(root, &["remove"]).status.success());
+    assert_eq!(elsecall::agent_skill::refresh(root), 1);
     assert_eq!(
-        fs::read_to_string(kept.join("SKILL.md")).unwrap(),
-        "---\nname: elsecall\n---\nkept here\n"
+        read(&root.join(".claude/skills/elsecall/SKILL.md")),
+        current
     );
-    assert!(root.join(".claude/skills/elsecall").is_symlink());
+    assert_eq!(
+        read(&root.join(".agents/skills/elsecall/SKILL.md")),
+        newer,
+        "a newer build's stub stays"
+    );
+
+    let empty = self::home();
+    fs::create_dir(empty.path().join(".claude")).unwrap();
+    assert_eq!(elsecall::agent_skill::refresh(empty.path()), 0);
+    assert!(!empty.path().join(".claude/skills").exists());
+
+    // A build that is not the installed one never refreshes.
+    fs::write(root.join(".claude/skills/elsecall/SKILL.md"), &older).unwrap();
+    let paths = elsecall::paths::Paths::for_home(root).unwrap();
+    assert_eq!(elsecall::agent_skill::refresh_if_installed(&paths), 0);
+    assert_eq!(read(&root.join(".claude/skills/elsecall/SKILL.md")), older);
+}
+
+/// Every file under `dir`, with its contents, to compare before and after.
+fn snapshot(dir: &Path) -> Vec<(String, Vec<u8>)> {
+    let mut files = Vec::new();
+    let mut pending = vec![dir.to_owned()];
+    while let Some(next) = pending.pop() {
+        for entry in fs::read_dir(&next).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                pending.push(path);
+            } else {
+                files.push((path.display().to_string(), fs::read(&path).unwrap()));
+            }
+        }
+    }
+    files.sort();
+    files
 }
 
 #[test]
-fn install_refuses_a_foreign_folder_and_prints_an_absolute_path() {
+fn doctor_warns_of_an_agent_without_the_skill_and_nothing_but_setup_writes_there() {
     let home = home();
+    let root = home.path();
+    fs::create_dir_all(root.join(".claude")).unwrap();
+    fs::create_dir_all(root.join(".codex")).unwrap();
+    fs::write(root.join(".claude/settings.json"), "{}").unwrap();
+    let before = (
+        snapshot(&root.join(".claude")),
+        snapshot(&root.join(".codex")),
+    );
+
+    let doctor = json(&elsecall(root, &["doctor"]));
+    let warning = doctor["data"]["agent_skill"]["warning"].as_str().unwrap();
+    assert!(warning.contains("Claude Code, Codex"), "{warning}");
+    assert!(warning.contains("elsecall skill setup"));
+    for args in [&["skill", "status"][..], &["skill", "show"], &["machine"]] {
+        elsecall(root, args);
+    }
+    assert_eq!(
+        (
+            snapshot(&root.join(".claude")),
+            snapshot(&root.join(".codex"))
+        ),
+        before,
+        "only setup, remove, install and refresh write agent files"
+    );
+
+    assert!(skill(root, &["setup"]).status.success());
+    let doctor = json(&elsecall(root, &["doctor"]));
+    assert!(
+        doctor["data"]["agent_skill"]["warning"].is_null(),
+        "{doctor}"
+    );
+}
+
+#[test]
+fn install_writes_the_whole_guide_and_refuses_a_foreign_folder() {
+    let home = home();
+    let none = skill(home.path(), &["setup"]);
+    assert_eq!(none.status.code(), Some(1));
+    assert_eq!(json(&none)["error"]["code"], "no_agents_found");
+
+    let installed = json(&skill(home.path(), &["install", "--dir", "fresh"]));
+    let folder = home.path().canonicalize().unwrap().join("fresh/elsecall");
+    assert_eq!(installed["data"]["path"], folder.to_str().unwrap());
+    assert!(
+        installed["data"]["note"]
+            .as_str()
+            .unwrap()
+            .contains("again after upgrading")
+    );
+    assert!(read(&folder.join("SKILL.md")).starts_with("---\nname: elsecall\n"));
+    assert!(read(&folder.join("SKILL.md")).contains("# Elsecall\n"));
+    assert!(read(&folder.join("references/integrate.md")).starts_with("# Integrating"));
+
     let theirs = home.path().join("taken/elsecall");
     fs::create_dir_all(&theirs).unwrap();
     fs::write(theirs.join("SKILL.md"), "mine\n").unwrap();
     let refused = skill(home.path(), &["install", "--dir", "taken"]);
     assert_eq!(refused.status.code(), Some(1));
     assert_eq!(json(&refused)["error"]["code"], "skill_foreign");
-    assert_eq!(
-        fs::read_to_string(theirs.join("SKILL.md")).unwrap(),
-        "mine\n"
-    );
-
-    let installed = json(&skill(home.path(), &["install", "--dir", "fresh"]));
-    assert_eq!(
-        installed["data"]["path"],
-        home.path()
-            .canonicalize()
-            .unwrap()
-            .join("fresh/elsecall")
-            .to_str()
-            .unwrap()
-    );
+    assert_eq!(read(&theirs.join("SKILL.md")), "mine\n");
 }
