@@ -6,7 +6,7 @@
 //! before it acts, so running it again continues where an earlier run stopped,
 //! and running it on a member repairs it.
 use crate::{
-    authorized_keys, client,
+    authorized_keys,
     fleet_local_api::EnrollRequest,
     inbound_firewall::Rule,
     member_code,
@@ -16,6 +16,7 @@ use crate::{
     roster::Readiness,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use elsecall_tailnet::tailscale_bottle;
 use hyper::Method;

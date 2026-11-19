@@ -290,7 +290,7 @@ async fn api_and_real_cli_check_start_and_follow_the_same_durable_job() {
     Store::new(&paths)
         .advance(&mut done, Phase::Succeeded)
         .unwrap();
-    let status: Status = elsecall::client::get(&paths.socket(), "/v1/update")
+    let status: Status = elsecall_local_client::get(&paths.socket(), "/v1/update")
         .await
         .unwrap();
     assert!(matches!(status.job.unwrap().phase, Phase::Succeeded));

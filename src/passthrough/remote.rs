@@ -2,7 +2,6 @@
 //! starts the command there, and passes the caller's input, output, signals and the
 //! command's exit through, as if it ran here.
 use crate::{
-    client::{self, Wait},
     passthrough::executor::{
         CommandLine, Executor, Exit, Finished, ResultReturn, RunContext, RunFailure, RunResult,
         Running,
@@ -32,6 +31,7 @@ use crate::{
     },
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_client::{self as client, Wait};
 use elsecall_wire::wire::Frame;
 use std::{
     fs::File,

@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use elsecall::{
     admission_cli::{self, LeaseCommand},
-    client, fleet_cli,
+    fleet_cli,
     inbound_firewall::{Inbound, InboundFirewall},
     inspection::{Health, Inspection, Machine},
     install_window,
@@ -13,6 +13,7 @@ use elsecall::{
     peer_listener, scheduling,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_client as client;
 use elsecall_local_state::{local_access, paths::Paths};
 use elsecall_tailnet::tailnet;
 use elsecall_wire::api;
@@ -539,7 +540,7 @@ async fn run(cli: Cli) -> Result<bool> {
             blocked.sort_by_key(|b| b.blocked.since);
             warnings.sort_by_key(|w| w.warning.since);
             let service_configurations = if health.is_ok() {
-                elsecall::client::post_large::<serde_json::Value, _>(
+                elsecall_local_client::post_large::<serde_json::Value, _>(
                     &paths.socket(),
                     "/v1/sync",
                     &serde_json::json!({}),

@@ -6,7 +6,6 @@ pub mod admission_api;
 pub mod admission_cli;
 pub mod askpass;
 pub mod authorized_keys;
-pub mod client;
 pub mod config_sync;
 pub mod config_sync_api;
 pub mod config_sync_cli;

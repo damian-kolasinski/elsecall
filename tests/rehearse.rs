@@ -622,7 +622,7 @@ fn repeated_cleanup_of_a_rehearsal_with_a_remote_copy_is_successful() {
         .unwrap();
     for member in [&alpha, &bravo] {
         let reply: elsecall::rehearsal::protocol::Reply = runtime
-            .block_on(elsecall::client::post_large(
+            .block_on(elsecall_local_client::post_large(
                 &elsecall_local_state::paths::Paths::for_home(alpha.home.path())
                     .unwrap()
                     .socket(),

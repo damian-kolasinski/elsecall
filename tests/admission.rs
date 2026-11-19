@@ -364,13 +364,11 @@ async fn without_a_handover_an_unreachable_service_fails_the_request_at_once() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_caller_that_disconnects_while_waiting_is_withdrawn() {
-    use elsecall::{
-        client::{self, Wait},
-        scheduling::{
-            messages::Grant,
-            request::{AdmissionRequest, Kind, Placement, Urgency},
-        },
+    use elsecall::scheduling::{
+        messages::Grant,
+        request::{AdmissionRequest, Kind, Placement, Urgency},
     };
+    use elsecall_local_client::{self as client, Wait};
     let mut fx = Fixture::start(1).await;
     fx.script(&holder("holding", ""));
     fx.wait_for_file("order").await;
@@ -410,13 +408,11 @@ async fn a_caller_that_disconnects_while_waiting_is_withdrawn() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_run_is_bound_to_its_caller_and_command_until_it_reports_the_end() {
-    use elsecall::{
-        client::{self, Wait},
-        scheduling::{
-            messages::{CommandStarted, Grant, RunEnded},
-            request::{AdmissionRequest, Kind, Placement, Urgency},
-        },
+    use elsecall::scheduling::{
+        messages::{CommandStarted, Grant, RunEnded},
+        request::{AdmissionRequest, Kind, Placement, Urgency},
     };
+    use elsecall_local_client::{self as client, Wait};
     let fx = Fixture::start(1).await;
     let socket = fx.paths.socket();
     let request = AdmissionRequest {

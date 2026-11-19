@@ -3,7 +3,6 @@
 mod processes;
 mod support;
 use elsecall::{
-    client::{self, Wait},
     scheduling::{
         messages::{CommandStarted, Grant, RunEnded},
         record::Record,
@@ -12,6 +11,7 @@ use elsecall::{
     },
     workload_metadata::{Observation, Workload},
 };
+use elsecall_local_client::{self as client, Wait};
 use serde_json::{Value, json};
 use std::os::unix::process::ExitStatusExt;
 use std::{process::Output, time::Duration};

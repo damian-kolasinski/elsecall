@@ -5,12 +5,12 @@ use super::{
     store::{self, Store},
 };
 use crate::{
-    client,
     installation::{ServiceManager, Transaction},
     window_app::{self, WindowLauncher},
 };
 use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::{Failure, Result};
+use elsecall_local_client as client;
 use elsecall_local_state::{paths::Paths, private_files};
 use std::{
     fs,

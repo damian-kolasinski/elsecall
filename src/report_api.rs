@@ -431,7 +431,7 @@ mod tests {
             .unwrap()
             .len();
         assert!(
-            size < crate::client::LARGE_RESPONSE,
+            size < elsecall_local_client::LARGE_RESPONSE,
             "{size} bytes of report"
         );
     }

@@ -125,7 +125,7 @@ fn removing_a_lease_retries_partial_delivery_without_another_generation() {
     let socket = Paths::for_home(alpha.home.path()).unwrap().socket();
     let call = |until, settings| {
         runtime
-            .block_on(elsecall::client::post_large::<Value, _>(
+            .block_on(elsecall_local_client::post_large::<Value, _>(
                 &socket,
                 "/v1/sync/rehearsal",
                 &RehearsalSettings {

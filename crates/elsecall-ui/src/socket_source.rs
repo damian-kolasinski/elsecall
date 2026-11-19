@@ -45,7 +45,7 @@ impl SocketSource {
         };
         let value = self
             .runtime
-            .block_on(elsecall::client::get_large_within::<Value>(
+            .block_on(elsecall_local_client::get_large_within::<Value>(
                 socket,
                 "/v1/fleet",
                 FLEET_WAIT,
@@ -85,7 +85,7 @@ fn start_release_at(socket: &std::path::Path) -> Result<elsecall::release_update
         .build()
         .map_err(|error| error.to_string())?;
     runtime
-        .block_on(elsecall::client::post_within(
+        .block_on(elsecall_local_client::post_within(
             socket,
             "/v1/update/install",
             serde_json::json!({"reopen":true,"wait_seconds":300}),
@@ -104,7 +104,7 @@ fn replace_window_at(socket: &std::path::Path) -> Result<(), String> {
         .build()
         .map_err(|error| error.to_string())?;
     let result = runtime
-        .block_on(elsecall::client::post_within::<Launched>(
+        .block_on(elsecall_local_client::post_within::<Launched>(
             socket,
             "/v1/ui/update",
             serde_json::json!({}),

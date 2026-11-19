@@ -1071,6 +1071,7 @@ dependencies = [
  "elsecall-failure",
  "elsecall-guidance",
  "elsecall-labels",
+ "elsecall-local-client",
  "elsecall-local-state",
  "elsecall-process",
  "elsecall-rehearsal-identity",
@@ -1156,6 +1157,21 @@ name = "elsecall-labels"
 version = "0.3.0"
 
 [[package]]
+name = "elsecall-local-client"
+version = "0.3.0"
+dependencies = [
+ "elsecall-failure",
+ "elsecall-local-state",
+ "elsecall-wire",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "elsecall-local-state"
 version = "0.3.0"
 dependencies = [
@@ -1221,6 +1237,7 @@ dependencies = [
  "elsecall",
  "elsecall-build-identity",
  "elsecall-failure",
+ "elsecall-local-client",
  "elsecall-local-state",
  "elsecall-wire",
  "libc",

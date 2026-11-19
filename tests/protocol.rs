@@ -1,7 +1,6 @@
 #![cfg(target_os = "macos")]
 use axum::{Json, Router, routing::get};
 use elsecall::{
-    client,
     inspection::{Inspection, LoadSample, Machine, MachineInspector},
     macos::processes::MacProcesses,
     peer_listener,
@@ -9,6 +8,7 @@ use elsecall::{
     server,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_client as client;
 use elsecall_local_state::{paths::Paths, private_files};
 use elsecall_tailnet::tailnet::{Presence, Tailnet};
 use std::{future::IntoFuture, sync::Arc};

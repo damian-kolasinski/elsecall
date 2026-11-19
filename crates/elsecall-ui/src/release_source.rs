@@ -45,13 +45,16 @@ impl ReleaseSource for SocketReleases {
     fn snapshot(&self) -> Result<ReleaseSnapshot, String> {
         let window = self
             .runtime
-            .block_on(elsecall::client::get::<WindowOffer>(&self.socket, "/v1/ui"))
+            .block_on(elsecall_local_client::get::<WindowOffer>(
+                &self.socket,
+                "/v1/ui",
+            ))
             .map_err(|error| error.message)?;
         // Older services still support staged-window updates without the release routes.
-        let release = match self
-            .runtime
-            .block_on(elsecall::client::get::<Status>(&self.socket, "/v1/update"))
-        {
+        let release = match self.runtime.block_on(elsecall_local_client::get::<Status>(
+            &self.socket,
+            "/v1/update",
+        )) {
             Ok(status) => Some(status),
             Err(error) if error.code == "not_found" => None,
             Err(error) => return Err(error.message),

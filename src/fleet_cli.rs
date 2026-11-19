@@ -1,12 +1,12 @@
 //! `elsecall fleet` commands: thin requests to the local service, which holds the
 //! member key and talks to the other members.
 use crate::{
-    client,
     fleet_local_api::{CodeRequest, EnrollRequest, ForceRequest, MemberRequest, SyncRequest},
     roster::{MemberName, Readiness},
 };
 use clap::{Args, Subcommand};
 use elsecall_failure::Result;
+use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use hyper::Method;
 use serde_json::Value;

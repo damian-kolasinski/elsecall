@@ -192,7 +192,7 @@ pub async fn send<T: DeserializeOwned>(
 }
 
 /// A request whose answer may be up to 8 MiB, with the caller's own deadline.
-pub(crate) async fn send_large<T: DeserializeOwned>(
+pub async fn send_large<T: DeserializeOwned>(
     socket: &Path,
     method: Method,
     route: &str,
@@ -202,7 +202,7 @@ pub(crate) async fn send_large<T: DeserializeOwned>(
 }
 
 /// A request whose answer may be up to `limit` bytes, with the caller's own deadline.
-pub(crate) async fn send_bounded<T: DeserializeOwned>(
+pub async fn send_bounded<T: DeserializeOwned>(
     socket: &Path,
     method: Method,
     route: &str,

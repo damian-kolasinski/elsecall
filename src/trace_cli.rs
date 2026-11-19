@@ -1,6 +1,5 @@
 //! Export orchestration and exclusive owner-only artifact writing.
 use crate::{
-    client,
     report_cli::since,
     reporting::window::invalid,
     scheduling::timestamp::Timestamp,
@@ -9,6 +8,7 @@ use crate::{
 };
 use clap::{Args, Subcommand};
 use elsecall_failure::{Failure, Result};
+use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use std::{collections::BTreeSet, io::Write, os::unix::fs::OpenOptionsExt, path::PathBuf};
 

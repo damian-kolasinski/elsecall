@@ -106,11 +106,11 @@ pub async fn current_trust(mut result: serde_json::Value) -> serde_json::Value {
     if !paths.data.join("tuning-evidence.sqlite").exists() && !paths.socket().exists() {
         return result;
     }
-    let evidence: elsecall_failure::Result<serde_json::Value> = crate::client::post(
+    let evidence: elsecall_failure::Result<serde_json::Value> = elsecall_local_client::post(
         &paths.socket(),
         "/v1/tuning/trust",
         &json!({}),
-        crate::client::Wait::Bounded,
+        elsecall_local_client::Wait::Bounded,
     )
     .await;
     let mut evidence = evidence

@@ -1,7 +1,6 @@
 //! Time-compressed replay orchestration. Trace parsing and model validation
 //! happen before the first fleet mutation; every exit path tears down sessions.
 use crate::{
-    client,
     rehearsal::{
         invalid,
         plan::{Arrival, Plan},
@@ -12,6 +11,7 @@ use crate::{
 };
 use clap::Args;
 use elsecall_failure::{Failure, Result};
+use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf, time::Duration};

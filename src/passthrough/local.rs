@@ -1,7 +1,6 @@
 //! Executes the command as a child of this process, so it inherits the caller's
 //! standard streams, environment, working directory and process group exactly.
 use crate::{
-    client::{self, Wait},
     macos::process_usage,
     passthrough::{
         executor::{CommandLine, Executor, Exit, Finished, RunContext, RunResult, Running},
@@ -10,6 +9,7 @@ use crate::{
     scheduling::messages::CommandStarted,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_local_client::{self as client, Wait};
 use elsecall_run_admission::Admission;
 use std::{
     ffi::OsStr,

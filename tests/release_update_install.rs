@@ -423,7 +423,7 @@ async fn helper_survives_the_service_restart(mode: Mode) {
         );
     }
     // The successor exposes the same durable job and releases its admission hold.
-    let status: release_update::Status = elsecall::client::get(&paths.socket(), "/v1/update")
+    let status: release_update::Status = elsecall_local_client::get(&paths.socket(), "/v1/update")
         .await
         .unwrap();
     assert_eq!(status.job.unwrap().id, job.id);
@@ -494,7 +494,7 @@ else: sys.exit(1)
         })
         .unwrap();
     member.restart();
-    let job: Job = elsecall::client::post_within(
+    let job: Job = elsecall_local_client::post_within(
         &paths.socket(),
         "/v1/update/install",
         serde_json::json!({"reopen":false,"wait_seconds":2}),
@@ -505,7 +505,8 @@ else: sys.exit(1)
     let deadline = std::time::Instant::now() + Duration::from_secs(90);
     loop {
         if let Ok(status) =
-            elsecall::client::get::<release_update::Status>(&paths.socket(), "/v1/update").await
+            elsecall_local_client::get::<release_update::Status>(&paths.socket(), "/v1/update")
+                .await
             && let Some(current) = status.job
             && current.id == job.id
             && current.phase.terminal()

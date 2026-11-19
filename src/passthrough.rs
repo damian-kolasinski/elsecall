@@ -15,7 +15,6 @@ use crate::{
         options::{CallerOptions, RequestOptions},
         resolution::{Layers, resolve},
     },
-    client::{self, Wait},
     scheduling::{
         messages::{Grant, RunEnded},
         placed::WorkspaceRef,
@@ -29,6 +28,7 @@ use crate::{
 use clap::Args;
 use elsecall_failure::{Failure, Result};
 use elsecall_guidance::{self as guidance, Unmanaged};
+use elsecall_local_client::{self as client, Wait};
 use elsecall_local_state::{local_access, paths::Paths, run_id_file::RunIdFile};
 use elsecall_run_admission::Admission;
 use elsecall_wire::api::SCHEMA_VERSION;
