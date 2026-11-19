@@ -135,10 +135,8 @@ pub fn own_processes(usage: &[Usage], own_work: &OwnWork) -> HashSet<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        inspection::MemoryPressure,
-        outside_pressure::sampling::{Memory, ProcessUse},
-    };
+    use crate::outside_pressure::sampling::{Memory, ProcessUse};
+    use elsecall_machine::inspection::MemoryPressure;
     use std::time::Duration;
 
     fn usage(pid: u32, parent: u32, gib: u64, cores: f64) -> Usage {

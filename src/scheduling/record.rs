@@ -1,18 +1,16 @@
 //! What Elsecall remembers about each request: the request, the decision and its
 //! inputs, and the outcome. Never arguments, environment values or secrets.
-use crate::{
-    inspection::LoadSample,
-    scheduling::{
-        admission::QueueCounts,
-        capacity::{Capacity, Cores},
-        load::Gate,
-        parameters::Parameters,
-        processes::ProcessIdentity,
-        request::{Kind, Placement, Urgency},
-        run_id::RunId,
-        timestamp::{Timestamp, seconds},
-    },
+use crate::scheduling::{
+    admission::QueueCounts,
+    capacity::{Capacity, Cores},
+    load::Gate,
+    parameters::Parameters,
+    processes::ProcessIdentity,
+    request::{Kind, Placement, Urgency},
+    run_id::RunId,
+    timestamp::{Timestamp, seconds},
 };
+use elsecall_machine::inspection::LoadSample;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

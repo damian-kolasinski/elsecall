@@ -299,7 +299,7 @@ mod tests {
         let usage = usage_between(Some(&earlier), &later);
         for reason in [
             Reason::MemoryPressure {
-                level: crate::inspection::MemoryPressure::Warning,
+                level: elsecall_machine::inspection::MemoryPressure::Warning,
             },
             Reason::OutsideSaturation {
                 outside_utilization: 0.95,

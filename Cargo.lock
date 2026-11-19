@@ -1073,6 +1073,7 @@ dependencies = [
  "elsecall-labels",
  "elsecall-local-client",
  "elsecall-local-state",
+ "elsecall-machine",
  "elsecall-process",
  "elsecall-rehearsal-identity",
  "elsecall-run-admission",
@@ -1179,6 +1180,16 @@ dependencies = [
  "getrandom 0.3.4",
  "libc",
  "tempfile",
+]
+
+[[package]]
+name = "elsecall-machine"
+version = "0.3.0"
+dependencies = [
+ "elsecall-build-identity",
+ "elsecall-failure",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

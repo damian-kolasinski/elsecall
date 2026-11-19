@@ -156,10 +156,8 @@ impl EpisodeStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        inspection::MemoryPressure,
-        outside_pressure::blocked::{Blocked, Reason},
-    };
+    use crate::outside_pressure::blocked::{Blocked, Reason};
+    use elsecall_machine::inspection::MemoryPressure;
 
     fn blocked(since: u64, attributed: u64) -> Blocked {
         Blocked {

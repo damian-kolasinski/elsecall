@@ -1,0 +1,22 @@
+[package]
+name = "elsecall-machine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+doctest = false
+
+[features]
+# Fixtures other crates' tests build machines with.
+test-support = []
+
+[dependencies]
+elsecall-build-identity.workspace = true
+elsecall-failure.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

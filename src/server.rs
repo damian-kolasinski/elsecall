@@ -2,7 +2,6 @@ use crate::{
     fleet::Fleet,
     fleet_local_api,
     fleet_placement::FleetMembers,
-    inspection::Inspection,
     member_key::MemberKey,
     membership_store::MembershipStore,
     peer_api, peer_listener, placement_api,
@@ -30,6 +29,7 @@ use axum::{
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::{local_access, paths::Paths, private_files};
+use elsecall_machine::inspection::Inspection;
 use elsecall_wire::api;
 use std::{
     fs,
@@ -554,7 +554,7 @@ pub async fn serve_with_updates(
 
 async fn health(
     State(inspection): State<Arc<Inspection>>,
-) -> Json<api::Response<crate::inspection::Health>> {
+) -> Json<api::Response<elsecall_machine::inspection::Health>> {
     Json(api::Response::new(inspection.health()))
 }
 async fn machine(State(inspection): State<Arc<Inspection>>) -> Response {

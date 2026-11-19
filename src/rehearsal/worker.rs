@@ -5,7 +5,7 @@
 
 pub use crate::workload::format::{Calibration, logical_demand};
 pub async fn calibrate(
-    cores: crate::inspection::CoreCounts,
+    cores: elsecall_machine::inspection::CoreCounts,
 ) -> elsecall_failure::Result<Calibration> {
     use elsecall_failure::Failure;
     let script = r#"use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC CLOCK_PROCESS_CPUTIME_ID);
@@ -108,7 +108,7 @@ exit($failed ? 124 : $exit);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::inspection::CoreCounts;
+    use elsecall_machine::inspection::CoreCounts;
     #[test]
     fn converts_h1_weighted_demand_to_the_os_cpu_denominator() {
         assert_eq!(
@@ -196,7 +196,7 @@ mod progress_tests {
     }
     #[tokio::test]
     async fn fixed_work_stretches_when_cpu_is_withheld_but_wall_lifetime_does_not() {
-        let c = calibrate(crate::inspection::CoreCounts {
+        let c = calibrate(elsecall_machine::inspection::CoreCounts {
             performance: 1,
             efficiency: 0,
         })
@@ -238,7 +238,7 @@ mod cpu_tests {
     async fn slower_instruction_service_does_not_inflate_the_cpu_budget() {
         use crate::macos::process_usage;
         use std::{fs, process::Command};
-        let c = calibrate(crate::inspection::CoreCounts {
+        let c = calibrate(elsecall_machine::inspection::CoreCounts {
             performance: 1,
             efficiency: 0,
         })
@@ -278,7 +278,7 @@ mod cpu_tests {
     async fn fractional_and_multicore_fixed_work_consumes_the_calibrated_cpu_budget() {
         use crate::macos::process_usage;
         use std::{fs, process::Command};
-        let c = calibrate(crate::inspection::CoreCounts {
+        let c = calibrate(elsecall_machine::inspection::CoreCounts {
             performance: 4,
             efficiency: 4,
         })
@@ -290,7 +290,7 @@ mod cpu_tests {
         for target in [0.25, 1.25] {
             let logical = logical_demand(
                 target,
-                crate::inspection::CoreCounts {
+                elsecall_machine::inspection::CoreCounts {
                     performance: 4,
                     efficiency: 4,
                 },

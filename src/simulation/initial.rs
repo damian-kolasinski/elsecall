@@ -375,7 +375,7 @@ mod tests {
                     machine: Arc::new(Observation {
                         world: world.clone(),
                         member: member.member.clone(),
-                        cores: crate::inspection::CoreCounts {
+                        cores: elsecall_machine::inspection::CoreCounts {
                             performance: 2,
                             efficiency: 0,
                         },

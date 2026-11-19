@@ -1,8 +1,6 @@
 //! One minute of a member's load, folded from the scheduler's per-second samples.
-use crate::{
-    inspection::{MemoryPressure, ThermalState},
-    scheduling::{capacity::Cores, gate::Gate, timestamp::Timestamp},
-};
+use crate::scheduling::{capacity::Cores, gate::Gate, timestamp::Timestamp};
+use elsecall_machine::inspection::{MemoryPressure, ThermalState};
 use serde::{Deserialize, Serialize};
 
 const MINUTE_MS: u64 = 60_000;

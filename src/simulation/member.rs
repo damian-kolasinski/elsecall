@@ -151,14 +151,14 @@ impl Member {
     }
 }
 
-fn core_types(capacity: Capacity) -> Result<crate::inspection::CoreCounts> {
+fn core_types(capacity: Capacity) -> Result<elsecall_machine::inspection::CoreCounts> {
     let weighted = capacity.weighted_cores.millis();
     if !weighted.is_multiple_of(500) {
         return Err(invalid(
             "Weighted capacity cannot be represented by machine core types.",
         ));
     }
-    Ok(crate::inspection::CoreCounts {
+    Ok(elsecall_machine::inspection::CoreCounts {
         performance: weighted / 1000,
         efficiency: weighted % 1000 / 500,
     })

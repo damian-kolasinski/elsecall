@@ -1,8 +1,6 @@
 //! Whether outside load lets a member admit new work.
-use crate::{
-    inspection::{LoadSample, MemoryPressure},
-    scheduling::{capacity::Cores, parameters::Admission},
-};
+use crate::scheduling::{capacity::Cores, parameters::Admission};
+use elsecall_machine::inspection::{LoadSample, MemoryPressure};
 use std::collections::VecDeque;
 
 /// Samples averaged for saturation; at one sample a second, about three seconds.
@@ -117,10 +115,8 @@ pub fn gate(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        inspection::{CoreCounts, ThermalState},
-        scheduling::parameters::{BlockingPressure, Parameters},
-    };
+    use crate::scheduling::parameters::{BlockingPressure, Parameters};
+    use elsecall_machine::inspection::{CoreCounts, ThermalState};
 
     fn sample(cpu: Option<f64>, memory: MemoryPressure) -> LoadSample {
         LoadSample {

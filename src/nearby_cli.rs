@@ -100,7 +100,7 @@ fn next_step(macs: &[NearbyMac]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::inspection::Machine;
+    use elsecall_machine::inspection::Machine;
 
     fn mac(name: &str, remote_login: RemoteLogin, membership: Membership) -> NearbyMac {
         NearbyMac {

@@ -1,14 +1,12 @@
 //! The real scheduler driven by virtual boundary adapters, without service tasks.
 use super::*;
-use crate::{
-    inspection::{LoadSample, Machine, MemoryPressure, ThermalState},
-    scheduling::{
-        clock::VirtualClock,
-        messages::RunEnded,
-        placed::Alone,
-        pre_run_sync::{PreRunSync, Synced},
-    },
+use crate::scheduling::{
+    clock::VirtualClock,
+    messages::RunEnded,
+    placed::Alone,
+    pre_run_sync::{PreRunSync, Synced},
 };
+use elsecall_machine::inspection::{LoadSample, Machine, MemoryPressure, ThermalState};
 use futures_util::future::BoxFuture;
 use std::sync::atomic::{AtomicU64, Ordering};
 

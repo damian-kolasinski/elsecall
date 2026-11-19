@@ -67,10 +67,8 @@ impl Recorder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        inspection::{MemoryPressure, ThermalState},
-        scheduling::{capacity::Cores, gate::Gate},
-    };
+    use crate::scheduling::{capacity::Cores, gate::Gate};
+    use elsecall_machine::inspection::{MemoryPressure, ThermalState};
     fn sample(at: u64, queued: usize) -> Second {
         Second {
             at: Timestamp::from_millis(at),

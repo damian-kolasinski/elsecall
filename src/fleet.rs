@@ -4,7 +4,6 @@
 //! Operator changes live in `fleet_changes` and the fleet-wide view in `fleet_view`;
 //! both act through this module's state.
 use crate::{
-    inspection::Inspection,
     member_code,
     member_key::{MemberKey, PublicKey},
     membership_store::{Membership, MembershipStore},
@@ -12,6 +11,7 @@ use crate::{
     roster::{Member, MemberName, Offer, Roster},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_machine::inspection::Inspection;
 use serde::{Deserialize, Serialize};
 use std::{
     net::SocketAddr,

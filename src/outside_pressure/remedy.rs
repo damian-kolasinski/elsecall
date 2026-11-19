@@ -2,7 +2,6 @@
 //! on. Elsecall never stops the process itself: it is not Elsecall's work, and
 //! a root daemon needs privileges the service does not have.
 use crate::{
-    inspection::MemoryPressure,
     outside_pressure::{
         blocked::{Blocked, OutsideProcess, Reason},
         sampling::Owner,
@@ -10,6 +9,7 @@ use crate::{
     },
     scheduling::timestamp::Timestamp,
 };
+use elsecall_machine::inspection::MemoryPressure;
 
 /// Processes whose restart ends the user's session or the machine's: the
 /// remedy for them is a reboot, never a kill.

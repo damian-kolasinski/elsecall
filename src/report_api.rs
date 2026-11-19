@@ -278,7 +278,6 @@ mod tests {
     use super::*;
     use crate::scheduling::fixtures::{self, bucket};
     use crate::{
-        inspection::{MemoryPressure, ThermalState},
         peer_client::RESPONSE_LIMIT,
         report_protocol::PAGE,
         reporting::{
@@ -286,6 +285,7 @@ mod tests {
             window::FINE_BUCKETS,
         },
     };
+    use elsecall_machine::inspection::{MemoryPressure, ThermalState};
 
     #[test]
     fn the_largest_answers_fit_a_member_response() {

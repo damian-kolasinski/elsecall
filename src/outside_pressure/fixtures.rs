@@ -17,7 +17,7 @@ pub fn episode(
     crate::outside_pressure::store::Episode {
         blocked: Blocked {
             reason: Reason::MemoryPressure {
-                level: crate::inspection::MemoryPressure::Warning,
+                level: elsecall_machine::inspection::MemoryPressure::Warning,
             },
             since,
             attributed_at: since.after(Duration::from_secs(300)),

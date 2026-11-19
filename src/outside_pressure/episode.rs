@@ -236,7 +236,7 @@ impl Watch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::inspection::MemoryPressure;
+    use elsecall_machine::inspection::MemoryPressure;
 
     const PRESSURE: Gate = Gate::MemoryPressure {
         level: MemoryPressure::Warning,

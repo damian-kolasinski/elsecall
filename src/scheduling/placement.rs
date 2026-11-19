@@ -1223,13 +1223,11 @@ fn score(observation: Observation, wanted: &Wanted, typical: f64) -> Scored {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        inspection::{CoreCounts, LoadSample, MemoryPressure, ThermalState},
-        scheduling::{
-            admission::QueueCounts, capacity::Capacity, learning::RunSample,
-            parameters::Parameters, sync_history::SyncSample, timestamp::Timestamp,
-        },
+    use crate::scheduling::{
+        admission::QueueCounts, capacity::Capacity, learning::RunSample, parameters::Parameters,
+        sync_history::SyncSample, timestamp::Timestamp,
     };
+    use elsecall_machine::inspection::{CoreCounts, LoadSample, MemoryPressure, ThermalState};
 
     fn cores(n: f64) -> Cores {
         Cores::from_f64(n).unwrap()

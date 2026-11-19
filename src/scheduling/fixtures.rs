@@ -1,6 +1,5 @@
 //! Fixed records and load buckets the report's tests compute from.
 use crate::{
-    inspection::ThermalState,
     load_log::buckets::Bucket,
     scheduling::{
         capacity::{Capacity, Cores},
@@ -17,6 +16,7 @@ use crate::{
         timestamp::Timestamp,
     },
 };
+use elsecall_machine::inspection::ThermalState;
 use std::time::Duration;
 
 pub const MINUTE: u64 = 60_000;

@@ -6,11 +6,11 @@ use super::{
     sampling::{Memory, Owner, ProcessSampler, ProcessUse},
 };
 use crate::{
-    inspection::MemoryPressure,
     outside_pressure::Reason,
     scheduling::{load, parameters::Parameters, timestamp::Timestamp},
 };
 use elsecall_failure::Result;
+use elsecall_machine::inspection::MemoryPressure;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,

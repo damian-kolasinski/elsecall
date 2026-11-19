@@ -1,16 +1,14 @@
 //! Messages between the CLI and the service about admitted work.
-use crate::{
-    inspection::LoadSample,
-    scheduling::{
-        admission::QueueCounts,
-        capacity::{Capacity, Cores},
-        load::Gate,
-        record::Record,
-        request::Kind,
-        run_id::RunId,
-        run_phases::{RemoteFailurePhase, RunPhases},
-    },
+use crate::scheduling::{
+    admission::QueueCounts,
+    capacity::{Capacity, Cores},
+    load::Gate,
+    record::Record,
+    request::Kind,
+    run_id::RunId,
+    run_phases::{RemoteFailurePhase, RunPhases},
 };
+use elsecall_machine::inspection::LoadSample;
 use serde::{Deserialize, Serialize};
 
 /// Capacity granted to a run or lease.

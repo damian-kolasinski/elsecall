@@ -5,7 +5,7 @@
 //!
 //! The same keys serve `config.toml` (as sections) and `replay --set` (as
 //! `section.key=value`), and both go through the same validation.
-use crate::inspection::MemoryPressure;
+use elsecall_machine::inspection::MemoryPressure;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

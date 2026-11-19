@@ -93,7 +93,7 @@ impl Calibration {
 
 /// H1 fits machine CPU share times weighted capacity. OS CPU time is measured
 /// against all logical CPUs, so fractional busy workers need this conversion.
-pub fn logical_demand(effective: f64, cores: crate::inspection::CoreCounts) -> f64 {
+pub fn logical_demand(effective: f64, cores: elsecall_machine::inspection::CoreCounts) -> f64 {
     let weighted =
         crate::scheduling::capacity::Capacity::of(cores, crate::scheduling::capacity::Cores::ZERO)
             .weighted_cores

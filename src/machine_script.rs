@@ -3,10 +3,10 @@
 //! load comes from a file the test rewrites, and their speed is fixed. Selected
 //! only by `ELSECALL_MACHINE_LOAD=file:PATH` and `ELSECALL_MACHINE_SPEED`, like the
 //! tailnet discovery overrides.
-use crate::inspection::{
+use elsecall_failure::Result;
+use elsecall_machine::inspection::{
     CoreCounts, LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState,
 };
-use elsecall_failure::Result;
 use serde::Deserialize;
 use std::path::PathBuf;
 

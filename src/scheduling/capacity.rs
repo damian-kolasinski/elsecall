@@ -1,5 +1,5 @@
 //! Capacity and request sizes, counted in weighted cores.
-use crate::inspection::CoreCounts;
+use elsecall_machine::inspection::CoreCounts;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// An amount of capacity, held in thousandths of a weighted core so that admission

@@ -157,13 +157,11 @@ pub fn behind(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        inspection::MemoryPressure,
-        outside_pressure::{
-            blocked::Blocked,
-            sampling::{Memory, Owner},
-        },
+    use crate::outside_pressure::{
+        blocked::Blocked,
+        sampling::{Memory, Owner},
     };
+    use elsecall_machine::inspection::MemoryPressure;
 
     fn at(minute: u64) -> Timestamp {
         Timestamp::from_millis(minute * 60_000)

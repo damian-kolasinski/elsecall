@@ -21,7 +21,6 @@ mod upgrading;
 pub use upgrading::{HostingHold, OnHandover, UpdateHold, WorkInFlight};
 
 use crate::{
-    inspection::{CoreCounts, MachineInspector},
     load_log::{LoadLog, minute::Second},
     scheduling::{
         admission::{Admission, Class},
@@ -52,6 +51,7 @@ use crate::{
 };
 use auto::Auto;
 use elsecall_failure::{Failure, Result};
+use elsecall_machine::inspection::{CoreCounts, MachineInspector};
 use placing::Placing;
 use quotes::Quotes;
 use serde::Serialize;
@@ -1833,12 +1833,10 @@ impl Drop for Pending {
 #[cfg(test)]
 mod pending_snapshot_tests {
     use super::*;
-    use crate::{
-        inspection::{LoadSample, Machine, MemoryPressure, ThermalState},
-        scheduling::{
-            binding::fake::FakeProcesses, clock::VirtualClock, placed::Alone, pre_run_sync::Synced,
-        },
+    use crate::scheduling::{
+        binding::fake::FakeProcesses, clock::VirtualClock, placed::Alone, pre_run_sync::Synced,
     };
+    use elsecall_machine::inspection::{LoadSample, Machine, MemoryPressure, ThermalState};
     use futures_util::future::BoxFuture;
     use std::sync::atomic::{AtomicU64, Ordering};
 

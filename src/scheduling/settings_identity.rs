@@ -14,7 +14,8 @@ pub fn fingerprint(parameters: &Parameters, capacity: Capacity) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{inspection::CoreCounts, scheduling::capacity::Cores};
+    use crate::scheduling::capacity::Cores;
+    use elsecall_machine::inspection::CoreCounts;
 
     #[test]
     fn identity_covers_parameters_capacity_and_reserve() {

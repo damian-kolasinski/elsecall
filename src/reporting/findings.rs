@@ -1570,7 +1570,8 @@ mod tests {
                 b.at = incident_at(m * 60);
                 if closed(m) == Some(Pressure::MemoryPressure) {
                     b.memory_pressure_seconds = 60;
-                    b.worst_memory_pressure = Some(crate::inspection::MemoryPressure::Warning);
+                    b.worst_memory_pressure =
+                        Some(elsecall_machine::inspection::MemoryPressure::Warning);
                 }
                 b
             })

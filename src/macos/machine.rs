@@ -1,11 +1,9 @@
-use crate::{
-    inspection::{
-        CoreCounts, LoadAverage, LoadSample, Machine, MachineInspector, Memory, MemoryPressure,
-        ThermalState,
-    },
-    macos::{sysctl, thermal},
-};
+use crate::macos::{sysctl, thermal};
 use elsecall_failure::{Failure, Result};
+use elsecall_machine::inspection::{
+    CoreCounts, LoadAverage, LoadSample, Machine, MachineInspector, Memory, MemoryPressure,
+    ThermalState,
+};
 use std::{
     sync::Mutex,
     time::{Duration, Instant},

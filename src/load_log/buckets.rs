@@ -1,10 +1,10 @@
 //! Minutes of load rolled into longer periods. Buckets start at whole multiples
 //! of their width since the Unix epoch, so every member's buckets line up.
-use crate::inspection::{MemoryPressure, ThermalState};
 use crate::{
     load_log::minute::{Minute, memory_rank, thermal_rank, worst},
     scheduling::{capacity::Cores, timestamp::Timestamp},
 };
+use elsecall_machine::inspection::{MemoryPressure, ThermalState};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

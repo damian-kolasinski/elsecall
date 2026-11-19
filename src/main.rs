@@ -3,7 +3,6 @@ use elsecall::{
     admission_cli::{self, LeaseCommand},
     fleet_cli,
     inbound_firewall::{Inbound, InboundFirewall},
-    inspection::{Health, Inspection, Machine},
     install_window,
     installation::{self, ServiceManager},
     macos::{
@@ -15,6 +14,7 @@ use elsecall::{
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::{local_access, paths::Paths};
+use elsecall_machine::inspection::{Health, Inspection, Machine};
 use elsecall_tailnet::tailnet;
 use elsecall_wire::api;
 use serde::Serialize;
@@ -626,14 +626,14 @@ async fn run(cli: Cli) -> Result<bool> {
         Command::Serve => {
             // After an upgrade, the stubs an older build wrote point at this one.
             elsecall_agent_skill::refresh_if_installed(&paths);
-            let machine: Arc<dyn elsecall::inspection::MachineInspector> =
+            let machine: Arc<dyn elsecall_machine::inspection::MachineInspector> =
                 if let Some(file) = elsecall::machine_script::load_file() {
                     Arc::new(elsecall::machine_script::ScriptedLoad {
                         machine: MacMachine::default(),
                         file,
                     })
-                } else if elsecall::idle_load::requested() {
-                    Arc::new(elsecall::idle_load::IdleLoad(MacMachine::default()))
+                } else if elsecall_machine::idle_load::requested() {
+                    Arc::new(elsecall_machine::idle_load::IdleLoad(MacMachine::default()))
                 } else {
                     Arc::new(MacMachine::default())
                 };

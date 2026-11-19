@@ -2,27 +2,25 @@
 //! `placement::decide`, recorded by `Candidate::scored` and `Arrival::of`, and
 //! read back from JSON, in each generation of the record format.
 use super::*;
-use crate::{
-    inspection::{CoreCounts, LoadSample, MemoryPressure, ThermalState},
-    scheduling::{
-        admission::QueueCounts,
-        capacity::{Capacity, Cores},
-        learning::Conversions,
-        load,
-        messages::MemberState,
-        parameters::{Admission, Parameters, Placement as PlacementParameters},
-        placed::Warmth,
-        placement::{
-            self, Ahead, Copy, Expectation, Held, Learned, LearnedRun, LearnedTime, Level,
-            Observation, Source, Wanted,
-        },
-        processes::ProcessIdentity,
-        record::{Arrival, Candidate, Decision, Outcome, Scoring, State, Verdict},
-        request::{Kind, Placement, Urgency},
-        run_id::RunId,
-        timestamp::Timestamp,
+use crate::scheduling::{
+    admission::QueueCounts,
+    capacity::{Capacity, Cores},
+    learning::Conversions,
+    load,
+    messages::MemberState,
+    parameters::{Admission, Parameters, Placement as PlacementParameters},
+    placed::Warmth,
+    placement::{
+        self, Ahead, Copy, Expectation, Held, Learned, LearnedRun, LearnedTime, Level, Observation,
+        Source, Wanted,
     },
+    processes::ProcessIdentity,
+    record::{Arrival, Candidate, Decision, Outcome, Scoring, State, Verdict},
+    request::{Kind, Placement, Urgency},
+    run_id::RunId,
+    timestamp::Timestamp,
 };
+use elsecall_machine::inspection::{CoreCounts, LoadSample, MemoryPressure, ThermalState};
 use std::time::Duration;
 
 fn cores(n: f64) -> Cores {

@@ -133,10 +133,10 @@ impl Inspection {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl Machine {
     /// A machine with plausible values, as an inspection reports them.
-    pub(crate) fn fixture() -> Self {
+    pub fn fixture() -> Self {
         Machine {
             hostname: None,
             local_host_name: None,
@@ -172,7 +172,7 @@ impl Machine {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::inspection::*;
 
     #[test]
     fn a_machine_keeps_its_load_averages_beside_the_flattened_sample() {

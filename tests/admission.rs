@@ -4,7 +4,7 @@
 mod processes;
 mod support;
 
-use elsecall::inspection::MemoryPressure;
+use elsecall_machine::inspection::MemoryPressure;
 use std::time::{Duration, Instant};
 use support::{Fixture, in_use, queued, record};
 

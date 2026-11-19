@@ -10,13 +10,13 @@ use crate::{
         journal::{Journal, Phase},
         protocol::UpgradeId,
     },
-    inspection::Health,
     installation::{ServiceManager, Transaction, ready::confirm},
 };
 use elsecall_build_identity::build_identity::{Build, BuildId, Digest};
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
+use elsecall_machine::inspection::Health;
 use std::path::Path;
 
 fn log(event: &str, id: &UpgradeId, detail: serde_json::Value) {

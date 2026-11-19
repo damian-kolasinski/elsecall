@@ -8,7 +8,6 @@
 //! as outside. Time without samples, such as a sleeping laptop, proves nothing
 //! either way, so too little of it sampled is not blocked.
 use crate::{
-    inspection::MemoryPressure,
     load_log::{
         buckets::Bucket,
         minute::{memory_rank, worst},
@@ -21,6 +20,7 @@ use crate::{
     },
     scheduling::timestamp::Timestamp,
 };
+use elsecall_machine::inspection::MemoryPressure;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 

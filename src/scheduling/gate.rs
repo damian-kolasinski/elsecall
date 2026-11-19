@@ -1,6 +1,6 @@
 //! What outside load lets admission do: the verdict it applies to new work,
 //! which the load log records every minute.
-use crate::inspection::MemoryPressure;
+use elsecall_machine::inspection::MemoryPressure;
 use serde::{Deserialize, Serialize};
 
 /// The verdict admission applies to new, non-nested work.

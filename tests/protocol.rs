@@ -1,15 +1,12 @@
 #![cfg(target_os = "macos")]
 use axum::{Json, Router, routing::get};
 use elsecall::{
-    inspection::{Inspection, LoadSample, Machine, MachineInspector},
-    macos::processes::MacProcesses,
-    peer_listener,
-    scheduling::service::Adapters,
-    server,
+    macos::processes::MacProcesses, peer_listener, scheduling::service::Adapters, server,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_machine::inspection::{Inspection, LoadSample, Machine, MachineInspector};
 use elsecall_tailnet::tailnet::{Presence, Tailnet};
 use std::{future::IntoFuture, sync::Arc};
 
@@ -72,7 +69,7 @@ async fn inspection_failure_crosses_real_api_without_becoming_false_health_failu
     ));
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(120);
     loop {
-        if client::get::<elsecall::inspection::Health>(&paths.socket(), "/v1/health")
+        if client::get::<elsecall_machine::inspection::Health>(&paths.socket(), "/v1/health")
             .await
             .is_ok()
         {

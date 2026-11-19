@@ -75,7 +75,7 @@ pub struct Reply {
     pub member: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trust: Option<serde_json::Value>,
-    pub cores: Option<crate::inspection::CoreCounts>,
+    pub cores: Option<elsecall_machine::inspection::CoreCounts>,
     #[serde(default)]
     pub calibration: Option<super::worker::Calibration>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
