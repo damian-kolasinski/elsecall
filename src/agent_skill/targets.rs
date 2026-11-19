@@ -62,12 +62,19 @@ pub fn inspect(home: &Path, chosen: &[Agent]) -> Vec<Target> {
         .collect()
 }
 
-/// Where a skill folder really is: its parent resolved through links.
+/// Where a skill folder really is: its nearest existing ancestor resolved through
+/// links, with the rest of the path after it.
 fn place(folder: &Path) -> PathBuf {
-    folder
-        .parent()
-        .and_then(|parent| parent.canonicalize().ok())
-        .map_or_else(|| folder.to_owned(), |parent| parent.join(folder::NAME))
+    let mut rest = Vec::new();
+    let mut at = folder;
+    while let Some(parent) = at.parent() {
+        rest.push(at.file_name().expect("a named folder").to_owned());
+        if let Ok(real) = parent.canonicalize() {
+            return rest.iter().rev().fold(real, |path, part| path.join(part));
+        }
+        at = parent;
+    }
+    folder.to_owned()
 }
 
 /// Acts on each target once per real folder: `act` decides from the state what

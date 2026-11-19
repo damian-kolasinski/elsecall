@@ -190,7 +190,7 @@ fn settled(outcomes: &[Outcome]) -> bool {
 fn install(dir: Option<PathBuf>) -> Result<Printed> {
     let root = match dir {
         Some(dir) => std::path::absolute(&dir).map_err(|e| unwritable(&dir, &e))?,
-        None => Paths::current()?.data.join("skill"),
+        None => default_copy(&Paths::current()?)?,
     };
     let target = root.join(folder::NAME);
     let state = folder::state(&target).map_err(|e| unwritable(&target, &e))?;
@@ -204,6 +204,14 @@ fn install(dir: Option<PathBuf>) -> Result<Printed> {
     folder::replace(&target, &folder::exported()).map_err(|e| unwritable(&target, &e))?;
     let note = "This copy does not update itself: run elsecall skill install again after upgrading Elsecall.";
     Ok(Printed::Json(json!({ "path": target, "note": note }), true))
+}
+
+/// Where `skill install` writes by default: inside Elsecall's own data folder,
+/// which is created private, as installing Elsecall requires it to be.
+pub fn default_copy(paths: &Paths) -> Result<PathBuf> {
+    crate::private_files::owned_tree(&paths.home, &paths.data)?;
+    crate::private_files::directory(&paths.data)?;
+    Ok(paths.data.join("skill"))
 }
 
 fn unwritable(folder: &Path, e: &std::io::Error) -> Failure {
@@ -251,24 +259,49 @@ fn described(home: &Path, targets: &[Target], outcomes: &[Outcome]) -> Vec<Value
 }
 
 /// What `elsecall doctor` reports: each agent found, its skill, and a warning
-/// naming the fix when one lacks it. Writes nothing.
+/// naming the fix when one lacks a current skill. Writes nothing.
 pub fn health(home: &Path) -> Value {
     let found: Vec<Agent> = agents::ALL.into_iter().filter(|a| a.found(home)).collect();
     let targets = targets::inspect(home, &found);
-    let lacking: Vec<&str> = targets
-        .iter()
-        .filter(|t| !matches!(t.before, Ok(State::Current | State::Outdated)))
-        .map(|t| t.agent.label())
-        .collect();
-    let warning = (!lacking.is_empty()).then(|| {
-        format!(
-            "{} {} no current Elsecall skill: run elsecall skill setup.",
-            lacking.join(", "),
-            if lacking.len() == 1 { "has" } else { "have" }
-        )
-    });
+    let lacking = |wanted: fn(&std::result::Result<State, String>) -> bool| -> Vec<&str> {
+        targets
+            .iter()
+            .filter(|t| wanted(&t.before))
+            .map(|t| t.agent.label())
+            .collect()
+    };
+    let mut warnings = Vec::new();
+    let setup = lacking(|s| matches!(s, Ok(State::Missing | State::Exported)));
+    if !setup.is_empty() {
+        warnings.push(format!(
+            "{} {} no Elsecall skill: run elsecall skill setup.",
+            setup.join(", "),
+            if setup.len() == 1 { "has" } else { "have" }
+        ));
+    }
+    let foreign = lacking(|s| matches!(s, Ok(State::Foreign)));
+    if !foreign.is_empty() {
+        warnings.push(format!(
+            "{}: a skill named elsecall that Elsecall did not write is in the way; run elsecall skill setup --force to replace it.",
+            foreign.join(", ")
+        ));
+    }
+    let linked = lacking(|s| matches!(s, Ok(State::Linked)));
+    if !linked.is_empty() {
+        warnings.push(format!(
+            "{}: the elsecall skill folder is a link; remove it, then run elsecall skill setup.",
+            linked.join(", ")
+        ));
+    }
+    let unreadable = lacking(|s| s.is_err());
+    if !unreadable.is_empty() {
+        warnings.push(format!(
+            "{}: the skill folder could not be read; check its permissions.",
+            unreadable.join(", ")
+        ));
+    }
     json!({
         "agents": targets.iter().map(|t| entry(home, t)).collect::<Vec<_>>(),
-        "warning": warning,
+        "warning": (!warnings.is_empty()).then(|| warnings.join(" ")),
     })
 }

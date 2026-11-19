@@ -371,3 +371,120 @@ fn install_writes_the_whole_guide_and_refuses_a_foreign_folder() {
     assert_eq!(json(&refused)["error"]["code"], "skill_foreign");
     assert_eq!(read(&theirs.join("SKILL.md")), "mine\n");
 }
+
+fn older_stub(current: &str) -> String {
+    current
+        .replace("elsecall-stub: \"1\"", "elsecall-stub: \"0\"")
+        .replace("never retry", "do not retry")
+}
+
+#[test]
+fn refresh_leaves_exported_copies_and_other_skills_alone() {
+    let home = home();
+    let root = home.path();
+    fs::create_dir(root.join(".claude")).unwrap();
+    assert!(skill(root, &["setup"]).status.success());
+    let current = read(&root.join(".claude/skills/elsecall/SKILL.md"));
+
+    let exported = root.join("copy");
+    let dir = exported.to_str().unwrap();
+    assert!(skill(root, &["install", "--dir", dir]).status.success());
+    fs::create_dir_all(root.join(".agents/skills")).unwrap();
+    fs::rename(
+        exported.join("elsecall"),
+        root.join(".agents/skills/elsecall"),
+    )
+    .unwrap();
+    let copy = read(&root.join(".agents/skills/elsecall/SKILL.md"));
+    fs::write(
+        root.join(".claude/skills/elsecall/SKILL.md"),
+        older_stub(&current),
+    )
+    .unwrap();
+
+    assert_eq!(elsecall::agent_skill::refresh(root), 1);
+    assert_eq!(
+        read(&root.join(".claude/skills/elsecall/SKILL.md")),
+        current
+    );
+    assert_eq!(read(&root.join(".agents/skills/elsecall/SKILL.md")), copy);
+
+    fs::write(
+        root.join(".claude/skills/elsecall/SKILL.md"),
+        "---\nname: elsecall\n---\nmine\n",
+    )
+    .unwrap();
+    assert_eq!(elsecall::agent_skill::refresh(root), 0);
+    assert!(read(&root.join(".claude/skills/elsecall/SKILL.md")).contains("mine"));
+}
+
+#[test]
+fn the_installed_service_refreshes_an_older_stub_when_it_starts() {
+    let home = home();
+    let root = home.path();
+    fs::create_dir(root.join(".claude")).unwrap();
+    assert!(skill(root, &["setup"]).status.success());
+    let stub = root.join(".claude/skills/elsecall/SKILL.md");
+    let current = read(&stub);
+    fs::write(&stub, older_stub(&current)).unwrap();
+
+    // The binary where `elsecall install` puts it, as the LaunchAgent runs it.
+    let paths = elsecall::paths::Paths::for_home(root).unwrap();
+    elsecall::private_files::directory(&paths.data).unwrap();
+    fs::copy(env!("CARGO_BIN_EXE_elsecall"), paths.executable()).unwrap();
+    let port = std::net::TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port();
+    let mut service = crate::processes::command(paths.executable())
+        .env("HOME", root)
+        .env("ELSECALL_FLEET_PORT", port.to_string())
+        .env("ELSECALL_TAILNET_NAME", "skill-refresh")
+        .env("ELSECALL_TAILNET_ADDRESSES", "127.0.0.1")
+        .env("ELSECALL_MACHINE_LOAD", "idle")
+        .env("ELSECALL_MACHINE_SPEED", "1")
+        .arg("serve")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    let deadline = std::time::Instant::now() + crate::processes::WAIT;
+    while read(&stub) != current && std::time::Instant::now() < deadline {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    let _ = service.kill();
+    let _ = service.wait();
+    assert_eq!(
+        read(&stub),
+        current,
+        "the service brought the stub up to date"
+    );
+}
+
+#[test]
+fn the_default_copy_keeps_the_data_folder_private_and_uninstall_removes_everything() {
+    use std::os::unix::fs::PermissionsExt;
+    let home = home();
+    let root = home.path();
+    fs::create_dir(root.join(".claude")).unwrap();
+    assert!(skill(root, &["setup"]).status.success());
+    let installed = json(&skill(root, &["install"]));
+    let paths = elsecall::paths::Paths::for_home(root).unwrap();
+    let copy = paths.data.join("skill/elsecall");
+    assert_eq!(
+        installed["data"]["path"],
+        copy.to_str().unwrap(),
+        "{installed}"
+    );
+    assert_eq!(
+        fs::metadata(&paths.data).unwrap().permissions().mode() & 0o777,
+        0o700,
+        "elsecall install refuses a data folder others can read"
+    );
+
+    let (removed, complete) = elsecall::agent_skill::remove_all(&paths);
+    assert!(complete, "{removed}");
+    assert!(!root.join(".claude/skills/elsecall").exists());
+    assert!(!paths.data.join("skill").exists());
+}

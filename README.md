@@ -1147,13 +1147,15 @@ write), `linked` (the folder or its `SKILL.md` is a link to somewhere else) or
 does not stop the others. `setup` replaces a foreign `SKILL.md` only with
 `--force` and never writes through a link; when it leaves a conflict or a failure
 it exits 1, with a `hint` for a conflict. With no agent found and none named it
-fails with `no_agents_found`. `remove` deletes only what Elsecall wrote, and
-`uninstall` does the same. Both take `--dry-run`, which writes nothing.
-`elsecall doctor` warns, under `agent_skill`, of an agent found without a current
-skill. For any other agent, `elsecall skill install [--dir PATH]` writes the whole
-skill folder (by default under `~/Library/Application Support/Elsecall/skill`) and
-prints its absolute path; that copy does not update itself, so run it again after
-upgrading.
+fails with `no_agents_found`. `setup` and `remove` take `--dry-run`, which writes
+nothing. `remove` deletes only what Elsecall wrote (its `SKILL.md`, an exported
+copy's references, and `.DS_Store`), keeping any other file in the folder, and
+`uninstall` does the same, also for the default copy below. `elsecall doctor`
+warns, under `agent_skill`, of an agent found without a current skill, with the
+fix for its state. For any other agent, `elsecall skill install [--dir PATH]`
+writes the whole skill folder (by default under
+`~/Library/Application Support/Elsecall/skill`) and prints its absolute path; that
+copy does not update itself, so run it again after upgrading.
 
 ## Integrating a consumer
 

@@ -409,9 +409,11 @@ async fn run(cli: Cli) -> Result<bool> {
                     elsecall::uninstall::Request::Remove
                 },
             )?;
-            let complete = uninstalled.complete();
+            let mut complete = uninstalled.complete();
             let mut data = serde_json::to_value(uninstalled).expect("serializable uninstall");
-            data["agent_skill"] = elsecall::agent_skill::remove_all(&paths.home);
+            let (skills, removed) = elsecall::agent_skill::remove_all(&paths);
+            complete &= removed;
+            data["agent_skill"] = skills;
             output(data);
             return Ok(complete);
         }

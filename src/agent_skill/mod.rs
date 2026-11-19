@@ -22,9 +22,22 @@ pub fn set_up_found(home: &Path) -> Value {
 }
 
 /// What `elsecall uninstall` does for agents: remove every stub and exported copy
-/// Elsecall wrote into an agent's skills folder.
-pub fn remove_all(home: &Path) -> Value {
-    cli::remove(home, &agents::ALL, false).0
+/// Elsecall wrote into an agent's skills folder, and the copy `skill install`
+/// wrote by default. The flag is whether nothing failed.
+pub fn remove_all(paths: &Paths) -> (Value, bool) {
+    let (mut data, mut complete) = cli::remove(&paths.home, &agents::ALL, false);
+    let default = paths.data.join("skill");
+    let copy = default.join(folder::NAME);
+    match folder::remove(&copy) {
+        Ok(()) => {
+            let _ = std::fs::remove_dir(&default);
+        }
+        Err(e) => {
+            complete = false;
+            data["default_copy_error"] = Value::String(format!("{}: {e}", copy.display()));
+        }
+    }
+    (data, complete)
 }
 
 pub use cli::health;

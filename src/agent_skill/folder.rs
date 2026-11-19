@@ -6,10 +6,7 @@ use super::{
     stub::{self, Owner},
 };
 use serde::Serialize;
-use std::{
-    io,
-    path::{Path, PathBuf},
-};
+use std::{io, path::Path};
 
 /// The skill's name, and its folder's name in an agent's skills folder.
 pub const NAME: &str = "elsecall";
@@ -95,11 +92,22 @@ fn create(path: &Path, text: &str) -> io::Result<()> {
     io::Write::write_all(&mut file, text.as_bytes())
 }
 
+/// Where a write stages its file; the process ID keeps concurrent runs apart,
+/// and a leftover of an interrupted write is recognised by the prefix.
+const STAGED: &str = ".SKILL.md.elsecall-new";
+
+/// Files no one keeps on purpose: Finder's `.DS_Store` and Elsecall's leftovers.
+/// Removing a skill deletes these; every other file someone put there stays.
+fn junk(name: &std::ffi::OsStr) -> bool {
+    let name = name.as_encoded_bytes();
+    name == b".DS_Store" || name.starts_with(STAGED.as_bytes())
+}
+
 /// Writes the stub as the folder's `SKILL.md`, replacing that file whole and
 /// leaving any other file in the folder.
 pub fn write_stub(folder: &Path) -> io::Result<()> {
     std::fs::create_dir_all(folder)?;
-    let staged = folder.join(format!(".{FILE}.elsecall-new"));
+    let staged = folder.join(format!("{STAGED}-{}", std::process::id()));
     let written =
         create(&staged, &stub::text()).and_then(|()| std::fs::rename(&staged, folder.join(FILE)));
     if written.is_err() {
@@ -109,8 +117,9 @@ pub fn write_stub(folder: &Path) -> io::Result<()> {
 }
 
 /// Puts `files` in place as the whole folder: written beside it, then renamed
-/// over it, so an agent never reads half a folder. Only for a folder that is
-/// missing or Elsecall's own.
+/// over it, so an agent never reads half a folder. What Elsecall wrote in the
+/// old folder goes; anything else in it moves into the new one. Only for a
+/// folder that is missing or Elsecall's own.
 pub fn replace(folder: &Path, files: &[(String, String)]) -> io::Result<()> {
     let parent = folder.parent().expect("a skill folder has a parent");
     std::fs::create_dir_all(parent)?;
@@ -123,13 +132,25 @@ pub fn replace(folder: &Path, files: &[(String, String)]) -> io::Result<()> {
             std::fs::create_dir_all(path.parent().expect("inside the folder"))?;
             create(&path, text)?;
         }
+        let state = state(folder)?;
         match std::fs::rename(folder, &old) {
             Ok(()) => {}
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
             Err(e) => return Err(e),
         }
         std::fs::rename(&fresh, folder)?;
-        gone(std::fs::remove_dir_all(&old))
+        if old.exists() {
+            remove_ours(&old, state)?;
+            for entry in std::fs::read_dir(&old)? {
+                let entry = entry?;
+                let kept = folder.join(entry.file_name());
+                if !kept.exists() {
+                    std::fs::rename(entry.path(), kept)?;
+                }
+            }
+            gone(std::fs::remove_dir(&old))?;
+        }
+        Ok(())
     })();
     if result.is_err() {
         let _ = std::fs::remove_dir_all(&fresh);
@@ -148,31 +169,25 @@ pub fn exported() -> Vec<(String, String)> {
         .collect()
 }
 
-/// The files Elsecall may have put in a folder: its `SKILL.md`, an exported
-/// copy's references, and leftovers of an interrupted write.
-fn ours(folder: &Path) -> Vec<PathBuf> {
-    let mut paths: Vec<PathBuf> = exported()
-        .into_iter()
-        .map(|(path, _)| folder.join(path))
-        .collect();
-    paths.push(folder.join(format!(".{FILE}.elsecall-new")));
-    paths
-}
-
-/// Removes what Elsecall wrote, then the folder if nothing but hidden files is
-/// left. A file already gone counts as removed.
-pub fn remove(folder: &Path) -> io::Result<()> {
-    for path in ours(folder) {
-        gone(std::fs::remove_file(path))?;
+/// Deletes what Elsecall wrote in `folder`, given its state: the `SKILL.md`, an
+/// exported copy's references (never through a link), and junk.
+fn remove_ours(folder: &Path, state: State) -> io::Result<()> {
+    if state.ours() {
+        gone(std::fs::remove_file(folder.join(FILE)))?;
     }
-    let _ = std::fs::remove_dir(folder.join("references"));
+    if state == State::Exported && !is_link(&folder.join("references"))? {
+        for (path, _) in exported().iter().filter(|(path, _)| path != FILE) {
+            gone(std::fs::remove_file(folder.join(path)))?;
+        }
+        let _ = std::fs::remove_dir(folder.join("references"));
+    }
     match std::fs::read_dir(folder) {
         Ok(entries) => {
-            let names: Vec<_> = entries
-                .map(|e| e.map(|e| e.file_name()))
-                .collect::<io::Result<_>>()?;
-            if names.iter().all(|name| hidden(name)) {
-                gone(std::fs::remove_dir_all(folder))?;
+            for entry in entries {
+                let entry = entry?;
+                if junk(&entry.file_name()) {
+                    gone(std::fs::remove_file(entry.path()))?;
+                }
             }
             Ok(())
         }
@@ -181,9 +196,31 @@ pub fn remove(folder: &Path) -> io::Result<()> {
     }
 }
 
+/// Removes what Elsecall wrote, then the folder if nothing else is left in it. A
+/// file already gone counts as removed.
+pub fn remove(folder: &Path) -> io::Result<()> {
+    let state = state(folder)?;
+    if !state.ours() {
+        return Ok(());
+    }
+    remove_ours(folder, state)?;
+    match std::fs::remove_dir(folder) {
+        Err(e)
+            if !matches!(
+                e.kind(),
+                io::ErrorKind::DirectoryNotEmpty | io::ErrorKind::NotFound
+            ) =>
+        {
+            Err(e)
+        }
+        _ => Ok(()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     fn folder() -> (tempfile::TempDir, PathBuf) {
         let home = tempfile::tempdir().unwrap();
@@ -229,6 +266,39 @@ mod tests {
     }
 
     #[test]
+    fn hidden_files_someone_keeps_survive_setup_replace_and_remove() {
+        let (_home, folder) = folder();
+        std::fs::create_dir_all(folder.join(".git")).unwrap();
+        std::fs::write(folder.join(".git/HEAD"), "ref").unwrap();
+        assert_eq!(state(&folder).unwrap(), State::Missing);
+        write_stub(&folder).unwrap();
+        remove(&folder).unwrap();
+        assert!(folder.join(".git/HEAD").is_file(), "remove kept it");
+        replace(&folder, &exported()).unwrap();
+        assert_eq!(state(&folder).unwrap(), State::Exported);
+        assert!(folder.join(".git/HEAD").is_file(), "replace moved it along");
+        replace(&folder, &[(FILE.to_owned(), stub::text())]).unwrap();
+        assert!(folder.join(".git/HEAD").is_file());
+        assert!(!folder.join("references").exists());
+    }
+
+    #[test]
+    fn a_linked_references_folder_is_never_followed() {
+        let (home, folder) = folder();
+        replace(&folder, &exported()).unwrap();
+        let elsewhere = home.path().join("elsewhere");
+        std::fs::create_dir(&elsewhere).unwrap();
+        std::fs::write(elsewhere.join("integrate.md"), "theirs").unwrap();
+        std::fs::remove_dir_all(folder.join("references")).unwrap();
+        std::os::unix::fs::symlink(&elsewhere, folder.join("references")).unwrap();
+        remove(&folder).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(elsewhere.join("integrate.md")).unwrap(),
+            "theirs"
+        );
+    }
+
+    #[test]
     fn a_skill_elsecall_did_not_write_is_foreign_and_its_files_stay() {
         let (_home, folder) = folder();
         std::fs::create_dir(&folder).unwrap();
@@ -262,7 +332,11 @@ mod tests {
         std::os::unix::fs::symlink(&outside, folder.join(FILE)).unwrap();
         assert_eq!(state(&folder).unwrap(), State::Linked, "a linked SKILL.md");
         std::fs::remove_file(folder.join(FILE)).unwrap();
-        std::os::unix::fs::symlink(&outside, folder.join(format!(".{FILE}.elsecall-new"))).unwrap();
+        std::os::unix::fs::symlink(
+            &outside,
+            folder.join(format!("{STAGED}-{}", std::process::id())),
+        )
+        .unwrap();
         write_stub(&folder).unwrap();
         assert!(
             !outside.exists(),
