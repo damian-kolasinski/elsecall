@@ -7,8 +7,8 @@ use super::{
     protocol::{Action, Job, Launch, Reply, valid_session, valid_workspace},
     scratch,
 };
-use crate::housekeeping::pass::Housekeeper;
 use elsecall_failure::{Failure, Result};
+use elsecall_housekeeping::housekeeping::pass::Housekeeper;
 use elsecall_local_state::paths::Paths;
 use elsecall_scheduling::service::Scheduler;
 use elsecall_scheduling_model::request::{Placement, Urgency};

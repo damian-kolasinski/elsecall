@@ -8,16 +8,11 @@ pub mod config_sync_api;
 pub mod config_sync_cli;
 pub mod config_sync_local_api;
 pub mod configuration;
-pub mod copies_api;
-pub mod copies_cli;
-pub mod fleet_callers;
 pub mod fleet_cli;
-pub mod fleet_copies;
 pub mod fleet_tool_inventory;
 pub mod fleet_upgrade;
 pub mod fleet_upgrade_api;
 pub mod fleet_upgrade_local_api;
-pub mod housekeeping;
 pub mod install_window;
 pub mod inventory_reader;
 pub mod macos;
@@ -56,7 +51,6 @@ pub mod upgrade_drain;
 pub mod upgrade_helper_process;
 pub mod window_app;
 pub mod window_startup;
-pub mod workspace_check_api;
 
 pub mod state_sizes;
 

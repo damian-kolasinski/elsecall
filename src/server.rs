@@ -1,13 +1,3 @@
-use crate::{
-    fleet_callers::FleetCallers,
-    housekeeping::{
-        self,
-        caller_state::CallerState,
-        callers::{Callers, Nobody},
-        catalog::Catalog,
-        pass::{Housekeeper, Parts},
-    },
-};
 use crate::{peer_api, peer_listener, placement_api, placement_host::PlacementHost, run_relay};
 use axum::{
     Json, Router,
@@ -18,6 +8,16 @@ use axum::{
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_fleet::{fleet::Fleet, fleet_local_api, fleet_placement::FleetMembers};
+use elsecall_housekeeping::{
+    fleet_callers::FleetCallers,
+    housekeeping::{
+        self,
+        caller_state::CallerState,
+        callers::{Callers, Nobody},
+        catalog::Catalog,
+        pass::{Housekeeper, Parts},
+    },
+};
 use elsecall_local_state::{local_access, paths::Paths, private_files};
 use elsecall_machine::inspection::Inspection;
 use elsecall_membership::{member_key::MemberKey, membership_store::MembershipStore};
@@ -382,7 +382,7 @@ pub async fn serve_with_updates(
         }))
     };
     if let Ok(fleet) = &fleet {
-        fleet.report_copies(Arc::new(crate::fleet_copies::FleetCopies(
+        fleet.report_copies(Arc::new(elsecall_housekeeping::fleet_copies::FleetCopies(
             housekeeper.clone(),
         )));
         fleet.report_load(load_log.clone());
@@ -450,7 +450,9 @@ pub async fn serve_with_updates(
     let fleet_routes = match fleet {
         Ok(fleet) => {
             let mut member_routes = placement_api::routes(host)
-                .merge(crate::workspace_check_api::routes(caller_state))
+                .merge(elsecall_housekeeping::workspace_check_api::routes(
+                    caller_state,
+                ))
                 .merge(crate::report_api::peer_routes(reporter.clone()))
                 .merge(crate::trace_api::peer_routes(reporter.clone()))
                 .merge(crate::rehearsal_api::peer_routes(rehearsal.clone()))
@@ -507,7 +509,7 @@ pub async fn serve_with_updates(
         .merge(trust_routes)
         .merge(crate::replay_api::routes(scheduler.clone()))
         .merge(crate::admission_api::routes(scheduler))
-        .merge(crate::copies_api::routes(housekeeper))
+        .merge(elsecall_housekeeping::copies_api::routes(housekeeper))
         .merge(tools_routes)
         .merge(desired_routes)
         .merge(crate::ui_app::routes(paths.clone()))

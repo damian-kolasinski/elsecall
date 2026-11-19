@@ -1073,6 +1073,7 @@ dependencies = [
  "elsecall-failure",
  "elsecall-fleet",
  "elsecall-guidance",
+ "elsecall-housekeeping",
  "elsecall-installation",
  "elsecall-labels",
  "elsecall-load-log",
@@ -1227,6 +1228,34 @@ version = "0.3.0"
 dependencies = [
  "elsecall-failure",
  "serde_json",
+]
+
+[[package]]
+name = "elsecall-housekeeping"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "clap",
+ "elsecall-api-response",
+ "elsecall-failure",
+ "elsecall-fleet",
+ "elsecall-local-client",
+ "elsecall-local-state",
+ "elsecall-peer-transport",
+ "elsecall-rehearsal-identity",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-service-log",
+ "elsecall-wire",
+ "elsecall-workspace",
+ "futures-util",
+ "hyper",
+ "libc",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

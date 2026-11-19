@@ -1,0 +1,36 @@
+[package]
+name = "elsecall-housekeeping"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+axum.workspace = true
+clap.workspace = true
+elsecall-api-response.workspace = true
+elsecall-failure.workspace = true
+elsecall-fleet.workspace = true
+elsecall-local-client.workspace = true
+elsecall-local-state.workspace = true
+elsecall-peer-transport.workspace = true
+elsecall-rehearsal-identity.workspace = true
+elsecall-scheduling.workspace = true
+elsecall-scheduling-model.workspace = true
+elsecall-service-log.workspace = true
+elsecall-wire.workspace = true
+elsecall-workspace.workspace = true
+futures-util.workspace = true
+hyper.workspace = true
+libc.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

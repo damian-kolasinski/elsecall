@@ -7,7 +7,8 @@ mod diagnostics;
 mod members;
 mod processes;
 
-use elsecall::housekeeping::{
+use elsecall_failure::Result;
+use elsecall_housekeeping::housekeeping::{
     caller_state::CallerState,
     callers::Callers,
     catalog::Catalog,
@@ -17,7 +18,6 @@ use elsecall::housekeeping::{
     settings::Settings,
     volumes::Statfs,
 };
-use elsecall_failure::Result;
 use elsecall_local_state::paths::Paths;
 use elsecall_peer_transport::peer_client;
 use elsecall_scheduling_model::timestamp::Timestamp;
