@@ -86,7 +86,10 @@ jobs:
         run: python3 distribution/desktop_install.py dist/elsecall-*.tar.gz
       - name: Write the installer set to this release
         run: python3 distribution/stamp_installer.py --output dist/install.sh
+      # Only a tag's signing job uses the archive. On main the build is the
+      # check, and an upload would only add a network step that can fail.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: github.ref_type == 'tag'
         with:
           name: elsecall-aarch64-apple-darwin
           path: |

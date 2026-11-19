@@ -92,7 +92,7 @@ class Decide(unittest.TestCase):
             re.search(r"(?m)^name: (.+)$", path.read_text()).group(1)
             for path in workflows.glob("*.yml")
         }
-        self.assertEqual(sorted(watched), ["Check", "Module shape", "Privacy"])
+        self.assertEqual(sorted(watched), ["Check", "Module shape", "Privacy", "Release"])
         self.assertLessEqual(set(watched), names)
 
 

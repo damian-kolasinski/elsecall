@@ -1,5 +1,7 @@
 # Keeps one issue labelled main-red open per workflow that fails on main (the
-# full check, the module shape check and the privacy checks), so a red main is
+# full check, the module shape check, the privacy checks, and the release's
+# packaging build after a packaging change; a tag's release run is on the tag,
+# not main, so it never reports here), so a red main is
 # visible to the operator and to every session starting work, and one of them
 # takes the fix. A failure opens the workflow's issue or comments on it, a pass
 # closes it, and a superseded (cancelled) run changes nothing. A run that no
@@ -8,7 +10,7 @@
 name: Main status
 on:
   workflow_run:
-    workflows: [Check, Module shape, Privacy]
+    workflows: [Check, Module shape, Privacy, Release]
     types: [completed]
     branches: [main]
 permissions: {}
