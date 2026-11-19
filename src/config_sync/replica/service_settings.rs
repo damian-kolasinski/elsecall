@@ -1,9 +1,7 @@
 //! Service settings as a typed attachment to the ordinary mirrored generation.
 use super::*;
-use crate::{
-    configuration::ServiceConfiguration,
-    service_configuration::{self, Configuration, Summary},
-};
+use crate::service_configuration::{self, Configuration, Summary};
+use elsecall_service_config::ServiceConfiguration;
 
 impl Replica {
     fn service_source(&self) -> PathBuf {
@@ -272,7 +270,7 @@ impl Replica {
                 .read(&manifest.key, &manifest.service.expect("filtered"))?;
             Configuration::parse(&bytes)?.resolve(&name)?
         } else {
-            crate::configuration::load(&self.service_source().with_file_name("config.toml"))?
+            elsecall_service_config::load(&self.service_source().with_file_name("config.toml"))?
         };
         Ok(service_configuration::compare(
             &before,

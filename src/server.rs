@@ -588,7 +588,7 @@ async fn machine(State(inspection): State<Arc<Inspection>>) -> Response {
 
 fn configured_locations(
     paths: &Paths,
-    configuration: &crate::configuration::ServiceConfiguration,
+    configuration: &elsecall_service_config::ServiceConfiguration,
 ) -> Locations {
     Locations {
         setting: configuration.location,

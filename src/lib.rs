@@ -7,7 +7,6 @@ pub mod config_sync;
 pub mod config_sync_api;
 pub mod config_sync_cli;
 pub mod config_sync_local_api;
-pub mod configuration;
 pub mod fleet_cli;
 pub mod fleet_upgrade;
 pub mod fleet_upgrade_api;

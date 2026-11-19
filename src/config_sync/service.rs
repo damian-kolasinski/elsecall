@@ -11,22 +11,20 @@
 #[path = "service_configuration.rs"]
 mod service_configuration;
 
-use crate::{
-    config_sync::{
-        manifest::{Manifest, Tree},
-        member_locks::MemberLocks,
-        pins::Pin,
-        protocol::{self, Message, Purpose},
-        replica::{ApplyAs, Replica},
-        report::{Applied, PathReport, SyncRole, SyncState, SyncSummary},
-    },
-    configuration,
+use crate::config_sync::{
+    manifest::{Manifest, Tree},
+    member_locks::MemberLocks,
+    pins::Pin,
+    protocol::{self, Message, Purpose},
+    replica::{ApplyAs, Replica},
+    report::{Applied, PathReport, SyncRole, SyncState, SyncSummary},
 };
 use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_failure::{Failure, Result};
 use elsecall_fleet::fleet::{Fleet, RoleHandover, SyncReport};
 use elsecall_membership::roster::{Member, MemberName, Roster};
 use elsecall_peer_transport::peer_client;
+use elsecall_service_config as configuration;
 use elsecall_workspace::digest::Digest;
 use hyper::Method;
 use serde::{Deserialize, Serialize};

@@ -1098,6 +1098,7 @@ dependencies = [
  "elsecall-scheduling-model",
  "elsecall-scripted-machine",
  "elsecall-secure-channel",
+ "elsecall-service-config",
  "elsecall-service-log",
  "elsecall-sqlite-retention",
  "elsecall-tailnet",
@@ -1646,6 +1647,24 @@ dependencies = [
  "tokio",
  "x25519-dalek",
  "zeroize",
+]
+
+[[package]]
+name = "elsecall-service-config"
+version = "0.3.0"
+dependencies = [
+ "elsecall-config-sync-model",
+ "elsecall-failure",
+ "elsecall-housekeeping",
+ "elsecall-remote-run",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-service-log",
+ "elsecall-workspace",
+ "humantime",
+ "serde",
+ "tempfile",
+ "toml",
 ]
 
 [[package]]
