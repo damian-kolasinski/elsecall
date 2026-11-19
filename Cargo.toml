@@ -13,6 +13,16 @@ rust-version = "1.99"
 description = "Inspect and maintain your development machines"
 license = "MIT"
 
+[lib]
+# The library has no Rust doctests; skip rustdoc's pass over it.
+doctest = false
+
+[[bin]]
+name = "elsecall"
+path = "src/main.rs"
+# main.rs has no unit tests; integration tests run the built binary.
+test = false
+
 [features]
 # Follow a local release channel instead of the published releases, for testing
 # the update path against local builds. scripts/local-release.sh builds with it;
@@ -55,6 +65,17 @@ tokio = { version = "1", features = ["process", "test-util"] }
 [profile.release]
 lto = "thin"
 strip = true
+
+# Backtraces keep file and line; full debug info is opt-in (`--profile debugging`).
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.debugging]
+inherits = "dev"
+debug = true
 
 # Digests dominate sync time; keep them fast in test builds too.
 [profile.dev.package.sha2]
