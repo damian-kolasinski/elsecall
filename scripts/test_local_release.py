@@ -1,6 +1,7 @@
 """Tests for the local release channel builder's pure parts."""
 
 import argparse
+import json
 import subprocess
 import tempfile
 import tomllib
@@ -88,6 +89,92 @@ class LocalRelease(unittest.TestCase):
             self.assertFalse(Path(copy, "removed").exists())
             self.assertTrue(Path(copy, "target", "build").exists())
 
+
+    def test_the_signing_key_is_kept_outside_the_build_tree(self):
+        self.assertFalse(local_release.KEY.is_relative_to(local_release.ROOT))
+        self.assertTrue(local_release.KEY.is_relative_to(Path.home()))
+
+    def test_a_missing_signing_key_is_created_once_and_then_kept(self):
+        packslip = local_release.tool("packslip")
+        with tempfile.TemporaryDirectory() as directory:
+            key = Path(directory, "settings", "local-release", "release.key")
+            earlier = Path(directory, "out", "key", "release.key")
+            self.assertEqual(local_release.signing_key(key, earlier, packslip), key)
+            public = key.with_suffix(".pub").read_text()
+            self.assertEqual(key.parent.stat().st_mode & 0o777, 0o700)
+            local_release.signing_key(key, earlier, packslip)
+            self.assertEqual(key.with_suffix(".pub").read_text(), public)
+            self.assertFalse(earlier.exists())
+
+    def test_a_key_an_earlier_build_kept_in_its_output_moves_to_the_settings(self):
+        packslip = local_release.tool("packslip")
+        with tempfile.TemporaryDirectory() as directory:
+            earlier = Path(directory, "out", "key", "release.key")
+            earlier.parent.mkdir(parents=True)
+            subprocess.run([packslip, "keygen", "--out", str(earlier)], check=True, capture_output=True)
+            private, public = earlier.read_bytes(), earlier.with_suffix(".pub").read_bytes()
+            key = Path(directory, "settings", "local-release", "release.key")
+            local_release.signing_key(key, earlier, packslip)
+            self.assertEqual((key.read_bytes(), key.with_suffix(".pub").read_bytes()), (private, public))
+            self.assertFalse(earlier.exists())
+            self.assertFalse(earlier.with_suffix(".pub").exists())
+
+    def test_half_of_an_earlier_key_is_refused_rather_than_moved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            earlier = Path(directory, "out", "key", "release.key")
+            earlier.parent.mkdir(parents=True)
+            earlier.write_text("private")
+            key = Path(directory, "settings", "release.key")
+            with self.assertRaisesRegex(SystemExit, "half of a signing key"):
+                local_release.signing_key(key, earlier, "packslip-is-not-run")
+            self.assertTrue(earlier.exists())
+            self.assertFalse(key.exists())
+
+    def test_a_key_inside_the_repository_is_refused(self):
+        root = local_release.ROOT
+        target = (root / "target").resolve()
+        for inside in (root / "release.key", root / "target" / "local-release" / "release.key",
+                       target / "local-release" / "release.key"):
+            with self.assertRaises(SystemExit, msg=inside):
+                local_release.key_outside_the_tree(inside)
+        self.assertEqual(local_release.key_outside_the_tree(local_release.KEY), local_release.KEY)
+
+    def test_a_channel_keeps_its_url_and_signing_key(self):
+        packslip = local_release.tool("packslip")
+        url = "http://192.168.64.1:8765"
+        with tempfile.TemporaryDirectory() as directory:
+            keys = Path(directory, "keys")
+            keys.mkdir()
+            for name in ("one", "two"):
+                subprocess.run([packslip, "keygen", "--out", str(keys / f"{name}.key")], check=True, capture_output=True)
+            one, two = keys / "one.key", keys / "two.key"
+            out = Path(directory, "out")
+            out.mkdir()
+            gone = out / "key" / "release.key"
+            settings = local_release.channel_settings(out, url, one, gone)
+            self.assertEqual(settings, {"url": url, "key": local_release.public_key(one)})
+            (out / "channel.json").write_text(json.dumps(settings))
+            self.assertEqual(local_release.channel_settings(out, url, one, gone), settings)
+            with self.assertRaisesRegex(SystemExit, "holds builds for"):
+                local_release.channel_settings(out, "http://192.168.64.1:9999", one, gone)
+            with self.assertRaisesRegex(SystemExit, "signed with another key"):
+                local_release.channel_settings(out, url, two, gone)
+
+    def test_a_channel_recorded_without_its_key_is_checked_against_the_key_it_kept(self):
+        packslip = local_release.tool("packslip")
+        url = "http://192.168.64.1:8765"
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory, "out")
+            earlier = out / "key" / "release.key"
+            earlier.parent.mkdir(parents=True)
+            shared = Path(directory, "shared.key")
+            for key in (earlier, shared):
+                subprocess.run([packslip, "keygen", "--out", str(key)], check=True, capture_output=True)
+            (out / "channel.json").write_text(json.dumps({"url": url}))
+            with self.assertRaisesRegex(SystemExit, "signed with another key"):
+                local_release.channel_settings(out, url, shared, earlier)
+            self.assertEqual(local_release.channel_settings(out, url, earlier, earlier)["key"],
+                             local_release.public_key(earlier))
 
     def test_output_stays_out_of_the_mirrored_tree(self):
         root = local_release.ROOT
