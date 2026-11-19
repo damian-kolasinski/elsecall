@@ -4,6 +4,7 @@ pub mod add_mac;
 pub mod add_mac_cli;
 pub mod admission_api;
 pub mod admission_cli;
+pub mod agent_skill;
 pub mod api;
 pub mod askpass;
 pub mod authorized_keys;

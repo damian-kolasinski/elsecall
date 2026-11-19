@@ -23,7 +23,7 @@ use std::{process::ExitCode, sync::Arc, time::Duration};
 #[command(
     version,
     about = "Inspect this machine and admit work onto it through the local Elsecall service",
-    after_help = "Commands return one JSON document. Errors exit 1; invalid arguments exit 2. Help and version are text."
+    after_help = "Commands return one JSON document. Errors exit 1; invalid arguments exit 2. Help, version and skill show are text."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -140,6 +140,9 @@ enum Command {
 
     /// Search scheduling settings offline and print proposals only
     Tune(elsecall::tune_cli::TuneArgs),
+    /// Print the agent guide matching this build, or install it as a skill for the
+    /// coding agents on this machine
+    Skill(elsecall::agent_skill::cli::SkillArgs),
 }
 #[derive(Subcommand)]
 enum ConfigCommand {
@@ -253,6 +256,24 @@ async fn main() -> ExitCode {
                     "The simulation task failed.",
                     "Check the trace and retry.",
                 )),
+            };
+        }
+        // The guide is text unless --json; nothing here needs the service.
+        Command::Skill(args) => {
+            return match elsecall::agent_skill::cli::run(args) {
+                Ok(elsecall::agent_skill::cli::Printed::Text(text)) => {
+                    print!("{text}");
+                    ExitCode::SUCCESS
+                }
+                Ok(elsecall::agent_skill::cli::Printed::Json(data, complete)) => {
+                    output(data);
+                    if complete {
+                        ExitCode::SUCCESS
+                    } else {
+                        ExitCode::FAILURE
+                    }
+                }
+                Err(error) => fail(error),
             };
         }
         // Run passes the command's output through rather than printing JSON.
@@ -653,6 +674,7 @@ async fn run(cli: Cli) -> Result<bool> {
 
         Command::Tune(_) => unreachable!("handled before platform and service checks"),
         Command::Simulate(_) => unreachable!("handled before platform and service checks"),
+        Command::Skill(_) => unreachable!("handled before platform and service checks"),
         Command::Copies(args) => {
             let (data, clean) = elsecall::copies_cli::run(&paths, args).await?;
             output(data);

@@ -220,10 +220,11 @@ wrapper's PID stopped only that shell and orphaned the run.
   already implemented).
 - **Delivery:** the C row names the marker and the entry line.
 
-The README's "Wrapping a whole script" documents the entry line, the values and
-when to use it rather than a per-command prefix or a lease. "Running commands",
-"Running on another member" and "Environment controls" name the marker where
-they listed what Elsecall adds.
+"Wrapping a whole script" in `elsecall skill show integrate` (skill/integrate.md)
+documents the entry line, the values and
+when to use it rather than a per-command prefix or a lease. The README's "Running
+commands" and "Running on another member", and the skill's "Environment controls",
+name the marker where they listed what Elsecall adds.
 
 ### Decisions
 
