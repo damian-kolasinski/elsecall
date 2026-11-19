@@ -2,11 +2,11 @@
 //! housekeeping existed. A directory counts only if its mark names a calling member
 //! and a caller path that map to exactly that directory.
 use crate::housekeeping::stores;
-use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_workspace::{
+use crate::{
     copy,
     location::{CopyLocation, Locations, Setting},
 };
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use std::{path::Path, time::SystemTime};
 
 /// Marked mapped copies under the workspace root, each with the latest time

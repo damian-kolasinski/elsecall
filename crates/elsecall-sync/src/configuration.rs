@@ -1,10 +1,10 @@
 //! The service's local configuration, written by the operator.
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::{capacity::Cores, request::AtDeadline};
-use elsecall_housekeeping::housekeeping::settings::{self, Settings as Housekeeping};
 use elsecall_scheduling::parameters::{
     AdmissionOverrides, EstimatesOverrides, Overrides, Parameters, PlacementOverrides,
 };
+use elsecall_workspace::housekeeping::settings::{self, Settings as Housekeeping};
 use elsecall_workspace::location::Setting;
 use serde::Deserialize;
 use std::{

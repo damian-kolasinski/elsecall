@@ -10,8 +10,8 @@ use super::{
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::request::{Placement, Urgency};
 use elsecall_host::paths::Paths;
-use elsecall_housekeeping::housekeeping::pass::Housekeeper;
 use elsecall_scheduling::service::Scheduler;
+use elsecall_workspace::housekeeping::pass::Housekeeper;
 use std::{
     fs,
     path::PathBuf,

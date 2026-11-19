@@ -10,7 +10,8 @@ mod processes;
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_host::paths::Paths;
-use elsecall_housekeeping::housekeeping::{
+use elsecall_peers::peer_client;
+use elsecall_workspace::housekeeping::{
     caller_state::CallerState,
     callers::Callers,
     catalog::Catalog,
@@ -20,7 +21,6 @@ use elsecall_housekeeping::housekeeping::{
     settings::Settings,
     volumes::Statfs,
 };
-use elsecall_peers::peer_client;
 use elsecall_workspace::{
     copies::Copies,
     location::{CopyLocation, Locations, Setting},

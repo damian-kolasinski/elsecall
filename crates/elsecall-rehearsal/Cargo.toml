@@ -17,7 +17,6 @@ axum.workspace = true
 elsecall-contract.workspace = true
 elsecall-fleet.workspace = true
 elsecall-host.workspace = true
-elsecall-housekeeping.workspace = true
 elsecall-peers.workspace = true
 elsecall-report-facts.workspace = true
 elsecall-scheduling.workspace = true

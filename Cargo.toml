@@ -57,7 +57,6 @@ elsecall-contract = { path = "crates/elsecall-contract" }
 elsecall-fleet = { path = "crates/elsecall-fleet" }
 elsecall-fleet-upgrade = { path = "crates/elsecall-fleet-upgrade" }
 elsecall-host = { path = "crates/elsecall-host" }
-elsecall-housekeeping = { path = "crates/elsecall-housekeeping" }
 elsecall-installation = { path = "crates/elsecall-installation" }
 elsecall-openssh-mac = { path = "crates/elsecall-openssh-mac" }
 elsecall-peers = { path = "crates/elsecall-peers" }
@@ -123,7 +122,6 @@ elsecall-contract.workspace = true
 elsecall-fleet-upgrade.workspace = true
 elsecall-fleet.workspace = true
 elsecall-host.workspace = true
-elsecall-housekeeping.workspace = true
 elsecall-installation.workspace = true
 elsecall-openssh-mac.workspace = true
 elsecall-peers.workspace = true

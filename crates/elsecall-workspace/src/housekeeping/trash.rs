@@ -7,9 +7,9 @@
 //! directory, by device and inode. Deletion walks from open directory handles and
 //! never follows links. A pass interrupted after the move finishes the deletion on
 //! its next run, and deletes only a directory that is still the one it moved.
+use crate::confined::{self, Confined};
 use crate::housekeeping::catalog::Catalog;
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_workspace::confined::{self, Confined};
 use std::{
     ffi::CString,
     fs, io,

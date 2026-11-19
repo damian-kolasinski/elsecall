@@ -115,7 +115,7 @@ enum Command {
     },
     /// List the copies of other members' workspaces kept on this machine, their
     /// object stores and recent removals, or run housekeeping now
-    Copies(elsecall_housekeeping::copies_cli::CopiesArgs),
+    Copies(elsecall_workspace::copies_cli::CopiesArgs),
     /// Score this member's recorded placement decisions again under changed
     /// parameters, to see which would flip before changing config.toml
     Replay(elsecall_replay::replay_cli::ReplayArgs),
@@ -698,7 +698,7 @@ async fn run(cli: Cli) -> Result<bool> {
         Command::Simulate(_) => unreachable!("handled before platform and service checks"),
         Command::Skill(_) => unreachable!("handled before platform and service checks"),
         Command::Copies(args) => {
-            let (data, clean) = elsecall_housekeeping::copies_cli::run(&paths, args).await?;
+            let (data, clean) = elsecall_workspace::copies_cli::run(&paths, args).await?;
             output(data);
             return Ok(clean);
         }

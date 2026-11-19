@@ -11,7 +11,12 @@ use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::inspection::Inspection;
 use elsecall_fleet::{fleet::Fleet, fleet_local_api, fleet_placement::FleetMembers};
 use elsecall_host::{local_access, paths::Paths, private_files};
-use elsecall_housekeeping::{
+use elsecall_peers::{member_key::MemberKey, membership_store::MembershipStore};
+use elsecall_runs::run_relay;
+use elsecall_runs::{placement_api, placement_host::PlacementHost};
+use elsecall_scheduling::service::{Adapters, Scheduler};
+use elsecall_workspace::{copies::Copies, location::Locations, object_sources::ObjectSources};
+use elsecall_workspace::{
     fleet_callers::FleetCallers,
     housekeeping::{
         self,
@@ -21,11 +26,6 @@ use elsecall_housekeeping::{
         pass::{Housekeeper, Parts},
     },
 };
-use elsecall_peers::{member_key::MemberKey, membership_store::MembershipStore};
-use elsecall_runs::run_relay;
-use elsecall_runs::{placement_api, placement_host::PlacementHost};
-use elsecall_scheduling::service::{Adapters, Scheduler};
-use elsecall_workspace::{copies::Copies, location::Locations, object_sources::ObjectSources};
 use std::{
     fs,
     os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},
@@ -385,7 +385,7 @@ pub async fn serve_with_updates(
         }))
     };
     if let Ok(fleet) = &fleet {
-        fleet.report_copies(Arc::new(elsecall_housekeeping::fleet_copies::FleetCopies(
+        fleet.report_copies(Arc::new(elsecall_workspace::fleet_copies::FleetCopies(
             housekeeper.clone(),
         )));
         fleet.report_load(load_log.clone());
@@ -453,7 +453,7 @@ pub async fn serve_with_updates(
     let fleet_routes = match fleet {
         Ok(fleet) => {
             let mut member_routes = placement_api::routes(host)
-                .merge(elsecall_housekeeping::workspace_check_api::routes(
+                .merge(elsecall_workspace::workspace_check_api::routes(
                     caller_state,
                 ))
                 .merge(elsecall_reporting::report_api::peer_routes(
@@ -520,7 +520,7 @@ pub async fn serve_with_updates(
         .merge(trust_routes)
         .merge(elsecall_replay::replay_api::routes(scheduler.clone()))
         .merge(elsecall_runs::admission_api::routes(scheduler))
-        .merge(elsecall_housekeeping::copies_api::routes(housekeeper))
+        .merge(elsecall_workspace::copies_api::routes(housekeeper))
         .merge(tools_routes)
         .merge(desired_routes)
         .merge(crate::ui_app::routes(paths.clone()))

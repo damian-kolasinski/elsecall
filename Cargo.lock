@@ -1071,7 +1071,6 @@ dependencies = [
  "elsecall-fleet",
  "elsecall-fleet-upgrade",
  "elsecall-host",
- "elsecall-housekeeping",
  "elsecall-installation",
  "elsecall-openssh-mac",
  "elsecall-peers",
@@ -1213,29 +1212,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-housekeeping"
-version = "0.3.0"
-dependencies = [
- "axum",
- "clap",
- "elsecall-api-response",
- "elsecall-contract",
- "elsecall-fleet",
- "elsecall-host",
- "elsecall-peers",
- "elsecall-scheduling",
- "elsecall-workspace",
- "futures-util",
- "hyper",
- "libc",
- "rusqlite",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
-]
-
-[[package]]
 name = "elsecall-installation"
 version = "0.3.0"
 dependencies = [
@@ -1316,7 +1292,6 @@ dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
- "elsecall-housekeeping",
  "elsecall-peers",
  "elsecall-report-facts",
  "elsecall-scheduling",
@@ -1502,7 +1477,6 @@ dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
- "elsecall-housekeeping",
  "elsecall-peers",
  "elsecall-scheduling",
  "elsecall-workspace",
@@ -1641,11 +1615,19 @@ dependencies = [
 name = "elsecall-workspace"
 version = "0.3.0"
 dependencies = [
+ "axum",
+ "clap",
+ "elsecall-api-response",
  "elsecall-contract",
+ "elsecall-fleet",
  "elsecall-host",
+ "elsecall-peers",
+ "elsecall-scheduling",
  "futures-util",
  "getrandom 0.3.4",
+ "hyper",
  "libc",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2",

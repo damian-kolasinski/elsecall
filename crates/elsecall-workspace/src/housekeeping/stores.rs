@@ -1,7 +1,7 @@
 //! The shared object stores under the workspace root: one per caller repository,
 //! at `<root>/.stores/<calling member>/<id>.git`.
+use crate::git::Git;
 use elsecall_contract::failure::Result;
-use elsecall_workspace::git::Git;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -52,7 +52,7 @@ pub fn is_store_of(root: &Path, calling_member: &str, path: &Path) -> bool {
 
 /// Whether the directory at `path` is a bare repository, as a store is.
 pub fn is_repository(path: &Path) -> bool {
-    elsecall_workspace::confined::Confined::open(path)
+    crate::confined::Confined::open(path)
         .ok()
         .and_then(|store| store.child("objects").ok().flatten())
         .is_some()

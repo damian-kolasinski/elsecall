@@ -1,22 +1,20 @@
-//! Workspace copies: the git working tree a placed run needs, reproduced on the member
-//! that runs it.
-//!
-//! The caller takes a [`snapshot`] of its working tree: HEAD, the refs a copy
-//! carries besides it ([`carried_refs`]), the index, and the
-//! content of every tracked or untracked file git does not ignore. The member keeps a
-//! persistent [`copy`] that [`sync`] brings to that snapshot, moving only what
-//! changed. History moves as git packs, file content by digest. Every write on either
-//! side goes through a [`confined`] directory, so no path escapes its workspace.
+//! Workspace copies on members, and the housekeeping that keeps their storage in
+//! check.
 pub mod carried_refs;
 pub mod confined;
 pub mod copies;
+pub mod copies_api;
+pub mod copies_cli;
 pub mod copy;
 pub mod copy_record;
 pub mod digest;
 pub mod file_clone;
+pub mod fleet_callers;
+pub mod fleet_copies;
 pub mod framed_link;
 pub mod git;
 pub mod head;
+pub mod housekeeping;
 pub mod index;
 pub mod location;
 pub mod manifest;
@@ -33,6 +31,7 @@ pub mod snapshot;
 pub mod staging;
 pub mod stat_cache;
 pub mod sync;
+pub mod workspace_check_api;
 
 use elsecall_contract::failure::Failure;
 

@@ -8,7 +8,7 @@ mod members;
 mod processes;
 
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_housekeeping::housekeeping::{
+use elsecall_workspace::housekeeping::{
     caller_state::CallerState,
     callers::Nobody,
     catalog::Catalog,
@@ -373,7 +373,7 @@ fn disk_pressure_evicts_the_least_recently_used_idle_copies_until_it_recovers() 
     let threshold: u64 = 1_000_000_000;
     // Free space 3 MB short of the threshold: one copy and its store are not
     // enough, two are.
-    let held = elsecall_housekeeping::housekeeping::measure::allocated(&root).unwrap();
+    let held = elsecall_workspace::housekeeping::measure::allocated(&root).unwrap();
     let simulate = |short: u64| {
         std::fs::write(
             &volume,

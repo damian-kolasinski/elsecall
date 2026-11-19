@@ -28,8 +28,8 @@ use crate::housekeeping::{
     trash::{Moved, Trash},
     volumes::Volumes,
 };
+use crate::{copies::Copies, copy, location::Locations};
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_workspace::{copies::Copies, copy, location::Locations};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     io,
