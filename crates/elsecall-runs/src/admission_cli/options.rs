@@ -1,5 +1,4 @@
 //! Request properties and caller choices as callers write them on the command line.
-use crate::workload_settings::WhenUnavailable;
 use clap::{Args, ValueEnum};
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::{
@@ -7,6 +6,7 @@ use elsecall_contract::scheduling_model::{
     request::{AtDeadline, invalid},
     timestamp::Timestamp,
 };
+use elsecall_workload_config::workload_settings::WhenUnavailable;
 use std::{path::PathBuf, time::Duration};
 
 /// Options shared by every work request. Values are parsed here rather than by

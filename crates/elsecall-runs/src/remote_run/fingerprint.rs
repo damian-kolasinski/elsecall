@@ -2,7 +2,7 @@
 //! hashing a configuration file or directory, under a salt. Each is bounded in
 //! time and size, so a declaration cannot hang the side that takes them.
 use crate::remote_run::consistency::{Declared, Fingerprints};
-use crate::workload_settings::ConfigurationLocation;
+use elsecall_workload_config::workload_settings::ConfigurationLocation;
 use elsecall_workspace::digest::{Digest, Hasher};
 use std::{
     ffi::OsString,

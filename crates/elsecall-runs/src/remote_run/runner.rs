@@ -16,7 +16,7 @@ use elsecall_contract::run_admission::{self as run_admission, Admission};
 use elsecall_contract::scheduling_model::run_id::RunId;
 use elsecall_contract::wire::Frame;
 use elsecall_host::os_processes::process_usage;
-use elsecall_scheduling::leftovers::Leftovers;
+use elsecall_scheduling::leftovers::{Leftovers, leftovers_wait_budget};
 use elsecall_workspace::{
     confined::{Confined, Create},
     copies::Claim,
@@ -53,15 +53,6 @@ pub const FORWARDED: [i32; 6] = [
 ];
 /// How long a stopped command has to exit before it is killed.
 const STOP_GRACE: Duration = Duration::from_secs(5);
-/// How long a run waits for what the previous run of its copy left running to
-/// end before it stops it and syncs the copy.
-pub const LEFTOVERS_WAIT: Duration = Duration::from_secs(10);
-
-/// Leave the executor's stopping budget inside the end-to-end hold limit.
-pub fn leftovers_wait_budget(remaining: Duration) -> Duration {
-    LEFTOVERS_WAIT.min(remaining.saturating_sub(leftovers::STOPPING))
-}
-
 /// How far a placed run got, for its record.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Reached {

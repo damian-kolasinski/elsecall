@@ -1,5 +1,5 @@
 //! Running commands on the fleet: admitting a run, placing it on a member, running
-//! it remotely, and the workload configuration that shapes it.
+//! it remotely.
 pub mod admission_api;
 pub mod admission_cli;
 mod local_run_client;
@@ -12,6 +12,3 @@ pub mod remote_run;
 pub mod run_relay;
 mod sealed_run;
 mod service_handover;
-pub mod workload_configuration;
-pub mod workload_migration;
-pub mod workload_settings;

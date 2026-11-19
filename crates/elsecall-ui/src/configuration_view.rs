@@ -3,8 +3,10 @@
 use std::time::Duration;
 
 use elsecall_contract::scheduling_model::request::AtDeadline;
-use elsecall_runs::workload_configuration::FILE_NAME;
-use elsecall_runs::workload_settings::{LabelRule, RulePlacement, RuleUrgency, WhenUnavailable};
+use elsecall_workload_config::workload_configuration::FILE_NAME;
+use elsecall_workload_config::workload_settings::{
+    LabelRule, RulePlacement, RuleUrgency, WhenUnavailable,
+};
 use rune::{El, Latest, ScrollSpec, TextEdit, Waker, col, el, row, text};
 use rune_kit::{Button, ButtonVariant, Kit, SegmentedControl, TextInput};
 
@@ -376,7 +378,7 @@ fn deadline_label(deadline: Duration, action: AtDeadline) -> String {
 #[cfg(test)]
 mod tests {
     use super::{matching_rules, source_preview};
-    use elsecall_runs::workload_settings::WorkloadSettings;
+    use elsecall_workload_config::workload_settings::WorkloadSettings;
 
     #[test]
     fn search_matches_literal_pattern_text_in_file_order() {

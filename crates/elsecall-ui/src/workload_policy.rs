@@ -3,8 +3,8 @@
 use std::path::Path;
 
 use elsecall_host::paths::Paths;
-use elsecall_runs::workload_configuration::{self, Configuration, FILE_NAME};
-use elsecall_runs::workload_settings::WorkloadSettings;
+use elsecall_workload_config::workload_configuration::{self, Configuration, FILE_NAME};
+use elsecall_workload_config::workload_settings::WorkloadSettings;
 
 pub(crate) struct Policy {
     pub(crate) source: Option<String>,

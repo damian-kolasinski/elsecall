@@ -1078,6 +1078,7 @@ dependencies = [
  "elsecall-sync",
  "elsecall-tools",
  "elsecall-tuning",
+ "elsecall-workload-config",
  "elsecall-workspace",
  "futures-util",
  "getrandom 0.3.4",
@@ -1273,6 +1274,7 @@ dependencies = [
  "elsecall-peers",
  "elsecall-scheduling",
  "elsecall-sync",
+ "elsecall-workload-config",
  "elsecall-workspace",
  "futures-util",
  "getrandom 0.3.4",
@@ -1372,9 +1374,9 @@ dependencies = [
  "elsecall-host",
  "elsecall-peers",
  "elsecall-reports",
- "elsecall-runs",
  "elsecall-scheduling",
  "elsecall-sync",
+ "elsecall-workload-config",
  "elsecall-workspace",
  "futures-util",
  "humantime",
@@ -1398,7 +1400,7 @@ dependencies = [
  "elsecall-host",
  "elsecall-lifecycle",
  "elsecall-peers",
- "elsecall-runs",
+ "elsecall-workload-config",
  "libc",
  "png 0.18.1",
  "rune",
@@ -1409,6 +1411,21 @@ dependencies = [
  "tempfile",
  "tokio",
  "zeroize",
+]
+
+[[package]]
+name = "elsecall-workload-config"
+version = "0.3.0"
+dependencies = [
+ "elsecall-contract",
+ "elsecall-host",
+ "elsecall-workspace",
+ "humantime",
+ "libc",
+ "serde",
+ "tempfile",
+ "toml",
+ "toml_edit",
 ]
 
 [[package]]

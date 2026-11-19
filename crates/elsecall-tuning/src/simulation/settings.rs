@@ -16,8 +16,8 @@ use elsecall_contract::scheduling_model::{
 };
 use elsecall_peers::roster::MemberName;
 use elsecall_reports::workload::trace::{Request, Trace};
-use elsecall_runs::workload_settings::WorkloadSettings;
 use elsecall_scheduling::parameters::{Overrides, Parameters};
+use elsecall_workload_config::workload_settings::WorkloadSettings;
 use std::{collections::BTreeMap, time::Duration};
 
 #[derive(Debug)]

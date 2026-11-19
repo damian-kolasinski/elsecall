@@ -5,6 +5,18 @@
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_host::processes::ProcessIdentity;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
+
+/// The longest stopping leftovers takes, from the request to the end of the watch.
+pub const STOPPING: Duration = Duration::from_secs(8);
+/// How long a run waits for what the previous run of its copy left running to
+/// end before it stops it and syncs the copy.
+const LEFTOVERS_WAIT: Duration = Duration::from_secs(10);
+
+/// Leave the executor's stopping budget inside the end-to-end hold limit.
+pub fn leftovers_wait_budget(remaining: Duration) -> Duration {
+    LEFTOVERS_WAIT.min(remaining.saturating_sub(STOPPING))
+}
 
 /// The leftovers of one placed run, while they run and once they ended.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

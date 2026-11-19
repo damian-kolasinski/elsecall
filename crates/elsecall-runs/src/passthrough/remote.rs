@@ -10,7 +10,6 @@ use crate::remote_run::{
     protocol::{Exited, RunMessage, Start, Stream, WINDOW},
     runner::FORWARDED,
 };
-use crate::workload_settings::WorkloadSettings;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::{run_id::RunId, timestamp::Timestamp};
 use elsecall_contract::wire::Frame;
@@ -19,6 +18,7 @@ use elsecall_scheduling::{
     placed::{PlacedReport, Reached, SyncSummary},
     run_phases::RemoteFailurePhase,
 };
+use elsecall_workload_config::workload_settings::WorkloadSettings;
 use elsecall_workspace::{
     confined::Confined,
     not_returned::{self, Cause},

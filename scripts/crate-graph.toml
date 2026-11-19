@@ -94,9 +94,16 @@ modules = ["fleet", "fleet_changes", "fleet_local_api", "fleet_view", "fleet_pla
 
 [crates.runs]
 band = "feature"
-# Running commands on the fleet: admitting a run, placing it on a member,
-# running it remotely, and the workload configuration that shapes it.
-modules = ["admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "remote_run", "sealed_run", "placement_api", "placement_authority", "placement_host", "placement_config_sync", "workload_settings", "workload_configuration", "workload_migration", "service_handover"]
+# Running commands on the fleet: admitting a run, placing it on a member, and
+# running it remotely.
+modules = ["admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "remote_run", "sealed_run", "placement_api", "placement_authority", "placement_host", "placement_config_sync", "service_handover"]
+
+[crates.workload-config]
+band = "feature"
+# The workload configuration a consumer project writes. Runs read it, tuning
+# simulates it and the desktop app edits it, so it stays apart from all three:
+# none of them waits for another to build.
+modules = ["workload_settings", "workload_configuration", "workload_migration"]
 
 [crates.sync]
 band = "feature"
@@ -166,4 +173,4 @@ packages = ["elsecall-ui"]
 # forms in `contract`, and reuses the few slices it shows or drives (adding a
 # Mac, updates, the window, workload settings); never the service, scheduling
 # or tuning.
-may_depend_on = ["contract", "host", "peers", "fleet", "lifecycle", "runs"]
+may_depend_on = ["contract", "host", "peers", "fleet", "lifecycle", "workload-config"]

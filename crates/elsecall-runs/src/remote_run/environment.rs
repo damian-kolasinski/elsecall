@@ -3,7 +3,7 @@
 //! member, and Elsecall sets its own `ELSECALL_*` variables. Values exist only in
 //! transit and in the running command: nothing here logs or stores them.
 use crate::remote_run::protocol::Variable;
-use crate::workload_settings::WorkloadSettings;
+use elsecall_workload_config::workload_settings::WorkloadSettings;
 use std::{
     ffi::{OsStr, OsString},
     os::unix::ffi::{OsStrExt, OsStringExt},

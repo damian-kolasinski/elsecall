@@ -23,8 +23,6 @@ const STOP_GRACE: Duration = Duration::from_secs(5);
 const KILL_WAIT: Duration = Duration::from_secs(2);
 /// At most this many of them are recorded, for a restart to find the group.
 const RECORDED: usize = 8;
-/// The longest stopping leftovers takes, from the request to the end of the watch.
-pub const STOPPING: Duration = Duration::from_secs(8);
 
 pub use elsecall_sync::configuration::Cap;
 

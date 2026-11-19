@@ -377,7 +377,7 @@ async fn run(cli: Cli) -> Result<bool> {
         Command::Config {
             command: ConfigCommand::Migrate { sources },
         } => {
-            output(elsecall_runs::workload_migration::migrate(
+            output(elsecall_workload_config::workload_migration::migrate(
                 &paths, &sources,
             )?);
         }

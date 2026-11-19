@@ -64,6 +64,7 @@ elsecall-scheduling = { path = "crates/elsecall-scheduling" }
 elsecall-sync = { path = "crates/elsecall-sync" }
 elsecall-tools = { path = "crates/elsecall-tools" }
 elsecall-tuning = { path = "crates/elsecall-tuning" }
+elsecall-workload-config = { path = "crates/elsecall-workload-config" }
 elsecall-workspace = { path = "crates/elsecall-workspace" }
 
 # Every crate inherits these with `[lints] workspace = true`.
@@ -126,14 +127,15 @@ elsecall-scheduling.workspace = true
 elsecall-sync.workspace = true
 elsecall-tools.workspace = true
 elsecall-tuning.workspace = true
+elsecall-workload-config.workspace = true
 elsecall-workspace.workspace = true
 futures-util.workspace = true
 getrandom.workspace = true
 hkdf.workspace = true
 http-body-util.workspace = true
 humantime.workspace = true
-hyper.workspace = true
 hyper-util.workspace = true
+hyper.workspace = true
 libc.workspace = true
 plist.workspace = true
 rusqlite.workspace = true
