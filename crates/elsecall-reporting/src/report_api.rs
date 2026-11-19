@@ -47,7 +47,7 @@ pub struct ReportRequest {
 
 #[derive(Clone)]
 pub struct Reporter {
-    pub paths: elsecall_local_state::paths::Paths,
+    pub paths: elsecall_host::paths::Paths,
     pub own: OwnHistory,
     /// The fleet, or why this member's fleet state could not be read.
     pub fleet: std::result::Result<Arc<Fleet>, Failure>,
@@ -59,7 +59,7 @@ pub struct Reporter {
 pub trait TrustEvidence: Send + Sync {
     fn fleet_status<'a>(
         &'a self,
-        paths: &'a elsecall_local_state::paths::Paths,
+        paths: &'a elsecall_host::paths::Paths,
         fleet: &'a std::result::Result<Arc<Fleet>, Failure>,
     ) -> futures_util::future::BoxFuture<'a, serde_json::Value>;
 }
@@ -435,7 +435,7 @@ mod tests {
             .unwrap()
             .len();
         assert!(
-            size < elsecall_local_client::LARGE_RESPONSE,
+            size < elsecall_host::client::LARGE_RESPONSE,
             "{size} bytes of report"
         );
     }

@@ -7,7 +7,7 @@ use elsecall_contract::scheduling_model::{
     timestamp::Timestamp,
     workload_metadata::{Observation, Workload},
 };
-use elsecall_local_client::{self as client, Wait};
+use elsecall_host::client::{self as client, Wait};
 use elsecall_scheduling::{
     messages::{CommandStarted, Grant, RunEnded},
     record::Record,
@@ -395,8 +395,8 @@ async fn observation_binding_grace_includes_slow_request_time() {
         .prefix("ec-observe-")
         .tempdir_in("/tmp")
         .unwrap();
-    let paths = elsecall_local_state::paths::Paths::for_home(home.path()).unwrap();
-    elsecall_local_state::private_files::directory(&paths.data).unwrap();
+    let paths = elsecall_host::paths::Paths::for_home(home.path()).unwrap();
+    elsecall_host::private_files::directory(&paths.data).unwrap();
     let listener = UnixListener::bind(paths.socket()).unwrap();
     let (seen, received) = tokio::sync::oneshot::channel();
     let peer = tokio::spawn(async move {

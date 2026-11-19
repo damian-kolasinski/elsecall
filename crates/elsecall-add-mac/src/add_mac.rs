@@ -14,8 +14,8 @@ use crate::{
 };
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::fleet_local_api::EnrollRequest;
-use elsecall_local_client as client;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::client;
+use elsecall_host::paths::Paths;
 use elsecall_membership::{member_code, roster::Readiness};
 use elsecall_tailnet::tailscale_bottle;
 use hyper::Method;

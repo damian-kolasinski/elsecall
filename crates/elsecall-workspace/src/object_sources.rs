@@ -106,7 +106,7 @@ async fn run(git: &Git, args: &[&OsStr], input: Option<&[u8]>) -> Option<Vec<u8>
         })
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
-    let mut child = elsecall_process::child_start::spawn_async(&mut command).ok()?;
+    let mut child = elsecall_host::child_start::spawn_async(&mut command).ok()?;
     if let Some(input) = input {
         // Answers come only once all input is read, or a line per candidate, so
         // writing first cannot block.

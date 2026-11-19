@@ -9,8 +9,8 @@ use crate::{
 };
 use clap::{Args, Subcommand};
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_client as client;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::client;
+use elsecall_host::paths::Paths;
 use elsecall_membership::roster::MemberName;
 use hyper::Method;
 use serde_json::Value;

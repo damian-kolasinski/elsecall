@@ -14,8 +14,8 @@ workspace = true
 
 [dependencies]
 elsecall-contract.workspace = true
+elsecall-host.workspace = true
 elsecall-installation.workspace = true
-elsecall-local-state.workspace = true
 libc.workspace = true
 plist.workspace = true
 serde.workspace = true

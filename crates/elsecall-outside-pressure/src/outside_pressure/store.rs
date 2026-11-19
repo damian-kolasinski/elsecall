@@ -150,7 +150,7 @@ impl EpisodeStore {
                 [cutoff as i64],
             )
             .map_err(failure)?;
-        elsecall_sqlite_retention::reclaim(&connection).map_err(failure)
+        elsecall_host::sqlite_retention::reclaim(&connection).map_err(failure)
     }
 }
 

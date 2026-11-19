@@ -1,7 +1,7 @@
 //! Owner-only update records shared by the old service, detached helper and successor.
 use super::{Discovery, Job, JobId, Phase, invalid, now};
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_host::{paths::Paths, private_files};
 use serde::{Serialize, de::DeserializeOwned};
 use std::{
     fs::{self, File},

@@ -14,7 +14,7 @@ workspace = true
 
 [dependencies]
 elsecall-contract.workspace = true
-elsecall-local-state.workspace = true
+elsecall-host.workspace = true
 elsecall-workspace.workspace = true
 humantime.workspace = true
 libc.workspace = true

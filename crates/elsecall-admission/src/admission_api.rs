@@ -10,7 +10,7 @@ use axum::{
 use elsecall_contract::api;
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::{request, run_id::RunId};
-use elsecall_local_state::local_access::LocalCaller;
+use elsecall_host::local_access::LocalCaller;
 use elsecall_scheduling::service::{OnHandover, Scheduler};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::sync::Arc;

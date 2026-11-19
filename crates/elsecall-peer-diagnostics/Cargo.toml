@@ -14,8 +14,7 @@ workspace = true
 
 [dependencies]
 elsecall-contract.workspace = true
-elsecall-local-state.workspace = true
-elsecall-service-log.workspace = true
+elsecall-host.workspace = true
 libc.workspace = true
 rusqlite.workspace = true
 serde.workspace = true

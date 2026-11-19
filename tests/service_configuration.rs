@@ -105,7 +105,7 @@ fn enable(member: &TestMember) -> Value {
 fn removing_a_lease_retries_partial_delivery_without_another_generation() {
     use elsecall_config_sync::service_configuration::RehearsalSettings;
     use elsecall_contract::scheduling_model::timestamp::Timestamp;
-    use elsecall_local_state::paths::Paths;
+    use elsecall_host::paths::Paths;
     let alpha = TestMember::start("alpha");
     let beta = TestMember::start("beta");
     enrol(&alpha, &beta);
@@ -124,7 +124,7 @@ fn removing_a_lease_retries_partial_delivery_without_another_generation() {
     let socket = Paths::for_home(alpha.home.path()).unwrap().socket();
     let call = |until, settings| {
         runtime
-            .block_on(elsecall_local_client::post_large::<Value, _>(
+            .block_on(elsecall_host::client::post_large::<Value, _>(
                 &socket,
                 "/v1/sync/rehearsal",
                 &RehearsalSettings {

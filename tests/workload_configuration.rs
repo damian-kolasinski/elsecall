@@ -1,6 +1,6 @@
 //! Personal policy import through the real CLI and filesystem; no service needed.
 mod processes;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use elsecall_workload_config::workload_configuration::{self, FILE_NAME};
 use serde_json::Value;
 use std::{os::unix::fs::PermissionsExt, path::Path};
@@ -55,7 +55,7 @@ fn migration_preserves_complete_policy_and_unrelated_settings_and_is_repeatable(
         .tempdir_in("/tmp")
         .unwrap();
     let paths = Paths::for_home(home.path()).unwrap();
-    elsecall_local_state::private_files::directory(&paths.data).unwrap();
+    elsecall_host::private_files::directory(&paths.data).unwrap();
     let service = "[capacity]\nreserved_cores = 3\n";
     std::fs::write(paths.configuration(), service).unwrap();
     let original = "# Personal defaults\n[environment]\nnames = ['GLOBAL_CI']\n";

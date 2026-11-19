@@ -48,13 +48,13 @@ impl ReleaseSource for SocketReleases {
     fn snapshot(&self) -> Result<ReleaseSnapshot, String> {
         let window = self
             .runtime
-            .block_on(elsecall_local_client::get::<WindowOffer>(
+            .block_on(elsecall_host::client::get::<WindowOffer>(
                 &self.socket,
                 "/v1/ui",
             ))
             .map_err(|error| error.message)?;
         // Older services still support staged-window updates without the release routes.
-        let release = match self.runtime.block_on(elsecall_local_client::get::<Status>(
+        let release = match self.runtime.block_on(elsecall_host::client::get::<Status>(
             &self.socket,
             "/v1/update",
         )) {
@@ -75,7 +75,7 @@ pub(crate) fn production() -> Arc<dyn ReleaseSource> {
     impl ReleaseSource for Lazy {
         fn snapshot(&self) -> Result<ReleaseSnapshot, String> {
             match self.source.get_or_init(|| {
-                elsecall_local_state::paths::Paths::current()
+                elsecall_host::paths::Paths::current()
                     .map(|paths| SocketReleases::open(paths.socket()))
                     .map_err(|error| error.message)
             }) {

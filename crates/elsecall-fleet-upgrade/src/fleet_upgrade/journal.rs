@@ -8,7 +8,7 @@ use crate::fleet_upgrade::{member::WorkInFlight, protocol::UpgradeId};
 use elsecall_contract::build_identity::{Build, BuildId, Digest};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_local_state::private_files;
+use elsecall_host::private_files;
 use elsecall_membership::roster::MemberName;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -109,7 +109,7 @@ impl Journal {
         if matches!(self.read(), Err(ref e) if e.code == "invalid_upgrade_state") {
             let aside = self.directory.join("state.json.unreadable");
             if std::fs::rename(self.state_path(), aside).is_ok() {
-                elsecall_service_log::service_log!("{{\"event\":\"upgrade_record_set_aside\"}}");
+                elsecall_host::service_log!("{{\"event\":\"upgrade_record_set_aside\"}}");
             }
         }
     }

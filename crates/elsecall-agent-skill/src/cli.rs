@@ -8,7 +8,7 @@ use super::{
 };
 use clap::{Args, Subcommand};
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 
@@ -207,8 +207,8 @@ fn install(dir: Option<PathBuf>) -> Result<Printed> {
 /// Where `skill install` writes by default: inside Elsecall's own data folder,
 /// which is created private, as installing Elsecall requires it to be.
 pub fn default_copy(paths: &Paths) -> Result<PathBuf> {
-    elsecall_local_state::private_files::owned_tree(&paths.home, &paths.data)?;
-    elsecall_local_state::private_files::directory(&paths.data)?;
+    elsecall_host::private_files::owned_tree(&paths.home, &paths.data)?;
+    elsecall_host::private_files::directory(&paths.data)?;
     Ok(paths.data.join("skill"))
 }
 

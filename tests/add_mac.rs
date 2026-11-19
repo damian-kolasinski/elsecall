@@ -14,7 +14,7 @@ use elsecall_add_mac::{
     },
 };
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use elsecall_tailnet::tailscale_bottle::Bottle;
 use members::{TestMember, free_port};
 use serde_json::Value;

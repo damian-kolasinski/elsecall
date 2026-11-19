@@ -13,8 +13,8 @@ use elsecall_contract::scheduling_model::{
     run_id::RunId,
     timestamp::Timestamp,
 };
-use elsecall_local_client::{self as client, Wait};
-use elsecall_local_state::{local_access, paths::Paths, run_id_file::RunIdFile};
+use elsecall_host::client::{self as client, Wait};
+use elsecall_host::{local_access, paths::Paths, run_id_file::RunIdFile};
 use elsecall_scheduling::{
     estimates,
     messages::{Grant, Release, Runs},

@@ -16,7 +16,7 @@ use std::{
 };
 
 /// Ended records older than this are deleted when the service starts.
-pub use elsecall_sqlite_retention::RETENTION;
+pub use elsecall_host::sqlite_retention::RETENTION;
 
 /// Effective scheduler settings since this service started. Service settings
 /// are immutable until restart, so these events preserve changes exactly.
@@ -477,7 +477,7 @@ impl Records {
                 [cutoff as i64],
             )
             .map_err(failure)?;
-        elsecall_sqlite_retention::reclaim(&connection).map_err(failure)
+        elsecall_host::sqlite_retention::reclaim(&connection).map_err(failure)
     }
 }
 

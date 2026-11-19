@@ -30,8 +30,8 @@ pub(crate) fn workload_policy(
     directory: Option<&std::path::Path>,
     settings: &str,
 ) {
-    let paths = elsecall_local_state::paths::Paths::for_home(home).unwrap();
-    elsecall_local_state::private_files::directory(&paths.data).unwrap();
+    let paths = elsecall_host::paths::Paths::for_home(home).unwrap();
+    elsecall_host::private_files::directory(&paths.data).unwrap();
     let target = paths
         .data
         .join(elsecall_workload_config::workload_configuration::FILE_NAME);

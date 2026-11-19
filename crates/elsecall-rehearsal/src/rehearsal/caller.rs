@@ -8,7 +8,7 @@ use elsecall_contract::scheduling_model::{
     request::{AtDeadline, Placement, Urgency},
     timestamp::Timestamp,
 };
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use elsecall_scheduling::processes::ProcessIdentity;
 use std::{
     fs,

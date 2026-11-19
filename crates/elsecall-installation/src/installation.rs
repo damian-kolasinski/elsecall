@@ -1,7 +1,7 @@
 //! Installation policy; the service manager is supplied at the system boundary.
 use crate::lifecycle_holder;
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_host::{paths::Paths, private_files};
 
 pub mod cli_request;
 pub mod ready;

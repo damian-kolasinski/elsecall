@@ -21,7 +21,7 @@ use axum::{
 use elsecall_contract::api;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::fleet::Fleet;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use elsecall_membership::roster::{MemberName, Roster};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{path::PathBuf, sync::Arc};

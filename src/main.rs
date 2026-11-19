@@ -5,9 +5,9 @@ use elsecall_admission::admission_cli::{self, LeaseCommand};
 use elsecall_contract::api;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::inspection::{Health, Inspection, Machine};
+use elsecall_host::client;
+use elsecall_host::{local_access, paths::Paths};
 use elsecall_installation::installation::{self, ServiceManager};
-use elsecall_local_client as client;
-use elsecall_local_state::{local_access, paths::Paths};
 use elsecall_os_processes::processes::MacProcesses;
 use elsecall_platform_macos::macos::{
     application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
@@ -192,7 +192,7 @@ async fn main() -> ExitCode {
                     "acquire",
                     "--run-id-file",
                 ) {
-                    let _ = elsecall_local_state::run_id_file::RunIdFile::at(path).record(None);
+                    let _ = elsecall_host::run_id_file::RunIdFile::at(path).record(None);
                 }
                 let failure = Failure::new(
                     "invalid_arguments",
@@ -337,8 +337,8 @@ fn output<T: Serialize>(data: T) {
     );
 }
 fn print_error(error: Failure) {
-    if elsecall_service_log::active() {
-        elsecall_service_log::service_log!(
+    if elsecall_host::service_log::active() {
+        elsecall_host::service_log!(
             "{}",
             serde_json::json!({"event":"service_failed", "code":error.code})
         );
@@ -363,7 +363,7 @@ async fn run(cli: Cli) -> Result<bool> {
         &cli.command,
         Command::Serve | Command::UpgradeHelper { .. } | Command::UpdateHelper { .. }
     ) {
-        elsecall_service_log::initialize(&paths, || {
+        elsecall_host::service_log::initialize(&paths, || {
             elsecall_config_sync::service_configuration::load(&paths, None).map(|c| c.logs)
         })?;
     }
@@ -551,7 +551,7 @@ async fn run(cli: Cli) -> Result<bool> {
             blocked.sort_by_key(|b| b.blocked.since);
             warnings.sort_by_key(|w| w.warning.since);
             let service_configurations = if health.is_ok() {
-                elsecall_local_client::post_large::<serde_json::Value, _>(
+                elsecall_host::client::post_large::<serde_json::Value, _>(
                     &paths.socket(),
                     "/v1/sync",
                     &serde_json::json!({}),
@@ -638,8 +638,8 @@ async fn run(cli: Cli) -> Result<bool> {
             // After an upgrade, the stubs an older build wrote point at this one.
             elsecall_agent_skill::refresh_if_installed(&paths);
             let machine: Arc<dyn elsecall_contract::inspection::MachineInspector> =
-                if let Some(file) = elsecall_scripted_machine::load_file() {
-                    Arc::new(elsecall_scripted_machine::ScriptedLoad {
+                if let Some(file) = elsecall_host::machine_script::load_file() {
+                    Arc::new(elsecall_host::machine_script::ScriptedLoad {
                         machine: MacMachine::default(),
                         file,
                     })
@@ -649,7 +649,7 @@ async fn run(cli: Cli) -> Result<bool> {
                     Arc::new(MacMachine::default())
                 };
             let speed: Arc<dyn elsecall_contract::scheduling_model::speed::SpeedMeter> =
-                match elsecall_scripted_machine::speed() {
+                match elsecall_host::machine_script::speed() {
                     Some(fixed) => Arc::new(fixed),
                     None => Arc::new(elsecall_platform_macos::macos::core_benchmark::CoreBenchmark),
                 };

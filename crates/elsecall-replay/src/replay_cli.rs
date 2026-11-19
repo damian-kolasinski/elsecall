@@ -4,8 +4,8 @@ use crate::replay_api::{ReplayRequest, invalid};
 use clap::Args;
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_local_client as client;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::client;
+use elsecall_host::paths::Paths;
 use elsecall_scheduling::replay::Change;
 use serde_json::Value;
 

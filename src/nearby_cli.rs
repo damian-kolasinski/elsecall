@@ -6,8 +6,8 @@ use elsecall_add_mac::nearby_macs::{
     KnownMember, LocalNetwork, Membership, NearbyMac, RemoteLogin, nearby,
 };
 use elsecall_contract::failure::Result;
-use elsecall_local_client as client;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::client;
+use elsecall_host::paths::Paths;
 use elsecall_platform_macos::macos::dns_sd::Bonjour;
 use serde::Deserialize;
 use serde_json::{Value, json};

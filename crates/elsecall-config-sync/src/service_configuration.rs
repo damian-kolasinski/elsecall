@@ -334,7 +334,7 @@ pub use elsecall_config_sync_model::status::ServiceSummary as Summary;
 /// Managed members start from their verified replica. A retained local file,
 /// including later edits to it, cannot override or break an accepted generation.
 pub fn load(
-    paths: &elsecall_local_state::paths::Paths,
+    paths: &elsecall_host::paths::Paths,
     member: Option<&MemberName>,
 ) -> Result<ServiceConfiguration> {
     use crate::config_sync::{

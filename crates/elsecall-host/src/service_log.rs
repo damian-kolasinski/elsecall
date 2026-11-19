@@ -1,7 +1,7 @@
 //! Complete lifecycle records, reopened under a process-shared lock on every
 //! write. No inherited descriptor can keep writing into a rotated archive.
+use crate::private_files;
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::private_files;
 use std::{
     fs::{self, OpenOptions},
     io::Write,
@@ -49,10 +49,7 @@ impl Log {
             .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
             .open(lock_path)?;
         let meta = lock.metadata()?;
-        if !meta.is_file()
-            || meta.uid() != elsecall_local_state::local_access::user_id()
-            || meta.nlink() != 1
-        {
+        if !meta.is_file() || meta.uid() != crate::local_access::user_id() || meta.nlink() != 1 {
             return Err(std::io::Error::other("unsafe service log lock"));
         }
         lock.set_permissions(fs::Permissions::from_mode(0o600))?;
@@ -84,7 +81,7 @@ impl Log {
                 match fs::symlink_metadata(&source) {
                     Ok(meta) => {
                         if !meta.is_file()
-                            || meta.uid() != elsecall_local_state::local_access::user_id()
+                            || meta.uid() != crate::local_access::user_id()
                             || meta.nlink() != 1
                         {
                             return Err(std::io::Error::other("unsafe service log"));
@@ -109,10 +106,7 @@ impl Log {
             .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
             .open(&self.path)?;
         let meta = file.metadata()?;
-        if !meta.is_file()
-            || meta.uid() != elsecall_local_state::local_access::user_id()
-            || meta.nlink() != 1
-        {
+        if !meta.is_file() || meta.uid() != crate::local_access::user_id() || meta.nlink() != 1 {
             return Err(std::io::Error::other("unsafe service log"));
         }
         file.set_permissions(fs::Permissions::from_mode(0o600))?;
@@ -125,7 +119,7 @@ static LOG: OnceLock<Mutex<Log>> = OnceLock::new();
 /// `configured` reads the log settings of the service configuration, or why
 /// they could not be read; it runs once the state directory is checked.
 pub fn initialize(
-    paths: &elsecall_local_state::paths::Paths,
+    paths: &crate::paths::Paths,
     configured: impl FnOnce() -> Result<Settings>,
 ) -> Result<()> {
     private_files::owned_tree(&paths.home, &paths.data)?;
@@ -174,11 +168,11 @@ pub fn write(arguments: std::fmt::Arguments<'_>) {
     }
 }
 #[macro_export]
-macro_rules! service_log { ($($arg:tt)*) => { $crate::write(format_args!($($arg)*)) }; }
+macro_rules! service_log { ($($arg:tt)*) => { $crate::service_log::write(format_args!($($arg)*)) }; }
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::service_log::*;
     #[test]
     fn rotates_whole_lines_keeps_count_and_restricts_existing_files() {
         let dir = tempfile::tempdir().unwrap();

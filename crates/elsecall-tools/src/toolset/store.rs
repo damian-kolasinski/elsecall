@@ -4,7 +4,7 @@
 //! with an owner-only temporary, the same way other application files are replaced.
 use crate::toolset::document::LIMIT;
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::private_files;
+use elsecall_host::private_files;
 use std::{
     fs::File,
     io::Read,

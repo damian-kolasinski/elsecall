@@ -18,10 +18,9 @@ test-support = []
 
 [dependencies]
 elsecall-contract.workspace = true
+elsecall-host.workspace = true
 elsecall-load-log.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-service-log.workspace = true
-elsecall-sqlite-retention.workspace = true
 libc.workspace = true
 rusqlite.workspace = true
 serde.workspace = true

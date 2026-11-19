@@ -97,18 +97,18 @@ pub fn run(args: TuneArgs) -> Result<serde_json::Value> {
 /// remains optional stronger evidence, but cannot bypass a drift revocation.
 pub async fn current_trust(mut result: serde_json::Value) -> serde_json::Value {
     use serde_json::json;
-    let Ok(paths) = elsecall_local_state::paths::Paths::current() else {
+    let Ok(paths) = elsecall_host::paths::Paths::current() else {
         return result;
     };
     if !paths.data.join("tuning-evidence.sqlite").exists() && !paths.socket().exists() {
         return result;
     }
     let evidence: elsecall_contract::failure::Result<serde_json::Value> =
-        elsecall_local_client::post(
+        elsecall_host::client::post(
             &paths.socket(),
             "/v1/tuning/trust",
             &json!({}),
-            elsecall_local_client::Wait::Bounded,
+            elsecall_host::client::Wait::Bounded,
         )
         .await;
     let mut evidence = evidence

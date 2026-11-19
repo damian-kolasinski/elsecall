@@ -10,8 +10,7 @@ const TOOL: &str = "/usr/libexec/ApplicationFirewall/socketfilterfw";
 pub struct ApplicationFirewall;
 impl ApplicationFirewall {
     fn query(&self, arguments: &[&str]) -> Option<String> {
-        let output =
-            elsecall_process::child_start::output(Command::new(TOOL).args(arguments)).ok()?;
+        let output = elsecall_host::child_start::output(Command::new(TOOL).args(arguments)).ok()?;
         output
             .status
             .success()

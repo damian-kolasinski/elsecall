@@ -28,7 +28,7 @@ pub(crate) struct SocketSource {
 
 impl SocketSource {
     pub(crate) fn open() -> Self {
-        let socket = elsecall_local_state::paths::Paths::current()
+        let socket = elsecall_host::paths::Paths::current()
             .map(|paths| paths.socket())
             .map_err(classify);
         let runtime = tokio::runtime::Builder::new_current_thread()
@@ -45,7 +45,7 @@ impl SocketSource {
         };
         let value = self
             .runtime
-            .block_on(elsecall_local_client::get_large_within::<Value>(
+            .block_on(elsecall_host::client::get_large_within::<Value>(
                 socket,
                 "/v1/fleet",
                 FLEET_WAIT,
@@ -66,12 +66,12 @@ pub(crate) struct SocketWindowUpgrade;
 impl crate::window_upgrade::WindowUpgrade for SocketWindowUpgrade {
     fn replace_and_reopen(&self) -> Result<(), String> {
         let paths =
-            elsecall_local_state::paths::Paths::current().map_err(|error| error.message.clone())?;
+            elsecall_host::paths::Paths::current().map_err(|error| error.message.clone())?;
         replace_window_at(&paths.socket())
     }
 
     fn start_release(&self) -> Result<elsecall_release_update::release_update::Job, String> {
-        let paths = elsecall_local_state::paths::Paths::current().map_err(|error| error.message)?;
+        let paths = elsecall_host::paths::Paths::current().map_err(|error| error.message)?;
         start_release_at(&paths.socket())
     }
     fn close_old_window(&self) {
@@ -87,7 +87,7 @@ fn start_release_at(
         .build()
         .map_err(|error| error.to_string())?;
     runtime
-        .block_on(elsecall_local_client::post_within(
+        .block_on(elsecall_host::client::post_within(
             socket,
             "/v1/update/install",
             serde_json::json!({"reopen":true,"wait_seconds":300}),
@@ -106,7 +106,7 @@ fn replace_window_at(socket: &std::path::Path) -> Result<(), String> {
         .build()
         .map_err(|error| error.to_string())?;
     let result = runtime
-        .block_on(elsecall_local_client::post_within::<Launched>(
+        .block_on(elsecall_host::client::post_within::<Launched>(
             socket,
             "/v1/ui/update",
             serde_json::json!({}),

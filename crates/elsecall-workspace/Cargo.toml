@@ -14,8 +14,7 @@ workspace = true
 
 [dependencies]
 elsecall-contract.workspace = true
-elsecall-local-state.workspace = true
-elsecall-process.workspace = true
+elsecall-host.workspace = true
 futures-util.workspace = true
 getrandom.workspace = true
 libc.workspace = true

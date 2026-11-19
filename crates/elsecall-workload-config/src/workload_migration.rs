@@ -4,7 +4,7 @@ use crate::{
     workload_settings::WorkloadSettings,
 };
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_host::{paths::Paths, private_files};
 use serde::Serialize;
 use std::{
     io::Write,

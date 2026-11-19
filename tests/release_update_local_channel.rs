@@ -2,7 +2,7 @@
 //! The local release channel with real curl, tar and packslip: releases are signed
 //! here with throwaway local keys and read from a directory or a loopback server.
 //! The only fakes are the release's executables, which report a version.
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use elsecall_release_update::release_update::{
     Release, ReleaseCatalog, ReleaseDownload, ReleaseVersion,
     local_channel::{self, LocalChannel, LocalDownload, Packslip},
@@ -160,7 +160,7 @@ impl Fixture {
             .home
             .join(".local/share/elsecall/releases")
             .join(version);
-        elsecall_local_state::private_files::owned_tree(&self.paths.home, &stage).unwrap();
+        elsecall_host::private_files::owned_tree(&self.paths.home, &stage).unwrap();
         self.download().stage(&release(version), &stage)
     }
 }
@@ -259,7 +259,7 @@ fn download_unpacks_a_release_the_pinned_key_verifies() {
         .paths
         .home
         .join(".local/share/elsecall/releases/served");
-    elsecall_local_state::private_files::owned_tree(&fixture.paths.home, &served).unwrap();
+    elsecall_host::private_files::owned_tree(&fixture.paths.home, &served).unwrap();
     let staged_again = download.stage(&release("0.1.2"), &served).unwrap();
     assert_eq!(staged_again.digest, staged.digest);
 }
@@ -361,7 +361,7 @@ fn the_updater_runs_the_pinned_packslip_through_mise_and_names_a_missing_verifie
             .home
             .join(".local/share/elsecall/releases")
             .join(version);
-        elsecall_local_state::private_files::owned_tree(&fixture.paths.home, &stage).unwrap();
+        elsecall_host::private_files::owned_tree(&fixture.paths.home, &stage).unwrap();
         LocalDownload {
             packslip: Packslip::Mise,
             ..fixture.download()

@@ -3,7 +3,7 @@
 use super::{LocalChannel, PROJECT, transport, verifier};
 use crate::release_update::{Release, ReleaseDownload, StagedRelease, download, invalid};
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_host::{paths::Paths, private_files};
 use std::{fs, path::Path, time::Duration};
 
 pub struct LocalDownload {

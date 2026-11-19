@@ -1,7 +1,7 @@
 #![cfg(target_os = "macos")]
 use elsecall_contract::failure::{Failure, Result};
+use elsecall_host::paths::Paths;
 use elsecall_installation::installation::{self, ServiceManager, Session};
-use elsecall_local_state::paths::Paths;
 use std::{cell::RefCell, fs, path::Path};
 
 #[derive(Default)]
@@ -233,7 +233,7 @@ fn restart_waits_for_previous_process_to_release_the_socket() {
     let (_home, paths, source) = fixture();
     let manager = Manager::default();
     installation::install(&paths, &source, &manager, None).unwrap();
-    let lock = elsecall_local_state::private_files::try_lock(&paths.data.join("service.lock"))
+    let lock = elsecall_host::private_files::try_lock(&paths.data.join("service.lock"))
         .unwrap()
         .unwrap();
     let started = std::time::Instant::now();
@@ -291,7 +291,7 @@ fn uninstall_after_deleted_state_directory_stops_service_and_removes_links() {
 fn files_without_receipt_or_links_are_a_conflict() {
     let (_home, paths, source) = fixture();
     let manager = Manager::default();
-    elsecall_local_state::private_files::directory(&paths.data).unwrap();
+    elsecall_host::private_files::directory(&paths.data).unwrap();
     fs::write(paths.executable(), "unknown").unwrap();
     assert_eq!(
         installation::install(&paths, &source, &manager, None)
@@ -308,10 +308,9 @@ fn concurrent_lifecycle_operations_are_refused() {
     let (_home, paths, source) = fixture();
     let manager = Manager::default();
     installation::install(&paths, &source, &manager, None).unwrap();
-    let _held =
-        elsecall_local_state::private_files::try_lock(&paths.data.join("installation.lock"))
-            .unwrap()
-            .unwrap();
+    let _held = elsecall_host::private_files::try_lock(&paths.data.join("installation.lock"))
+        .unwrap()
+        .unwrap();
     for error in [
         installation::install(&paths, &source, &manager, None).unwrap_err(),
         installation::restart(&paths, &manager)

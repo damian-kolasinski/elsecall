@@ -23,8 +23,8 @@ use elsecall_contract::scheduling_model::{
     request::{Kind, Placement},
     timestamp::Timestamp,
 };
-use elsecall_local_client::{self as client, Wait};
-use elsecall_local_state::{local_access, paths::Paths, run_id_file::RunIdFile};
+use elsecall_host::client::{self as client, Wait};
+use elsecall_host::{local_access, paths::Paths, run_id_file::RunIdFile};
 use elsecall_scheduling::{
     messages::{Grant, RunEnded},
     placed::WorkspaceRef,
@@ -293,7 +293,7 @@ async fn run(args: RunArgs, reports: &Reports) -> Result<Exit> {
     let caches = paths.data.join("workspaces");
     let copy_configuration = match &located {
         Some(_) => {
-            elsecall_local_state::private_files::directory(&caches)?;
+            elsecall_host::private_files::directory(&caches)?;
             Some(configuration.clone())
         }
         None => None,

@@ -11,6 +11,7 @@ use elsecall_contract::api;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::inspection::Inspection;
 use elsecall_fleet::{fleet::Fleet, fleet_local_api, fleet_placement::FleetMembers};
+use elsecall_host::{local_access, paths::Paths, private_files};
 use elsecall_housekeeping::{
     fleet_callers::FleetCallers,
     housekeeping::{
@@ -21,7 +22,6 @@ use elsecall_housekeeping::{
         pass::{Housekeeper, Parts},
     },
 };
-use elsecall_local_state::{local_access, paths::Paths, private_files};
 use elsecall_membership::{member_key::MemberKey, membership_store::MembershipStore};
 use elsecall_placement::{placement_api, placement_host::PlacementHost};
 use elsecall_scheduling::service::{Adapters, Scheduler};
@@ -55,7 +55,7 @@ async fn identify_caller(
 ) -> Response {
     request
         .extensions_mut()
-        .insert(elsecall_local_state::local_access::LocalCaller { pid: peer.pid });
+        .insert(elsecall_host::local_access::LocalCaller { pid: peer.pid });
     next.run(request).await
 }
 
@@ -64,7 +64,7 @@ struct TuningTrust;
 impl elsecall_reporting::report_api::TrustEvidence for TuningTrust {
     fn fleet_status<'a>(
         &'a self,
-        paths: &'a elsecall_local_state::paths::Paths,
+        paths: &'a elsecall_host::paths::Paths,
         fleet: &'a std::result::Result<Arc<elsecall_fleet::fleet::Fleet>, Failure>,
     ) -> futures_util::future::BoxFuture<'a, serde_json::Value> {
         Box::pin(elsecall_rehearsal::tuning_trust_api::fleet_status(
@@ -137,9 +137,9 @@ pub async fn serve_with_updates(
         ));
     };
     elsecall_peer_diagnostics::initialize(&paths)?;
-    if let Err(error) = elsecall_local_state::state_temps::prune(&paths) {
+    if let Err(error) = elsecall_host::state_temps::prune(&paths) {
         // Optional sync/upgrade state must not take down local admission.
-        elsecall_service_log::service_log!(
+        elsecall_host::service_log!(
             "{}",
             serde_json::json!({"event":"state_scratch_cleanup_failed", "code":error.code})
         );
@@ -196,7 +196,7 @@ pub async fn serve_with_updates(
             _ => (),
         }
     }
-    elsecall_service_log::configure(configuration.logs.clone());
+    elsecall_host::service_log::configure(configuration.logs.clone());
     if let (Ok(fleet), Ok(sync)) = (&fleet, &config_sync) {
         fleet.report_sync(sync.clone());
         fleet.hand_over_with(sync.clone());
@@ -205,7 +205,7 @@ pub async fn serve_with_updates(
         ));
     }
     if let (Ok(fleet), Err(error)) = (&fleet, &config_sync) {
-        elsecall_service_log::service_log!(
+        elsecall_host::service_log!(
             "{{\"event\":\"config_sync_unavailable\",\"code\":{:?}}}",
             error.code
         );
@@ -261,7 +261,7 @@ pub async fn serve_with_updates(
             .abort_handle(),
         )),
         Err(error) => {
-            elsecall_service_log::service_log!(
+            elsecall_host::service_log!(
                 "{}",
                 serde_json::json!({"event":"outside_processes_unavailable", "code":error.code})
             );
@@ -293,7 +293,7 @@ pub async fn serve_with_updates(
             .abort_handle(),
         )),
         Err(error) => {
-            elsecall_service_log::service_log!(
+            elsecall_host::service_log!(
                 "{}",
                 serde_json::json!({"event":"outside_pressure_unavailable", "code":error.code})
             );
@@ -496,7 +496,7 @@ pub async fn serve_with_updates(
                 ))
         }
         Err(error) => {
-            elsecall_service_log::service_log!(
+            elsecall_host::service_log!(
                 "{{\"event\":\"fleet_unavailable\",\"code\":{:?}}}",
                 error.code
             );
@@ -541,7 +541,7 @@ pub async fn serve_with_updates(
     // Register handlers before signaling readiness, and release the socket on shutdown.
     let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
         .map_err(|e| Failure::io("Register shutdown handler", e))?;
-    elsecall_service_log::service_log!(
+    elsecall_host::service_log!(
         "{{\"event\":\"service_ready\",\"version\":\"{}\",\"build\":\"{}\"}}",
         build.version,
         build.build
@@ -571,7 +571,7 @@ pub async fn serve_with_updates(
     }
     result?;
     if relaunch.load(std::sync::atomic::Ordering::SeqCst) {
-        elsecall_service_log::service_log!("{{\"event\":\"service_configuration_relaunch\"}}");
+        elsecall_host::service_log!("{{\"event\":\"service_configuration_relaunch\"}}");
         return elsecall_service_lifecycle::service_relaunch::execute(&service_lock);
     }
     Ok(())

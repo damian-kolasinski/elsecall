@@ -60,11 +60,10 @@ elsecall-config-sync-model = { path = "crates/elsecall-config-sync-model" }
 elsecall-contract = { path = "crates/elsecall-contract" }
 elsecall-fleet = { path = "crates/elsecall-fleet" }
 elsecall-fleet-upgrade = { path = "crates/elsecall-fleet-upgrade" }
+elsecall-host = { path = "crates/elsecall-host" }
 elsecall-housekeeping = { path = "crates/elsecall-housekeeping" }
 elsecall-installation = { path = "crates/elsecall-installation" }
 elsecall-load-log = { path = "crates/elsecall-load-log" }
-elsecall-local-client = { path = "crates/elsecall-local-client" }
-elsecall-local-state = { path = "crates/elsecall-local-state" }
 elsecall-membership = { path = "crates/elsecall-membership" }
 elsecall-openssh-mac = { path = "crates/elsecall-openssh-mac" }
 elsecall-os-processes = { path = "crates/elsecall-os-processes" }
@@ -73,7 +72,6 @@ elsecall-peer-diagnostics = { path = "crates/elsecall-peer-diagnostics" }
 elsecall-peer-transport = { path = "crates/elsecall-peer-transport" }
 elsecall-placement = { path = "crates/elsecall-placement" }
 elsecall-platform-macos = { path = "crates/elsecall-platform-macos" }
-elsecall-process = { path = "crates/elsecall-process" }
 elsecall-rehearsal = { path = "crates/elsecall-rehearsal" }
 elsecall-release-update = { path = "crates/elsecall-release-update" }
 elsecall-remote-run = { path = "crates/elsecall-remote-run" }
@@ -81,13 +79,10 @@ elsecall-replay = { path = "crates/elsecall-replay" }
 elsecall-report-facts = { path = "crates/elsecall-report-facts" }
 elsecall-reporting = { path = "crates/elsecall-reporting" }
 elsecall-scheduling = { path = "crates/elsecall-scheduling" }
-elsecall-scripted-machine = { path = "crates/elsecall-scripted-machine" }
 elsecall-secure-channel = { path = "crates/elsecall-secure-channel" }
 elsecall-service-config = { path = "crates/elsecall-service-config" }
 elsecall-service-lifecycle = { path = "crates/elsecall-service-lifecycle" }
-elsecall-service-log = { path = "crates/elsecall-service-log" }
 elsecall-simulation = { path = "crates/elsecall-simulation" }
-elsecall-sqlite-retention = { path = "crates/elsecall-sqlite-retention" }
 elsecall-tailnet = { path = "crates/elsecall-tailnet" }
 elsecall-tools = { path = "crates/elsecall-tools" }
 elsecall-trace = { path = "crates/elsecall-trace" }
@@ -144,11 +139,10 @@ elsecall-config-sync.workspace = true
 elsecall-contract.workspace = true
 elsecall-fleet-upgrade.workspace = true
 elsecall-fleet.workspace = true
+elsecall-host.workspace = true
 elsecall-housekeeping.workspace = true
 elsecall-installation.workspace = true
 elsecall-load-log.workspace = true
-elsecall-local-client.workspace = true
-elsecall-local-state.workspace = true
 elsecall-membership.workspace = true
 elsecall-openssh-mac.workspace = true
 elsecall-os-processes.workspace = true
@@ -157,7 +151,6 @@ elsecall-peer-diagnostics.workspace = true
 elsecall-peer-transport.workspace = true
 elsecall-placement.workspace = true
 elsecall-platform-macos.workspace = true
-elsecall-process.workspace = true
 elsecall-rehearsal.workspace = true
 elsecall-release-update.workspace = true
 elsecall-remote-run.workspace = true
@@ -165,13 +158,10 @@ elsecall-replay.workspace = true
 elsecall-report-facts.workspace = true
 elsecall-reporting.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-scripted-machine.workspace = true
 elsecall-secure-channel.workspace = true
 elsecall-service-config.workspace = true
 elsecall-service-lifecycle.workspace = true
-elsecall-service-log.workspace = true
 elsecall-simulation.workspace = true
-elsecall-sqlite-retention.workspace = true
 elsecall-tailnet.workspace = true
 elsecall-tools.workspace = true
 elsecall-trace.workspace = true

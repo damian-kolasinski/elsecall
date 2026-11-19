@@ -2,7 +2,7 @@
 use crate::workload_settings::WorkloadSettings;
 use elsecall_contract::build_identity::Digest;
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use std::{
     collections::BTreeMap,
     fs::OpenOptions,

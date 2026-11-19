@@ -15,14 +15,12 @@ workspace = true
 [dependencies]
 clap.workspace = true
 elsecall-contract.workspace = true
+elsecall-host.workspace = true
 elsecall-load-log.workspace = true
-elsecall-local-client.workspace = true
-elsecall-local-state.workspace = true
 elsecall-rehearsal.workspace = true
 elsecall-replay.workspace = true
 elsecall-reporting.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-service-log.workspace = true
 elsecall-simulation.workspace = true
 elsecall-trace.workspace = true
 elsecall-workload-config.workspace = true

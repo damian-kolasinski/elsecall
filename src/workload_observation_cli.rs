@@ -4,8 +4,8 @@ use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::{
     request::invalid, run_id::RunId, workload_metadata::parse_observation,
 };
-use elsecall_local_client::{self as client, Wait};
-use elsecall_local_state::paths::Paths;
+use elsecall_host::client::{self as client, Wait};
+use elsecall_host::paths::Paths;
 
 #[derive(Args, Debug)]
 pub struct WorkloadArgs {

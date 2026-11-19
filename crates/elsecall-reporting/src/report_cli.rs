@@ -3,8 +3,8 @@ use crate::report_api::ReportRequest;
 use clap::Args;
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_local_client as client;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::client;
+use elsecall_host::paths::Paths;
 use elsecall_report_facts::window::{MAXIMUM_PERIOD, invalid};
 use std::time::Duration;
 

@@ -3,8 +3,8 @@ use axum::{Json, Router, routing::get};
 use elsecall::{peer_listener, server};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::inspection::{Inspection, LoadSample, Machine, MachineInspector};
-use elsecall_local_client as client;
-use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_host::client;
+use elsecall_host::{paths::Paths, private_files};
 use elsecall_os_processes::processes::MacProcesses;
 use elsecall_scheduling::service::Adapters;
 use elsecall_tailnet::tailnet::{Presence, Tailnet};
@@ -56,7 +56,7 @@ async fn inspection_failure_crosses_real_api_without_becoming_false_health_failu
         Arc::new(Inspection::new(machine.clone())),
         Adapters {
             machine,
-            speed: Arc::new(elsecall_scripted_machine::FixedSpeed(1.0)),
+            speed: Arc::new(elsecall_host::machine_script::FixedSpeed(1.0)),
             processes,
             exits,
         },

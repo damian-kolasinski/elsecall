@@ -12,7 +12,7 @@ use axum::{
 use elsecall_contract::failure::Failure;
 use elsecall_contract::scheduling_model::run_id::RunId;
 use elsecall_fleet::fleet::Fleet;
-use elsecall_local_state::local_access::LocalCaller;
+use elsecall_host::local_access::LocalCaller;
 use elsecall_membership::roster::MemberName;
 use elsecall_peer_transport::peer_client;
 use elsecall_scheduling::service::Scheduler;

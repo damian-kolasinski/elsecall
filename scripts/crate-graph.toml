@@ -41,14 +41,6 @@ band = "foundation"
 # configuration names and config sync enforces.
 modules = ["config_sync::synced_path", "config_sync::status"]
 
-[crates.local-state]
-band = "foundation"
-modules = ["paths", "private_files", "local_access", "state_temps", "run_id_file"]
-
-[crates.process]
-band = "foundation"
-modules = ["child_start", "command_capture"]
-
 [crates.secure-channel]
 band = "foundation"
 modules = ["secure_channel"]
@@ -61,24 +53,12 @@ modules = ["tailnet", "tailscale_bottle"]
 band = "foundation"
 modules = ["roster", "member_key", "member_code", "membership_store", "peer_auth"]
 
-[crates.sqlite-retention]
-band = "core"
-modules = ["sqlite_retention"]
-
 [crates.os-processes]
 band = "core"
 # The operating system's processes: identity and exit notification, process
 # groups and their signals, and the CPU time a command used. A second platform
 # adds its implementation here.
 modules = ["macos::process_group", "macos::process_usage", "macos::processes"]
-
-[crates.service-log]
-band = "core"
-modules = ["service_log"]
-
-[crates.local-client]
-band = "core"
-modules = ["client"]
 
 [crates.peer-transport]
 band = "core"
@@ -231,13 +211,6 @@ band = "adapter"
 # Adding a Mac over Remote Login: the remote side of add-mac.
 modules = ["openssh_mac"]
 
-[crates.scripted-machine]
-band = "adapter"
-# Machine observations a test scripts through files, selected by environment.
-modules = ["machine_script"]
-
-# --- entry points -------------------------------------------------------------
-
 [crates.service]
 band = "entry"
 # Router assembly and the peer listener: they mount routes from many slices and
@@ -256,9 +229,14 @@ band = "entry"
 packages = ["elsecall-ui"]
 # The desktop app talks to the service through its contract, never through the
 # service's internals.
-may_depend_on = ["contract", "local-client", "local-state", "membership", "add-mac", "release-update", "installation", "window", "workload-config"]
+may_depend_on = ["contract", "host", "membership", "add-mac", "release-update", "installation", "window", "workload-config"]
 
 [crates.contract]
 band = "foundation"
 # The vocabulary every crate shares: failures, the wire forms and API envelope, guidance, labels, build identity, the scheduler's request model and this machine's facts.
 modules = ["failure", "api", "wire", "guidance", "run_admission", "labels", "rehearsal::identity", "build_identity", "executable_format", "version_skew", "scheduling::request", "scheduling::settings", "scheduling::timestamp", "scheduling::capacity", "scheduling::gate", "scheduling::run_id", "scheduling::speed", "workload_metadata", "inspection", "idle_load"]
+
+[crates.host]
+band = "core"
+# This machine's local plumbing: starting child processes, the state directory and its private files, SQLite retention, the service log, the client for the local service, and scripted machine observations for tests.
+modules = ["child_start", "command_capture", "paths", "private_files", "local_access", "state_temps", "run_id_file", "sqlite_retention", "service_log", "client", "machine_script"]

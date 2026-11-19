@@ -469,8 +469,8 @@ impl Copy {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null());
-        let mut child = elsecall_process::child_start::spawn(&mut command)
-            .map_err(failed("Reading objects"))?;
+        let mut child =
+            elsecall_host::child_start::spawn(&mut command).map_err(failed("Reading objects"))?;
         let mut input = child.stdin.take().expect("piped");
         let requests: String = wanted.iter().map(|(oid, _)| format!("{oid}\n")).collect();
         let writer = std::thread::spawn(move || {

@@ -6,9 +6,9 @@ use super::{
 };
 use elsecall_contract::build_identity::Digest;
 use elsecall_contract::failure::{Failure, Result};
+use elsecall_host::client;
+use elsecall_host::{paths::Paths, private_files};
 use elsecall_installation::installation::{ServiceManager, Transaction};
-use elsecall_local_client as client;
-use elsecall_local_state::{paths::Paths, private_files};
 use elsecall_window::window_app::{self, WindowLauncher};
 use std::{
     fs,

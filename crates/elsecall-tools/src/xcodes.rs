@@ -28,7 +28,7 @@ use crate::tool_inventory::{
     Detail, Executable, InstalledTool, InventoryFailure, Manager, ManagerInventory, ToolManager,
     ToolName, ToolVersion, version_token,
 };
-use elsecall_process::command_capture::{self, Program};
+use elsecall_host::command_capture::{self, Program};
 use std::{
     ffi::OsStr,
     path::{Path, PathBuf},

@@ -4,8 +4,8 @@
 //! builds only; release builds always use launchd. It keeps nothing alive after a
 //! crash, which launchd would.
 use elsecall_contract::failure::{Failure, Result};
+use elsecall_host::{paths::Paths, private_files};
 use elsecall_installation::installation::{ServiceManager, Session};
-use elsecall_local_state::{paths::Paths, private_files};
 use std::{
     os::unix::process::CommandExt,
     path::{Path, PathBuf},
@@ -37,7 +37,7 @@ pub struct ProcessService {
 }
 impl ProcessService {
     pub fn new(paths: Paths) -> Self {
-        elsecall_service_log::service_log!(
+        elsecall_host::service_log!(
             "{}",
             serde_json::json!({"event": "test_seam_in_use", "detail": "ELSECALL_SERVICE_MANAGER=process runs the service as a plain process instead of a LaunchAgent"})
         );
@@ -122,7 +122,7 @@ impl ServiceManager for ProcessService {
                 Ok(())
             });
         }
-        let output = elsecall_process::child_start::output(&mut command)
+        let output = elsecall_host::child_start::output(&mut command)
             .map_err(|e| Failure::io("Start the service process", e))?;
         let pid = String::from_utf8_lossy(&output.stdout).trim().to_owned();
         if !output.status.success() || pid.parse::<i32>().is_err() {

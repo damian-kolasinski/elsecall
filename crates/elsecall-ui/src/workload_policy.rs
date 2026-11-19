@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use elsecall_workload_config::workload_configuration::{self, Configuration, FILE_NAME};
 use elsecall_workload_config::workload_settings::WorkloadSettings;
 

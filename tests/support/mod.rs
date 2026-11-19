@@ -7,7 +7,7 @@ use elsecall_contract::inspection::{
     CoreCounts, Inspection, LoadAverage, LoadSample, Machine, MachineInspector, Memory,
     MemoryPressure, ThermalState,
 };
-use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_host::{paths::Paths, private_files};
 use elsecall_os_processes::processes::MacProcesses;
 use elsecall_scheduling::service::Adapters;
 use elsecall_tailnet::tailnet::{Presence, Tailnet};
@@ -111,7 +111,7 @@ impl Fixture {
             Arc::new(Inspection::new(self.machine.clone())),
             Adapters {
                 machine: self.machine.clone(),
-                speed: Arc::new(elsecall_scripted_machine::FixedSpeed(1.0)),
+                speed: Arc::new(elsecall_host::machine_script::FixedSpeed(1.0)),
                 processes,
                 exits,
             },

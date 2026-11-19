@@ -15,8 +15,7 @@ workspace = true
 [dependencies]
 elsecall-contract.workspace = true
 elsecall-fleet.workspace = true
-elsecall-local-client.workspace = true
-elsecall-local-state.workspace = true
+elsecall-host.workspace = true
 elsecall-membership.workspace = true
 elsecall-tailnet.workspace = true
 hyper.workspace = true

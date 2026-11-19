@@ -2,8 +2,8 @@
 #![cfg(target_os = "macos")]
 use elsecall_contract::build_identity::Digest;
 use elsecall_contract::failure::{Failure, Result};
+use elsecall_host::{paths::Paths, private_files};
 use elsecall_installation::window_release;
-use elsecall_local_state::{paths::Paths, private_files};
 use elsecall_window::window_app::{self, WindowLauncher};
 use std::{fs, os::unix::fs::symlink, path::Path, sync::Mutex};
 

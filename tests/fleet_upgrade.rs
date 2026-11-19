@@ -18,7 +18,7 @@ use elsecall_fleet_upgrade::fleet_upgrade::{
     member::UpgradeStatus,
     protocol::{self, Manifest, Message, Os, UpgradeId},
 };
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use elsecall_peer_transport::peer_client;
 use members::{TestMember, enrol, json};
 use serde_json::Value;
@@ -765,10 +765,9 @@ fn an_attempt_that_cannot_finish_is_closed_and_the_member_keeps_working() {
     // An install refused before anything stopped (another install holds the
     // installation lock) leaves the service running and the member upgradable.
     let pid = bravo.installed_pid().unwrap();
-    let lock =
-        elsecall_local_state::private_files::try_lock(&bravo.data().join("installation.lock"))
-            .unwrap()
-            .expect("no install runs");
+    let lock = elsecall_host::private_files::try_lock(&bravo.data().join("installation.lock"))
+        .unwrap()
+        .expect("no install runs");
     let (code, report) = upgrade(&alpha, &[]);
     assert_eq!(code, 1, "{report}");
     let refused = outcome(&report, "bravo");

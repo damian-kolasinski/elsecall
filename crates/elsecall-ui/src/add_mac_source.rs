@@ -91,7 +91,7 @@ impl CliSource {
         if let Some(executable) = &self.executable {
             return Ok(executable.clone());
         }
-        let executable = elsecall_local_state::paths::Paths::current()?.executable();
+        let executable = elsecall_host::paths::Paths::current()?.executable();
         if executable.is_file() {
             Ok(executable)
         } else {

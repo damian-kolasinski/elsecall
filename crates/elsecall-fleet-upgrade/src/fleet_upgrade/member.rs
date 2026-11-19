@@ -124,7 +124,7 @@ pub struct Upgrades {
 }
 
 fn log(event: &str, id: &UpgradeId, detail: serde_json::Value) {
-    elsecall_service_log::service_log!(
+    elsecall_host::service_log!(
         "{}",
         serde_json::json!({"event": event, "upgrade": id, "detail": detail})
     );

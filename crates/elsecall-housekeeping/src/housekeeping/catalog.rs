@@ -503,7 +503,7 @@ impl Catalog {
 impl UseLog for Catalog {
     fn used(&self, location: &CopyLocation) {
         if let Err(error) = self.record_use(location, self.clock.now()) {
-            elsecall_service_log::service_log!(
+            elsecall_host::service_log!(
                 "{}",
                 serde_json::json!({"event": "copy_use_unrecorded", "detail": error})
             );

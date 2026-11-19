@@ -7,7 +7,7 @@ use axum::{
     routing::{get, post},
 };
 use elsecall_contract::api;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use serde::Serialize;
 
 #[derive(Serialize)]

@@ -4,7 +4,7 @@ use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_contract::api::ErrorResponse;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::run_id::RunId;
-use elsecall_local_state::{local_access, private_files};
+use elsecall_host::{local_access, private_files};
 use elsecall_remote_run::{remote_run::link::Link, sealed_run};
 use elsecall_secure_channel::{Ephemeral, SecureStream};
 use http_body_util::{BodyExt, Full, Limited};

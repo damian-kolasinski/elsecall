@@ -2,7 +2,7 @@
 //! and an archive against the bundle.
 use super::PACKSLIP;
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_host::{paths::Paths, private_files};
 use serde::Deserialize;
 use std::{
     ffi::OsString,

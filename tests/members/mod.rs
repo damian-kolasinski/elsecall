@@ -2,7 +2,7 @@
 //! machine observations and tailnet discovery are controlled: each member
 //! "discovers" loopback and its own port, with scripted load and speed.
 #![allow(dead_code)]
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use elsecall_membership::{member_key::MemberKey, roster::Member};
 use serde_json::Value;
 use std::{
@@ -158,7 +158,7 @@ impl TestMember {
             .tempdir_in("/tmp")
             .unwrap();
         let data = Paths::for_home(home.path()).unwrap().data;
-        elsecall_local_state::private_files::directory(&data).unwrap();
+        elsecall_host::private_files::directory(&data).unwrap();
         std::fs::write(data.join("config.toml"), configuration).unwrap();
         let _diagnostics = diagnostics(name, home.path());
         let mut member = Self {
@@ -206,7 +206,7 @@ impl TestMember {
             .unwrap();
         if !configuration.is_empty() {
             let data = Paths::for_home(home.path()).unwrap().data;
-            elsecall_local_state::private_files::directory(&data).unwrap();
+            elsecall_host::private_files::directory(&data).unwrap();
             std::fs::write(data.join("config.toml"), configuration).unwrap();
         }
         let _diagnostics = diagnostics(name, home.path());
@@ -328,8 +328,7 @@ impl TestMember {
         }
         // Foreground fixtures historically expose only this launch's records.
         // Do not let an earlier port collision poison a later startup retry.
-        elsecall_local_state::private_files::write(&self.data().join("service.log"), b"", 0o600)
-            .unwrap();
+        elsecall_host::private_files::write(&self.data().join("service.log"), b"", 0o600).unwrap();
         // A service that cannot start prints its error envelope on stdout.
         let log = std::fs::File::create(self.home.path().join("serve.log")).unwrap();
         let mut command = crate::processes::command(

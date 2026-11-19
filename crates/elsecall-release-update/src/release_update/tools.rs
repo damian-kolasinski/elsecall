@@ -1,7 +1,7 @@
 //! Bounded, non-interactive external tools; output never enters errors or logs.
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::paths::Paths;
-use elsecall_process::command_capture::{self, Program};
+use elsecall_host::command_capture::{self, Program};
+use elsecall_host::paths::Paths;
 use std::{
     ffi::OsString,
     os::unix::fs::PermissionsExt,

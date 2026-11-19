@@ -18,11 +18,10 @@ test-support = []
 
 [dependencies]
 elsecall-contract.workspace = true
+elsecall-host.workspace = true
 elsecall-load-log.workspace = true
 elsecall-peer-diagnostics.workspace = true
 elsecall-peer-transport.workspace = true
-elsecall-service-log.workspace = true
-elsecall-sqlite-retention.workspace = true
 futures-util.workspace = true
 humantime.workspace = true
 libc.workspace = true

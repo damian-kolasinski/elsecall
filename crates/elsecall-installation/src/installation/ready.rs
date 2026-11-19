@@ -3,8 +3,8 @@
 use elsecall_contract::build_identity::{Build, BuildId};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::inspection::Health;
-use elsecall_local_client as client;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::client;
+use elsecall_host::paths::Paths;
 use std::time::{Duration, Instant};
 
 /// How long a freshly installed service has to answer with its build.

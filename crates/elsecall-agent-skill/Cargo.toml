@@ -15,7 +15,7 @@ workspace = true
 [dependencies]
 clap.workspace = true
 elsecall-contract.workspace = true
-elsecall-local-state.workspace = true
+elsecall-host.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 

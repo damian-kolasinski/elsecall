@@ -229,7 +229,7 @@ impl Phase {
 }
 
 fn log(event: &str, detail: impl Serialize) {
-    elsecall_service_log::service_log!("{}", serde_json::json!({"event": event, "detail": detail}));
+    elsecall_host::service_log!("{}", serde_json::json!({"event": event, "detail": detail}));
 }
 
 /// The member's name: the host name up to its first dot.

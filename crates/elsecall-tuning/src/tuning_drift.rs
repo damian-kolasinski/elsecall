@@ -6,7 +6,7 @@ use elsecall_contract::scheduling_model::{
     request::{AdmissionRequest, AtDeadline, Kind, Placement, Urgency},
     timestamp::Timestamp,
 };
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use elsecall_scheduling::{messages::RunEnded, service::Scheduler};
 use std::{sync::Arc, time::Duration};
 const DAY: u64 = 86_400_000;
@@ -100,7 +100,7 @@ pub fn start(
                     },
                 );
                 if let Err(error) = result {
-                    elsecall_service_log::service_log!(
+                    elsecall_host::service_log!(
                         "{}",
                         serde_json::json!({"event":"fidelity_monitor_failed","code":error.code})
                     );

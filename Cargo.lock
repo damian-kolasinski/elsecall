@@ -1074,11 +1074,10 @@ dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-fleet-upgrade",
+ "elsecall-host",
  "elsecall-housekeeping",
  "elsecall-installation",
  "elsecall-load-log",
- "elsecall-local-client",
- "elsecall-local-state",
  "elsecall-membership",
  "elsecall-openssh-mac",
  "elsecall-os-processes",
@@ -1087,7 +1086,6 @@ dependencies = [
  "elsecall-peer-transport",
  "elsecall-placement",
  "elsecall-platform-macos",
- "elsecall-process",
  "elsecall-rehearsal",
  "elsecall-release-update",
  "elsecall-remote-run",
@@ -1095,13 +1093,10 @@ dependencies = [
  "elsecall-report-facts",
  "elsecall-reporting",
  "elsecall-scheduling",
- "elsecall-scripted-machine",
  "elsecall-secure-channel",
  "elsecall-service-config",
  "elsecall-service-lifecycle",
- "elsecall-service-log",
  "elsecall-simulation",
- "elsecall-sqlite-retention",
  "elsecall-tailnet",
  "elsecall-tools",
  "elsecall-trace",
@@ -1140,8 +1135,7 @@ version = "0.3.0"
 dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
- "elsecall-local-client",
- "elsecall-local-state",
+ "elsecall-host",
  "elsecall-membership",
  "elsecall-tailnet",
  "hyper",
@@ -1163,8 +1157,7 @@ dependencies = [
  "elsecall-api-response",
  "elsecall-contract",
  "elsecall-fleet",
- "elsecall-local-client",
- "elsecall-local-state",
+ "elsecall-host",
  "elsecall-membership",
  "elsecall-os-processes",
  "elsecall-peer-transport",
@@ -1192,7 +1185,7 @@ version = "0.3.0"
 dependencies = [
  "clap",
  "elsecall-contract",
- "elsecall-local-state",
+ "elsecall-host",
  "serde",
  "serde_json",
  "sha2",
@@ -1218,14 +1211,12 @@ dependencies = [
  "elsecall-config-sync-model",
  "elsecall-contract",
  "elsecall-fleet",
- "elsecall-local-client",
- "elsecall-local-state",
+ "elsecall-host",
  "elsecall-membership",
  "elsecall-peer-transport",
  "elsecall-scheduling",
  "elsecall-secure-channel",
  "elsecall-service-config",
- "elsecall-service-log",
  "elsecall-workspace",
  "futures-util",
  "getrandom 0.3.4",
@@ -1295,21 +1286,35 @@ dependencies = [
  "elsecall-api-response",
  "elsecall-contract",
  "elsecall-fleet",
+ "elsecall-host",
  "elsecall-installation",
- "elsecall-local-client",
- "elsecall-local-state",
  "elsecall-membership",
  "elsecall-peer-transport",
- "elsecall-process",
  "elsecall-release-update",
  "elsecall-scheduling",
  "elsecall-secure-channel",
- "elsecall-service-log",
  "futures-util",
  "getrandom 0.3.4",
  "hyper",
  "hyper-util",
  "libc",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "elsecall-host"
+version = "0.3.0"
+dependencies = [
+ "elsecall-contract",
+ "getrandom 0.3.4",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "libc",
+ "rusqlite",
  "serde",
  "serde_json",
  "tempfile",
@@ -1325,11 +1330,9 @@ dependencies = [
  "elsecall-api-response",
  "elsecall-contract",
  "elsecall-fleet",
- "elsecall-local-client",
- "elsecall-local-state",
+ "elsecall-host",
  "elsecall-peer-transport",
  "elsecall-scheduling",
- "elsecall-service-log",
  "elsecall-workspace",
  "futures-util",
  "hyper",
@@ -1346,8 +1349,7 @@ name = "elsecall-installation"
 version = "0.3.0"
 dependencies = [
  "elsecall-contract",
- "elsecall-local-client",
- "elsecall-local-state",
+ "elsecall-host",
  "elsecall-os-processes",
  "elsecall-scheduling",
  "serde",
@@ -1361,35 +1363,11 @@ name = "elsecall-load-log"
 version = "0.3.0"
 dependencies = [
  "elsecall-contract",
- "elsecall-sqlite-retention",
+ "elsecall-host",
  "libc",
  "rusqlite",
  "serde",
  "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "elsecall-local-client"
-version = "0.3.0"
-dependencies = [
- "elsecall-contract",
- "elsecall-local-state",
- "http-body-util",
- "hyper",
- "hyper-util",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "elsecall-local-state"
-version = "0.3.0"
-dependencies = [
- "elsecall-contract",
- "getrandom 0.3.4",
- "libc",
  "tempfile",
 ]
 
@@ -1400,7 +1378,7 @@ dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
  "elsecall-contract",
- "elsecall-local-state",
+ "elsecall-host",
  "elsecall-secure-channel",
  "elsecall-tailnet",
  "getrandom 0.3.4",
@@ -1440,10 +1418,9 @@ name = "elsecall-outside-pressure"
 version = "0.3.0"
 dependencies = [
  "elsecall-contract",
+ "elsecall-host",
  "elsecall-load-log",
  "elsecall-scheduling",
- "elsecall-service-log",
- "elsecall-sqlite-retention",
  "libc",
  "rusqlite",
  "serde",
@@ -1457,8 +1434,7 @@ name = "elsecall-peer-diagnostics"
 version = "0.3.0"
 dependencies = [
  "elsecall-contract",
- "elsecall-local-state",
- "elsecall-service-log",
+ "elsecall-host",
  "libc",
  "rusqlite",
  "serde",
@@ -1496,12 +1472,12 @@ dependencies = [
  "elsecall-config-sync-model",
  "elsecall-contract",
  "elsecall-fleet",
+ "elsecall-host",
  "elsecall-membership",
  "elsecall-peer-transport",
  "elsecall-remote-run",
  "elsecall-scheduling",
  "elsecall-secure-channel",
- "elsecall-service-log",
  "elsecall-workspace",
  "futures-util",
  "hyper",
@@ -1518,11 +1494,9 @@ dependencies = [
  "base64 0.22.1",
  "elsecall-add-mac",
  "elsecall-contract",
+ "elsecall-host",
  "elsecall-installation",
- "elsecall-local-state",
  "elsecall-outside-pressure",
- "elsecall-process",
- "elsecall-service-log",
  "elsecall-tailnet",
  "elsecall-window",
  "libc",
@@ -1534,30 +1508,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-process"
-version = "0.3.0"
-dependencies = [
- "libc",
- "tempfile",
- "tokio",
-]
-
-[[package]]
 name = "elsecall-rehearsal"
 version = "0.3.0"
 dependencies = [
  "axum",
  "elsecall-contract",
  "elsecall-fleet",
+ "elsecall-host",
  "elsecall-housekeeping",
  "elsecall-load-log",
- "elsecall-local-state",
  "elsecall-membership",
  "elsecall-os-processes",
  "elsecall-peer-transport",
  "elsecall-report-facts",
  "elsecall-scheduling",
- "elsecall-service-log",
  "elsecall-simulation",
  "elsecall-workload",
  "elsecall-workspace",
@@ -1581,12 +1545,9 @@ dependencies = [
  "base64 0.22.1",
  "clap",
  "elsecall-contract",
+ "elsecall-host",
  "elsecall-installation",
- "elsecall-local-client",
- "elsecall-local-state",
- "elsecall-process",
  "elsecall-scheduling",
- "elsecall-service-log",
  "elsecall-window",
  "getrandom 0.3.4",
  "humantime",
@@ -1606,11 +1567,11 @@ version = "0.3.0"
 dependencies = [
  "base64 0.22.1",
  "elsecall-contract",
+ "elsecall-host",
  "elsecall-membership",
  "elsecall-os-processes",
  "elsecall-peer-diagnostics",
  "elsecall-peer-transport",
- "elsecall-process",
  "elsecall-scheduling",
  "elsecall-secure-channel",
  "elsecall-service-config",
@@ -1633,8 +1594,7 @@ dependencies = [
  "axum",
  "clap",
  "elsecall-contract",
- "elsecall-local-client",
- "elsecall-local-state",
+ "elsecall-host",
  "elsecall-report-facts",
  "elsecall-scheduling",
  "elsecall-workload",
@@ -1664,9 +1624,8 @@ dependencies = [
  "elsecall-api-response",
  "elsecall-contract",
  "elsecall-fleet",
+ "elsecall-host",
  "elsecall-load-log",
- "elsecall-local-client",
- "elsecall-local-state",
  "elsecall-membership",
  "elsecall-outside-pressure",
  "elsecall-peer-diagnostics",
@@ -1687,11 +1646,10 @@ name = "elsecall-scheduling"
 version = "0.3.0"
 dependencies = [
  "elsecall-contract",
+ "elsecall-host",
  "elsecall-load-log",
  "elsecall-peer-diagnostics",
  "elsecall-peer-transport",
- "elsecall-service-log",
- "elsecall-sqlite-retention",
  "futures-util",
  "humantime",
  "libc",
@@ -1702,15 +1660,6 @@ dependencies = [
  "tempfile",
  "tokio",
  "toml",
-]
-
-[[package]]
-name = "elsecall-scripted-machine"
-version = "0.3.0"
-dependencies = [
- "elsecall-contract",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -1732,9 +1681,9 @@ version = "0.3.0"
 dependencies = [
  "elsecall-config-sync-model",
  "elsecall-contract",
+ "elsecall-host",
  "elsecall-housekeeping",
  "elsecall-scheduling",
- "elsecall-service-log",
  "elsecall-workspace",
  "humantime",
  "serde",
@@ -1753,17 +1702,6 @@ dependencies = [
  "elsecall-scheduling",
  "tempfile",
  "tokio",
-]
-
-[[package]]
-name = "elsecall-service-log"
-version = "0.3.0"
-dependencies = [
- "elsecall-contract",
- "elsecall-local-state",
- "libc",
- "serde_json",
- "tempfile",
 ]
 
 [[package]]
@@ -1789,13 +1727,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-sqlite-retention"
-version = "0.3.0"
-dependencies = [
- "rusqlite",
-]
-
-[[package]]
 name = "elsecall-tailnet"
 version = "0.3.0"
 dependencies = [
@@ -1812,11 +1743,9 @@ dependencies = [
  "elsecall-api-response",
  "elsecall-contract",
  "elsecall-fleet",
- "elsecall-local-client",
- "elsecall-local-state",
+ "elsecall-host",
  "elsecall-membership",
  "elsecall-peer-transport",
- "elsecall-process",
  "elsecall-scheduling",
  "futures-util",
  "hyper",
@@ -1838,9 +1767,8 @@ dependencies = [
  "clap",
  "elsecall-contract",
  "elsecall-fleet",
+ "elsecall-host",
  "elsecall-load-log",
- "elsecall-local-client",
- "elsecall-local-state",
  "elsecall-rehearsal",
  "elsecall-report-facts",
  "elsecall-reporting",
@@ -1858,15 +1786,13 @@ dependencies = [
  "clap",
  "elsecall-config-sync",
  "elsecall-contract",
+ "elsecall-host",
  "elsecall-load-log",
- "elsecall-local-client",
- "elsecall-local-state",
  "elsecall-rehearsal",
  "elsecall-replay",
  "elsecall-report-facts",
  "elsecall-reporting",
  "elsecall-scheduling",
- "elsecall-service-log",
  "elsecall-simulation",
  "elsecall-trace",
  "elsecall-workload",
@@ -1884,8 +1810,7 @@ version = "0.3.0"
 dependencies = [
  "elsecall-add-mac",
  "elsecall-contract",
- "elsecall-local-client",
- "elsecall-local-state",
+ "elsecall-host",
  "elsecall-membership",
  "elsecall-release-update",
  "elsecall-window",
@@ -1907,8 +1832,8 @@ name = "elsecall-window"
 version = "0.3.0"
 dependencies = [
  "elsecall-contract",
+ "elsecall-host",
  "elsecall-installation",
- "elsecall-local-state",
  "libc",
  "plist",
  "serde",
@@ -1934,7 +1859,7 @@ name = "elsecall-workload-config"
 version = "0.3.0"
 dependencies = [
  "elsecall-contract",
- "elsecall-local-state",
+ "elsecall-host",
  "elsecall-workspace",
  "humantime",
  "libc",
@@ -1949,8 +1874,7 @@ name = "elsecall-workspace"
 version = "0.3.0"
 dependencies = [
  "elsecall-contract",
- "elsecall-local-state",
- "elsecall-process",
+ "elsecall-host",
  "futures-util",
  "getrandom 0.3.4",
  "libc",

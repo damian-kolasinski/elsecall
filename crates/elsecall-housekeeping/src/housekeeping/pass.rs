@@ -70,7 +70,7 @@ struct Pass {
 }
 
 fn log(event: &str, detail: impl serde::Serialize) {
-    elsecall_service_log::service_log!("{}", serde_json::json!({"event": event, "detail": detail}));
+    elsecall_host::service_log!("{}", serde_json::json!({"event": event, "detail": detail}));
 }
 
 /// Whether `directory` exists and is not a mount point, so what is missing from it

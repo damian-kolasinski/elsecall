@@ -11,8 +11,8 @@ use elsecall_contract::scheduling_model::{
     run_id::{RandomRunIds, RunId},
     speed::SpeedMeter,
 };
+use elsecall_host::{paths::Paths, private_files};
 use elsecall_load_log::LoadLog;
-use elsecall_local_state::{paths::Paths, private_files};
 use elsecall_release_update::release_update::{
     self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
     service::{HelperLauncher, UpdateService},
@@ -288,7 +288,7 @@ async fn api_and_real_cli_check_start_and_follow_the_same_durable_job() {
     Store::new(&paths)
         .advance(&mut done, Phase::Succeeded)
         .unwrap();
-    let status: Status = elsecall_local_client::get(&paths.socket(), "/v1/update")
+    let status: Status = elsecall_host::client::get(&paths.socket(), "/v1/update")
         .await
         .unwrap();
     assert!(matches!(status.job.unwrap().phase, Phase::Succeeded));

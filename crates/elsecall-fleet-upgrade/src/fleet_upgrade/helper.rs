@@ -12,13 +12,13 @@ use crate::fleet_upgrade::{
 use elsecall_contract::build_identity::{Build, BuildId, Digest};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::inspection::Health;
+use elsecall_host::client;
+use elsecall_host::paths::Paths;
 use elsecall_installation::installation::{ServiceManager, Transaction, ready::confirm};
-use elsecall_local_client as client;
-use elsecall_local_state::paths::Paths;
 use std::path::Path;
 
 fn log(event: &str, id: &UpgradeId, detail: serde_json::Value) {
-    elsecall_service_log::service_log!(
+    elsecall_host::service_log!(
         "{}",
         serde_json::json!({"event": event, "upgrade": id, "detail": detail})
     );
@@ -130,7 +130,7 @@ pub async fn run(paths: &Paths, manager: &dyn ServiceManager, id: &UpgradeId) ->
     match phase {
         // Keep the previous build where the hint says, for the operator to restore.
         Phase::RollbackFailed { .. } => {
-            let _ = elsecall_local_state::private_files::remove_file(&journal.incoming());
+            let _ = elsecall_host::private_files::remove_file(&journal.incoming());
         }
         _ => journal.discard_builds(),
     }

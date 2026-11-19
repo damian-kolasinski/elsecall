@@ -5,7 +5,7 @@ use crate::config_sync::compare::Change;
 use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_local_state::private_files;
+use elsecall_host::private_files;
 use elsecall_membership::roster::MemberName;
 use serde::{Deserialize, Serialize};
 use std::{

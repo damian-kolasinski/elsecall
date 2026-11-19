@@ -30,7 +30,7 @@ impl Clock for FileClock {
 pub fn from_environment() -> Arc<dyn Clock> {
     match std::env::var_os("ELSECALL_HOUSEKEEPING_CLOCK") {
         Some(path) if !path.is_empty() => {
-            elsecall_service_log::service_log!(
+            elsecall_host::service_log!(
                 "{}",
                 serde_json::json!({"event": "test_seam_in_use", "detail": "ELSECALL_HOUSEKEEPING_CLOCK sets the clock housekeeping judges idleness by"})
             );

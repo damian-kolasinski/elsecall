@@ -3,8 +3,8 @@
 #![cfg(target_os = "macos")]
 use elsecall_contract::build_identity::Digest;
 use elsecall_contract::failure::{Failure, Result};
+use elsecall_host::paths::Paths;
 use elsecall_installation::installation::{self, ServiceManager, Session, Transaction};
-use elsecall_local_state::paths::Paths;
 use elsecall_window::{
     install_window::{self, Window},
     window_app::{self, WindowLauncher},

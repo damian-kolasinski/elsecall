@@ -72,7 +72,7 @@ impl Volumes for SimulatedVolume {
 pub fn from_environment(root: &Path) -> Arc<dyn Volumes> {
     match std::env::var_os("ELSECALL_SIMULATED_VOLUME") {
         Some(file) if !file.is_empty() => {
-            elsecall_service_log::service_log!(
+            elsecall_host::service_log!(
                 "{}",
                 serde_json::json!({"event": "test_seam_in_use", "detail": "ELSECALL_SIMULATED_VOLUME replaces the free space housekeeping sees"})
             );

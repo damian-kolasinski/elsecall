@@ -10,7 +10,7 @@ use elsecall_config_sync::config_sync::{
     protocol::{self, Message, Purpose},
     state::State,
 };
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use elsecall_peer_transport::peer_client;
 use elsecall_workspace::path::WorkspacePath;
 use members::{TestMember, enrol};

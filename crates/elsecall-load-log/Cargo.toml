@@ -14,7 +14,7 @@ workspace = true
 
 [dependencies]
 elsecall-contract.workspace = true
-elsecall-sqlite-retention.workspace = true
+elsecall-host.workspace = true
 libc.workspace = true
 rusqlite.workspace = true
 serde.workspace = true

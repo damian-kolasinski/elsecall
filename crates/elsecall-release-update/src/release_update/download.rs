@@ -2,7 +2,7 @@
 use super::{ISSUER, Release, ReleaseDownload, StagedRelease, TOOL, invalid};
 use elsecall_contract::build_identity::Digest;
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_host::{paths::Paths, private_files};
 use std::{
     ffi::OsString,
     fs,

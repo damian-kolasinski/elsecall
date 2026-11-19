@@ -8,7 +8,7 @@ mod members;
 mod processes;
 mod sync_gate;
 
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use members::{TestMember, enrol};
 use serde_json::Value;
 use std::{

@@ -331,7 +331,7 @@ impl TrendStore {
                  DELETE FROM warnings WHERE until IS NOT NULL AND until < {warnings};"
             ))
             .map_err(failure)?;
-        elsecall_sqlite_retention::reclaim(&connection).map_err(failure)
+        elsecall_host::sqlite_retention::reclaim(&connection).map_err(failure)
     }
 }
 

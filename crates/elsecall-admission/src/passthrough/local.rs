@@ -6,7 +6,7 @@ use crate::passthrough::{
 };
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::run_admission::Admission;
-use elsecall_local_client::{self as client, Wait};
+use elsecall_host::client::{self as client, Wait};
 use elsecall_os_processes::process_usage;
 use elsecall_scheduling::messages::CommandStarted;
 use std::{

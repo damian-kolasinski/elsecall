@@ -5,7 +5,7 @@
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::{local_access::user_id, private_files};
+use elsecall_host::{local_access::user_id, private_files};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, OpenOptions},

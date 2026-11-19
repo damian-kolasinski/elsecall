@@ -11,7 +11,7 @@ use super::{
     local_channel::{LocalChannel, LocalDownload, Packslip},
 };
 use elsecall_contract::failure::Result;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

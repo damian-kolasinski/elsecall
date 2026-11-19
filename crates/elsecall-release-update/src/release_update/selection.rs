@@ -2,8 +2,8 @@
 use super::{ISSUER, Release, StagedRelease, TOOL, invalid};
 use elsecall_contract::build_identity::Digest;
 use elsecall_contract::failure::{Failure, Result};
+use elsecall_host::paths::Paths;
 use elsecall_installation::installation::cli_request::Selection;
-use elsecall_local_state::paths::Paths;
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
@@ -270,14 +270,11 @@ fn owned_config(paths: &Paths, path: &Path) -> Result<()> {
             "The global mise request is outside this user's home.",
         ));
     }
-    elsecall_local_state::private_files::owned_tree(
-        &paths.home,
-        path.parent().expect("config parent"),
-    )?;
+    elsecall_host::private_files::owned_tree(&paths.home, path.parent().expect("config parent"))?;
     let metadata =
         fs::symlink_metadata(path).map_err(|e| Failure::io("Inspect mise configuration", e))?;
     if !metadata.is_file()
-        || metadata.uid() != elsecall_local_state::local_access::user_id()
+        || metadata.uid() != elsecall_host::local_access::user_id()
         || metadata.mode() & 0o022 != 0
     {
         return Err(invalid(

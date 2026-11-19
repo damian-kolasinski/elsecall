@@ -6,7 +6,7 @@ use rusqlite::{Connection, params};
 use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt, path::Path, sync::Mutex, time::Duration};
 
 /// Minutes older than this are deleted: as long as request records are kept.
-pub const RETENTION: Duration = elsecall_sqlite_retention::RETENTION;
+pub const RETENTION: Duration = elsecall_host::sqlite_retention::RETENTION;
 
 pub struct LoadStore {
     connection: Mutex<Connection>,
@@ -103,7 +103,7 @@ impl LoadStore {
         connection
             .execute("DELETE FROM minutes WHERE at < ?1", [cutoff as i64])
             .map_err(failure)?;
-        elsecall_sqlite_retention::reclaim(&connection).map_err(failure)
+        elsecall_host::sqlite_retention::reclaim(&connection).map_err(failure)
     }
 }
 

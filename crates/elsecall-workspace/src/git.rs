@@ -173,7 +173,7 @@ impl Git {
 
     /// Runs git and returns its standard output, or `None` if it failed.
     pub fn try_output<S: AsRef<std::ffi::OsStr>>(&self, args: &[S]) -> Option<Vec<u8>> {
-        let output = elsecall_process::child_start::output(&mut self.command(args)).ok()?;
+        let output = elsecall_host::child_start::output(&mut self.command(args)).ok()?;
         output.status.success().then_some(output.stdout)
     }
 
@@ -201,7 +201,7 @@ impl Git {
             })
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-        let mut child = elsecall_process::child_start::spawn(&mut command)
+        let mut child = elsecall_host::child_start::spawn(&mut command)
             .map_err(|e| sync_failed(format!("git could not be started: {e}.")))?;
         let writer = input.map(|input| {
             let mut stdin = child.stdin.take().expect("piped");

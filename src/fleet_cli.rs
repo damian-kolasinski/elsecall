@@ -5,8 +5,8 @@ use elsecall_contract::failure::Result;
 use elsecall_fleet::fleet_local_api::{
     CodeRequest, EnrollRequest, ForceRequest, MemberRequest, SyncRequest,
 };
-use elsecall_local_client as client;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::client;
+use elsecall_host::paths::Paths;
 use elsecall_membership::roster::{MemberName, Readiness};
 use hyper::Method;
 use serde_json::Value;

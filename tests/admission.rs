@@ -367,7 +367,7 @@ async fn a_caller_that_disconnects_while_waiting_is_withdrawn() {
     use elsecall_contract::scheduling_model::request::{
         AdmissionRequest, Kind, Placement, Urgency,
     };
-    use elsecall_local_client::{self as client, Wait};
+    use elsecall_host::client::{self as client, Wait};
     use elsecall_scheduling::messages::Grant;
     let mut fx = Fixture::start(1).await;
     fx.script(&holder("holding", ""));
@@ -411,7 +411,7 @@ async fn a_run_is_bound_to_its_caller_and_command_until_it_reports_the_end() {
     use elsecall_contract::scheduling_model::request::{
         AdmissionRequest, Kind, Placement, Urgency,
     };
-    use elsecall_local_client::{self as client, Wait};
+    use elsecall_host::client::{self as client, Wait};
     use elsecall_scheduling::messages::{CommandStarted, Grant, RunEnded};
     let fx = Fixture::start(1).await;
     let socket = fx.paths.socket();

@@ -1,6 +1,6 @@
 #![cfg(target_os = "macos")]
 //! Controlled external mise executable: verification policy, isolation, and config preservation.
-use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_host::{paths::Paths, private_files};
 use elsecall_release_update::release_update::{
     self, Release, ReleaseDownload, ReleaseVersion,
     download::MiseDownload,

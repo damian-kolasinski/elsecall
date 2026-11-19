@@ -9,8 +9,8 @@ use super::{
 };
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::request::{Placement, Urgency};
+use elsecall_host::paths::Paths;
 use elsecall_housekeeping::housekeeping::pass::Housekeeper;
-use elsecall_local_state::paths::Paths;
 use elsecall_scheduling::service::Scheduler;
 use std::{
     fs,
@@ -71,7 +71,7 @@ impl Member {
                         break;
                     }
                     Err(error) => {
-                        elsecall_service_log::service_log!(
+                        elsecall_host::service_log!(
                             "{}",
                             serde_json::json!({"event":"rehearsal_cleanup_pending","code":error.code})
                         );

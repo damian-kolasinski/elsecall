@@ -3,7 +3,7 @@
 use elsecall_contract::build_identity::{Build, Digest};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::paths::Paths;
 use elsecall_workload::trace::Trace;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -59,7 +59,7 @@ impl Certificate {
     }
 }
 fn database(paths: &Paths) -> Result<rusqlite::Connection> {
-    elsecall_local_state::private_files::directory(&paths.data)?;
+    elsecall_host::private_files::directory(&paths.data)?;
     let path = paths.data.join("tuning-evidence.sqlite");
     use std::os::unix::fs::OpenOptionsExt;
     std::fs::OpenOptions::new()

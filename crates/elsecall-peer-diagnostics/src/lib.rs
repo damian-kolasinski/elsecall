@@ -149,7 +149,7 @@ impl Store {
             .metadata()
             .map_err(|e| Failure::io("Inspect peer diagnostics", e))?;
         if !meta.is_file()
-            || meta.uid() != elsecall_local_state::local_access::user_id()
+            || meta.uid() != elsecall_host::local_access::user_id()
             || meta.nlink() != 1
         {
             return Err(Failure::new(
@@ -234,7 +234,7 @@ fn db_error(_: rusqlite::Error) -> Failure {
     )
 }
 static STORE: OnceLock<Store> = OnceLock::new();
-pub fn initialize(paths: &elsecall_local_state::paths::Paths) -> Result<()> {
+pub fn initialize(paths: &elsecall_host::paths::Paths) -> Result<()> {
     let store = Store::open(&paths.data.join("peer-io.sqlite"))?;
     let _ = STORE.set(store);
     Ok(())
@@ -246,13 +246,13 @@ pub fn record(attempt: &Attempt) {
     if let Some(store) = STORE.get()
         && let Err(error) = store.record(attempt)
     {
-        elsecall_service_log::service_log!(
+        elsecall_host::service_log!(
             "{}",
             serde_json::json!({"event":"peer_history_failed","code":error.code})
         );
     }
     if attempt.failure_kind.is_some() {
-        elsecall_service_log::service_log!(
+        elsecall_host::service_log!(
             "{}",
             serde_json::json!({"event":"peer_request_failed","peer_io":attempt})
         );

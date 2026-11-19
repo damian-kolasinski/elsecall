@@ -9,7 +9,7 @@ use crate::config_sync::{
     manifest::FileNode,
 };
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::private_files;
+use elsecall_host::private_files;
 use std::{
     collections::BTreeSet,
     fs,

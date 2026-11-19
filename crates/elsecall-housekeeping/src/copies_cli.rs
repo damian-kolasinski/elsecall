@@ -2,8 +2,8 @@
 use crate::copies_api::PruneRequest;
 use clap::{Args, Subcommand};
 use elsecall_contract::failure::Result;
-use elsecall_local_client as client;
-use elsecall_local_state::paths::Paths;
+use elsecall_host::client;
+use elsecall_host::paths::Paths;
 use serde_json::Value;
 
 #[derive(Args)]

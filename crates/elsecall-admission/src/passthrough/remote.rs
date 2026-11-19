@@ -7,7 +7,7 @@ use crate::passthrough::executor::{
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::{run_id::RunId, timestamp::Timestamp};
 use elsecall_contract::wire::Frame;
-use elsecall_local_client::{self as client, Wait};
+use elsecall_host::client::{self as client, Wait};
 use elsecall_remote_run::remote_run::{
     consistency, environment, fingerprint,
     link::{self, Link, Outbox, SyncOverLink},

@@ -381,7 +381,7 @@ fn broken_fleet_state_keeps_the_local_service_and_explains_the_repair() {
     let a = TestMember::start("alpha");
     let mut b = TestMember::start("bravo");
     enrol(&a, &b);
-    let paths = elsecall_local_state::paths::Paths::for_home(b.home.path()).unwrap();
+    let paths = elsecall_host::paths::Paths::for_home(b.home.path()).unwrap();
     // The key changes after enrolment: the roster no longer lists this member.
     std::fs::remove_file(paths.member_key()).unwrap();
     b.restart_without_fleet();

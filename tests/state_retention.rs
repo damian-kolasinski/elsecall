@@ -1,8 +1,8 @@
 //! Real filesystem and SQLite boundaries, including writers in separate processes.
 mod processes;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
+use elsecall_host::service_log::{Log, Settings};
 use elsecall_scheduling::records::Records;
-use elsecall_service_log::{Log, Settings};
 use std::{fs, process::Stdio};
 
 #[test]
@@ -115,7 +115,7 @@ fn backup_retention_removes_content_and_empty_directories_and_applies_lowered_li
         store::FileStore,
     };
     use elsecall_config_sync_model::synced_path::SyncedPath;
-    use elsecall_local_state::private_files;
+    use elsecall_host::private_files;
     let home = tempfile::tempdir().unwrap();
     let data = home.path().join("state");
     let layout = Layout::for_home(home.path(), &data);
@@ -183,7 +183,7 @@ fn retention_removes_recorded_cross_volume_backup_without_removing_its_neighbors
         store::FileStore,
     };
     use elsecall_config_sync_model::synced_path::SyncedPath;
-    use elsecall_local_state::private_files;
+    use elsecall_host::private_files;
     let home = tempfile::tempdir().unwrap();
     let data = home.path().join("state");
     let layout = Layout::for_home(home.path(), &data);

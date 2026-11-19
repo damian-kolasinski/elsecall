@@ -1,7 +1,7 @@
 //! The companion window shipped beside a CLI release and staged by installation.
 use elsecall_contract::build_identity::Digest;
 use elsecall_contract::failure::Failure;
-use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_host::{paths::Paths, private_files};
 use std::{fs, path::Path};
 
 /// `elsecall-ui` sitting next to the service executable that is being installed.

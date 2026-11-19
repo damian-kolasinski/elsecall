@@ -18,7 +18,7 @@ use crate::config_sync::{
 use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_local_state::private_files;
+use elsecall_host::private_files;
 use elsecall_membership::roster::MemberName;
 use elsecall_workspace::confined::Confined;
 use std::{
@@ -549,7 +549,7 @@ impl Replica {
                             // left unlaid, shown in status; the rest of the fleet
                             // keeps syncing.
                             Err(error) if error.code == "override_conflict" => {
-                                elsecall_service_log::service_log!(
+                                elsecall_host::service_log!(
                                     "{}",
                                     serde_json::json!({
                                         "event": "config_sync_override_conflict",

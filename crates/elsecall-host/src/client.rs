@@ -1,6 +1,6 @@
+use crate::{local_access, private_files};
 use elsecall_contract::api::{ErrorResponse, Response, SCHEMA_VERSION};
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_local_state::{local_access, private_files};
 use http_body_util::{BodyExt, Full, Limited};
 use hyper::{Method, Request, body::Bytes, client::conn::http1};
 use hyper_util::rt::TokioIo;
