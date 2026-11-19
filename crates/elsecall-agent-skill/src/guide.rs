@@ -2,7 +2,7 @@
 //! built: `SKILL.md`, with the skill's name and description in its frontmatter, and
 //! one `references/NAME.md` per topic.
 
-const SKILL: &str = include_str!("../../skill/elsecall/SKILL.md");
+const SKILL: &str = include_str!("../../../skill/elsecall/SKILL.md");
 
 pub struct Topic {
     pub name: &'static str,
@@ -11,7 +11,7 @@ pub struct Topic {
 
 pub const TOPICS: [Topic; 1] = [Topic {
     name: "integrate",
-    text: include_str!("../../skill/elsecall/references/integrate.md"),
+    text: include_str!("../../../skill/elsecall/references/integrate.md"),
 }];
 
 /// `SKILL.md`'s frontmatter, and the guide after it.

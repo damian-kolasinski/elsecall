@@ -142,7 +142,7 @@ enum Command {
     Tune(elsecall::tune_cli::TuneArgs),
     /// Print the agent guide matching this build, or install it as a skill for the
     /// coding agents on this machine
-    Skill(elsecall::agent_skill::cli::SkillArgs),
+    Skill(elsecall_agent_skill::cli::SkillArgs),
 }
 #[derive(Subcommand)]
 enum ConfigCommand {
@@ -260,12 +260,12 @@ async fn main() -> ExitCode {
         }
         // The guide is text unless --json; nothing here needs the service.
         Command::Skill(args) => {
-            return match elsecall::agent_skill::cli::run(args) {
-                Ok(elsecall::agent_skill::cli::Printed::Text(text)) => {
+            return match elsecall_agent_skill::cli::run(args) {
+                Ok(elsecall_agent_skill::cli::Printed::Text(text)) => {
                     print!("{text}");
                     ExitCode::SUCCESS
                 }
-                Ok(elsecall::agent_skill::cli::Printed::Json(data, complete)) => {
+                Ok(elsecall_agent_skill::cli::Printed::Json(data, complete)) => {
                     output(data);
                     if complete {
                         ExitCode::SUCCESS
@@ -396,7 +396,7 @@ async fn run(cli: Cli) -> Result<bool> {
                     .expect("serializable firewall state");
             data["window"] = serde_json::to_value(window).expect("serializable window state");
             // Agents learn the installed build from its skill (README "Agent skill").
-            data["agent_skill"] = elsecall::agent_skill::set_up_found(&paths.home);
+            data["agent_skill"] = elsecall_agent_skill::set_up_found(&paths.home);
             output(data);
             return Ok(complete);
         }
@@ -414,7 +414,7 @@ async fn run(cli: Cli) -> Result<bool> {
             )?;
             let mut complete = uninstalled.complete();
             let mut data = serde_json::to_value(uninstalled).expect("serializable uninstall");
-            let (skills, removed) = elsecall::agent_skill::remove_all(&paths);
+            let (skills, removed) = elsecall_agent_skill::remove_all(&paths);
             complete &= removed;
             data["agent_skill"] = skills;
             output(data);
@@ -611,7 +611,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 "configuration_sync": service_configurations,
                 "paths": {"executable": paths.bin, "launch_agent": paths.agent, "socket": paths.socket(), "log": paths.log()},
                 "next_step": next_step,
-                "agent_skill": elsecall::agent_skill::health(&paths.home),
+                "agent_skill": elsecall_agent_skill::health(&paths.home),
             }));
             return Ok(healthy);
         }
@@ -624,7 +624,7 @@ async fn run(cli: Cli) -> Result<bool> {
         }
         Command::Serve => {
             // After an upgrade, the stubs an older build wrote point at this one.
-            elsecall::agent_skill::refresh_if_installed(&paths);
+            elsecall_agent_skill::refresh_if_installed(&paths);
             let machine: Arc<dyn elsecall::inspection::MachineInspector> =
                 if let Some(file) = elsecall::machine_script::load_file() {
                     Arc::new(elsecall::machine_script::ScriptedLoad {

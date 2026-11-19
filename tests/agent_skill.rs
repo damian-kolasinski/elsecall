@@ -266,7 +266,7 @@ fn an_upgrade_refreshes_older_stubs_and_installs_nothing_where_nothing_was() {
     fs::write(root.join(".agents/skills/elsecall/SKILL.md"), &newer).unwrap();
     assert_eq!(states(root)[0], pairs(&[("claude", "outdated")])[0]);
 
-    assert_eq!(elsecall::agent_skill::refresh(root), 1);
+    assert_eq!(elsecall_agent_skill::refresh(root), 1);
     assert_eq!(
         read(&root.join(".claude/skills/elsecall/SKILL.md")),
         current
@@ -279,13 +279,13 @@ fn an_upgrade_refreshes_older_stubs_and_installs_nothing_where_nothing_was() {
 
     let empty = self::home();
     fs::create_dir(empty.path().join(".claude")).unwrap();
-    assert_eq!(elsecall::agent_skill::refresh(empty.path()), 0);
+    assert_eq!(elsecall_agent_skill::refresh(empty.path()), 0);
     assert!(!empty.path().join(".claude/skills").exists());
 
     // A build that is not the installed one never refreshes.
     fs::write(root.join(".claude/skills/elsecall/SKILL.md"), &older).unwrap();
     let paths = elsecall_local_state::paths::Paths::for_home(root).unwrap();
-    assert_eq!(elsecall::agent_skill::refresh_if_installed(&paths), 0);
+    assert_eq!(elsecall_agent_skill::refresh_if_installed(&paths), 0);
     assert_eq!(read(&root.join(".claude/skills/elsecall/SKILL.md")), older);
 }
 
@@ -402,7 +402,7 @@ fn refresh_leaves_exported_copies_and_other_skills_alone() {
     )
     .unwrap();
 
-    assert_eq!(elsecall::agent_skill::refresh(root), 1);
+    assert_eq!(elsecall_agent_skill::refresh(root), 1);
     assert_eq!(
         read(&root.join(".claude/skills/elsecall/SKILL.md")),
         current
@@ -414,7 +414,7 @@ fn refresh_leaves_exported_copies_and_other_skills_alone() {
         "---\nname: elsecall\n---\nmine\n",
     )
     .unwrap();
-    assert_eq!(elsecall::agent_skill::refresh(root), 0);
+    assert_eq!(elsecall_agent_skill::refresh(root), 0);
     assert!(read(&root.join(".claude/skills/elsecall/SKILL.md")).contains("mine"));
 }
 
@@ -483,7 +483,7 @@ fn the_default_copy_keeps_the_data_folder_private_and_uninstall_removes_everythi
         "elsecall install refuses a data folder others can read"
     );
 
-    let (removed, complete) = elsecall::agent_skill::remove_all(&paths);
+    let (removed, complete) = elsecall_agent_skill::remove_all(&paths);
     assert!(complete, "{removed}");
     assert!(!root.join(".claude/skills/elsecall").exists());
     assert!(!paths.data.join("skill").exists());
