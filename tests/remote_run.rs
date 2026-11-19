@@ -694,6 +694,40 @@ fn environment_of(output: &Output) -> std::collections::HashMap<String, String> 
         .collect()
 }
 
+/// mise, as the caller's PATH finds it: the toolchain checks run under mise.
+fn mise() -> String {
+    let found = std::process::Command::new("/bin/sh")
+        .args(["-c", "command -v mise"])
+        .output()
+        .unwrap();
+    let path = String::from_utf8(found.stdout).unwrap().trim().to_owned();
+    assert!(!path.is_empty(), "these tests need mise on PATH");
+    path
+}
+
+#[test]
+fn mise_reads_the_configuration_of_a_placed_copy() {
+    let (alpha, bravo) = fleet();
+    let repo = repository();
+    // mise reads an `[env]` table only from a configuration it trusts.
+    std::fs::write(repo.root.join("mise.toml"), "[env]\nPROBE = \"1\"\n").unwrap();
+    // Twice, with nothing but HOME: without the trust Elsecall set, then with it.
+    let script = format!(
+        "probe() {{ /usr/bin/env -i HOME=\"$HOME\" PATH=/usr/bin:/bin \
+         MISE_TRUSTED_CONFIG_PATHS=\"$1\" '{}' ls --current --offline >/dev/null 2>&1; echo $?; }}; \
+         probe ''; probe \"$MISE_TRUSTED_CONFIG_PATHS\"",
+        mise()
+    );
+    let output = run(
+        &alpha,
+        &repo.root.join("src"),
+        &["--member", "bravo", "--", "/bin/sh", "-c", &script],
+        b"",
+    );
+    assert_eq!(stdout(&output), "1\n0\n", "untrusted, then trusted");
+    drop(bravo);
+}
+
 #[test]
 fn placed_work_gets_the_allowlist_the_members_identity_and_its_own_variables() {
     let alpha = TestMember::start("alpha");
@@ -756,6 +790,11 @@ fn placed_work_gets_the_allowlist_the_members_identity_and_its_own_variables() {
         "{copy:?}"
     );
     assert_eq!(env["PWD"], copy.join("src").to_str().unwrap());
+    assert_eq!(
+        env["MISE_TRUSTED_CONFIG_PATHS"].rsplit(':').next(),
+        copy.to_str(),
+        "mise reads the copy's configuration"
+    );
     assert!(
         !env.contains_key("ELSECALL_TAILNET_NAME"),
         "the service's own variables stay"
@@ -769,6 +808,10 @@ fn placed_work_gets_the_allowlist_the_members_identity_and_its_own_variables() {
         env["ELSECALL_WORKSPACE_COPY"],
         same.to_str().unwrap(),
         "same-path location"
+    );
+    assert_eq!(
+        env["MISE_TRUSTED_CONFIG_PATHS"].rsplit(':').next(),
+        same.to_str()
     );
     assert_eq!(
         env["PATH"], "/usr/bin:/bin:/usr/sbin",

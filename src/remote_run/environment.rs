@@ -26,6 +26,13 @@ pub const IDENTITY: [&str; 13] = [
     "XPC_SERVICE_NAME",
 ];
 
+/// The directories whose `mise.toml` mise reads without asking, separated by `:`.
+/// A copy is new to the member, so mise would refuse its configuration, and the
+/// tools the project pins with it, with a prompt nobody can answer. The command
+/// already runs the caller's code in the copy, so trusting its configuration
+/// grants nothing more.
+const MISE_TRUSTED: &str = "MISE_TRUSTED_CONFIG_PATHS";
+
 fn identity(name: &[u8]) -> bool {
     IDENTITY.iter().any(|i| i.as_bytes() == name)
 }
@@ -63,6 +70,31 @@ pub struct Placed<'a> {
     /// `ELSECALL_*` variables and their values.
     pub elsecall: Vec<(&'static str, OsString)>,
     pub working_directory: &'a OsStr,
+    /// The root of the copy the command runs in: `ELSECALL_WORKSPACE_COPY`, and
+    /// trusted by mise.
+    pub copy: &'a OsStr,
+}
+
+fn set(environment: &mut Vec<(OsString, OsString)>, name: OsString, value: OsString) {
+    environment.retain(|(existing, _)| *existing != name);
+    environment.push((name, value));
+}
+
+/// `trusted` with `copy` appended, or unchanged when the copy's path holds the
+/// separator and would be read as two paths.
+fn trusting(trusted: Option<&OsStr>, copy: &OsStr) -> Option<OsString> {
+    if copy.as_bytes().contains(&b':') {
+        return trusted.map(OsStr::to_owned);
+    }
+    Some(match trusted {
+        Some(paths) if !paths.is_empty() => {
+            let mut joined = paths.to_owned();
+            joined.push(":");
+            joined.push(copy);
+            joined
+        }
+        _ => copy.to_owned(),
+    })
 }
 
 impl Placed<'_> {
@@ -72,26 +104,39 @@ impl Placed<'_> {
             .into_iter()
             .filter(|(name, _)| !elsecall(name.as_bytes()) && name != "PWD" && name != "OLDPWD")
             .collect();
-        let mut set = |name: OsString, value: OsString| {
-            environment.retain(|(existing, _)| *existing != name);
-            environment.push((name, value));
-        };
         if let Some(path) = self.path {
-            set("PATH".into(), path.into());
+            set(&mut environment, "PATH".into(), path.into());
         }
         for variable in self.forwarded {
             // The member enforces the rules too: the caller is not trusted to.
             if !identity(&variable.name) && !elsecall(&variable.name) {
                 set(
+                    &mut environment,
                     OsString::from_vec(variable.name.clone()),
                     OsString::from_vec(variable.value.clone()),
                 );
             }
         }
-        set("PWD".into(), self.working_directory.into());
-        for (name, value) in self.elsecall {
-            set(name.into(), value);
+        let trusted = environment
+            .iter()
+            .find(|(name, _)| name == MISE_TRUSTED)
+            .map(|(_, value)| value.as_os_str());
+        if let Some(trusted) = trusting(trusted, self.copy) {
+            set(&mut environment, MISE_TRUSTED.into(), trusted);
         }
+        set(
+            &mut environment,
+            "PWD".into(),
+            self.working_directory.into(),
+        );
+        for (name, value) in self.elsecall {
+            set(&mut environment, name.into(), value);
+        }
+        set(
+            &mut environment,
+            "ELSECALL_WORKSPACE_COPY".into(),
+            self.copy.into(),
+        );
         environment
     }
 }
@@ -146,6 +191,7 @@ mod tests {
             ],
             elsecall: vec![("ELSECALL_RUN_ID", "r-1".into())],
             working_directory: OsStr::new("/copy/src"),
+            copy: OsStr::new("/copy"),
         }
         .build();
         let get = |name: &str| {
@@ -160,5 +206,58 @@ mod tests {
         assert_eq!(get("PWD").as_deref(), Some("/copy/src"));
         assert_eq!(get("ELSECALL_RUN_ID").as_deref(), Some("r-1"));
         assert_eq!(get("ELSECALL_TAILNET_NAME"), None);
+        assert_eq!(get(MISE_TRUSTED).as_deref(), Some("/copy"));
+        assert_eq!(get("ELSECALL_WORKSPACE_COPY").as_deref(), Some("/copy"));
+    }
+
+    fn trusted_with(target: &[(&str, &str)], forwarded: &[Variable], copy: &str) -> Option<String> {
+        Placed {
+            target: os(target),
+            path: None,
+            forwarded,
+            elsecall: Vec::new(),
+            working_directory: OsStr::new(copy),
+            copy: OsStr::new(copy),
+        }
+        .build()
+        .into_iter()
+        .find(|(name, _)| name == MISE_TRUSTED)
+        .map(|(_, value)| value.into_string().unwrap())
+    }
+
+    #[test]
+    fn the_copy_is_appended_to_the_paths_mise_already_trusts() {
+        assert_eq!(
+            trusted_with(&[(MISE_TRUSTED, "/Users/devbox/work")], &[], "/copy").as_deref(),
+            Some("/Users/devbox/work:/copy"),
+            "the member's own trust stays"
+        );
+        assert_eq!(
+            trusted_with(&[(MISE_TRUSTED, "")], &[], "/copy").as_deref(),
+            Some("/copy")
+        );
+        let forwarded = [Variable {
+            name: MISE_TRUSTED.as_bytes().to_vec(),
+            value: b"/Users/me/acme".to_vec(),
+        }];
+        assert_eq!(
+            trusted_with(&[(MISE_TRUSTED, "/Users/devbox/work")], &forwarded, "/copy").as_deref(),
+            Some("/Users/me/acme:/copy"),
+            "a forwarded value replaces the member's, as forwarding does"
+        );
+    }
+
+    #[test]
+    fn a_copy_whose_path_holds_the_separator_is_not_trusted() {
+        assert_eq!(trusted_with(&[], &[], "/Users/me/a:b"), None);
+        assert_eq!(
+            trusted_with(
+                &[(MISE_TRUSTED, "/Users/devbox/work")],
+                &[],
+                "/Users/me/a:b"
+            )
+            .as_deref(),
+            Some("/Users/devbox/work")
+        );
     }
 }

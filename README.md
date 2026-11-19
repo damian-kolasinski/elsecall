@@ -894,7 +894,13 @@ local run.
   `ELSECALL_MEMBER`, `ELSECALL_ADMISSION` (`granted`), `ELSECALL_CALLER_MEMBER`,
   `ELSECALL_CALLER_WORKSPACE` and `ELSECALL_WORKSPACE_COPY`. Callers' `ELSECALL_*`
   variables are never forwarded. Absolute paths it prints name the copy; use the last two
-  to translate. Values are never logged or stored.
+  to translate. Values are never logged or stored. `MISE_TRUSTED_CONFIG_PATHS` gets the
+  copy appended, after the member's or forwarded paths, so mise reads the copy's
+  `mise.toml` (its environment, wrappers and pinned tools, which mise can install on
+  first use) instead of refusing it with a trust prompt nobody can answer. The command
+  already runs the caller's code there, so this grants the caller nothing it lacks. A
+  copy whose path holds `:`, mise's separator, is not added, and a `mise.toml` in a
+  directory above the copy stays untrusted.
 - **Outputs.** Paths declared in `workloads.toml` come back after any exit code, and
   only if the run changed them: each changed output replaces yours whole, a removed
   one is removed. Links are neither followed nor returned on either side.
