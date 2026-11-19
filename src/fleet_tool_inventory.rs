@@ -10,12 +10,12 @@
 //! machine that was asked is the first entry and the rest stay in roster order.
 //! A machine that has not joined a fleet is that roster of one.
 use crate::{
-    fleet::Fleet,
     macos::xcodes::XcodesCli,
     mise_cli::MiseCli,
     tool_inventory::{Inventory, ToolManager},
 };
 use elsecall_failure::{Failure, is_code};
+use elsecall_fleet::fleet::Fleet;
 use elsecall_membership::roster::{Member, MemberName};
 use elsecall_peer_transport::peer_client;
 use futures_util::future::BoxFuture;

@@ -482,7 +482,7 @@ async fn run(cli: Cli) -> Result<bool> {
             // flagged with its repair, and doctor's verdict stays about this machine.
             let fleet = if enrolled && health.is_ok() {
                 Some(
-                    client::get::<elsecall::fleet_view::FleetBuilds>(
+                    client::get::<elsecall_fleet::fleet_view::FleetBuilds>(
                         &paths.socket(),
                         "/v1/fleet/builds",
                     )
@@ -519,7 +519,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 Some(Ok(this)) => {
                     if !warnings.iter().any(|w| w.member == this.member) {
                         warnings.extend(this.warnings.into_iter().map(|warning| {
-                            elsecall::fleet_view::MemberWarning {
+                            elsecall_fleet::fleet_view::MemberWarning {
                                 member: this.member.clone(),
                                 warning,
                             }
@@ -528,7 +528,7 @@ async fn run(cli: Cli) -> Result<bool> {
                     if let Some(own) = this.blocked
                         && !blocked.iter().any(|b| b.member == this.member)
                     {
-                        blocked.push(elsecall::fleet_view::BlockedMember {
+                        blocked.push(elsecall_fleet::fleet_view::BlockedMember {
                             member: this.member,
                             blocked: own,
                         });

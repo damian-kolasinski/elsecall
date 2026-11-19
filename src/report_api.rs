@@ -3,7 +3,6 @@
 //! member's own requests, load, peer I/O and outside-pressure history to the
 //! member that reports.
 use crate::{
-    fleet::Fleet,
     own_history::OwnHistory,
     peer_history::PeerHistory,
     reporting::{
@@ -21,6 +20,7 @@ use axum::{
 };
 use elsecall_api_response as api_response;
 use elsecall_failure::{Failure, Result};
+use elsecall_fleet::fleet::Fleet;
 use elsecall_load_log::buckets::Bucket;
 use elsecall_membership::membership_store::Membership;
 use elsecall_report_facts::{

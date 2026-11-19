@@ -21,10 +21,10 @@ use crate::{
         report::{Applied, PathReport, SyncRole, SyncState, SyncSummary},
     },
     configuration,
-    fleet::{Fleet, RoleHandover, SyncReport},
 };
 use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_failure::{Failure, Result};
+use elsecall_fleet::fleet::{Fleet, RoleHandover, SyncReport};
 use elsecall_membership::roster::{Member, MemberName, Roster};
 use elsecall_peer_transport::peer_client;
 use elsecall_workspace::digest::Digest;
@@ -1317,7 +1317,7 @@ impl RoleHandover for ConfigSync {
 /// master it stands down, so a later return restores again.
 pub struct RoleChanges(pub Arc<ConfigSync>);
 
-impl crate::fleet::RoleObserver for RoleChanges {
+impl elsecall_fleet::fleet::RoleObserver for RoleChanges {
     fn role_changed(&self, master: bool) {
         let Ok(runtime) = tokio::runtime::Handle::try_current() else {
             return;

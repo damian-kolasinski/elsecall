@@ -367,7 +367,7 @@ fn without_roster(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::fleet_view::*;
     use elsecall_outside_pressure::outside_pressure::{
         sampling::Owner,
         warning::{Concern, Warning},

@@ -1,14 +1,12 @@
 //! Housekeeping's view of the fleet: which members exist, and how a question
 //! reaches the member that owns copies here. The adapter of
 //! `housekeeping::callers::Callers` over the authenticated member API.
-use crate::{
-    fleet::Fleet,
-    housekeeping::{
-        callers::Callers,
-        exchange::{Answer, Question, ROUTE},
-    },
+use crate::housekeeping::{
+    callers::Callers,
+    exchange::{Answer, Question, ROUTE},
 };
 use elsecall_failure::Result;
+use elsecall_fleet::fleet::Fleet;
 use elsecall_peer_transport::peer_client;
 use futures_util::future::BoxFuture;
 use hyper::Method;

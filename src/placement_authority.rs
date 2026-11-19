@@ -1,29 +1,15 @@
 //! The authorization boundary for placement authority: requests that only the
 //! recorded master may make. Placement itself arrives in later steps; a probe proves
 //! the boundary.
-use crate::fleet::{AuthenticatedPeer, Fleet, PlacementAccepted, PlacementAuthority};
 use axum::{
     Json,
-    extract::{FromRequestParts, State},
-    http::{StatusCode, request::Parts},
+    extract::State,
+    http::StatusCode,
     response::{IntoResponse, Response},
 };
 use elsecall_api_response::failure;
+use elsecall_fleet::fleet::{Fleet, PlacementAccepted, PlacementAuthority};
 use std::sync::Arc;
-
-impl FromRequestParts<Arc<Fleet>> for PlacementAuthority {
-    type Rejection = Response;
-    async fn from_request_parts(parts: &mut Parts, fleet: &Arc<Fleet>) -> Result<Self, Response> {
-        // The member API authenticates every request before any handler runs.
-        let peer = parts
-            .extensions
-            .get::<AuthenticatedPeer>()
-            .expect("member requests are authenticated before extraction");
-        fleet
-            .authorize_placement(&peer.key)
-            .map_err(|error| failure(StatusCode::FORBIDDEN, error))
-    }
-}
 
 /// Accepts only the recorded master. Placement handlers take `PlacementAuthority`
 /// the same way.

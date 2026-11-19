@@ -290,7 +290,7 @@ impl Fleet {
         let _ = self.handover.set(handover);
     }
 
-    pub(crate) fn handover(&self) -> Option<Arc<dyn RoleHandover>> {
+    pub fn handover(&self) -> Option<Arc<dyn RoleHandover>> {
         self.handover.get().cloned()
     }
 
@@ -309,7 +309,7 @@ impl Fleet {
         self.load.get().cloned()
     }
 
-    pub(crate) fn key(&self) -> &MemberKey {
+    pub fn key(&self) -> &MemberKey {
         &self.key
     }
 
@@ -322,21 +322,21 @@ impl Fleet {
         *self.presence.lock().expect("presence lock") = Some((name, endpoints));
     }
 
-    pub(crate) fn presence(&self) -> Option<(MemberName, Vec<SocketAddr>)> {
+    pub fn presence(&self) -> Option<(MemberName, Vec<SocketAddr>)> {
         self.presence.lock().expect("presence lock").clone()
     }
 
-    pub(crate) fn membership(&self) -> Membership {
+    pub fn membership(&self) -> Membership {
         self.membership.lock().expect("membership lock").clone()
     }
 
     /// Takes the lock that serialises operator changes on this member.
-    pub(crate) async fn lock_changes(&self) -> tokio::sync::MutexGuard<'_, ()> {
+    pub async fn lock_changes(&self) -> tokio::sync::MutexGuard<'_, ()> {
         self.changes.lock().await
     }
 
     /// This member as it presents itself to others, from its live presence.
-    pub(crate) fn own_member(&self) -> Result<Member> {
+    pub fn own_member(&self) -> Result<Member> {
         match self.presence() {
             None => Err(elsecall_tailnet::tailnet::unavailable(
                 "no tailnet address is bound yet",
@@ -358,7 +358,7 @@ impl Fleet {
     }
 
     /// Replaces the membership, provided it is still `base`.
-    pub(crate) fn replace(&self, base: &Membership, next: Membership) -> Result<()> {
+    pub fn replace(&self, base: &Membership, next: Membership) -> Result<()> {
         let mut membership = self.membership.lock().expect("membership lock");
         if &*membership != base {
             return Err(changed_meanwhile());
@@ -371,7 +371,7 @@ impl Fleet {
     }
 
     /// Records `next` locally, provided the roster this member acts on is still `base`.
-    pub(crate) fn commit(&self, base: &Roster, next: &Roster) -> Result<()> {
+    pub fn commit(&self, base: &Roster, next: &Roster) -> Result<()> {
         let mut membership = self.membership.lock().expect("membership lock");
         if &roster_of(&membership, self)? != base {
             return Err(changed_meanwhile());
@@ -603,7 +603,7 @@ impl Fleet {
         }
     }
 
-    pub(crate) fn own_name(&self, roster: &Roster) -> MemberName {
+    pub fn own_name(&self, roster: &Roster) -> MemberName {
         roster
             .member_by_key(&self.key.public())
             .expect("own key is enrolled")
@@ -694,7 +694,7 @@ fn roster_of(membership: &Membership, fleet: &Fleet) -> Result<Roster> {
     }
 }
 
-pub(crate) fn changed_meanwhile() -> Failure {
+pub fn changed_meanwhile() -> Failure {
     Failure::new(
         "roster_changed",
         "The fleet changed while this operation ran; nothing was recorded.",
@@ -704,7 +704,7 @@ pub(crate) fn changed_meanwhile() -> Failure {
 
 #[cfg(test)]
 mod copies_tests {
-    use super::*;
+    use crate::fleet::*;
 
     #[test]
     fn copies_are_optional_in_both_directions() {

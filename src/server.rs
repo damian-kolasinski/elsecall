@@ -1,8 +1,4 @@
 use crate::{
-    fleet::Fleet, fleet_local_api, fleet_placement::FleetMembers, peer_api, peer_listener,
-    placement_api, placement_host::PlacementHost, run_relay,
-};
-use crate::{
     fleet_callers::FleetCallers,
     housekeeping::{
         self,
@@ -12,6 +8,7 @@ use crate::{
         pass::{Housekeeper, Parts},
     },
 };
+use crate::{peer_api, peer_listener, placement_api, placement_host::PlacementHost, run_relay};
 use axum::{
     Json, Router,
     extract::State,
@@ -20,6 +17,7 @@ use axum::{
     routing::get,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_fleet::{fleet::Fleet, fleet_local_api, fleet_placement::FleetMembers};
 use elsecall_local_state::{local_access, paths::Paths, private_files};
 use elsecall_machine::inspection::Inspection;
 use elsecall_membership::{member_key::MemberKey, membership_store::MembershipStore};
@@ -65,7 +63,7 @@ impl crate::report_api::TrustEvidence for TuningTrust {
     fn fleet_status<'a>(
         &'a self,
         paths: &'a elsecall_local_state::paths::Paths,
-        fleet: &'a std::result::Result<Arc<crate::fleet::Fleet>, Failure>,
+        fleet: &'a std::result::Result<Arc<elsecall_fleet::fleet::Fleet>, Failure>,
     ) -> futures_util::future::BoxFuture<'a, serde_json::Value> {
         Box::pin(crate::tuning_trust_api::fleet_status(paths, fleet))
     }
@@ -73,15 +71,15 @@ impl crate::report_api::TrustEvidence for TuningTrust {
 
 /// The scheduler's latest placed run with each member, as the fleet view shows it.
 struct PlacedRunsOf(Arc<Scheduler>);
-impl crate::fleet_view::PlacedRuns for PlacedRunsOf {
-    fn latest_with(&self, member: &str) -> Option<crate::fleet_view::PlacedRunSummary> {
-        self.0
-            .latest_placed_with(member)
-            .map(|record| crate::fleet_view::PlacedRunSummary {
+impl elsecall_fleet::fleet_view::PlacedRuns for PlacedRunsOf {
+    fn latest_with(&self, member: &str) -> Option<elsecall_fleet::fleet_view::PlacedRunSummary> {
+        self.0.latest_placed_with(member).map(|record| {
+            elsecall_fleet::fleet_view::PlacedRunSummary {
                 run_id: record.run_id.to_string(),
                 started_at: record.started_at,
                 warnings: record.warnings,
-            })
+            }
+        })
     }
 }
 

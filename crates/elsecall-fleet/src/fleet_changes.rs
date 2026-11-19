@@ -345,14 +345,14 @@ pub async fn sync(fleet: &Fleet, force: bool, override_newer: bool) -> Result<Ch
 
 // Shared steps.
 
-pub(crate) fn enrolled_roster(fleet: &Fleet, name: &MemberName) -> Result<Roster> {
+pub fn enrolled_roster(fleet: &Fleet, name: &MemberName) -> Result<Roster> {
     match fleet.membership() {
         Membership::Enrolled(roster) => Ok(roster),
         Membership::Solo => Err(not_a_member(name)),
     }
 }
 
-pub(crate) fn others(fleet: &Fleet, roster: &Roster) -> Vec<Member> {
+pub fn others(fleet: &Fleet, roster: &Roster) -> Vec<Member> {
     roster
         .members()
         .iter()
@@ -362,7 +362,7 @@ pub(crate) fn others(fleet: &Fleet, roster: &Roster) -> Vec<Member> {
 }
 
 /// Records a change locally; an unchanged roster is delivered again as it is.
-pub(crate) fn apply(fleet: &Fleet, roster: &Roster, change: Change) -> Result<Roster> {
+pub fn apply(fleet: &Fleet, roster: &Roster, change: Change) -> Result<Roster> {
     match change {
         Change::Changed(next) => {
             fleet.commit(roster, &next)?;
@@ -374,7 +374,7 @@ pub(crate) fn apply(fleet: &Fleet, roster: &Roster, change: Change) -> Result<Ro
 
 /// Reads every member's status, refusing while any is unreachable unless forced.
 /// Unreachable members are `None` in a forced change.
-pub(crate) async fn require_reachable(
+pub async fn require_reachable(
     fleet: &Fleet,
     members: &[Member],
     force: bool,
@@ -406,7 +406,7 @@ pub(crate) async fn require_reachable(
     Ok(results.into_iter().map(Result::ok).collect())
 }
 
-pub(crate) async fn deliver(fleet: &Fleet, roster: &Roster, to: &[Member]) -> Vec<Delivery> {
+pub async fn deliver(fleet: &Fleet, roster: &Roster, to: &[Member]) -> Vec<Delivery> {
     let results = peer_client::call_each::<OfferOutcome>(
         fleet.key(),
         to,
@@ -428,7 +428,7 @@ pub(crate) async fn deliver(fleet: &Fleet, roster: &Roster, to: &[Member]) -> Ve
         .collect()
 }
 
-pub(crate) fn report(
+pub fn report(
     fleet: &Fleet,
     roster: &Roster,
     deliveries: Vec<Delivery>,

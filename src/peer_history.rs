@@ -2,11 +2,9 @@
 //! channel. Answers are untrusted: facts must be plausible and of the period,
 //! buckets of the period and bounded, and a member's own error text is never
 //! quoted.
-use crate::{
-    fleet::Fleet,
-    reporting::gathering::{Facts, MAXIMUM_FACTS, MemberHistory},
-};
+use crate::reporting::gathering::{Facts, MAXIMUM_FACTS, MemberHistory};
 use elsecall_failure::{Failure, Result};
+use elsecall_fleet::fleet::Fleet;
 use elsecall_load_log::buckets::Bucket;
 use elsecall_membership::roster::Member;
 use elsecall_peer_transport::peer_client;

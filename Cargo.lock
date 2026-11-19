@@ -1070,6 +1070,7 @@ dependencies = [
  "elsecall-build-identity",
  "elsecall-config-sync-model",
  "elsecall-failure",
+ "elsecall-fleet",
  "elsecall-guidance",
  "elsecall-labels",
  "elsecall-load-log",
@@ -1168,6 +1169,32 @@ version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "elsecall-fleet"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "elsecall-api-response",
+ "elsecall-build-identity",
+ "elsecall-config-sync-model",
+ "elsecall-failure",
+ "elsecall-load-log",
+ "elsecall-machine",
+ "elsecall-membership",
+ "elsecall-outside-pressure",
+ "elsecall-peer-diagnostics",
+ "elsecall-peer-transport",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-tailnet",
+ "elsecall-wire",
+ "futures-util",
+ "hyper",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

@@ -3,7 +3,6 @@
 //! The same-user rule authorizes the caller. Writes are serialized, re-read the
 //! file inside that lock, and run only on the master.
 use crate::{
-    fleet::Fleet,
     tool_inventory::Manager,
     toolset::{
         document::{self, MemberWants, Toolset},
@@ -20,6 +19,7 @@ use axum::{
     routing::{any, get},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_fleet::fleet::Fleet;
 use elsecall_local_state::paths::Paths;
 use elsecall_membership::roster::{MemberName, Roster};
 use elsecall_wire::api;

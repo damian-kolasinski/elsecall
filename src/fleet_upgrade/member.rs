@@ -22,13 +22,10 @@
 //! last forever, since under sustained load or memory pressure the member admits
 //! nothing and the pass is asked for again every interval. A deferred or failed
 //! upgrade releases the hold.
-use crate::{
-    fleet::Fleet,
-    fleet_upgrade::{
-        journal::{Journal, Phase, UpgradeState},
-        protocol::{
-            self, MAXIMUM_EXECUTABLE, MAXIMUM_WAIT_SECONDS, Message, Os, SignedManifest, UpgradeId,
-        },
+use crate::fleet_upgrade::{
+    journal::{Journal, Phase, UpgradeState},
+    protocol::{
+        self, MAXIMUM_EXECUTABLE, MAXIMUM_WAIT_SECONDS, Message, Os, SignedManifest, UpgradeId,
     },
 };
 use elsecall_build_identity::{
@@ -36,6 +33,7 @@ use elsecall_build_identity::{
     executable_format::{self, Architecture},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_fleet::fleet::Fleet;
 use elsecall_membership::{member_key::PublicKey, roster::MemberName};
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};

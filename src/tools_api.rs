@@ -10,7 +10,6 @@
 //! routes use, including the refusal of a different build. Reading the managers
 //! blocks, so it runs off the async worker, and only one such read is in flight.
 use crate::{
-    fleet::Fleet,
     fleet_tool_inventory::{self, MemberInventories, OwnInventories, PeerInventories, Source},
     tool_inventory::Inventory,
 };
@@ -23,6 +22,7 @@ use axum::{
 };
 use elsecall_api_response as api_response;
 use elsecall_failure::Failure;
+use elsecall_fleet::fleet::Fleet;
 use elsecall_membership::{
     membership_store::Membership,
     roster::{MemberName, Roster},

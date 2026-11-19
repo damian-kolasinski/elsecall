@@ -3,19 +3,17 @@
 //! each member's upgrade record until it ends, and reports every member's outcome.
 //! Members are upgraded at the same time; each one installs, confirms and, if
 //! needed, rolls back on its own.
-use crate::{
-    fleet::Fleet,
-    fleet_upgrade::{
-        journal::{Phase, UpgradeState},
-        member::{UpgradeStatus, WorkInFlight},
-        protocol::{self, Manifest, Message, Os, UpgradeId},
-    },
+use crate::fleet_upgrade::{
+    journal::{Phase, UpgradeState},
+    member::{UpgradeStatus, WorkInFlight},
+    protocol::{self, Manifest, Message, Os, UpgradeId},
 };
 use elsecall_build_identity::{
     build_identity::{Build, BuildId, Digest},
     executable_format::{self, Architecture},
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_fleet::fleet::Fleet;
 use elsecall_membership::roster::{Member, MemberName};
 use elsecall_peer_transport::peer_client;
 use hyper::Method;

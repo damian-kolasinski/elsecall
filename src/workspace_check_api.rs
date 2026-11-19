@@ -2,12 +2,9 @@
 //! whether its workspaces still exist, and tells it which copies it removed.
 //! Authentication names the asking member; the owner answers only about
 //! workspaces it pushed to that member.
-use crate::{
-    fleet::{AuthenticatedPeer, Fleet},
-    housekeeping::{
-        caller_state::CallerState,
-        exchange::{Question, ROUTE},
-    },
+use crate::housekeeping::{
+    caller_state::CallerState,
+    exchange::{Question, ROUTE},
 };
 use axum::{
     Extension, Json, Router,
@@ -19,6 +16,7 @@ use axum::{
 };
 use elsecall_api_response::failure;
 use elsecall_failure::Failure;
+use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet};
 use std::sync::Arc;
 
 pub fn routes(state: Arc<CallerState>) -> Router<Arc<Fleet>> {

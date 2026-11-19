@@ -3,7 +3,7 @@
 mod diagnostics;
 mod members;
 mod processes;
-use elsecall::fleet::PeerStatus;
+use elsecall_fleet::fleet::PeerStatus;
 use elsecall_membership::{member_key::MemberKey, peer_auth, roster::Member};
 use elsecall_peer_transport::peer_client;
 use hyper::Method;

@@ -1,6 +1,5 @@
 //! Fleet-readable evidence; certificate writes remain on the master-authorized
 //! rehearsal route. An unreachable member cannot silently certify fleet trust.
-use crate::fleet::Fleet;
 use axum::{
     Extension, Json, Router,
     extract::State,
@@ -8,6 +7,7 @@ use axum::{
     routing::post,
 };
 use elsecall_failure::Result;
+use elsecall_fleet::fleet::Fleet;
 use elsecall_local_state::paths::Paths;
 use elsecall_peer_transport::peer_client;
 use elsecall_wire::api;

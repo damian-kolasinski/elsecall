@@ -1,7 +1,6 @@
 //! The member-to-member API served on the tailnet. Every route requires a request
 //! signed by an enrolled member; everything else gets an empty 401. Every
 //! authenticated response is signed by this member.
-use crate::fleet::{AuthenticatedPeer, Fleet};
 use axum::{
     Extension, Json, Router,
     body::{Body, Bytes, to_bytes},
@@ -12,6 +11,7 @@ use axum::{
     routing::{get, post},
 };
 use elsecall_failure::Failure;
+use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet};
 use elsecall_membership::{
     peer_auth::{RequestProof, SIGNATURE_HEADER},
     roster::Roster,

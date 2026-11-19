@@ -7,13 +7,13 @@
 //! and running it on a member repairs it.
 use crate::{
     authorized_keys,
-    fleet_local_api::EnrollRequest,
     inbound_firewall::Rule,
     remote_mac::{
         Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant,
     },
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_fleet::fleet_local_api::EnrollRequest;
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use elsecall_membership::{member_code, roster::Readiness};

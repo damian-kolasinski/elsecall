@@ -2,39 +2,23 @@
 //! upgrade-authority boundary: only the recorded master may open it, since what it
 //! carries is code this member will run. Any enrolled member may read how this
 //! member's latest upgrade went.
-use crate::{
-    fleet::{AuthenticatedPeer, Fleet, UpgradeAuthority},
-    fleet_upgrade::{member::Upgrades, protocol},
-};
+use crate::fleet_upgrade::{member::Upgrades, protocol};
 use axum::{
     Extension, Json, Router,
     body::to_bytes,
-    extract::{FromRequestParts, Request, State},
-    http::{HeaderValue, StatusCode, header, request::Parts},
+    extract::{Request, State},
+    http::{HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_api_response::failure;
 use elsecall_failure::Failure;
+use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet, UpgradeAuthority};
 use elsecall_secure_channel::{Ephemeral, SecureStream};
 use hyper_util::rt::TokioIo;
 use serde::Deserialize;
 use std::sync::Arc;
-
-impl FromRequestParts<Arc<Fleet>> for UpgradeAuthority {
-    type Rejection = Response;
-    async fn from_request_parts(parts: &mut Parts, fleet: &Arc<Fleet>) -> Result<Self, Response> {
-        // The member API authenticates every request before any handler runs.
-        let peer = parts
-            .extensions
-            .get::<AuthenticatedPeer>()
-            .expect("member requests are authenticated before extraction");
-        fleet
-            .authorize_upgrade(&peer.key)
-            .map_err(|error| failure(StatusCode::FORBIDDEN, error))
-    }
-}
 
 pub fn routes(upgrades: Arc<Upgrades>) -> Router<Arc<Fleet>> {
     Router::new()

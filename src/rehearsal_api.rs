@@ -1,11 +1,8 @@
 //! Local master orchestration and enrolled, master-authorized member operations.
-use crate::{
-    fleet::{Fleet, PlacementAuthority},
-    rehearsal::{
-        invalid,
-        member::Member,
-        protocol::{Action, Call, Reply},
-    },
+use crate::rehearsal::{
+    invalid,
+    member::Member,
+    protocol::{Action, Call, Reply},
 };
 use axum::{
     Extension, Json, Router,
@@ -16,6 +13,7 @@ use axum::{
     routing::post,
 };
 use elsecall_failure::Result;
+use elsecall_fleet::fleet::{Fleet, PlacementAuthority};
 use elsecall_peer_transport::peer_client;
 use elsecall_wire::api;
 use hyper::Method;
