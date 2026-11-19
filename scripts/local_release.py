@@ -2,7 +2,8 @@
 
 `build` makes release archives of the working tree at two or more versions, with
 the `local-release-channel` feature pointing them at one channel, signs each with
-a local packslip key, and writes the channel: the release list, each version's
+a local packslip key kept in ~/.config/elsecall/local-release, and writes the
+channel: the release list, each version's
 archive and bundle, and an installer for the oldest version. `serve` publishes
 the channel over HTTP. See scripts/local-release.sh.
 
@@ -32,6 +33,8 @@ PACKSLIP = "github:jdx/packslip@1.11.1"
 FEATURE = "local-release-channel"
 # The address a Tart guest reaches its host at.
 DEFAULT_URL = "http://192.168.64.1:8765"
+# Beside the privacy hooks' private terms: this account's developer settings, not a build tree.
+KEY = Path.home() / ".config" / "elsecall" / "local-release" / "release.key"
 STABLE = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
 
 
@@ -136,23 +139,73 @@ def outside_the_tree(out):
     return out
 
 
+def key_outside_the_tree(key):
+    """The private key never sits in the repository, where the mirror or git
+    would pick it up, or under target/, which mbx collects. target/ is a link into
+    mbx's cache, so the key is checked as written and as resolved."""
+    written, resolved = Path(os.path.abspath(key)), key.resolve()
+    for place in (ROOT, (ROOT / "target").resolve()):
+        if written.is_relative_to(place) or resolved.is_relative_to(place):
+            raise SystemExit(f"--key must be outside the repository ({ROOT}) and its target/")
+    return written
+
+
+def signing_key(key, earlier, packslip):
+    """The key local builds are signed with. Test VMs trust its public half, so it
+    lives apart from every build tree: cleaning one, or mbx collecting target/,
+    must never replace it. A key an earlier build kept at `earlier` moves here."""
+    if key.exists():
+        return key
+    halves = (earlier, earlier.with_suffix(".pub"))
+    if any(half.exists() for half in halves) and not all(half.exists() for half in halves):
+        raise SystemExit(f"{earlier.parent} holds half of a signing key; restore the other half, or remove both")
+    key.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if earlier.exists():
+        shutil.move(halves[1], key.with_suffix(".pub"))
+        shutil.move(halves[0], key)
+        print(f"Moved the signing key from {earlier} to {key}", file=sys.stderr)
+    else:
+        subprocess.run([packslip, "keygen", "--out", str(key)], check=True)
+    return key
+
+
+def channel_settings(out, url, key, earlier):
+    """What the channel in `out` is for: one URL and one signing key, since an
+    installation reads one channel and trusts one key. Refuses a build that would
+    mix in another. A channel recorded before the key was kept there was signed
+    with `earlier`, if that key is still in place."""
+    wanted = {"url": url, "key": public_key(key)}
+    path = out / "channel.json"
+    if not path.exists():
+        return wanted
+    recorded = json.loads(path.read_text())
+    if recorded["url"] != url:
+        raise SystemExit(
+            f"{out / 'channel'} holds builds for {recorded['url']}; "
+            f"pass that --url, or remove {out} to start a channel for {url}"
+        )
+    signed = recorded.get("key")
+    if signed is None and earlier.with_suffix(".pub").exists():
+        signed = public_key(earlier)
+    if signed not in (None, wanted["key"]):
+        raise SystemExit(
+            f"{out / 'channel'} holds builds signed with another key than {key}; "
+            f"remove {out} to start a channel signed with it, and reinstall test VMs from that channel"
+        )
+    return wanted
+
+
 def build(args):
     out = outside_the_tree(args.out.resolve())
     channel = out / "channel"
-    key = out / "key" / "release.key"
     packslip = tool("packslip")
-    if not key.exists():
-        key.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run([packslip, "keygen", "--out", str(key)], check=True)
+    earlier = out / "key" / "release.key"
+    key = signing_key(key_outside_the_tree(args.key.expanduser()), earlier, packslip)
     versions = args.versions or [package.version(), next_patch(package.version())]
     if not set(args.fail_to_start) <= set(versions):
         raise SystemExit("--fail-to-start names a version this build does not make")
     settings = out / "channel.json"
-    if settings.exists() and json.loads(settings.read_text())["url"] != args.url:
-        raise SystemExit(
-            f"{channel} holds builds for {json.loads(settings.read_text())['url']}; "
-            f"pass that --url, or remove {out} to start a channel for {args.url}"
-        )
+    recorded = channel_settings(out, args.url, key, earlier)
     source = out / "source"
     source.mkdir(parents=True, exist_ok=True)
     mirror(ROOT, source)
@@ -187,7 +240,7 @@ def build(args):
     if startable:
         template = (ROOT / "scripts" / "local-release-install.sh").read_text()
         (channel / "install.sh").write_text(installer(template, args.url, startable[0], public_key(key)))
-    settings.write_text(json.dumps({"url": args.url}) + "\n")
+    settings.write_text(json.dumps(recorded) + "\n")
     print(
         f"\nThe channel is {channel}, listing {', '.join(sorted(published))}.\n"
         f"Builds trust only {key.with_suffix('.pub')}, and check {args.url} for updates.\n\n"
@@ -226,9 +279,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--out", type=Path, default=ROOT / "target" / "local-release",
-                        help="where the key, build tree and channel live (default: target/local-release)")
+                        help="where the build tree and channel live (default: target/local-release)")
     commands = parser.add_subparsers(dest="command", required=True)
     build_parser = commands.add_parser("build", parents=[common], help="build and sign releases into the channel")
+    build_parser.add_argument("--key", type=Path, default=KEY,
+                              help=f"the signing key, created when missing (default: {KEY})")
     build_parser.add_argument("--url", type=channel_url, default=DEFAULT_URL,
                               help=f"where installations will read the channel (default: {DEFAULT_URL}, "
                                    "the host as a Tart guest sees it)")
