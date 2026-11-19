@@ -975,3 +975,49 @@ fn records_without_a_placement_decision_are_left_out() {
     let replay = replay(&[pinned, undecided, local], &change(&[]));
     assert_eq!(replay.decisions.placement, 0);
 }
+
+/// The bytes a record is stored as, in every generation of the format. Records
+/// are kept in SQLite as this JSON and queried by key, so moving their types
+/// between modules or crates must not change a byte.
+#[test]
+fn stored_records_keep_their_exact_bytes() {
+    let expected = [
+        (
+            Form::Current,
+            "Digest(507ce35c5c0377c5c441db38faca5423175a6ff85b43299837c0219447e88e1b)",
+        ),
+        (
+            Form::BeforeArrivalInputs,
+            "Digest(4ee15d11aa2c994b4f51889f2319073c5dcd96317ca1098bcd22879d2a614607)",
+        ),
+        (
+            Form::BeforeInputs,
+            "Digest(ba3c07db98936961443c994d8e1446a1220b5e19e93313c68ac6185b833ee082)",
+        ),
+    ];
+    let mut actual = Vec::new();
+    for (form, _) in expected {
+        for (index, case) in cases().into_iter().enumerate() {
+            let mut record = recorded(case, &defaults(), form);
+            record.run_id = RunId::parse(&format!("r-{index:012x}")).unwrap();
+            actual.push(serde_json::to_vec(&record).unwrap());
+        }
+    }
+    let digest = |form: usize| {
+        let per_form = actual.len() / expected.len();
+        format!(
+            "{:?}",
+            crate::build_identity::Digest::of(
+                &actual[form * per_form..(form + 1) * per_form].concat()
+            )
+        )
+    };
+    let found: Vec<String> = (0..expected.len()).map(digest).collect();
+    assert_eq!(
+        found,
+        expected
+            .iter()
+            .map(|(_, d)| d.to_string())
+            .collect::<Vec<_>>()
+    );
+}
