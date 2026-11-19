@@ -11,6 +11,7 @@ pub mod askpass;
 pub mod authorized_keys;
 pub mod build_identity;
 pub mod child_start;
+pub mod cli_request;
 pub mod client;
 mod command_capture;
 pub mod config_sync;

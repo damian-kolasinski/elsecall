@@ -323,6 +323,16 @@ pub fn installed(paths: &Paths) -> Result<bool> {
         && paths.plist().is_file())
 }
 
+/// What other slices keep in the state directory, removed with the installation.
+pub trait InstalledParts {
+    /// Whether a release update's helper is running, which an uninstall must not
+    /// cut short.
+    fn helper_active(&self, paths: &Paths) -> Result<bool>;
+    /// Removes the slices' own state. Called with the installation lock held and
+    /// the service stopped.
+    fn remove(&self, paths: &Paths) -> Result<()>;
+}
+
 /// What an uninstall left in the state directory.
 #[derive(Debug, Serialize)]
 pub struct Kept {
@@ -338,7 +348,12 @@ pub struct Kept {
 /// State a later install still needs, the operator's own fleet configuration and
 /// files Elsecall does not recognize stay; the uninstall still succeeds and
 /// returns what stayed.
-pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Result<Option<Kept>> {
+pub fn uninstall(
+    paths: &Paths,
+    manager: &dyn ServiceManager,
+    parts: &dyn InstalledParts,
+    force: bool,
+) -> Result<Option<Kept>> {
     if !force && paths.fleet_membership().symlink_metadata().is_ok() {
         return Err(Failure::new(
             "fleet_member",
@@ -360,7 +375,7 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
         private_files::directory(&paths.data)?;
     }
     private_files::check_directory(&paths.data)?;
-    if crate::release_update::store::active_helper(paths)? {
+    if parts.helper_active(paths)? {
         return Err(Failure::new(
             "operation_in_progress",
             "An Elsecall release update is running.",
@@ -417,9 +432,7 @@ pub fn uninstall(paths: &Paths, manager: &dyn ServiceManager, force: bool) -> Re
             private_files::remove_file(&entry.path())?;
         }
     }
-    crate::fleet_upgrade::journal::Journal::new(&paths.data).remove()?;
-    crate::release_update::store::remove(paths)?;
-    crate::window_app::remove_locked(paths);
+    parts.remove(paths)?;
     match fs::remove_dir(&paths.data) {
         Ok(()) => Ok(None),
         Err(e) if e.kind() == std::io::ErrorKind::DirectoryNotEmpty => {

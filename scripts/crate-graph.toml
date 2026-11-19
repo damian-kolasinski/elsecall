@@ -135,7 +135,7 @@ modules = ["workload_settings", "workload_configuration", "workload_migration"]
 
 [crates.admission]
 band = "feature"
-modules = ["run_admission", "admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "lifecycle_holder", "guidance"]
+modules = ["run_admission", "admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "guidance"]
 
 [crates.remote-run]
 band = "feature"
@@ -175,11 +175,14 @@ modules = ["housekeeping"]
 
 [crates.installation]
 band = "feature"
-modules = ["installation", "uninstall"]
+# The installed files, the lock every lifecycle operation holds (and who holds
+# it), the companion window staged beside the executable, and the ports through
+# which other slices take part in an uninstall.
+modules = ["installation", "lifecycle_holder", "window_release", "cli_request"]
 
 [crates.window]
 band = "feature"
-modules = ["window_app", "window_release", "window_startup", "install_window"]
+modules = ["window_app", "window_startup", "install_window"]
 
 [crates.release-update]
 band = "feature"
@@ -264,7 +267,7 @@ band = "entry"
 # The `elsecall` binary, src/main.rs, and subcommands of slices that may not
 # use clap themselves.
 binary = "src/main.rs"
-modules = ["workload_observation_cli", "state_sizes", "add_mac_cli", "nearby_cli", "fleet_cli"]
+modules = ["workload_observation_cli", "state_sizes", "add_mac_cli", "nearby_cli", "fleet_cli", "uninstall"]
 
 [crates.ui]
 band = "entry"

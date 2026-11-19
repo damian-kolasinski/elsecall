@@ -309,7 +309,13 @@ fn uninstall_removes_the_app_it_published() {
     let manager = Manager::default();
     install(&paths, &source, &manager, &Desktop::default());
     assert!(paths.window_app().is_dir());
-    installation::uninstall(&paths, &manager, false).unwrap();
+    installation::uninstall(
+        &paths,
+        &manager,
+        &elsecall::uninstall::InstalledSlices,
+        false,
+    )
+    .unwrap();
     assert!(!paths.window_app().exists());
     assert!(!paths.data.exists());
 }
@@ -327,7 +333,13 @@ fn uninstall_keeps_another_application_at_the_app_path() {
 <plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.example.other</string></dict></plist>"#,
     )
     .unwrap();
-    installation::uninstall(&paths, &manager, false).unwrap();
+    installation::uninstall(
+        &paths,
+        &manager,
+        &elsecall::uninstall::InstalledSlices,
+        false,
+    )
+    .unwrap();
     assert!(contents.join("Info.plist").is_file());
 }
 

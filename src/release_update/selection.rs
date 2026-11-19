@@ -2,9 +2,9 @@
 use super::{ISSUER, Release, StagedRelease, TOOL, invalid};
 use crate::{
     build_identity::Digest,
+    cli_request::Selection,
     failure::{Failure, Result},
     paths::Paths,
-    uninstall::Selection,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -177,7 +177,7 @@ impl MiseSelection {
         )
     }
 }
-impl crate::uninstall::CliRequest for MiseSelection {
+impl crate::cli_request::CliRequest for MiseSelection {
     fn forget(&self) -> Selection {
         let Some(mise) = super::tools::find_mise(&self.paths) else {
             return Selection::NoMise;
