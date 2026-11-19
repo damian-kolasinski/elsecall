@@ -1,19 +1,22 @@
 name: Check
-# Once per commit: a pull request tests its revisions, and main tests each
-# commit that lands there. Pushes of review branches would only test the same
-# commits again. A release calls this workflow on its tag and publishes only
-# after it passed there, so the release gate is this same suite.
+# fmt, Clippy and the Rust tests (cargo test, doctests included), after a change
+# lands on main and on a release's tag. Pull
+# requests don't run it: whoever submits a change runs `mise run check` first
+# (AGENTS.md), and a mistake that lands on main is cheap to fix forward. A
+# release is not, so it calls this workflow on its tag and publishes only after
+# it passed there. main-status.yml turns main's results into the main-red issue.
 on:
   push:
     branches: [main]
-  pull_request:
   workflow_call:
 concurrency:
-  # A newer revision of a pull request supersedes the run of the older one.
-  # Every main commit keeps its own run. A release's call is grouped under the
-  # calling workflow, so it never waits behind main's run on the same commit.
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # main tests its newest commit: a run in progress finishes, and of the commits
+  # that land meanwhile only the newest waits for it, so a busy day can't keep
+  # cancelling runs before any finishes. A release's call is grouped under the
+  # calling workflow and its tag, apart from main's runs and from the caller's
+  # own group (group names ignore case, hence the `check-` prefix).
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
