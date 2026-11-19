@@ -72,6 +72,17 @@ class ReadingPaths(unittest.TestCase):
         self.assertEqual(graph.resolve("elsecall::failure::Failure", (), "elsecall"), ("failure", "Failure"))
         self.assertIsNone(graph.resolve("serde::Serialize", here, "crate"))
 
+    def test_super_inside_an_inline_module_means_the_file_itself(self):
+        code = "fn a() {}\nmod tests {\n    use super::*;\n    mod deeper {\n        use super::super::x;\n    }\n}\nuse super::y;\n"
+        nested = graph.inline_modules(code)
+        self.assertEqual(nested[2], ("tests",))
+        self.assertEqual(nested[4], ("tests", "deeper"))
+        self.assertEqual(nested[7], ())
+        here = ("scheduling", "capacity")
+        self.assertEqual(graph.resolve("super::*", here + nested[2], "crate"), ("scheduling", "capacity", "*"))
+        self.assertEqual(graph.resolve("super::super::x", here + nested[4], "crate"), ("scheduling", "capacity", "x"))
+        self.assertEqual(graph.resolve("super::y", here + nested[7], "crate"), ("scheduling", "y"))
+
     def test_the_longest_listed_module_path_wins(self):
         plan = graph.read_plan(PLAN)
         self.assertEqual(graph.assign(plan, ("scheduling", "timestamp", "Timestamp")), "scheduling-model")

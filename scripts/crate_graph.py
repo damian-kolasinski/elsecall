@@ -270,6 +270,30 @@ def references(text: str) -> list[tuple[int, str]]:
     return found
 
 
+INLINE_MODULE = re.compile(r"\bmod\s+([A-Za-z_]\w*)\s*\{")
+
+
+def inline_modules(code: str) -> list[tuple[str, ...]]:
+    """For each line of blanked code (index 0 is line 1), the inline modules
+    (`mod name { ... }`) it sits in, outermost first."""
+    stack: list[tuple[str, int]] = []  # (name, brace depth inside it)
+    depth = 0
+    out: list[tuple[str, ...]] = []
+    for line in code.split("\n"):
+        out.append(tuple(name for name, _ in stack))
+        opened = {m.end() - 1: m.group(1) for m in INLINE_MODULE.finditer(line)}
+        for index, c in enumerate(line):
+            if c == "{":
+                depth += 1
+                if index in opened:
+                    stack.append((opened[index], depth))
+            elif c == "}":
+                if stack and stack[-1][1] == depth:
+                    stack.pop()
+                depth -= 1
+    return out
+
+
 def module_path(relative: str) -> tuple[str, ...]:
     """`scheduling/service/running.rs` -> (scheduling, service, running)."""
     parts = list(PurePosixPath(relative).with_suffix("").parts)
@@ -373,8 +397,11 @@ def build(root: Path, plan: Plan, files: dict[str, str], packages: dict[str, str
         graph.lines[crate] += len(production)
         code = blank(production)
         for lines, into in ((production, graph.edges), (test_code, graph.test_edges)):
-            for line, reference in references(blank(lines)):
-                target_path = resolve(reference, here, library_root)
+            blanked = blank(lines)
+            nested = inline_modules(blanked)
+            for line, reference in references(blanked):
+                inside_module = nested[line - 1] if line - 1 < len(nested) else ()
+                target_path = resolve(reference, here + inside_module, library_root)
                 if target_path is None or not target_path:
                     continue
                 target = assign(plan, target_path)
@@ -649,9 +676,12 @@ def main(argv: list[str]) -> int:
     if options.why:
         a, b = options.why
         sites = graph.edges.get((a, b), [])
+        tests = graph.test_edges.get((a, b), [])
         for site in sites:
             print(f"{site.file}:{site.line}: {site.path}")
-        print(f"{a} -> {b}: {len(sites)} reference(s)")
+        for site in tests:
+            print(f"{site.file}:{site.line}: {site.path} (test)")
+        print(f"{a} -> {b}: {len(sites)} reference(s), {len(tests)} from test code")
         return 0
     if options.cycles:
         for label, edges in (("code", graph.edges), ("code and tests", {**graph.test_edges, **graph.edges})):
