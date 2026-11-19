@@ -503,7 +503,7 @@ async fn execute<E: Executor>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::passthrough::*;
 
     fn arguments(text: &[&str]) -> Vec<OsString> {
         text.iter().map(OsString::from).collect()

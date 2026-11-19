@@ -1,15 +1,11 @@
 //! Local inspection, admission, installation and fleet membership, with platform and
 //! transport adapters.
 pub mod add_mac_cli;
-pub mod admission_api;
-pub mod admission_cli;
 pub mod fleet_cli;
 pub mod nearby_cli;
 pub mod outside_pressure_api;
-pub mod passthrough;
 pub mod peer_api;
 pub mod peer_listener;
-pub mod run_relay;
 pub mod server;
 pub mod ui_app;
 pub mod uninstall;
@@ -29,8 +25,6 @@ pub mod tuning_preflight;
 pub mod tuning_preflight_cli;
 
 pub mod busy_hour_calibration;
-
-mod local_run_client;
 
 pub mod rehearsal_compare;
 pub mod workload_observation_cli;

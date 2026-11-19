@@ -1066,6 +1066,7 @@ dependencies = [
  "clap",
  "ed25519-dalek",
  "elsecall-add-mac",
+ "elsecall-admission",
  "elsecall-agent-skill",
  "elsecall-api-response",
  "elsecall-build-identity",
@@ -1158,6 +1159,43 @@ dependencies = [
  "tempfile",
  "tokio",
  "zeroize",
+]
+
+[[package]]
+name = "elsecall-admission"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "clap",
+ "elsecall-api-response",
+ "elsecall-failure",
+ "elsecall-fleet",
+ "elsecall-guidance",
+ "elsecall-local-client",
+ "elsecall-local-state",
+ "elsecall-membership",
+ "elsecall-os-processes",
+ "elsecall-peer-transport",
+ "elsecall-remote-run",
+ "elsecall-run-admission",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-secure-channel",
+ "elsecall-service-lifecycle",
+ "elsecall-wire",
+ "elsecall-workload-config",
+ "elsecall-workspace",
+ "futures-util",
+ "http-body-util",
+ "humantime",
+ "hyper",
+ "hyper-util",
+ "libc",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

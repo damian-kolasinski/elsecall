@@ -1,9 +1,7 @@
 use clap::{Parser, Subcommand};
-use elsecall::{
-    admission_cli::{self, LeaseCommand},
-    fleet_cli, peer_listener,
-};
+use elsecall::{fleet_cli, peer_listener};
 use elsecall_add_mac::inbound_firewall::{Inbound, InboundFirewall};
+use elsecall_admission::admission_cli::{self, LeaseCommand};
 use elsecall_failure::{Failure, Result};
 use elsecall_installation::installation::{self, ServiceManager};
 use elsecall_local_client as client;
@@ -96,7 +94,7 @@ enum Command {
     #[command(
         after_help = "Prints nothing of its own unless Elsecall fails; then the last stderr line is the JSON error envelope. Use --status-file to tell the command's own exit 125 from Elsecall's."
     )]
-    Run(elsecall::passthrough::RunArgs),
+    Run(elsecall_admission::passthrough::RunArgs),
     /// Hold capacity on this machine for a section of a script's own work
     Lease {
         #[command(subcommand)]
@@ -183,15 +181,17 @@ async fn main() -> ExitCode {
         Err(error) if error.use_stderr() => {
             let arguments: Vec<_> = std::env::args_os().skip(1).take(2).collect();
             if arguments.first().is_some_and(|command| command == "run") {
-                return elsecall::passthrough::usage_failure();
+                return elsecall_admission::passthrough::usage_failure();
             }
             // Do not echo argument values: callers may accidentally pass secrets.
             let failure = if arguments == ["lease", "acquire"] {
                 // A run ID file named among the options must not keep a stale ID.
                 let all: Vec<_> = std::env::args_os().collect();
-                if let Some(path) =
-                    elsecall::passthrough::option_argument(&all, "acquire", "--run-id-file")
-                {
+                if let Some(path) = elsecall_admission::passthrough::option_argument(
+                    &all,
+                    "acquire",
+                    "--run-id-file",
+                ) {
                     let _ = elsecall_local_state::run_id_file::RunIdFile::at(path).record(None);
                 }
                 let failure = Failure::new(
@@ -281,7 +281,7 @@ async fn main() -> ExitCode {
             };
         }
         // Run passes the command's output through rather than printing JSON.
-        Command::Run(args) => return elsecall::passthrough::main(args).await,
+        Command::Run(args) => return elsecall_admission::passthrough::main(args).await,
         // Leases check the platform and user themselves, so ELSECALL=off needs neither.
         Command::Lease { command } => {
             let acquire = matches!(command, LeaseCommand::Acquire { .. });

@@ -1,4 +1,4 @@
-use crate::{peer_api, peer_listener, run_relay};
+use crate::{peer_api, peer_listener};
 use axum::{
     Json, Router,
     extract::State,
@@ -6,6 +6,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
+use elsecall_admission::run_relay;
 use elsecall_failure::{Failure, Result};
 use elsecall_fleet::{fleet::Fleet, fleet_local_api, fleet_placement::FleetMembers};
 use elsecall_housekeeping::{
@@ -525,7 +526,7 @@ pub async fn serve_with_updates(
         .with_state(inspection)
         .merge(trust_routes)
         .merge(elsecall_replay::replay_api::routes(scheduler.clone()))
-        .merge(crate::admission_api::routes(scheduler))
+        .merge(elsecall_admission::admission_api::routes(scheduler))
         .merge(elsecall_housekeeping::copies_api::routes(housekeeper))
         .merge(tools_routes)
         .merge(desired_routes)

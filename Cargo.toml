@@ -51,6 +51,7 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 elsecall = { path = "." }
+elsecall-admission = { path = "crates/elsecall-admission" }
 elsecall-trace = { path = "crates/elsecall-trace" }
 elsecall-service-lifecycle = { path = "crates/elsecall-service-lifecycle" }
 elsecall-placement = { path = "crates/elsecall-placement" }
@@ -134,6 +135,7 @@ chacha20poly1305.workspace = true
 clap.workspace = true
 ed25519-dalek.workspace = true
 elsecall-add-mac.workspace = true
+elsecall-admission.workspace = true
 elsecall-agent-skill.workspace = true
 elsecall-api-response.workspace = true
 elsecall-build-identity.workspace = true
