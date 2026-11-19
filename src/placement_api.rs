@@ -1,7 +1,6 @@
 //! The member API routes of placement, behind the placement-authority boundary:
 //! only the recorded master may offer runs or attach to them.
 use crate::{
-    api_response::failure,
     fleet::{AuthenticatedPeer, Fleet, PlacementAuthority},
     placement_host::PlacementHost,
     remote_run::runner,
@@ -16,6 +15,7 @@ use axum::{
     routing::post,
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use elsecall_api_response::failure;
 use elsecall_failure::Failure;
 use elsecall_secure_channel::{Ephemeral, SecureStream};
 use hyper_util::rt::TokioIo;

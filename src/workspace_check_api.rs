@@ -3,7 +3,6 @@
 //! Authentication names the asking member; the owner answers only about
 //! workspaces it pushed to that member.
 use crate::{
-    api_response::failure,
     fleet::{AuthenticatedPeer, Fleet},
     housekeeping::{
         caller_state::CallerState,
@@ -18,6 +17,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
+use elsecall_api_response::failure;
 use elsecall_failure::Failure;
 use std::sync::Arc;
 

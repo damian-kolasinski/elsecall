@@ -1,16 +1,14 @@
 //! The authorization boundary for placement authority: requests that only the
 //! recorded master may make. Placement itself arrives in later steps; a probe proves
 //! the boundary.
-use crate::{
-    api_response::failure,
-    fleet::{AuthenticatedPeer, Fleet, PlacementAccepted, PlacementAuthority},
-};
+use crate::fleet::{AuthenticatedPeer, Fleet, PlacementAccepted, PlacementAuthority};
 use axum::{
     Json,
     extract::{FromRequestParts, State},
     http::{StatusCode, request::Parts},
     response::{IntoResponse, Response},
 };
+use elsecall_api_response::failure;
 use std::sync::Arc;
 
 impl FromRequestParts<Arc<Fleet>> for PlacementAuthority {

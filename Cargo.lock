@@ -1066,6 +1066,7 @@ dependencies = [
  "clap",
  "ed25519-dalek",
  "elsecall-agent-skill",
+ "elsecall-api-response",
  "elsecall-build-identity",
  "elsecall-failure",
  "elsecall-guidance",
@@ -1113,6 +1114,15 @@ dependencies = [
  "serde_json",
  "sha2",
  "tempfile",
+]
+
+[[package]]
+name = "elsecall-api-response"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "elsecall-failure",
+ "elsecall-wire",
 ]
 
 [[package]]

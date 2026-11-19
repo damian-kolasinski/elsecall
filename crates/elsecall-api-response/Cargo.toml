@@ -1,0 +1,15 @@
+[package]
+name = "elsecall-api-response"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+axum.workspace = true
+elsecall-failure.workspace = true
+elsecall-wire.workspace = true

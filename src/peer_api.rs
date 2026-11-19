@@ -48,7 +48,7 @@ pub fn routes(fleet: Arc<Fleet>, placement: Router<Arc<Fleet>>) -> Router {
         .with_state(fleet)
 }
 
-pub use crate::api_response::failure;
+pub use elsecall_api_response::failure;
 
 fn data<T: serde::Serialize>(value: T) -> Response {
     Json(api::Response::new(value)).into_response()
