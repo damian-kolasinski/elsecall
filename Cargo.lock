@@ -1073,6 +1073,7 @@ dependencies = [
  "elsecall-config-sync-model",
  "elsecall-failure",
  "elsecall-fleet",
+ "elsecall-fleet-upgrade",
  "elsecall-guidance",
  "elsecall-housekeeping",
  "elsecall-installation",
@@ -1265,6 +1266,40 @@ dependencies = [
  "hyper",
  "serde",
  "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "elsecall-fleet-upgrade"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "elsecall-api-response",
+ "elsecall-build-identity",
+ "elsecall-failure",
+ "elsecall-fleet",
+ "elsecall-installation",
+ "elsecall-local-client",
+ "elsecall-local-state",
+ "elsecall-machine",
+ "elsecall-membership",
+ "elsecall-peer-transport",
+ "elsecall-process",
+ "elsecall-release-update",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-secure-channel",
+ "elsecall-service-log",
+ "elsecall-wire",
+ "futures-util",
+ "getrandom 0.3.4",
+ "hyper",
+ "hyper-util",
+ "libc",
+ "serde",
+ "serde_json",
+ "tempfile",
  "tokio",
 ]
 

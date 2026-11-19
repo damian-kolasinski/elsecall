@@ -57,7 +57,7 @@ impl InstalledParts for InstalledSlices {
         elsecall_release_update::release_update::store::active_helper(paths)
     }
     fn remove(&self, paths: &Paths) -> Result<()> {
-        crate::fleet_upgrade::journal::Journal::new(&paths.data).remove()?;
+        elsecall_fleet_upgrade::fleet_upgrade::journal::Journal::new(&paths.data).remove()?;
         elsecall_release_update::release_update::store::remove(paths)?;
         elsecall_window::window_app::remove_locked(paths);
         Ok(())

@@ -707,7 +707,8 @@ async fn run(cli: Cli) -> Result<bool> {
                     "The service starts this helper itself; run elsecall fleet upgrade on the master.",
                 )
             })?;
-            let phase = elsecall::fleet_upgrade::helper::run(&paths, manager, &id).await?;
+            let phase =
+                elsecall_fleet_upgrade::fleet_upgrade::helper::run(&paths, manager, &id).await?;
             output(phase);
         }
     }

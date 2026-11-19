@@ -51,6 +51,7 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 elsecall = { path = "." }
+elsecall-fleet-upgrade = { path = "crates/elsecall-fleet-upgrade" }
 elsecall-config-sync = { path = "crates/elsecall-config-sync" }
 elsecall-simulation = { path = "crates/elsecall-simulation" }
 elsecall-service-config = { path = "crates/elsecall-service-config" }
@@ -135,6 +136,7 @@ elsecall-config-sync.workspace = true
 elsecall-config-sync-model.workspace = true
 elsecall-failure.workspace = true
 elsecall-fleet.workspace = true
+elsecall-fleet-upgrade.workspace = true
 elsecall-guidance.workspace = true
 elsecall-housekeeping.workspace = true
 elsecall-installation.workspace = true

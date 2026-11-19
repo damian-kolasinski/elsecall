@@ -4,9 +4,6 @@ pub mod add_mac_cli;
 pub mod admission_api;
 pub mod admission_cli;
 pub mod fleet_cli;
-pub mod fleet_upgrade;
-pub mod fleet_upgrade_api;
-pub mod fleet_upgrade_local_api;
 pub mod nearby_cli;
 pub mod openssh_mac;
 pub mod outside_pressure_api;
@@ -23,8 +20,6 @@ pub mod service_handover;
 pub mod service_relaunch;
 pub mod ui_app;
 pub mod uninstall;
-pub mod upgrade_drain;
-pub mod upgrade_helper_process;
 
 pub mod state_sizes;
 

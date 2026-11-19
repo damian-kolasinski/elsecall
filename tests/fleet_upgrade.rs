@@ -9,11 +9,11 @@ mod diagnostics;
 mod members;
 mod processes;
 
-use elsecall::fleet_upgrade::{
+use elsecall_build_identity::{build_identity::Digest, executable_format::Architecture};
+use elsecall_fleet_upgrade::fleet_upgrade::{
     member::UpgradeStatus,
     protocol::{self, Manifest, Message, Os, UpgradeId},
 };
-use elsecall_build_identity::{build_identity::Digest, executable_format::Architecture};
 use elsecall_local_state::paths::Paths;
 use elsecall_peer_transport::peer_client;
 use elsecall_scheduling_model::{

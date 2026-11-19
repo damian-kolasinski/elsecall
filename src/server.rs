@@ -313,12 +313,14 @@ pub async fn serve_with_updates(
     };
     // Upgrades need fleet state; a broken upgrade record refuses only upgrades.
     let upgrades = match &fleet {
-        Ok(fleet) => crate::fleet_upgrade::member::Upgrades::open(
-            crate::fleet_upgrade::journal::Journal::new(&paths.data),
+        Ok(fleet) => elsecall_fleet_upgrade::fleet_upgrade::member::Upgrades::open(
+            elsecall_fleet_upgrade::fleet_upgrade::journal::Journal::new(&paths.data),
             paths.executable(),
             fleet.clone(),
-            Arc::new(crate::upgrade_drain::SchedulerWork(scheduler.clone())),
-            Arc::new(crate::upgrade_helper_process::HelperProcess),
+            Arc::new(elsecall_fleet_upgrade::upgrade_drain::SchedulerWork(
+                scheduler.clone(),
+            )),
+            Arc::new(elsecall_fleet_upgrade::upgrade_helper_process::HelperProcess),
             build.clone(),
         )
         .map(Arc::new),
@@ -327,7 +329,10 @@ pub async fn serve_with_updates(
     let automatic_updates = updates.automatic;
     // The CLI's `fleet upgrade` and a release update's fleet half share one distributor.
     let distributor = fleet.as_ref().ok().map(|fleet| {
-        crate::fleet_upgrade::distributor::Distributor::new(fleet.clone(), paths.executable())
+        elsecall_fleet_upgrade::fleet_upgrade::distributor::Distributor::new(
+            fleet.clone(),
+            paths.executable(),
+        )
     });
     let updates = elsecall_release_update::release_update::service::UpdateService::open(
         paths.clone(),
@@ -466,13 +471,13 @@ pub async fn serve_with_updates(
                     .merge(elsecall_config_sync::config_sync_api::routes(sync.clone()));
             }
             member_routes = member_routes.merge(match &upgrades {
-                Ok(upgrades) => crate::fleet_upgrade_api::routes(upgrades.clone()),
-                Err(error) => crate::fleet_upgrade_api::unavailable(error.clone()),
+                Ok(upgrades) => elsecall_fleet_upgrade::fleet_upgrade_api::routes(upgrades.clone()),
+                Err(error) => elsecall_fleet_upgrade::fleet_upgrade_api::unavailable(error.clone()),
             });
             let peer_routes = peer_api::routes(fleet.clone(), member_routes);
             peer_listener::start(fleet.clone(), members_listener, peer_routes).await;
             crate::rehearsal_api::routes(fleet.clone(), rehearsal)
-                .merge(crate::fleet_upgrade_local_api::routes(
+                .merge(elsecall_fleet_upgrade::fleet_upgrade_local_api::routes(
                     distributor
                         .clone()
                         .expect("a readable fleet has a distributor"),
