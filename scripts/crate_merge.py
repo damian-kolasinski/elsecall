@@ -209,7 +209,12 @@ def main(argv: list[str]) -> int:
     plan_text = PLAN.read_text()
     flattened = {m: layout(m, plan_text) for m in members}
     directory = ROOT / "crates" / f"{LIBRARY}-{merged}"
-    if directory.exists() and merged not in members:
+    # A member named like the merged crate keeps its root and paths, and the
+    # others join it.
+    host = merged in members
+    if host:
+        flattened[merged] = None
+    elif directory.exists():
         raise SystemExit(f"{directory} exists")
 
     # Rewrite every Rust file in place first.
@@ -225,10 +230,12 @@ def main(argv: list[str]) -> int:
     manifest = merge_manifests(merged, members)
 
     # Move files.
-    staging = ROOT / "crates" / f".merge-{merged}"
-    staging.mkdir()
+    staging = directory if host else ROOT / "crates" / f".merge-{merged}"
+    staging.mkdir(exist_ok=host)
     declarations = []
     for member in members:
+        if member == merged:
+            continue
         source = ROOT / "crates" / f"{LIBRARY}-{member}" / "src"
         module = flattened[member]
         for path in sorted(source.rglob("*.rs")):
@@ -239,6 +246,8 @@ def main(argv: list[str]) -> int:
                 if relative.as_posix() == "lib.rs":
                     continue
                 target = staging / "src" / relative
+            if target.exists():
+                raise SystemExit(f"{target} exists")
             target.parent.mkdir(parents=True, exist_ok=True)
             git("mv", str(path.relative_to(ROOT)), str(target.relative_to(ROOT)))
         if module:
@@ -250,9 +259,19 @@ def main(argv: list[str]) -> int:
             git("rm", "-q", str((source / "lib.rs").relative_to(ROOT)))
         git("rm", "-q", str((ROOT / "crates" / f"{LIBRARY}-{member}" / "Cargo.toml").relative_to(ROOT)))
         subprocess.run(["rm", "-rf", str(ROOT / "crates" / f"{LIBRARY}-{member}")], check=True)
-    staging.rename(directory)
     doc = "\n".join("//! " + line for line in textwrap.wrap(options.doc, 80))
-    (directory / "src" / "lib.rs").write_text(doc + "\n" + "\n".join(sorted(declarations, key=lambda d: d.split("mod ")[-1])) + "\n")
+    added = "\n".join(sorted(declarations, key=lambda d: d.split("mod ")[-1])) + "\n"
+    if host:
+        # The new doc replaces the root's, and the joining modules go before
+        # its first module, where rustfmt orders them with the rest.
+        lib = directory / "src" / "lib.rs"
+        body = re.sub(r"\A(?://![^\n]*\n)+", "", lib.read_text())
+        first = re.search(r"^(?:#\[[^\]]*\]\s*)*(?:pub(?:\([^)]*\))?\s+)?mod\s", body, re.M)
+        at = first.start() if first else len(body)
+        lib.write_text(doc + "\n" + body[:at] + added + body[at:])
+    else:
+        staging.rename(directory)
+        (directory / "src" / "lib.rs").write_text(doc + "\n" + added)
     (directory / "Cargo.toml").write_text(manifest)
 
     # Manifests elsewhere and the workspace's list.
