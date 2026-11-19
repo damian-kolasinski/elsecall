@@ -32,7 +32,11 @@ fn failing_helper() {
 fn failure_reports_commands_and_registered_logs() {
     let directory = tempfile::tempdir().unwrap();
     let output = Command::new(std::env::current_exe().unwrap())
-        .args(["--ignored", "--exact", "failing_helper"])
+        .args([
+            "--ignored",
+            "--exact",
+            "fixture_diagnostics::failing_helper",
+        ])
         .env("EC_TEST_DIAGNOSTICS_DIR", directory.path())
         // A report printed past the capture would not be under the test's failure.
         .env_remove("RUST_TEST_NOCAPTURE")

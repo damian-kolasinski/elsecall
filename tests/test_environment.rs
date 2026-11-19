@@ -18,7 +18,7 @@ async fn outer_admission_and_unknown_controls_never_reach_test_services_or_scrip
             .arg(std::env::current_exe().unwrap())
             .args([
                 "--exact",
-                "outer_admission_and_unknown_controls_never_reach_test_services_or_scripts",
+                "test_environment::outer_admission_and_unknown_controls_never_reach_test_services_or_scripts",
                 "--nocapture",
             ])
             .env("TEST_ENVIRONMENT_PROBE", "1")
@@ -36,6 +36,11 @@ async fn outer_admission_and_unknown_controls_never_reach_test_services_or_scrip
             .output()
             .unwrap();
         assert!(output.status.success(), "{output:?}");
+        // A renamed test would match nothing and pass without probing.
+        assert!(
+            String::from_utf8_lossy(&output.stdout).contains("1 passed"),
+            "{output:?}"
+        );
         return;
     }
     assert_eq!(std::env::var("ELSECALL_UI_SKIP_GOLDENS").unwrap(), "1");
@@ -91,7 +96,7 @@ async fn subprocess_constructors_clear_inherited_controls_before_adding_fixture_
         let output = std::process::Command::new(std::env::current_exe().unwrap())
             .args([
                 "--exact",
-                "subprocess_constructors_clear_inherited_controls_before_adding_fixture_controls",
+                "test_environment::subprocess_constructors_clear_inherited_controls_before_adding_fixture_controls",
                 "--nocapture",
             ])
             .env("TEST_CONSTRUCTOR_PROBE", "1")
@@ -102,6 +107,11 @@ async fn subprocess_constructors_clear_inherited_controls_before_adding_fixture_
             .output()
             .unwrap();
         assert!(output.status.success(), "{output:?}");
+        // A renamed test would match nothing and pass without probing.
+        assert!(
+            String::from_utf8_lossy(&output.stdout).contains("1 passed"),
+            "{output:?}"
+        );
         return;
     }
     assert_eq!(std::env::var("ELSECALL_ADMISSION").unwrap(), "nested");

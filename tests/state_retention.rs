@@ -28,7 +28,7 @@ fn concurrent_processes_reopen_the_current_file_and_keep_every_line() {
     let mut children: Vec<_> = (0..4)
         .map(|n| {
             crate::processes::command(std::env::current_exe().unwrap())
-                .args(["--exact", "log_writer_child", "--ignored"])
+                .args(["--exact", "state_retention::log_writer_child", "--ignored"])
                 .env("LOG_TEST_PATH", &path)
                 .env("LOG_TEST_WRITER", n.to_string())
                 .stdout(Stdio::null())
