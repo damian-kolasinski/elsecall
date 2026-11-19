@@ -1088,6 +1088,7 @@ dependencies = [
  "elsecall-process",
  "elsecall-rehearsal-identity",
  "elsecall-remote-run",
+ "elsecall-replay",
  "elsecall-report-facts",
  "elsecall-run-admission",
  "elsecall-scheduling",
@@ -1447,6 +1448,29 @@ dependencies = [
  "getrandom 0.3.4",
  "hyper",
  "libc",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "elsecall-replay"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "clap",
+ "elsecall-failure",
+ "elsecall-labels",
+ "elsecall-local-client",
+ "elsecall-local-state",
+ "elsecall-report-facts",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-wire",
+ "elsecall-workload",
+ "elsecall-workload-config",
+ "humantime",
  "serde",
  "serde_json",
  "tempfile",

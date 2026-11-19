@@ -118,7 +118,7 @@ pub fn split(trace: &Trace) -> serde_json::Value {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::replay_placement::*;
     use elsecall_scheduling::fixtures;
     use elsecall_scheduling_model::timestamp::Timestamp;
     use elsecall_workload::trace::Request;
@@ -165,7 +165,7 @@ mod tests {
     fn acme_current_rules_make_historical_pinned_tests_eligible_on_devbox_without_writing_rules() {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("rules.toml");
-        let bytes = include_bytes!("../tests/fixtures/acme.elsecall.toml");
+        let bytes = include_bytes!("../../../tests/fixtures/acme.elsecall.toml");
         std::fs::write(&path, bytes).unwrap();
         let mut t = trace();
         let before = serde_json::to_vec(&t).unwrap();

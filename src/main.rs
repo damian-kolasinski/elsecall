@@ -120,7 +120,7 @@ enum Command {
     Copies(elsecall_housekeeping::copies_cli::CopiesArgs),
     /// Score this member's recorded placement decisions again under changed
     /// parameters, to see which would flip before changing config.toml
-    Replay(elsecall::replay_cli::ReplayArgs),
+    Replay(elsecall_replay::replay_cli::ReplayArgs),
     /// Installs a build the master distributed; the service starts this itself
     #[command(hide = true)]
     UpgradeHelper {
@@ -698,7 +698,7 @@ async fn run(cli: Cli) -> Result<bool> {
             output(data);
             return Ok(clean);
         }
-        Command::Replay(args) => output(elsecall::replay_cli::run(&paths, args).await?),
+        Command::Replay(args) => output(elsecall_replay::replay_cli::run(&paths, args).await?),
         Command::UpgradeHelper { id } => {
             let id = serde_json::from_value(serde_json::Value::String(id)).map_err(|_| {
                 Failure::new(

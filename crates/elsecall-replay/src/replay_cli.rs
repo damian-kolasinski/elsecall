@@ -58,7 +58,7 @@ pub async fn run(paths: &Paths, args: ReplayArgs) -> Result<Value> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::replay_cli::*;
 
     #[test]
     fn since_takes_a_duration_ago_or_a_time() {

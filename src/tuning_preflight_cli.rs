@@ -6,7 +6,7 @@ use std::{num::NonZeroUsize, path::PathBuf, time::Duration};
 #[derive(Args, Debug)]
 pub struct PreflightArgs {
     #[command(flatten)]
-    pub replay_placement: crate::replay_placement::ReplayPlacement,
+    pub replay_placement: elsecall_replay::replay_placement::ReplayPlacement,
     /// Complete installed-build rehearsal trace; repeat for each tested F
     #[arg(long, requires = "calibrate_busy_hours")]
     pub busy_rehearsal: Vec<PathBuf>,

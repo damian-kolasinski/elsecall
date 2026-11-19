@@ -30,8 +30,6 @@ pub mod placement_authority;
 pub mod placement_config_sync;
 pub mod placement_host;
 pub mod process_service;
-pub mod replay_api;
-pub mod replay_cli;
 pub mod report_api;
 pub mod report_cli;
 pub mod reporting;
@@ -82,8 +80,6 @@ pub mod tuning_preflight_cli;
 pub mod replay_load;
 
 pub mod busy_hour_calibration;
-
-pub mod replay_placement;
 
 mod local_run_client;
 

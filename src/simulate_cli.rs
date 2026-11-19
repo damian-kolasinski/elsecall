@@ -10,7 +10,7 @@ use std::path::PathBuf;
 #[derive(Args, Debug)]
 pub struct SimulateArgs {
     #[command(flatten)]
-    pub replay_placement: crate::replay_placement::ReplayPlacement,
+    pub replay_placement: elsecall_replay::replay_placement::ReplayPlacement,
     /// Diagnose a recorded rehearsal using measured CPU costs; never grants tuning trust
     #[arg(long, conflicts_with_all = ["fidelity", "settings", "load_factor", "day"])]
     pub rehearsal_cpu_replay: bool,
@@ -33,7 +33,7 @@ pub struct SimulateArgs {
 }
 pub fn run(args: SimulateArgs) -> Result<serde_json::Value> {
     let mut trace = read_trace(&args.trace)?;
-    if args.replay_placement.placement == crate::replay_placement::Mode::Current
+    if args.replay_placement.placement == elsecall_replay::replay_placement::Mode::Current
         && (args.fidelity || args.rehearsal_cpu_replay)
     {
         return Err(crate::tuning::invalid(
@@ -55,7 +55,7 @@ pub fn run(args: SimulateArgs) -> Result<serde_json::Value> {
             day,
         },
     )?;
-    if args.replay_placement.placement == crate::replay_placement::Mode::Current {
+    if args.replay_placement.placement == elsecall_replay::replay_placement::Mode::Current {
         result["placement_replay"] = placement;
     }
     Ok(result)

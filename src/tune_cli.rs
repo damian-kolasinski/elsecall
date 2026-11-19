@@ -16,7 +16,7 @@ pub enum TuneCommand {
 #[command(subcommand_negates_reqs = true)]
 pub struct TuneArgs {
     #[command(flatten)]
-    pub replay_placement: crate::replay_placement::ReplayPlacement,
+    pub replay_placement: elsecall_replay::replay_placement::ReplayPlacement,
     /// Replay arrivals F times closer; preserve all command work (1–32)
     #[arg(long, default_value = "1")]
     pub load_factor: crate::replay_load::LoadFactor,

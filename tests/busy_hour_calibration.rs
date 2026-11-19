@@ -3,10 +3,8 @@
 mod diagnostics;
 mod members;
 mod processes;
-use elsecall::{
-    busy_hour_calibration::{Target, calibrate},
-    replay_placement::{Mode, ReplayPlacement},
-};
+use elsecall::busy_hour_calibration::{Target, calibrate};
+use elsecall_replay::replay_placement::{Mode, ReplayPlacement};
 use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workload::trace::Trace;
 use members::{TestMember, enrol};

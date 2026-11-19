@@ -507,7 +507,7 @@ pub async fn serve_with_updates(
         })
         .with_state(inspection)
         .merge(trust_routes)
-        .merge(crate::replay_api::routes(scheduler.clone()))
+        .merge(elsecall_replay::replay_api::routes(scheduler.clone()))
         .merge(crate::admission_api::routes(scheduler))
         .merge(elsecall_housekeeping::copies_api::routes(housekeeper))
         .merge(tools_routes)

@@ -111,7 +111,9 @@ pub fn check(trace: Trace, args: Options) -> Result<Value> {
             (None, details)
         }
     };
-    let placement_split = workload.as_ref().map(crate::replay_placement::split);
+    let placement_split = workload
+        .as_ref()
+        .map(elsecall_replay::replay_placement::split);
     let selected_valid = workload.is_some();
     // A failed workload check must not hide independently discoverable model,
     // search, compression or timing blockers. Diagnose the densest candidate

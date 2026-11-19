@@ -20,7 +20,7 @@ use tokio::time::Instant;
 #[derive(Args, Debug, Clone)]
 pub struct RehearseArgs {
     #[command(flatten)]
-    pub replay_placement: crate::replay_placement::ReplayPlacement,
+    pub replay_placement: elsecall_replay::replay_placement::ReplayPlacement,
     /// Replay arrivals F times closer, on top of compression (1–32)
     #[arg(long, default_value = "1")]
     pub load_factor: crate::replay_load::LoadFactor,
@@ -698,7 +698,7 @@ pub(crate) async fn single(
         )?;
     }
     Ok(
-        json!({"placement_replay":{"mode":args.replay_placement.placement,"split":crate::replay_placement::split(source)},"calibration":calibration,"measured_calibration":measured_calibration,"recording_complete":trace.rehearsal.as_ref().is_some_and(|r|r.complete_for(&trace)),"recording_missing":unfinished.iter().cloned().chain(trace.rehearsal.as_ref().map(|r|r.missing_evidence(&trace)).unwrap_or_default()).collect::<Vec<_>>(),"certificate":certificate,"session":session,"compress":args.compress,"load_factor":args.load_factor,"seed":seed,"limit_ms":args.limit.as_millis(),"stop_reason":stop_reason,"rehearsal_error":rehearsal_error,"submitted":submitted.len(),"planned":plan.arrivals.len(),"aggregated_nested":plan.aggregated_nested,"elapsed_ms":started.elapsed().as_millis(),"trace":output,"cleanup_complete":cleanup_errors.is_empty(),"cleanup_errors":cleanup_errors,"requests":request_mapping,"metrics":crate::simulation::observed_metrics(&trace),"simulation":simulation}),
+        json!({"placement_replay":{"mode":args.replay_placement.placement,"split":elsecall_replay::replay_placement::split(source)},"calibration":calibration,"measured_calibration":measured_calibration,"recording_complete":trace.rehearsal.as_ref().is_some_and(|r|r.complete_for(&trace)),"recording_missing":unfinished.iter().cloned().chain(trace.rehearsal.as_ref().map(|r|r.missing_evidence(&trace)).unwrap_or_default()).collect::<Vec<_>>(),"certificate":certificate,"session":session,"compress":args.compress,"load_factor":args.load_factor,"seed":seed,"limit_ms":args.limit.as_millis(),"stop_reason":stop_reason,"rehearsal_error":rehearsal_error,"submitted":submitted.len(),"planned":plan.arrivals.len(),"aggregated_nested":plan.aggregated_nested,"elapsed_ms":started.elapsed().as_millis(),"trace":output,"cleanup_complete":cleanup_errors.is_empty(),"cleanup_errors":cleanup_errors,"requests":request_mapping,"metrics":crate::simulation::observed_metrics(&trace),"simulation":simulation}),
     )
 }
 fn mapping(
