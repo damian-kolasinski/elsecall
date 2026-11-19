@@ -627,8 +627,8 @@ async fn run(cli: Cli) -> Result<bool> {
             // After an upgrade, the stubs an older build wrote point at this one.
             elsecall_agent_skill::refresh_if_installed(&paths);
             let machine: Arc<dyn elsecall_machine::inspection::MachineInspector> =
-                if let Some(file) = elsecall::machine_script::load_file() {
-                    Arc::new(elsecall::machine_script::ScriptedLoad {
+                if let Some(file) = elsecall_scripted_machine::load_file() {
+                    Arc::new(elsecall_scripted_machine::ScriptedLoad {
                         machine: MacMachine::default(),
                         file,
                     })
@@ -638,7 +638,7 @@ async fn run(cli: Cli) -> Result<bool> {
                     Arc::new(MacMachine::default())
                 };
             let speed: Arc<dyn elsecall_scheduling_model::speed::SpeedMeter> =
-                match elsecall::machine_script::speed() {
+                match elsecall_scripted_machine::speed() {
                     Some(fixed) => Arc::new(fixed),
                     None => Arc::new(elsecall::macos::core_benchmark::CoreBenchmark),
                 };

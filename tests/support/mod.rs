@@ -111,7 +111,7 @@ impl Fixture {
             Arc::new(Inspection::new(self.machine.clone())),
             Adapters {
                 machine: self.machine.clone(),
-                speed: Arc::new(elsecall::machine_script::FixedSpeed(1.0)),
+                speed: Arc::new(elsecall_scripted_machine::FixedSpeed(1.0)),
                 processes,
                 exits,
             },

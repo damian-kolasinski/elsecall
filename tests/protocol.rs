@@ -56,7 +56,7 @@ async fn inspection_failure_crosses_real_api_without_becoming_false_health_failu
         Arc::new(Inspection::new(machine.clone())),
         Adapters {
             machine,
-            speed: Arc::new(elsecall::machine_script::FixedSpeed(1.0)),
+            speed: Arc::new(elsecall_scripted_machine::FixedSpeed(1.0)),
             processes,
             exits,
         },

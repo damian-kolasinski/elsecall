@@ -1082,6 +1082,7 @@ dependencies = [
  "elsecall-rehearsal-identity",
  "elsecall-run-admission",
  "elsecall-scheduling-model",
+ "elsecall-scripted-machine",
  "elsecall-secure-channel",
  "elsecall-service-log",
  "elsecall-sqlite-retention",
@@ -1288,6 +1289,17 @@ dependencies = [
  "elsecall-machine",
  "humantime",
  "libc",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "elsecall-scripted-machine"
+version = "0.3.0"
+dependencies = [
+ "elsecall-failure",
+ "elsecall-machine",
+ "elsecall-scheduling-model",
  "serde",
  "serde_json",
 ]
