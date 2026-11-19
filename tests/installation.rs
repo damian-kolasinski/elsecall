@@ -91,14 +91,9 @@ fn install_update_restart_and_clean_uninstall_using_real_files_and_fake_lifecycl
         "[capacity]\nreserved_cores = 3\n"
     );
     assert!(
-        installation::uninstall(
-            &paths,
-            &manager,
-            &elsecall::uninstall::InstalledSlices,
-            false
-        )
-        .unwrap()
-        .is_none()
+        installation::uninstall(&paths, &manager, false)
+            .unwrap()
+            .is_none()
     );
     assert!(!paths.data.exists());
     assert!(!paths.bin.is_symlink());
@@ -108,13 +103,7 @@ fn install_update_restart_and_clean_uninstall_using_real_files_and_fake_lifecycl
         *manager.events.borrow(),
         vec!["start", "stop", "start", "stop", "start", "stop"]
     );
-    installation::uninstall(
-        &paths,
-        &manager,
-        &elsecall::uninstall::InstalledSlices,
-        false,
-    )
-    .unwrap();
+    installation::uninstall(&paths, &manager, false).unwrap();
 }
 
 #[test]
@@ -148,13 +137,7 @@ fn failed_start_leaves_diagnosable_installation_that_can_be_removed() {
     );
     assert!(paths.bin.exists());
     assert!(paths.agent.exists());
-    installation::uninstall(
-        &paths,
-        &manager,
-        &elsecall::uninstall::InstalledSlices,
-        false,
-    )
-    .unwrap();
+    installation::uninstall(&paths, &manager, false).unwrap();
     assert!(!paths.data.exists());
 }
 
@@ -166,28 +149,18 @@ fn uninstall_preserves_unknown_files_and_conflicting_links() {
     fs::remove_file(&paths.bin).unwrap();
     fs::write(&paths.bin, "replacement").unwrap();
     assert_eq!(
-        installation::uninstall(
-            &paths,
-            &manager,
-            &elsecall::uninstall::InstalledSlices,
-            false
-        )
-        .unwrap_err()
-        .code,
+        installation::uninstall(&paths, &manager, false)
+            .unwrap_err()
+            .code,
         "installation_conflict"
     );
     assert!(*manager.loaded.borrow());
     assert_eq!(fs::read_to_string(&paths.bin).unwrap(), "replacement");
     fs::remove_file(&paths.bin).unwrap();
     fs::write(paths.data.join("unrelated"), "keep me").unwrap();
-    let kept = installation::uninstall(
-        &paths,
-        &manager,
-        &elsecall::uninstall::InstalledSlices,
-        false,
-    )
-    .unwrap()
-    .expect("the unrelated file is kept");
+    let kept = installation::uninstall(&paths, &manager, false)
+        .unwrap()
+        .expect("the unrelated file is kept");
     assert_eq!(kept.directory, paths.data);
     assert_eq!(kept.entries, ["unrelated"]);
     assert_eq!(
@@ -267,24 +240,12 @@ fn uninstall_after_deleted_state_directory_stops_service_and_removes_links() {
     let manager = Manager::default();
     installation::install(&paths, &source, &manager, None).unwrap();
     fs::remove_dir_all(&paths.data).unwrap();
-    installation::uninstall(
-        &paths,
-        &manager,
-        &elsecall::uninstall::InstalledSlices,
-        false,
-    )
-    .unwrap();
+    installation::uninstall(&paths, &manager, false).unwrap();
     assert!(!*manager.loaded.borrow());
     assert!(!paths.bin.is_symlink());
     assert!(!paths.agent.is_symlink());
     assert!(!paths.data.exists());
-    installation::uninstall(
-        &paths,
-        &manager,
-        &elsecall::uninstall::InstalledSlices,
-        false,
-    )
-    .unwrap();
+    installation::uninstall(&paths, &manager, false).unwrap();
 }
 
 #[test]
@@ -316,13 +277,7 @@ fn concurrent_lifecycle_operations_are_refused() {
         installation::restart(&paths, &manager)
             .map(drop)
             .unwrap_err(),
-        installation::uninstall(
-            &paths,
-            &manager,
-            &elsecall::uninstall::InstalledSlices,
-            false,
-        )
-        .unwrap_err(),
+        installation::uninstall(&paths, &manager, false).unwrap_err(),
     ] {
         assert_eq!(error.code, "operation_in_progress");
     }
@@ -350,13 +305,7 @@ fn uninstall_after_lost_receipt_removes_linked_installation() {
     installation::install(&paths, &source, &manager, None).unwrap();
     fs::remove_file(paths.data.join("installation")).unwrap();
     fs::remove_file(&paths.bin).unwrap();
-    installation::uninstall(
-        &paths,
-        &manager,
-        &elsecall::uninstall::InstalledSlices,
-        false,
-    )
-    .unwrap();
+    installation::uninstall(&paths, &manager, false).unwrap();
     assert!(!*manager.loaded.borrow());
     assert!(!paths.agent.is_symlink());
     assert!(!paths.data.exists());
@@ -370,24 +319,13 @@ fn uninstall_keeps_an_enrolled_member_key_unless_forced() {
     fs::write(paths.member_key(), "key").unwrap();
     fs::write(paths.fleet_membership(), "roster").unwrap();
     assert_eq!(
-        installation::uninstall(
-            &paths,
-            &manager,
-            &elsecall::uninstall::InstalledSlices,
-            false
-        )
-        .unwrap_err()
-        .code,
+        installation::uninstall(&paths, &manager, false)
+            .unwrap_err()
+            .code,
         "fleet_member"
     );
     assert!(paths.member_key().exists());
-    installation::uninstall(
-        &paths,
-        &manager,
-        &elsecall::uninstall::InstalledSlices,
-        true,
-    )
-    .unwrap();
+    installation::uninstall(&paths, &manager, true).unwrap();
     assert!(!paths.data.exists());
 }
 

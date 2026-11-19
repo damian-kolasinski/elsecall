@@ -4,7 +4,7 @@
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_host::paths::Paths;
 use elsecall_lifecycle::installation::{
-    self, InstalledParts, Kept, ServiceManager,
+    self, Kept, ServiceManager,
     cli_request::{CliRequest, Request, Selection},
 };
 use serde::Serialize;
@@ -37,7 +37,7 @@ pub fn uninstall(
     force: bool,
     request: Request,
 ) -> Result<Uninstalled> {
-    let kept = installation::uninstall(paths, manager, &InstalledSlices, force)?;
+    let kept = installation::uninstall(paths, manager, force)?;
     let mise = match request {
         Request::Keep => Selection::Kept,
         Request::Remove => cli.forget(),
@@ -48,18 +48,4 @@ pub fn uninstall(
         kept,
         master_ssh_key_error: elsecall_fleet::authorized_keys::remove_ours(&paths.home).err(),
     })
-}
-
-/// The update, upgrade and window slices' state under the installation.
-pub struct InstalledSlices;
-impl InstalledParts for InstalledSlices {
-    fn helper_active(&self, paths: &Paths) -> Result<bool> {
-        elsecall_lifecycle::release_update::store::active_helper(paths)
-    }
-    fn remove(&self, paths: &Paths) -> Result<()> {
-        elsecall_lifecycle::fleet_upgrade::journal::Journal::new(&paths.data).remove()?;
-        elsecall_lifecycle::release_update::store::remove(paths)?;
-        elsecall_lifecycle::window_app::remove_locked(paths);
-        Ok(())
-    }
 }
