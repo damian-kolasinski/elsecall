@@ -118,6 +118,24 @@ capture the two illustrations later in their loop (`-at28`, `-at24`) and the app
 page at the window's minimum size. Pointer-driven tests walk the sheet from the header
 to a member, and stop an add, with the CLI faked at its boundary.
 
+## Resource usage
+
+The fleet table shows a meter for each member’s CPU and memory. Hover **Managed**
+under either meter to see the operation labels and their assigned weighted cores.
+Hover **Outside** for the processes in pressure samples and early warnings, their
+owners, and observation times. CPU readings use logical cores. Memory readings
+identify physical footprint or resident size when the sample carries that detail.
+An empty outside report means the member reported no contributors for that resource.
+
+The `resource-load` app scene uses a synthetic two-member fleet. Record the
+interaction from the built window using its native renderer:
+
+```sh
+target/debug/elsecall-ui --scene resource-load --size 1120x560 --scale 1 \
+  --theme light --script crates/elsecall-ui/tests/fixtures/resource-hovers.json \
+  --video fleet-resource-usage.mp4 --fps 30 --duration 10 --pointer
+```
+
 ## Golden tests
 
 `cargo test -p elsecall-ui --bin elsecall-ui fleet_scenes_match_goldens` renders each

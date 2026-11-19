@@ -7,6 +7,8 @@ mod fleet_source;
 mod load_trend;
 mod refresh;
 mod release_source;
+mod resource_details;
+mod resource_display;
 mod socket_source;
 mod theme;
 mod uninstalled;

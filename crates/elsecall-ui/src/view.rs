@@ -270,6 +270,8 @@ fn member_card(state: &AppState, dark: bool, paints: Paints) -> El {
 }
 
 fn members_table(state: &AppState, dark: bool, paints: Paints) -> El {
+    let kit = theme::kit(dark);
+    let cell_kit = kit.clone();
     Table::new(AppState::table, AppState::table_mut, row_count, row_id)
         .name("Fleet members")
         .style(theme::table_style(dark))
@@ -286,17 +288,17 @@ fn members_table(state: &AppState, dark: bool, paints: Paints) -> El {
         )
         .column(
             TableColumn::new("status", "Status")
-                .width(160.0)
+                .width(152.0)
                 .resizable(false),
         )
         .column(
             TableColumn::new("release", "Release")
-                .width(176.0)
+                .width(148.0)
                 .resizable(false),
         )
         .column(
             TableColumn::new("cpu", "CPU")
-                .width(124.0)
+                .width(160.0)
                 .align(Align::End)
                 .resizable(false),
         )
@@ -312,18 +314,20 @@ fn members_table(state: &AppState, dark: bool, paints: Paints) -> El {
                 .align(Align::End)
                 .resizable(false),
         )
-        .cell(move |state, index, column| cell(&state.rows()[index], column, paints))
-        .build(state, &theme::kit(dark))
+        .cell(move |state, index, column| cell(&state.rows()[index], column, paints, &cell_kit))
+        .build(state, &kit)
 }
 
-fn cell(member: &MemberRow, column: &str, paints: Paints) -> Cell {
+fn cell(member: &MemberRow, column: &str, paints: Paints, kit: &rune_kit::Kit) -> Cell {
     match column {
         "member" => Cell::text(member.name.clone()).mono(),
         "role" => role_cell(member, paints),
         "status" => status_cell(member, paints),
         "release" => release_cell(&member.release, paints),
-        "cpu" => cpu_cell(member.cpu, member.logical_cpus, paints),
-        "memory" => Cell::text(memory_label(member.memory.as_ref())).mono(),
+        "cpu" => crate::resource_display::cell(member, crate::resource_details::Metric::Cpu, kit),
+        "memory" => {
+            crate::resource_display::cell(member, crate::resource_details::Metric::Memory, kit)
+        }
         "cpu-demand" => cpu_demand_cell(member.load, member.logical_cpus, paints),
         _ => Cell::text(""),
     }
@@ -374,27 +378,6 @@ fn status_cell(member: &MemberRow, paints: Paints) -> Cell {
         );
     }
     Cell::el(line)
-}
-
-fn cpu_cell(cpu: Option<f64>, count: Option<NonZeroU32>, paints: Paints) -> Cell {
-    let utilization = cpu_label(cpu);
-    let Some(count) = count else {
-        return Cell::text(utilization).mono();
-    };
-    Cell::el(
-        col()
-            .items_end()
-            .child(
-                text(utilization)
-                    .font(theme::scale().mono)
-                    .color(paints.text),
-            )
-            .child(
-                text(logical_cpu_label(count))
-                    .font(paints.small)
-                    .color(paints.secondary),
-            ),
-    )
 }
 
 fn cpu_demand_cell(load: Option<LoadAverages>, count: Option<NonZeroU32>, paints: Paints) -> Cell {
@@ -572,11 +555,11 @@ pub(crate) fn compact_bytes(bytes: u64) -> String {
     const KIB: f64 = 1024.0;
     let value = bytes as f64;
     let (scaled, suffix) = if value >= KIB.powi(3) {
-        (value / KIB.powi(3), "GB")
+        (value / KIB.powi(3), "GiB")
     } else if value >= KIB.powi(2) {
-        (value / KIB.powi(2), "MB")
+        (value / KIB.powi(2), "MiB")
     } else if value >= KIB {
-        (value / KIB, "KB")
+        (value / KIB, "KiB")
     } else {
         return format!("{bytes} B");
     };
@@ -607,6 +590,7 @@ mod tests {
                     memory: None,
                     load: None,
                     release: release.clone(),
+                    contributors: Default::default(),
                 })
                 .collect(),
             standing: Standing::Rostered,
@@ -690,15 +674,15 @@ mod tests {
         assert_eq!(cpu_label(Some(f64::NAN)), "—");
         assert_eq!(cpu_label(None), "—");
         assert_eq!(compact_bytes(500), "500 B");
-        assert_eq!(compact_bytes(1536), "1.5 KB");
-        assert_eq!(compact_bytes(10 * 1024 * 1024), "10 MB");
-        assert_eq!(compact_bytes(36 << 30), "36 GB");
+        assert_eq!(compact_bytes(1536), "1.5 KiB");
+        assert_eq!(compact_bytes(10 * 1024 * 1024), "10 MiB");
+        assert_eq!(compact_bytes(36 << 30), "36 GiB");
         assert_eq!(
             memory_label(Some(&MemoryUse {
                 used_bytes: 36 << 30,
                 total_bytes: 64 << 30,
             })),
-            "36 GB / 64 GB"
+            "36 GiB / 64 GiB"
         );
         assert_eq!(memory_label(None), "—");
         let load = LoadAverages {

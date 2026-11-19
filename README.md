@@ -1815,6 +1815,14 @@ there is a roster, `roster_error` is null; an enrolled machine that loses Tailsc
 its roster and shows members as unreachable. The fleet window shows the reason as a
 banner instead of an empty fleet.
 
+A reachable member reports its current capacity holders in `status.active_grants`.
+`total` counts held allocations and `assigned` sums their sizes in weighted cores.
+`operations` lists up to the 32 largest grants, each with its run ID, kind, label
+and size. Nested work sharing a grant counts once. Older members omit this field.
+Labels are visible to enrolled members. Keep secrets out of operation labels.
+Grant sizes describe admission capacity. Live CPU and memory use per grant are
+currently unavailable.
+
 Each member also reports its **load history** as `status.load_history`, with
 `last_hour` and `last_day` up to the current second (`status.load_history_error`
 says why it could not be read). Every member keeps one row per minute in

@@ -38,6 +38,7 @@ const SCENES: &[(&str, Scene)] = &[
     ("solo", scene_solo),
     ("no-tailnet", scene_no_tailnet),
     ("members", scene_members),
+    ("resource-load", scene_resource_load),
     ("members-selected", scene_members_selected),
     ("outdated-member", scene_outdated_member),
     ("upgrade", scene_upgrade),
@@ -79,6 +80,8 @@ pub(crate) enum Phase {
 }
 
 pub(crate) struct AppState {
+    pub(crate) snapshot_at: elsecall_contract::scheduling_model::timestamp::Timestamp,
+    pub(crate) resource_hover: crate::resource_display::Hover,
     pub(crate) configuration: ConfigurationView,
     phase: Phase,
     refreshed: Option<String>,
@@ -121,6 +124,7 @@ const ANIMATION_FRAME: std::time::Duration = std::time::Duration::from_millis(33
 impl AppState {
     fn open_configuration(&mut self, tx: &mut Tx) {
         if !self.add_mac.is_open() {
+            self.resource_hover.dismiss();
             self.configuration.open();
             tx.instant();
         }
@@ -139,6 +143,7 @@ impl AppState {
     }
 
     pub(crate) fn open_add_mac(&mut self) {
+        self.resource_hover.dismiss();
         self.add_mac.open();
         self.last_look = None;
     }
@@ -386,6 +391,7 @@ impl AppState {
     fn apply_refresh(&mut self, update: Update) {
         match update.result {
             Ok(snapshot) => {
+                self.snapshot_at = elsecall_contract::scheduling_model::timestamp::Timestamp::now();
                 self.refreshed = Some(update.refreshed_at);
                 self.phase = Phase::Ready(snapshot);
             }
@@ -487,6 +493,9 @@ fn render(state: &AppState, cx: &mut rune::Cx<AppState>) -> rune::El {
         .child(toolbar)
         .child(col().w_full().grow(1.0).min_h(0.0).child(page));
     let mut overlays = Vec::new();
+    if !state.configuration.visible() && !state.add_mac.is_open() {
+        crate::resource_display::overlay(state, &kit, &mut overlays);
+    }
     crate::add_mac_view::sheet(state, &kit, cx.is_reduced_motion(), &mut overlays);
     rune_kit::root(base, overlays)
 }
@@ -499,12 +508,17 @@ fn spec() -> AppSpec<AppState> {
         families: theme::FAMILIES,
         setup: Some(setup),
         poll: Some(poll),
+        on_key: Some(|state, event, _| {
+            event.key == rune::Key::Escape && state.resource_hover.dismiss()
+        }),
         ..AppSpec::new("Elsecall", (1120.0, 560.0), init, render)
     }
 }
 
 fn init() -> AppState {
     AppState {
+        snapshot_at: elsecall_contract::scheduling_model::timestamp::Timestamp::now(),
+        resource_hover: Default::default(),
         configuration: ConfigurationView::default(),
         phase: Phase::Loading,
         refreshed: None,
@@ -557,6 +571,7 @@ fn setup(state: &mut AppState, waker: Waker) {
 
 fn poll(state: &mut AppState, now: f64, tx: &mut Tx) -> bool {
     let mut changed = poll_add_mac(state, now, tx);
+    changed |= state.resource_hover.poll(now, tx);
     changed |= state.configuration.poll();
     if let Some(update) = state.feed.take() {
         state.apply_refresh(update);
@@ -729,6 +744,19 @@ fn scene_no_tailnet(state: &mut AppState) {
     state.follow_service = false;
     state.refreshed = Some("14:32:05".into());
     state.phase = Phase::Ready(no_tailnet_snapshot());
+}
+
+fn scene_resource_load(state: &mut AppState) {
+    state.snapshot_at = elsecall_contract::scheduling_model::timestamp::Timestamp::parse_rfc3339(
+        "2026-11-01T14:00:00Z",
+    )
+    .unwrap();
+    state.follow_service = false;
+    state.refreshed = Some("14:00:00".into());
+    let fixture = serde_json::from_str(include_str!("../tests/fixtures/resource-load.json"))
+        .expect("resource scene");
+    state.phase =
+        Phase::Ready(socket_source::snapshot_from_value(&fixture).expect("resource snapshot"));
 }
 
 fn scene_members(state: &mut AppState) {
@@ -1116,6 +1144,7 @@ fn member(
         role,
         reach,
         gate,
+        contributors: Default::default(),
         cpu: cpu.map(|(utilization, _)| utilization),
         logical_cpus: cpu.and_then(|(_, count)| NonZeroU32::new(count)),
         memory,

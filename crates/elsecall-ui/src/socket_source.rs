@@ -184,7 +184,7 @@ pub(crate) fn snapshot_from_value(data: &Value) -> Result<FleetSnapshot, SourceF
     })
 }
 
-fn map_member(member: WireMember, master: Option<&str>) -> Result<MemberRow, SourceFailure> {
+fn map_member(mut member: WireMember, master: Option<&str>) -> Result<MemberRow, SourceFailure> {
     let reach = match member.reachability.as_str() {
         "reachable" => Reachability::Reachable,
         "unreachable" => Reachability::Unreachable,
@@ -198,15 +198,30 @@ fn map_member(member: WireMember, master: Option<&str>) -> Result<MemberRow, Sou
             });
         }
     };
-    let gate = match member.blocked {
+    let gate = match &member.blocked {
         Some(blocked) => Gate::Blocked {
-            leading_process: blocked
-                .outside
+            leading_process: blocked["outside"]
+                .as_array()
                 .into_iter()
-                .map(|process| process.name)
-                .find(|name| !name.is_empty()),
+                .flatten()
+                .filter_map(|process| process["name"].as_str())
+                .find(|name| !name.is_empty())
+                .map(str::to_owned),
         },
         None => Gate::Open,
+    };
+    let contributors = crate::resource_details::Contributors {
+        grants: member
+            .status
+            .as_mut()
+            .and_then(|status| status.active_grants.take()),
+        pressure: match member.blocked {
+            None => crate::resource_details::Pressure::None,
+            Some(value) => serde_json::from_value(value)
+                .map(crate::resource_details::Pressure::Sample)
+                .unwrap_or(crate::resource_details::Pressure::Unreadable),
+        },
+        warnings: member.outside_warnings,
     };
     let machine = match reach {
         Reachability::Reachable => member.status.and_then(|status| status.machine),
@@ -260,6 +275,7 @@ fn map_member(member: WireMember, master: Option<&str>) -> Result<MemberRow, Sou
         memory,
         load,
         release,
+        contributors,
     })
 }
 
@@ -289,7 +305,12 @@ struct WireMember {
     #[serde(default)]
     status: Option<WireStatus>,
     #[serde(default)]
-    blocked: Option<WireBlocked>,
+    blocked: Option<Value>,
+    #[serde(
+        default,
+        deserialize_with = "elsecall_fleet::resource_report::read_warnings"
+    )]
+    outside_warnings: Vec<elsecall_fleet::resource_report::Warning>,
     /// Null when unreachable or when the member predates build IDs.
     #[serde(default)]
     build: Option<WireBuild>,
@@ -312,6 +333,11 @@ enum WireRole {
 
 #[derive(Deserialize)]
 struct WireStatus {
+    #[serde(
+        default,
+        deserialize_with = "elsecall_fleet::resource_report::read_grants"
+    )]
+    active_grants: Option<elsecall_fleet::resource_report::GrantSnapshot>,
     #[serde(default)]
     machine: Option<WireMachine>,
 }
@@ -339,18 +365,6 @@ struct WireLoad {
     one_minute: f64,
     five_minutes: f64,
     fifteen_minutes: f64,
-}
-
-#[derive(Deserialize)]
-struct WireBlocked {
-    #[serde(default)]
-    outside: Vec<WireProcess>,
-}
-
-#[derive(Deserialize)]
-struct WireProcess {
-    #[serde(default)]
-    name: String,
 }
 
 #[cfg(test)]

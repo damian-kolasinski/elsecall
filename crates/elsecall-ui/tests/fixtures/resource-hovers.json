@@ -1,0 +1,8 @@
+[
+  {"t":0.6,"type":"move","key":"usage-mac-mini-CPU-Managed"},
+  {"t":2.0,"type":"move","x":685,"y":270},
+  {"t":3.5,"type":"move","key":"usage-mac-mini-CPU-Outside"},
+  {"t":6.1,"type":"move","key":"usage-mac-mini-memory-Outside"},
+  {"t":8.8,"type":"key","name":"Escape"},
+  {"t":9.0,"type":"move","x":1000,"y":140}
+]

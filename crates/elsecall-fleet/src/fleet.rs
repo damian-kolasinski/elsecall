@@ -37,6 +37,13 @@ pub struct PeerStatus {
     /// members can add fields.
     pub machine: Option<MachineState>,
     pub machine_error: Option<Failure>,
+    /// One entry per held allocation. Older members omit the entire field.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::resource_report::read_grants"
+    )]
+    pub active_grants: Option<crate::resource_report::GrantSnapshot>,
     /// The copies of other members' workspaces this member holds; absent from
     /// members that predate housekeeping.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -62,16 +69,16 @@ pub struct PeerStatus {
         skip_serializing_if = "Option::is_none",
         deserialize_with = "elsecall_scheduling::outside_pressure::blocked::lenient"
     )]
-    pub blocked: Option<elsecall_scheduling::outside_pressure::Blocked>,
+    pub blocked: Option<crate::resource_report::Blocked>,
     /// Early warnings about outside processes that have spun or grown for
     /// hours, the longest-standing first. Absent while there are none, from
     /// members that predate them; entries this build cannot read are dropped.
     #[serde(
         default,
         skip_serializing_if = "Vec::is_empty",
-        deserialize_with = "elsecall_scheduling::outside_pressure::blocked::lenient_list"
+        deserialize_with = "crate::resource_report::read_warnings"
     )]
-    pub outside_warnings: Vec<elsecall_scheduling::outside_pressure::Warning>,
+    pub outside_warnings: Vec<crate::resource_report::Warning>,
 }
 
 /// Where the fleet learns this member's configuration sync state.
@@ -207,6 +214,8 @@ pub struct Fleet {
     changes: tokio::sync::Mutex<()>,
     replay: ReplayGuard,
     inspection: Arc<Inspection>,
+    grants:
+        std::sync::OnceLock<std::sync::Weak<dyn elsecall_scheduling::active_grants::ActiveGrants>>,
     copies: std::sync::OnceLock<Arc<dyn CopiesReport>>,
     load: std::sync::OnceLock<Arc<dyn elsecall_scheduling::load_log::LoadReport>>,
     blocked: std::sync::OnceLock<Arc<dyn elsecall_scheduling::outside_pressure::BlockedReport>>,
@@ -240,6 +249,7 @@ impl Fleet {
             changes: tokio::sync::Mutex::new(()),
             replay: ReplayGuard::default(),
             inspection,
+            grants: std::sync::OnceLock::new(),
             copies: std::sync::OnceLock::new(),
             load: std::sync::OnceLock::new(),
             blocked: std::sync::OnceLock::new(),
@@ -248,6 +258,11 @@ impl Fleet {
             handover: std::sync::OnceLock::new(),
             role_observer: std::sync::OnceLock::new(),
         })
+    }
+
+    // The scheduler also reaches this fleet through its placement adapter.
+    pub fn report_grants(&self, report: Arc<dyn elsecall_scheduling::active_grants::ActiveGrants>) {
+        let _ = self.grants.set(Arc::downgrade(&report));
     }
 
     /// Reports this member's copies with its status from now on.
@@ -542,6 +557,11 @@ impl Fleet {
             roster,
             machine,
             machine_error,
+            active_grants: self
+                .grants
+                .get()
+                .and_then(std::sync::Weak::upgrade)
+                .map(|report| report.active_grants()),
             copies,
             copies_error,
             load_history,
