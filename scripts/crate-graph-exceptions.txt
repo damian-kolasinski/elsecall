@@ -1,6 +1,0 @@
-# <kind> <subject> <count>: crate-graph violations older than scripts/crate_graph.py.
-# `edge FROM TO`: references from one planned crate to another that point upward,
-# close a cycle or leave an allowlist; `testedge FROM TO`: the same from test code.
-# `extern CRATE DEP`: uses of a framework the crate's band forbids. `lines CRATE`:
-# non-test lines over the band's budget. Counts are exact and only go down:
-# scripts/crate_graph.py --shrink lowers them after a fix.

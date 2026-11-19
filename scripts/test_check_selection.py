@@ -179,6 +179,26 @@ class SelectionTest(unittest.TestCase):
         self.assertRuns(["crates/tool/src/lib.rs"], rust={"package(acme-tool)"})
         self.assertRuns(["crates/desk/src/main.rs"], rust={"package(acme-desk)"})
 
+    def test_a_crate_others_depend_on_selects_them_too(self):
+        files = dict(FILES)
+        files["crates/tool/Cargo.toml"] = '[package]\nname = "acme-tool"\n[dependencies]\nacme-base.workspace = true\n'
+        files["crates/base/Cargo.toml"] = '[package]\nname = "acme-base"\n'
+        files["crates/base/src/lib.rs"] = ""
+        files["Cargo.toml"] = (
+            '[workspace]\nmembers = [".", "crates/*"]\n'
+            '[workspace.dependencies]\nacme-base = { path = "crates/base" }\n'
+            '[package]\nname = "acme"\n'
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name, content in files.items():
+                (root / name).parent.mkdir(parents=True, exist_ok=True)
+                (root / name).write_text(content)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            selection = check_selection.select(root, ["crates/base/src/lib.rs"])
+        self.assertIsNone(selection.everything, selection.reasons)
+        self.assertEqual(selection.targets.rust, {"rdeps(acme-base)"})
+
     def test_library_sources_and_workspace_inputs_select_everything(self):
         for path in [
             "src/reader.rs",

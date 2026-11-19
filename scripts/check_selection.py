@@ -12,8 +12,8 @@ The rules:
   them, the lock file, toolchain and test environment) and the root package's
   own sources select everything: every test binary and the desktop crate link
   the library, and most tests run its executable.
-- A file in another workspace crate selects that crate's package, or everything
-  when another package depends on it.
+- A file in another workspace crate selects that crate's tests and the tests of
+  every package depending on it, directly or not (nextest's `rdeps`).
 - `tests/NAME.rs` and `tests/NAME/main.rs` select that test binary. Anything
   else under `tests/DIR/` selects the binaries declaring `mod DIR;` and what
   names it, or everything when neither does.
@@ -257,13 +257,10 @@ def affects(workspace: Workspace, path: str, visiting: set[str]) -> Everything |
     if in_package_sources and not package.directory:
         return Everything(f"{path} is in the {package.name} library or executable, which every test uses")
     if package.directory:
-        if package.dependents:
-            names = ", ".join(sorted(package.dependents))
-            return Everything(f"{path} is in {package.name}, which {names} depend on")
         named = referenced(workspace, path, visiting, outside=package.directory + "/")
         if isinstance(named, Everything):
             return named
-        named.rust.add(f"package({package.name})")
+        named.rust.add(f"rdeps({package.name})" if package.dependents else f"package({package.name})")
         return named
     if relative.startswith("tests/"):
         parts = relative.split("/")[1:]

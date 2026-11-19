@@ -31,11 +31,13 @@ Agents using the CLI are the primary consumers. Humans using the web interface a
   - After splitting or moving a listed file, run `scripts/module_shape.py --shrink` to lower or move its entry.
   - A file moved with `git mv` keeps its ceiling, so a move need not also be a split. Keep moves and splits in separate changes so each reviews on its own.
   - Warnings show only for files the change touched; `--all` lists the whole backlog.
-- `scripts/crate_graph.py` holds the crate graph the code is heading for, in `mise run check` and `check:affected`:
-  - `scripts/crate-graph.toml` puts every top-level module, binary and workspace crate in a planned crate, and every planned crate in a band: foundation, core, feature, lab, adapter, entry. A new module gets its entry in the same change, under the slice it belongs to.
-  - Dependencies point down the bands, never up, and crates in one band form no cycle. Test code follows the same rules: a fixture lives in the crate that owns the types it builds. Foundation crates stay under their line budget and free of frameworks such as axum and rusqlite; core stays free of axum and clap.
+- The code is a workspace of crates: each is the package `elsecall-<name>` in `crates/elsecall-<name>/`, and the `elsecall` package holds only the binary, the CLI's commands and the service's composition. `scripts/crate_graph.py` holds the graph, in `mise run check` and `check:affected`:
+  - `scripts/crate-graph.toml` puts every crate in a band: foundation, core, feature, lab, adapter, entry. A new crate gets its entry in the same change. A new module goes in the crate whose responsibility it is; when none fits, make a crate for it instead of growing one.
+  - Dependencies point down the bands, never up, and crates in one band form no cycle. Test code follows the same rules: a crate shares fixtures behind a `test-support` feature (`scripts/test_support.py`), and other crates' tests turn it on. Foundation crates stay under their line budget and free of frameworks such as axum and rusqlite; core stays free of axum and clap.
   - Fix a violation by moving the shared item down to a crate both sides can use, or by declaring a port (a trait) in the lower crate and implementing it above. `--why FROM TO` lists every reference behind an edge; `--cycles` suggests which edges to cut.
-  - Older violations are in `scripts/crate-graph-exceptions.txt` with exact reference counts. Never add or raise an entry. After removing references, run `scripts/crate_graph.py --shrink` in the same change; a count left above the code fails.
+  - Manifests inherit the workspace (`version`, `edition`, `rust-version`, `license`, `[lints]`), say `publish = false`, and name every dependency as `name.workspace = true`, declared once in `[workspace.dependencies]`.
+  - `pub` means another crate uses the item (`unreachable_pub` is denied); inside a crate, write `pub(crate)`.
+  - Code written against the single library crate moves onto the crates with `scripts/crate_split.py`, which rewrites its paths.
 
 ## Working
 

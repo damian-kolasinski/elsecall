@@ -2,7 +2,10 @@
 crates, finding cycles, and the exceptions ratchet."""
 from __future__ import annotations
 
+import tempfile
+import tomllib
 import unittest
+from pathlib import Path
 
 import crate_graph as graph
 import module_shape as shape
@@ -155,7 +158,7 @@ class Checking(unittest.TestCase):
     def test_catch_all_crate_names_fail(self):
         plan = graph.read_plan(PLAN + '[crates.shared-types]\nband = "core"\nmodules = []\n')
         built = graph.build(None, plan, {}, {"": "elsecall"})
-        messages = [f.message for f in graph.findings(plan, built, {}) if f.error]
+        messages = [f.message for f in graph.findings(plan, built) if f.error]
         self.assertTrue(any("shared-types" in message for message in messages))
 
 
@@ -169,38 +172,51 @@ class Cuts(unittest.TestCase):
             self.assertNotEqual(graph.cycles({"a", "b", "c"}, left | {cut}), [], cut)
 
 
-class Ratchet(unittest.TestCase):
-    FILES = {
-        "src/scheduling/request.rs": "fn f() { crate::rehearsal::a(); crate::rehearsal::b(); }\n",
-        "src/rehearsal.rs": "use crate::scheduling::request;\n",
-    }
+class Manifests(unittest.TestCase):
+    GOOD = (
+        '[package]\nname = "elsecall-failure"\nversion.workspace = true\nedition.workspace = true\n'
+        'rust-version.workspace = true\nlicense.workspace = true\npublish = false\n\n'
+        '[lints]\nworkspace = true\n\n[dependencies]\nserde.workspace = true\n'
+    )
 
-    def errors(self, listed):
-        plan, built = build(self.FILES)
-        return [f.message for f in graph.findings(plan, built, listed) if f.error]
+    def check(self, manifests: dict[str, str], files: dict[str, str] | None = None) -> list[str]:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packages = {}
+            for folder, text in manifests.items():
+                (root / folder).mkdir(parents=True)
+                (root / folder / "Cargo.toml").write_text(text)
+                packages[folder] = tomllib.loads(text)["package"]["name"]
+            plan = graph.read_plan(PLAN)
+            return [f.message for f in graph.manifest_findings(root, plan, packages, files or {})]
 
-    def test_a_listed_edge_passes_only_at_its_exact_count(self):
-        self.assertEqual(self.errors({("edge", "scheduling", "rehearsal"): 2}), [])
-        self.assertTrue(any("over the listed 1" in m for m in self.errors({("edge", "scheduling", "rehearsal"): 1})))
-        # Room freed by a fix must be recorded, or a later change could spend it.
-        self.assertTrue(any("run --shrink" in m for m in self.errors({("edge", "scheduling", "rehearsal"): 3})))
-        resolved = {("edge", "scheduling", "rehearsal"): 2, ("edge", "rehearsal", "fleet"): 1}
-        self.assertTrue(any("is resolved" in m for m in self.errors(resolved)))
+    def test_a_crate_that_inherits_the_workspace_passes(self):
+        self.assertEqual(self.check({"crates/elsecall-failure": self.GOOD}), [])
 
-    def test_shrinking_lowers_counts_and_drops_resolved_edges(self):
-        plan, built = build({"src/scheduling/request.rs": "fn f() { crate::rehearsal::a(); }\n", "src/rehearsal.rs": ""})
-        listed = {("edge", "scheduling", "rehearsal"): 2, ("edge", "rehearsal", "scheduling"): 1}
-        self.assertEqual(graph.shrunk(plan, built, listed), {("edge", "scheduling", "rehearsal"): 1})
+    def test_versions_lints_and_publishing_come_from_the_workspace(self):
+        bad = self.GOOD.replace("version.workspace = true", 'version = "1.0.0"').replace("publish = false\n", "")
+        bad = bad.replace("[lints]\nworkspace = true\n", "")
+        messages = self.check({"crates/elsecall-failure": bad})
+        self.assertTrue(any("package.version" in m for m in messages), messages)
+        self.assertTrue(any("publish = false" in m for m in messages), messages)
+        self.assertTrue(any("[lints]" in m for m in messages), messages)
 
-    def test_the_list_may_not_gain_or_raise_entries_against_the_base(self):
-        base = {("edge", "a", "b"): 2}
-        self.assertEqual(graph.ratchet({("edge", "a", "b"): 2}, base), [])
-        self.assertEqual(len(graph.ratchet({("edge", "a", "b"): 3}, base)), 1)
-        self.assertEqual(len(graph.ratchet({("edge", "a", "c"): 1}, base)), 1)
+    def test_dependencies_are_declared_once_for_the_workspace(self):
+        bad = self.GOOD.replace("serde.workspace = true", 'serde = "1"')
+        self.assertTrue(any("serde.workspace = true" in m for m in self.check({"crates/elsecall-failure": bad})))
 
-    def test_the_list_round_trips(self):
-        entries = {("edge", "a", "b"): 2, ("extern", "a", "axum"): 1, ("lines", "a", ""): 1600}
-        self.assertEqual(graph.parse_exceptions(graph.format_exceptions(entries)), entries)
+    def test_a_dependency_on_a_higher_band_fails_even_for_tests(self):
+        manifest = self.GOOD + "\n[dev-dependencies]\nelsecall-rehearsal.workspace = true\n"
+        messages = self.check({"crates/elsecall-failure": manifest})
+        self.assertTrue(any("higher feature band" in m for m in messages), messages)
+
+    def test_build_environment_variables_stay_where_they_hold(self):
+        files = {
+            "crates/elsecall-failure/src/lib.rs": 'const A: &str = env!("CARGO_MANIFEST_DIR");\nconst B: &str = env!("CARGO_BIN_EXE_x");\n',
+        }
+        messages = self.check({"crates/elsecall-failure": self.GOOD}, files)
+        self.assertTrue(any("CARGO_MANIFEST_DIR" in m for m in messages), messages)
+        self.assertTrue(any("CARGO_BIN_EXE_x" in m for m in messages), messages)
 
 
 if __name__ == "__main__":

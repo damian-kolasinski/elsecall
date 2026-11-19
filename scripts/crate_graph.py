@@ -1,36 +1,37 @@
 #!/usr/bin/env python3
-"""Hold the crate graph Elsecall is heading for: every module in a planned crate,
-dependencies only downward, no cycles, a small foundation.
+"""Hold the workspace's crate graph: every crate in a band, dependencies only
+downward, no cycles, a small foundation, and manifests that inherit the
+workspace.
 
-`scripts/crate-graph.toml` assigns every top-level module of the library, the
-binary and every workspace crate to a planned crate, and every planned crate to
-a band. The check reads production code (test-only items and test files are
-left out), resolves each `crate::`, `super::`, `self::` and `elsecall::` path to
-the planned crate it names, and reports:
+`scripts/crate-graph.toml` puts every crate in a band (foundation, core,
+feature, lab, adapter, entry). The `elsecall` package's own modules and binary
+are assigned to the entry crates there too; every other crate is the package
+`elsecall-<name>` in `crates/elsecall-<name>/`. The check reads each crate's
+code (production and tests apart), resolves its paths to the crates they name,
+reads its manifest, and fails on:
 
 - `unassigned`: a module, binary or package with no planned crate. Choose its
-  slice when you create it.
-- `upward`: a crate depending on a crate in a higher band.
-- `cycle`: crates in one band depending on each other, directly or through
-  others. (A cycle across bands always holds an upward edge.)
-- `testedge`: the same two rules for test code, which compiles with its crate:
-  an upward test reference becomes a dev-dependency that builds a crate twice.
-- `allowlist`: a dependency outside a crate's `may_depend_on`.
+  band when you create it.
+- `edge`: a crate depending on a crate in a higher band, closing a cycle within
+  its band, or leaving its `may_depend_on`.
+- `testedge`: the same for test code, which compiles with its crate: an upward
+  test dependency builds a crate twice. A crate shares fixtures behind a
+  `test-support` feature instead.
 - `extern`: a framework its band forbids (`forbid`), such as axum in the
   foundation.
-- `lines`: a crate over its band's `max_lines`.
+- `lines`: a foundation crate over its band's `max_lines`.
 - `name`: a crate named for no responsibility (`common`, `types`, ...).
+- `manifest`: a crate's manifest not inheriting the workspace (version, edition,
+  rust-version, license, lints), publishable, naming a dependency other than
+  `name.workspace = true`, or depending on a higher band.
+- `environment`: `CARGO_BIN_EXE_*` outside a package's own tests, or
+  `CARGO_MANIFEST_DIR` in foundation or core production code, which ties shared
+  build caches to one checkout.
 
-Violations older than the check are listed in
-`scripts/crate-graph-exceptions.txt` with how many references each has. The
-counts are exact: a violation above its count fails, and so does one below it
-or one resolved, until `--shrink` records the lower count, so freed room
-cannot be spent again. With a base (`--base REF`, else the merge base with `mergegate/main`) the
-list may not gain or raise an entry. `--shrink` lowers the counts to the code. `--cycles` prints each cycle within a
-band with a cheapest set of edges to cut, and `--why FROM TO` every reference
-behind an edge.
+`--why FROM TO` prints every reference behind an edge, `--cycles` each cycle
+within a band with edges to cut, `--graph` the graph as a Mermaid flowchart.
 
-Usage: crate_graph.py [--base REF] [--shrink] [--cycles] [--why FROM TO] [--graph]
+Usage: crate_graph.py [--why FROM TO] [--cycles] [--graph]
 """
 from __future__ import annotations
 
@@ -45,19 +46,10 @@ from pathlib import Path, PurePosixPath
 import module_shape as shape
 
 CONFIG = "scripts/crate-graph.toml"
-EXCEPTIONS = "scripts/crate-graph-exceptions.txt"
-GUARD = "scripts/crate_graph.py"
 LIBRARY = "elsecall"
 # Crate names that say where code sits rather than what it owns.
 CATCH_ALL = shape.CATCH_ALL | {"types", "base", "prelude", "lib", "stuff", "general"}
-HEADER = (
-    "# <kind> <subject> <count>: crate-graph violations older than scripts/crate_graph.py.\n"
-    "# `edge FROM TO`: references from one planned crate to another that point upward,\n"
-    "# close a cycle or leave an allowlist; `testedge FROM TO`: the same from test code.\n"
-    "# `extern CRATE DEP`: uses of a framework the crate's band forbids. `lines CRATE`:\n"
-    "# non-test lines over the band's budget. Counts are exact and only go down:\n"
-    "# scripts/crate_graph.py --shrink lowers them after a fix.\n"
-)
+INHERITED = ("version", "edition", "rust-version", "license")
 
 
 # --- The plan -----------------------------------------------------------------
@@ -579,27 +571,6 @@ def violations(plan: Plan, graph: Graph) -> list[Violation]:
     return found
 
 
-def parse_exceptions(text: str) -> dict[Key, int]:
-    entries = {}
-    for number, line in enumerate(text.splitlines(), 1):
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        fields = line.split()
-        if fields[0] in ("edge", "testedge", "extern") and len(fields) == 4 and fields[3].isdigit():
-            entries[(fields[0], fields[1], fields[2])] = int(fields[3])
-        elif fields[0] == "lines" and len(fields) == 3 and fields[2].isdigit():
-            entries[("lines", fields[1], "")] = int(fields[2])
-        else:
-            raise SystemExit(f"{EXCEPTIONS}:{number}: expected `edge FROM TO n`, `testedge FROM TO n`, `extern CRATE DEP n` or `lines CRATE n`, got {line!r}")
-    return entries
-
-
-def format_exceptions(entries: dict[Key, int]) -> str:
-    rows = [" ".join(part for part in (kind, subject, detail, str(count)) if part) for (kind, subject, detail), count in sorted(entries.items())]
-    return HEADER + "".join(row + "\n" for row in rows)
-
-
 @dataclass(frozen=True)
 class Finding:
     error: bool
@@ -620,44 +591,70 @@ def describe(violation: Violation) -> str:
     return f"{kind} {subject} {detail}".rstrip()
 
 
-def findings(plan: Plan, graph: Graph, entries: dict[Key, int]) -> list[Finding]:
+def findings(plan: Plan, graph: Graph) -> list[Finding]:
     found = [Finding(True, CONFIG, problem) for problem in plan.problems]
     for subject, what in sorted(graph.unassigned.items()):
-        found.append(Finding(True, subject, f"{what} is in no planned crate: add it to {CONFIG} under the slice it belongs to"))
+        found.append(Finding(True, subject, f"{what} is in no planned crate: add it to {CONFIG} under the band it belongs to"))
     for name in plan.crates:
         if any(part.replace("-", "_") in CATCH_ALL for part in name.split("-")):
             found.append(Finding(True, CONFIG, f"crate `{name}` is named for no responsibility: name it for what it owns"))
-    current = {v.key: v for v in violations(plan, graph)}
-    for key, violation in sorted(current.items()):
-        allowed = entries.get(key)
+    for violation in violations(plan, graph):
         site = f" (first at {violation.first.file}:{violation.first.line}, `{violation.first.path}`)" if violation.first else ""
-        if allowed is None:
-            found.append(Finding(True, describe(violation), f"{violation.reason}, {violation.count} reference(s){site}: {ADVICE[key[0]]}"))
-        elif violation.count > allowed:
-            found.append(Finding(True, describe(violation), f"{violation.reason}: {violation.count} reference(s), over the listed {allowed}{site}"))
-        elif violation.count < allowed:
-            # An exact count leaves no slack for a later change to spend.
-            found.append(Finding(True, EXCEPTIONS, f"`{describe(violation)}` is down to {violation.count} from {allowed}: run --shrink"))
-    for key, allowed in sorted(entries.items()):
-        if key not in current:
-            found.append(Finding(True, EXCEPTIONS, f"`{' '.join(p for p in key if p)}` is resolved: run --shrink to drop it"))
+        found.append(Finding(True, describe(violation), f"{violation.reason}, {violation.count} reference(s){site}: {ADVICE[violation.key[0]]}"))
     return sorted(found, key=lambda f: (not f.error, f.subject))
 
 
-def ratchet(entries: dict[Key, int], base: dict[Key, int]) -> list[Finding]:
+def manifest_findings(root: Path, plan: Plan, packages: dict[str, str], files: dict[str, str]) -> list[Finding]:
+    """Rules on the manifests of the crates under crates/, and on the build
+    environment variables their code reads."""
     found = []
-    for key, value in sorted(entries.items()):
-        label = " ".join(p for p in key if p)
-        if key not in base:
-            found.append(Finding(True, EXCEPTIONS, f"adds `{label}`: fix the violation instead"))
-        elif value > base[key]:
-            found.append(Finding(True, EXCEPTIONS, f"raises `{label}` from {base[key]} to {value}: counts only go down"))
+    for directory, package in sorted(packages.items()):
+        if not directory:
+            continue
+        crate = plan.packages.get(package) or extracted(plan, package)
+        manifest_path = f"{directory}/Cargo.toml"
+        manifest = tomllib.loads((root / manifest_path).read_text(encoding="utf-8"))
+        if crate is None:
+            continue  # reported as unassigned
+        if package not in plan.packages and directory != f"crates/{package}":
+            found.append(Finding(True, manifest_path, f"`{package}` lives in {directory}; put it in crates/{package}"))
+        fields = manifest.get("package", {})
+        for key in INHERITED:
+            if fields.get(key) != {"workspace": True}:
+                found.append(Finding(True, manifest_path, f"`package.{key}` must be `{key}.workspace = true`: every crate is one release"))
+        if fields.get("publish") is not False:
+            found.append(Finding(True, manifest_path, "`publish = false`: crates are parts of one application, not libraries"))
+        if manifest.get("lints") != {"workspace": True}:
+            found.append(Finding(True, manifest_path, "`[lints] workspace = true`: every crate keeps the workspace's lints"))
+        for table in ("dependencies", "dev-dependencies", "build-dependencies"):
+            for name, spec in manifest.get(table, {}).items():
+                if not (isinstance(spec, dict) and spec.get("workspace") is True):
+                    found.append(Finding(True, manifest_path, f"`{table}.{name}`: declare it in [workspace.dependencies] and write `{name}.workspace = true`, so every crate builds it alike"))
+                target = extracted(plan, name)
+                if target is None or target == crate:
+                    continue
+                source, destination = plan.crates[crate], plan.crates[target]
+                if destination.band.rank > source.band.rank:
+                    found.append(Finding(True, manifest_path, f"`{table}.{name}`: a {source.band.name} crate may not depend on the higher {destination.band.name} band"))
+                if table != "dev-dependencies" and source.may_depend_on is not None and target not in source.may_depend_on:
+                    found.append(Finding(True, manifest_path, f"`{table}.{name}` is not in `{crate}`'s may_depend_on"))
+    directories = sorted(packages, key=len, reverse=True)
+    for path, text in sorted(files.items()):
+        directory = next((d for d in directories if d == "" or path.startswith(d + "/")), None)
+        if directory is None:
+            continue
+        package = packages[directory]
+        inside = path[len(directory) + 1 :] if directory else path
+        own_tests = inside.startswith("tests/")
+        for match in re.finditer(r"CARGO_BIN_EXE_([\w-]+)", text):
+            if not own_tests:
+                found.append(Finding(True, path, f"`CARGO_BIN_EXE_{match.group(1)}` exists only for {package}'s own integration tests"))
+        crate = plan.packages.get(package) or extracted(plan, package)
+        if crate and plan.crates[crate].band.name in ("foundation", "core") and not shape.is_test_file(path):
+            production = "\n".join(line for _, line in shape.production_lines(text))
+            if "CARGO_MANIFEST_DIR" in production:
+                found.append(Finding(True, path, "`CARGO_MANIFEST_DIR` in foundation or core code ties the shared build cache to one checkout"))
     return found
-
-
-def shrunk(plan: Plan, graph: Graph, entries: dict[Key, int]) -> dict[Key, int]:
-    current = {v.key: v.count for v in violations(plan, graph)}
-    return {key: min(count, entries[key]) for key, count in current.items() if key in entries}
 
 
 # --- Reading the repository -----------------------------------------------------
@@ -697,18 +694,15 @@ def mermaid(plan: Plan, graph: Graph, flagged: set[tuple[str, str]]) -> str:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--base", help="the commit to hold the exceptions list to")
-    parser.add_argument("--shrink", action="store_true", help="lower the list's counts to the code")
-    parser.add_argument("--write-baseline", action="store_true", help="list every current violation; only for the change that adds this check")
-    parser.add_argument("--why", nargs=2, metavar=("FROM", "TO"), help="print every reference from one planned crate to another")
-    parser.add_argument("--graph", action="store_true", help="print the planned crate graph as a Mermaid flowchart")
+    parser.add_argument("--why", nargs=2, metavar=("FROM", "TO"), help="print every reference from one crate to another")
+    parser.add_argument("--graph", action="store_true", help="print the crate graph as a Mermaid flowchart")
     parser.add_argument("--cycles", action="store_true", help="print each cycle within a band with edges to cut")
     options = parser.parse_args(argv)
     root = Path(shape.git(Path.cwd(), "rev-parse", "--show-toplevel").strip())
     plan = read_plan((root / CONFIG).read_text(encoding="utf-8"))
-    graph = build(root, plan, shape.rust_files(root), workspace_packages(root))
-    path = root / EXCEPTIONS
-    entries = parse_exceptions(path.read_text(encoding="utf-8")) if path.exists() else {}
+    files = shape.rust_files(root)
+    packages = workspace_packages(root)
+    graph = build(root, plan, files, packages)
 
     if options.why:
         a, b = options.why
@@ -733,34 +727,13 @@ def main(argv: list[str]) -> int:
     if options.graph:
         print(mermaid(plan, graph, {v.key[1:] for v in violations(plan, graph) if v.key[0] == "edge"}))
         return 0
-    if options.write_baseline:
-        current = {v.key: v.count for v in violations(plan, graph)}
-        path.write_text(format_exceptions(current), encoding="utf-8")
-        print(f"wrote {EXCEPTIONS}: {len(current)} entries")
-        return 0
-    if options.shrink:
-        lowered = shrunk(plan, graph, entries)
-        path.write_text(format_exceptions(lowered), encoding="utf-8")
-        print(f"wrote {EXCEPTIONS}: {len(lowered)} entries, {len(entries) - len(lowered)} resolved")
-        return 0
 
-    found = findings(plan, graph, entries)
-    base = options.base or shape.default_base(root)
-    if base and shape.git(root, "cat-file", "-t", f"{base}:{GUARD}", check=False).strip():
-        found += ratchet(entries, parse_exceptions(shape.git(root, "show", f"{base}:{EXCEPTIONS}", check=False)))
+    found = findings(plan, graph) + manifest_findings(root, plan, packages, files)
     for finding in found:
-        print(f"{'error' if finding.error else 'warn '}  {finding.subject}: {finding.message}")
-    errors = sum(f.error for f in found)
-    components = cycles(set(plan.crates), set(graph.edges))
-    largest = max((len(c) for c in components), default=0)
-    listed_edges = [k for k in entries if k[0] == "edge"]
-    listed_tests = [k for k in entries if k[0] == "testedge"]
-    print(
-        f"crate graph: {errors} errors, {len(found) - errors} warnings · {len(plan.crates)} planned crates · "
-        f"largest cycle {largest} crates · {len(listed_edges)} listed edges with "
-        f"{sum(entries[k] for k in listed_edges)} references and {len(listed_tests)} test edges to go"
-    )
-    return 1 if errors else 0
+        print(f"error  {finding.subject}: {finding.message}")
+    crates = len(({c for c in graph.lines} | {extracted(plan, p) for p in packages.values()}) - {None})
+    print(f"crate graph: {len(found)} errors · {crates} crates")
+    return 1 if found else 0
 
 
 if __name__ == "__main__":

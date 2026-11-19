@@ -1,14 +1,15 @@
-# The crate graph Elsecall is heading for, held by scripts/crate_graph.py.
+# The workspace's crates and the band each sits in, held by scripts/crate_graph.py.
 #
-# Every top-level module of the `elsecall` library and every workspace crate
-# belongs to one planned crate below, and every planned crate to one band. A
-# new module needs an entry before it lands: choose its slice when you create
-# it, not after it has grown dependencies in every direction.
+# Every crate is the package `elsecall-<name>` in `crates/elsecall-<name>/` and
+# has an entry here; a new crate needs its entry, with its band, before it
+# lands. Choose the band by what the crate may depend on, not by what depends
+# on it.
 #
-# A module is named by its path from the crate root (`scheduling` or
-# `scheduling::timestamp`); the longest listed path wins, so a module can be
-# assigned piece by piece while it is being split. A workspace crate other than
-# the library is assigned by its package name in `packages`.
+# `modules` are the `elsecall` library modules each crate was moved out of, by
+# their path from the library root (`scheduling` or `scheduling::timestamp`).
+# For the entry crates `cli` and `service`, which stay in the `elsecall`
+# package, they are its modules today. scripts/crate_split.py reads them to
+# move code written against the single crate onto the crates.
 
 # Lowest first. A crate may depend on crates in its own band or a lower one,
 # never a higher one, and the planned crates may not form a cycle.

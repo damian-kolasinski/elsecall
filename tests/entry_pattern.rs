@@ -468,7 +468,7 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
     for (task, expected) in [
         (
             "check",
-            "granted:0:fmt --all -- --check\nmodule shape: 0 errors, 0 warnings\ncrate graph: 0 errors, 0 warnings · 0 planned crates · largest cycle 0 crates · 0 listed edges with 0 references and 0 test edges to go\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\ngranted:0:clippy -p elsecall-release-update --locked --all-targets --features local-release-channel -- -D warnings\ngranted:0:nextest run -p elsecall-release-update --locked --lib --features local-release-channel release_update::\nclean:0:nextest run --workspace --locked\nclean:0:test --doc --workspace --locked\n",
+            "granted:0:fmt --all -- --check\nmodule shape: 0 errors, 0 warnings\ncrate graph: 0 errors · 0 crates\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\ngranted:0:clippy -p elsecall-release-update --locked --all-targets --features local-release-channel -- -D warnings\ngranted:0:nextest run -p elsecall-release-update --locked --lib --features local-release-channel release_update::\nclean:0:nextest run --workspace --locked\nclean:0:test --doc --workspace --locked\n",
         ),
         ("build", "granted:0:build --locked --release\n"),
         (
@@ -518,7 +518,7 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
     // A failing lint stops the check before any test runs.
     assert_eq!(
         String::from_utf8(output.stdout).unwrap(),
-        "granted:0:fmt --all -- --check\nmodule shape: 0 errors, 0 warnings\ncrate graph: 0 errors, 0 warnings · 0 planned crates · largest cycle 0 crates · 0 listed edges with 0 references and 0 test edges to go\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\n"
+        "granted:0:fmt --all -- --check\nmodule shape: 0 errors, 0 warnings\ncrate graph: 0 errors · 0 crates\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\n"
     );
     let home = empty_home();
     crate::processes::workload_policy(home.path(), None, "[admission]\nwhen_unavailable = 'run'\n");
