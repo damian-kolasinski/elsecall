@@ -1,0 +1,243 @@
+# The crate graph Elsecall is heading for, held by scripts/crate_graph.py.
+#
+# Every top-level module of the `elsecall` library and every workspace crate
+# belongs to one planned crate below, and every planned crate to one band. A
+# new module needs an entry before it lands: choose its slice when you create
+# it, not after it has grown dependencies in every direction.
+#
+# A module is named by its path from the crate root (`scheduling` or
+# `scheduling::timestamp`); the longest listed path wins, so a module can be
+# assigned piece by piece while it is being split. A workspace crate other than
+# the library is assigned by its package name in `packages`.
+
+# Lowest first. A crate may depend on crates in its own band or a lower one,
+# never a higher one, and the planned crates may not form a cycle.
+bands = ["foundation", "core", "feature", "lab", "adapter", "entry"]
+
+[band.foundation]
+# Shared vocabulary that everything builds on. A private edit here reruns rustc
+# for every crate above, so these stay small and free of frameworks.
+max_lines = 1500
+forbid = ["axum", "hyper", "hyper_util", "http_body_util", "tower", "rusqlite", "clap", "sysinfo", "plist", "toml_edit"]
+
+[band.core]
+# Scheduling, the records it keeps and peer transport. No HTTP routes and no
+# command line: the service mounts their routes and the binary their commands.
+forbid = ["axum", "clap"]
+
+[band.feature]
+[band.lab]
+[band.adapter]
+# Platform adapters implement ports the slices declare. Only entry points,
+# the one band above, may depend on them.
+[band.entry]
+
+# --- foundation ---------------------------------------------------------------
+
+[crates.failure]
+band = "foundation"
+modules = ["failure"]
+
+[crates.labels]
+band = "foundation"
+modules = ["label_pattern"]
+
+[crates.wire]
+band = "foundation"
+modules = ["api", "wire", "report_protocol"]
+
+[crates.local-state]
+band = "foundation"
+modules = ["paths", "private_files", "local_access", "state_temps", "run_id_file"]
+
+[crates.build-identity]
+band = "foundation"
+modules = ["build_identity", "executable_format", "version_skew"]
+
+[crates.process]
+band = "foundation"
+modules = ["child_start", "command_capture"]
+
+[crates.secure-channel]
+band = "foundation"
+modules = ["secure_channel"]
+
+[crates.tailnet]
+band = "foundation"
+modules = ["tailnet", "tailscale_bottle"]
+
+[crates.membership]
+band = "foundation"
+modules = ["roster", "member_key", "member_code", "membership_store", "peer_auth"]
+
+[crates.scheduling-model]
+band = "foundation"
+# The scheduler's vocabulary: what a request, a time, a capacity and a run id
+# are. Everything that decides or stores stays in `scheduling`.
+modules = ["scheduling::request", "scheduling::timestamp", "scheduling::capacity", "scheduling::run_id", "scheduling::speed"]
+
+[crates.machine]
+band = "foundation"
+modules = ["inspection", "idle_load", "machine_script", "state_sizes"]
+
+# --- core ---------------------------------------------------------------------
+
+[crates.sqlite-retention]
+band = "core"
+modules = ["sqlite_retention"]
+
+[crates.service-log]
+band = "core"
+modules = ["service_log"]
+
+[crates.local-client]
+band = "core"
+modules = ["client"]
+
+[crates.peer-transport]
+band = "core"
+modules = ["peer_client", "peer_transport", "socket_io", "send_inactivity", "receive_inactivity"]
+
+[crates.peer-diagnostics]
+band = "core"
+modules = ["peer_diagnostics", "peer_history"]
+
+[crates.scheduling]
+band = "core"
+modules = ["scheduling"]
+
+[crates.workload]
+band = "core"
+modules = ["workload", "workload_metadata"]
+
+[crates.load-log]
+band = "core"
+modules = ["load_log", "own_history"]
+
+[crates.outside-pressure]
+band = "core"
+modules = ["outside_pressure", "outside_pressure_gate"]
+
+# --- feature slices -----------------------------------------------------------
+
+[crates.workload-config]
+band = "feature"
+modules = ["workload_settings", "workload_configuration", "workload_migration"]
+
+[crates.admission]
+band = "feature"
+modules = ["run_admission", "admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "lifecycle_holder", "guidance"]
+
+[crates.remote-run]
+band = "feature"
+modules = ["remote_run", "sealed_run"]
+
+[crates.placement]
+band = "feature"
+modules = ["placement_api", "placement_authority", "placement_host", "placement_config_sync"]
+
+[crates.fleet]
+band = "feature"
+modules = ["fleet", "fleet_changes", "fleet_cli", "fleet_local_api", "fleet_view", "fleet_callers", "fleet_placement"]
+
+[crates.add-mac]
+band = "feature"
+modules = ["add_mac", "add_mac_cli", "nearby_macs", "nearby_cli", "remote_mac", "openssh_mac", "askpass", "authorized_keys"]
+
+[crates.service-config]
+band = "feature"
+modules = ["configuration", "service_configuration"]
+
+[crates.config-sync]
+band = "feature"
+modules = ["config_sync", "config_sync_api", "config_sync_cli", "config_sync_local_api"]
+
+[crates.tools]
+band = "feature"
+modules = ["toolset", "toolset_api", "tools_api", "tools_cli", "tool_inventory", "fleet_tool_inventory", "mise_cli", "inventory_reader"]
+
+[crates.workspace]
+band = "feature"
+modules = ["workspace", "workspace_check_api", "copies_api", "copies_cli", "fleet_copies"]
+
+[crates.housekeeping]
+band = "feature"
+modules = ["housekeeping"]
+
+[crates.installation]
+band = "feature"
+modules = ["installation", "uninstall"]
+
+[crates.window]
+band = "feature"
+modules = ["window_app", "window_release", "window_startup", "ui_app", "install_window"]
+
+[crates.release-update]
+band = "feature"
+modules = ["release_update", "release_update_api", "release_update_cli"]
+
+[crates.fleet-upgrade]
+band = "feature"
+modules = ["fleet_upgrade", "fleet_upgrade_api", "fleet_upgrade_local_api", "upgrade_drain", "upgrade_helper_process"]
+
+[crates.agent-skill]
+band = "feature"
+modules = ["agent_skill"]
+
+[crates.service-lifecycle]
+band = "feature"
+modules = ["service_handover", "service_relaunch"]
+
+# --- lab slices ---------------------------------------------------------------
+
+[crates.reporting]
+band = "lab"
+modules = ["reporting", "report_api", "report_cli"]
+
+[crates.trace]
+band = "lab"
+modules = ["trace_api", "trace_cli", "trace_snapshot"]
+
+[crates.replay]
+band = "lab"
+modules = ["replay_api", "replay_cli", "replay_load", "replay_placement"]
+
+[crates.simulation]
+band = "lab"
+modules = ["simulation", "simulate_cli", "evaluation_day"]
+
+[crates.rehearsal]
+band = "lab"
+modules = ["rehearsal", "rehearsal_api", "rehearse_cli", "tuning_trust", "tuning_trust_api", "tuning_objective"]
+
+[crates.tuning]
+band = "lab"
+modules = ["tuning", "tune_cli", "tuning_drift", "tuning_preflight", "tuning_preflight_cli", "busy_hour_calibration"]
+
+# --- adapters -----------------------------------------------------------------
+
+[crates.platform-macos]
+band = "adapter"
+modules = ["macos", "lan_address", "inbound_firewall", "process_service"]
+
+# --- entry points -------------------------------------------------------------
+
+[crates.service]
+band = "entry"
+# Router assembly and the peer listener: they mount routes from many slices and
+# apply enrolled-member authentication over all of them.
+modules = ["server", "peer_api", "peer_listener", "outside_pressure_api"]
+
+[crates.cli]
+band = "entry"
+# The `elsecall` binary, src/main.rs, and subcommands of slices that may not
+# use clap themselves.
+binary = "src/main.rs"
+modules = ["workload_observation_cli"]
+
+[crates.ui]
+band = "entry"
+packages = ["elsecall-ui"]
+# The desktop app talks to the service through its contract, never through the
+# service's internals.
+may_depend_on = ["failure", "wire", "local-client", "local-state", "build-identity", "membership", "labels", "add-mac", "release-update", "installation", "window", "workload-config"]
