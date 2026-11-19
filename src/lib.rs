@@ -11,8 +11,6 @@ pub mod peer_api;
 pub mod peer_listener;
 pub mod run_relay;
 pub mod server;
-pub mod service_handover;
-pub mod service_relaunch;
 pub mod ui_app;
 pub mod uninstall;
 

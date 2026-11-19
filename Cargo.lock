@@ -1104,6 +1104,7 @@ dependencies = [
  "elsecall-scripted-machine",
  "elsecall-secure-channel",
  "elsecall-service-config",
+ "elsecall-service-lifecycle",
  "elsecall-service-log",
  "elsecall-simulation",
  "elsecall-sqlite-retention",
@@ -1821,6 +1822,20 @@ dependencies = [
  "serde",
  "tempfile",
  "toml",
+]
+
+[[package]]
+name = "elsecall-service-lifecycle"
+version = "0.3.0"
+dependencies = [
+ "elsecall-config-sync",
+ "elsecall-failure",
+ "elsecall-guidance",
+ "elsecall-installation",
+ "elsecall-os-processes",
+ "elsecall-scheduling",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

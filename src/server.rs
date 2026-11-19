@@ -554,7 +554,7 @@ pub async fn serve_with_updates(
         tokio::select! {
             _ = terminate.recv() => (),
             _ = tokio::signal::ctrl_c() => (),
-            _ = crate::service_relaunch::when_idle(restart_sync, restart_scheduler) => {
+            _ = elsecall_service_lifecycle::service_relaunch::when_idle(restart_sync, restart_scheduler) => {
                 restarting.store(true, std::sync::atomic::Ordering::SeqCst);
             }
         }
@@ -571,7 +571,7 @@ pub async fn serve_with_updates(
     result?;
     if relaunch.load(std::sync::atomic::Ordering::SeqCst) {
         elsecall_service_log::service_log!("{{\"event\":\"service_configuration_relaunch\"}}");
-        return crate::service_relaunch::execute(&service_lock);
+        return elsecall_service_lifecycle::service_relaunch::execute(&service_lock);
     }
     Ok(())
 }
