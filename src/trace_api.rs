@@ -5,7 +5,6 @@ use crate::{
     failure::Result,
     fleet::Fleet,
     report_api::Reporter,
-    report_protocol::Cursor,
     reporting::{
         gathering::Source,
         window::{Window, invalid},
@@ -24,14 +23,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct PageRequest {
-    pub since_ms: u64,
-    pub until_ms: u64,
-    pub member: Option<String>,
-    pub before: Option<Cursor>,
-}
+pub use crate::report_protocol::PageRequest;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Members {
     pub members: Vec<String>,

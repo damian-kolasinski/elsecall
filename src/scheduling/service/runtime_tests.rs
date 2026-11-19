@@ -133,16 +133,12 @@ async fn controlled_runtime_uses_real_admission_timers_records_and_supplied_ids(
     assert_eq!(rejected.code, "invalid_request");
     assert_eq!(scheduler.member_state().in_use, Cores::from_millis(2_000));
     // Outside pressure detection reads the same gate, and the active holder
-    // and the service as the roots of Elsecall's own work.
-    use crate::outside_pressure::GateSource;
-    let observed = crate::outside_pressure_gate::SchedulerGate(scheduler.clone()).observe();
-    assert_eq!(observed.at.millis(), 1_000);
-    assert_eq!(observed.gate, Gate::Open);
-    assert_eq!(observed.own.roots, [100, std::process::id()]);
-    assert_eq!(
-        observed.own.granted_since,
-        Some(Timestamp::from_millis(1_000))
-    );
+    // as a root of Elsecall's own work.
+    let own = scheduler.own_load();
+    assert_eq!(own.at.millis(), 1_000);
+    assert_eq!(own.gate, Gate::Open);
+    assert_eq!(own.holders, [100]);
+    assert_eq!(own.granted_since, Some(Timestamp::from_millis(1_000)));
     let waiting = tokio::spawn({
         let scheduler = scheduler.clone();
         async move { scheduler.request(101, request(1_000, 750)).await }

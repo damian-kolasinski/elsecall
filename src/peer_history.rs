@@ -241,7 +241,7 @@ impl MemberHistory for PeerHistory {
             let page = history
                 .call(
                     "/peer/v1/trace/requests",
-                    &crate::trace_api::PageRequest {
+                    &crate::report_protocol::PageRequest {
                         since_ms: window.since.millis(),
                         until_ms: window.until.millis(),
                         member: None,

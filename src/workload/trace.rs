@@ -299,13 +299,13 @@ pub struct Member {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Trace {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub placement_replay: Option<crate::replay_placement::Provenance>,
+    pub placement_replay: Option<crate::workload::format::Provenance>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::rehearsal::recording::deserialize"
+        deserialize_with = "crate::workload::recording::deserialize"
     )]
-    pub rehearsal: Option<crate::rehearsal::recording::Recording>,
+    pub rehearsal: Option<crate::workload::recording::Recording>,
     pub trace_version: u32,
     /// Full-fleet collection completeness, including deliberate member subsets;
     /// fidelity and model identification are separate.
@@ -346,6 +346,36 @@ impl Trace {
         self.demand = super::demand::estimate(&facts, &loads);
         self.contention = super::contention::derive(&facts, &loads);
     }
+}
+
+/// Work the service did for itself (housekeeping, drift checks), as rehearsal and
+/// replay leave it out.
+pub fn internal(request: &Request) -> bool {
+    request.fact.internal
+        || matches!(
+            request.fact.label.as_deref(),
+            Some("elsecall housekeeping" | "elsecall fidelity drift")
+        ) && (request.placement_request == crate::scheduling::request::Placement::Pinned
+            || request.fact.deferrable)
+}
+
+/// Structural placement constraints are independent of occupancy and proposals.
+pub fn structural_members(trace: &Trace, request: &Request) -> Vec<String> {
+    use crate::scheduling::request::Placement;
+    trace
+        .members
+        .iter()
+        .filter(|m| match &request.placement_request {
+            Placement::Pinned => m.member == request.fact.calling_member,
+            Placement::Member(name) => &m.member == name,
+            Placement::Placeable => {
+                m.member == request.fact.calling_member
+                    || (trace.master.as_ref() == Some(&request.fact.calling_member)
+                        && request.workspace.is_some())
+            }
+        })
+        .map(|m| m.member.clone())
+        .collect()
 }
 
 #[cfg(test)]

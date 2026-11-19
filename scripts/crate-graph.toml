@@ -223,11 +223,17 @@ modules = ["service_handover", "service_relaunch"]
 
 # --- lab slices ---------------------------------------------------------------
 
+[crates.report-facts]
+band = "lab"
+# One request, its leftovers and a report's period, as reports and workload
+# models read records.
+modules = ["reporting::facts", "reporting::window", "reporting::leftovers", "report_protocol"]
+
 [crates.reporting]
 band = "lab"
 # Reports and where their facts come from: this member's history, other
 # members' over the peer channel, and the protocol between them.
-modules = ["reporting", "report_api", "report_cli", "report_protocol", "own_history", "peer_history"]
+modules = ["reporting", "report_api", "report_cli", "own_history", "peer_history"]
 
 [crates.workload]
 band = "lab"
@@ -240,15 +246,16 @@ modules = ["trace_api", "trace_cli", "trace_snapshot"]
 
 [crates.replay]
 band = "lab"
-modules = ["replay_api", "replay_cli", "replay_load", "replay_placement"]
+modules = ["replay_api", "replay_cli", "replay_placement"]
 
 [crates.simulation]
 band = "lab"
-modules = ["simulation", "simulate_cli", "evaluation_day"]
+# The simulator, the trace input it reads and the arrival density it applies.
+modules = ["simulation", "evaluation_day", "workload::input", "replay_load"]
 
 [crates.rehearsal]
 band = "lab"
-modules = ["rehearsal", "rehearsal_api", "rehearse_cli", "tuning_trust", "tuning_trust_api", "tuning_objective"]
+modules = ["rehearsal", "rehearsal_api", "tuning_trust", "tuning_trust_api", "tuning_objective"]
 
 [crates.tuning]
 band = "lab"
@@ -283,7 +290,7 @@ band = "entry"
 # The `elsecall` binary, src/main.rs, and subcommands of slices that may not
 # use clap themselves.
 binary = "src/main.rs"
-modules = ["workload_observation_cli", "state_sizes", "add_mac_cli", "nearby_cli", "fleet_cli", "uninstall"]
+modules = ["workload_observation_cli", "state_sizes", "add_mac_cli", "nearby_cli", "fleet_cli", "uninstall", "simulate_cli", "rehearse_cli", "rehearsal::compare"]
 
 [crates.ui]
 band = "entry"

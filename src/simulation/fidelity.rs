@@ -1091,4 +1091,31 @@ mod tests {
                 .any(|b| b.as_str().unwrap().contains("workspace"))
         );
     }
+
+    /// Rehearsal recordings from before their format carried calibration still
+    /// replay, but never certify tuning.
+    #[test]
+    fn original_h4a_v1_artifacts_remain_uncertified_replay_inputs() {
+        let start = crate::scheduling::timestamp::Timestamp::from_millis(60_000_000);
+        let mut artifact = serde_json::json!({"trace_version":1,"incomplete":false,"since":start,"until":start.after(std::time::Duration::from_secs(60)),"master":"a","members":[{"member":"a","errors":[],"load":[],"scheduler_settings":[{"at":start,"capacity":{"weighted_cores":2,"reserved":0,"capacity":2},"parameters":{}}]}],"requests":[],"leftovers":[],"demand":[],"contention":[],"limits":[]});
+        artifact["rehearsal"] = serde_json::json!({"session":"a".repeat(24),"compress":6.0,"seed":0,"requests":[],"aggregated_nested":[]});
+        let trace: crate::workload::trace::Trace = serde_json::from_value(artifact).unwrap();
+        assert!(trace.rehearsal.is_none());
+        let result = crate::simulation::simulate(
+            trace,
+            crate::simulation::Options {
+                fidelity: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(result["fidelity"]["trusted_for_tuning"], false);
+        assert!(
+            result["fidelity"]["blockers"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|b| b.as_str().unwrap().contains("complete recorded UTC day"))
+        );
+    }
 }

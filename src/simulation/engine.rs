@@ -99,7 +99,12 @@ pub fn simulate(trace: Trace, options: Options) -> Result<Value> {
         })
         .collect();
     let source = trace;
-    let trace = Arc::new(options.load_factor.replay(&source, since, until));
+    let trace = Arc::new(crate::replay_load::replay(
+        options.load_factor,
+        &source,
+        since,
+        until,
+    ));
     let until = if options.load_factor == Default::default() {
         until
     } else {
@@ -1302,9 +1307,12 @@ pub(super) mod tests {
             at_deadline: crate::scheduling::request::AtDeadline::Skip,
         };
         let reference = crate::simulation::freeze_reference(&source, &source.requests[0]);
-        let replay = crate::replay_load::LoadFactor::try_from(4.0)
-            .unwrap()
-            .replay(&source, source.since, source.until);
+        let replay = crate::replay_load::replay(
+            crate::replay_load::LoadFactor::try_from(4.0).unwrap(),
+            &source,
+            source.since,
+            source.until,
+        );
         let mut expected = serde_json::to_value(&source.requests[0]).unwrap();
         expected["execution_reference"] = serde_json::to_value(reference).unwrap();
         let shift = |t: Timestamp| Timestamp::from_millis(t.millis() - 9000);

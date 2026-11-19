@@ -59,3 +59,13 @@ pub struct OutsideRequest {
     pub since_ms: u64,
     pub until_ms: u64,
 }
+
+/// `POST /peer/v1/trace/page`: one page of a member's trace records.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PageRequest {
+    pub since_ms: u64,
+    pub until_ms: u64,
+    pub member: Option<String>,
+    pub before: Option<Cursor>,
+}

@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 #[serde(deny_unknown_fields)]
 pub struct Recording {
     #[serde(default)]
-    pub calibration: BTreeMap<String, super::worker::Calibration>,
+    pub calibration: BTreeMap<String, crate::workload::format::Calibration>,
     #[serde(default)]
     pub ideal_ms: BTreeMap<String, Option<f64>>,
     #[serde(default)]
@@ -22,7 +22,7 @@ pub struct Recording {
     pub build: Build,
     pub compress: f64,
     #[serde(default)]
-    pub load_factor: crate::replay_load::LoadFactor,
+    pub load_factor: crate::workload::format::LoadFactor,
     pub seed: u64,
     pub complete: bool,
     pub load_complete: BTreeMap<String, bool>,
@@ -51,7 +51,7 @@ impl Recording {
             if !self
                 .calibration
                 .get(member)
-                .is_some_and(super::worker::Calibration::valid)
+                .is_some_and(crate::workload::format::Calibration::valid)
             {
                 missing.push(format!("{member}: no valid worker calibration"));
             }
@@ -91,7 +91,7 @@ impl Recording {
                 self.planned
             ));
         }
-        if !super::protocol::valid_session(&self.session) {
+        if !crate::rehearsal_identity::valid_session(&self.session) {
             missing.push("the session ID is invalid".to_owned());
         }
         if !(self.compress.is_finite() && self.compress >= 1.0) {
@@ -180,7 +180,7 @@ pub fn deserialize<'de, D: serde::Deserializer<'de>>(
         None => Ok(None),
         Some(Provenance::Current(recording)) => Ok(Some(*recording)),
         Some(Provenance::Legacy(legacy)) => {
-            if !super::protocol::valid_session(&legacy.session)
+            if !crate::rehearsal_identity::valid_session(&legacy.session)
                 || !(1.0..=1000.0).contains(&legacy.compress)
             {
                 return Err(serde::de::Error::custom(
@@ -210,7 +210,7 @@ mod tests {
         trace.rehearsal = Some(Recording {
             calibration: BTreeMap::from([(
                 "a".into(),
-                super::super::worker::Calibration {
+                crate::workload::format::Calibration {
                     iterations: 1000,
                     elapsed_seconds: 1.0,
                     cpu_seconds: 1.0,
@@ -350,29 +350,5 @@ mod tests {
         let reasons = short.missing_evidence(&many);
         assert_eq!(reasons.len(), 1, "{reasons:?}");
         assert!(reasons[0].starts_with("499 requests (r-000000000100, r-000000000101, r-000000000102 and 496 more): missing demand"), "{reasons:?}");
-    }
-    #[test]
-    fn original_h4a_v1_artifacts_remain_uncertified_replay_inputs() {
-        let start = Timestamp::from_millis(60_000_000);
-        let mut artifact = serde_json::json!({"trace_version":1,"incomplete":false,"since":start,"until":start.after(std::time::Duration::from_secs(60)),"master":"a","members":[{"member":"a","errors":[],"load":[],"scheduler_settings":[{"at":start,"capacity":{"weighted_cores":2,"reserved":0,"capacity":2},"parameters":{}}]}],"requests":[],"leftovers":[],"demand":[],"contention":[],"limits":[]});
-        artifact["rehearsal"] = serde_json::json!({"session":"a".repeat(24),"compress":6.0,"seed":0,"requests":[],"aggregated_nested":[]});
-        let trace: Trace = serde_json::from_value(artifact).unwrap();
-        assert!(trace.rehearsal.is_none());
-        let result = crate::simulation::simulate(
-            trace,
-            crate::simulation::Options {
-                fidelity: true,
-                ..Default::default()
-            },
-        )
-        .unwrap();
-        assert_eq!(result["fidelity"]["trusted_for_tuning"], false);
-        assert!(
-            result["fidelity"]["blockers"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|b| b.as_str().unwrap().contains("complete recorded UTC day"))
-        );
     }
 }

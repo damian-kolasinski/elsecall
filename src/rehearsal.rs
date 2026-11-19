@@ -16,15 +16,8 @@ pub use crate::scheduling::service::invalid_rehearsal as invalid;
 
 pub mod cancellation;
 pub mod compare;
-pub mod recording;
+pub use crate::workload::recording;
 
 /// Only known service-owned labels with internal placement are background in
 /// synthetic workloads. Never infer ownership from a consumer label prefix.
-pub fn internal(request: &crate::workload::trace::Request) -> bool {
-    request.fact.internal
-        || matches!(
-            request.fact.label.as_deref(),
-            Some("elsecall housekeeping" | "elsecall fidelity drift")
-        ) && (request.placement_request == crate::scheduling::request::Placement::Pinned
-            || request.fact.deferrable)
-}
+pub use crate::workload::trace::internal;

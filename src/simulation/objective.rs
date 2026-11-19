@@ -171,7 +171,7 @@ pub fn constrain_failures(metrics: &mut Value, baseline: Option<u64>, basis: &st
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rehearsal::recording::Recording;
+    use crate::workload::recording::Recording;
     use std::collections::BTreeMap;
     fn fixture() -> Trace {
         let mut trace = crate::simulation::engine::tests::trace();

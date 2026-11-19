@@ -466,4 +466,59 @@ mod tests {
         assert!(json["accuracy"]["run"]["by_label"].is_array());
         assert_eq!(json["findings"][0]["kind"], "incomplete");
     }
+
+    /// A report fits demand on all its context, then applies label and member
+    /// filters.
+    #[test]
+    fn reports_fit_demand_on_all_context_then_filter_by_label() {
+        use crate::workload::demand::tests::{bucket, run};
+        let mut facts = vec![run(999, "old", 0, 1000, 1.0)];
+        let mut buckets = Vec::new();
+        for m in 10..26 {
+            let busy = m % 2 == 1;
+            if busy {
+                facts.push(run(m, "a", m * 60_000, (m + 1) * 60_000, 2.0));
+            }
+            buckets.push(bucket(
+                m,
+                if busy { 4.0 } else { 1.0 },
+                if busy { 2.0 } else { 0.0 },
+            ));
+        }
+        // report uses all context to fit, then applies label/member filters.
+        use crate::reporting::window::Window;
+        let until = Timestamp::from_millis(T0 + 26 * 60_000);
+        let gathered = Gathered {
+            this_member: "mini".into(),
+            master: Some("mini".into()),
+            fleet_error: None,
+            members: vec![MemberInput {
+                member: "mini".into(),
+                outside: Ok(Default::default()),
+                load: Ok(buckets),
+                records: Ok(RecordsRead::default()),
+            }],
+            facts,
+            leftovers: vec![],
+        };
+        let mut q = Query {
+            window: Window::new(Timestamp::from_millis(T0), until, until).unwrap(),
+            series_width: std::time::Duration::from_secs(60),
+            member: None,
+            label: None,
+            parameters: Default::default(),
+        };
+        let report = document(&q, &gathered);
+        assert!(
+            report
+                .findings
+                .iter()
+                .any(|f| f.kind == "effective_demand" && f.label.as_deref() == Some("a"))
+        );
+        q.label = Some("old".into());
+        let report = document(&q, &gathered);
+        assert_eq!(report.metrics.demand.len(), 1);
+        assert_eq!(report.metrics.demand[0].family, "old");
+        assert!(!report.findings.iter().any(|f| f.kind == "effective_demand"));
+    }
 }

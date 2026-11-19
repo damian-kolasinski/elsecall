@@ -436,44 +436,6 @@ pub(crate) mod tests {
         assert!((d[0].effective_cores.unwrap() - 3.0).abs() < 1e-8);
         assert_eq!(d[1].family, "old");
         assert_eq!(d[1].effective_cores, None);
-        // report uses all context to fit, then applies label/member filters.
-        use crate::reporting::{
-            document::{Gathered, MemberInput, Query, RecordsRead, document},
-            window::Window,
-        };
-        let until = Timestamp::from_millis(T0 + 26 * 60_000);
-        let gathered = Gathered {
-            this_member: "mini".into(),
-            master: Some("mini".into()),
-            fleet_error: None,
-            members: vec![MemberInput {
-                member: "mini".into(),
-                outside: Ok(Default::default()),
-                load: Ok(buckets),
-                records: Ok(RecordsRead::default()),
-            }],
-            facts,
-            leftovers: vec![],
-        };
-        let mut q = Query {
-            window: Window::new(Timestamp::from_millis(T0), until, until).unwrap(),
-            series_width: std::time::Duration::from_secs(60),
-            member: None,
-            label: None,
-            parameters: Default::default(),
-        };
-        let report = document(&q, &gathered);
-        assert!(
-            report
-                .findings
-                .iter()
-                .any(|f| f.kind == "effective_demand" && f.label.as_deref() == Some("a"))
-        );
-        q.label = Some("old".into());
-        let report = document(&q, &gathered);
-        assert_eq!(report.metrics.demand.len(), 1);
-        assert_eq!(report.metrics.demand[0].family, "old");
-        assert!(!report.findings.iter().any(|f| f.kind == "effective_demand"));
     }
 
     #[test]

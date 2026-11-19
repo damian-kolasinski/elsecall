@@ -6,23 +6,10 @@ use crate::{
     workload::trace::Trace,
     workload_settings::RulePlacement,
 };
-use clap::{Args, ValueEnum};
-use serde::Serialize;
+use clap::Args;
 use std::{io::Read, path::PathBuf};
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, serde::Deserialize, ValueEnum)]
-#[serde(rename_all = "snake_case")]
-pub enum Mode {
-    #[default]
-    Historical,
-    Current,
-}
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Provenance {
-    pub mode: Mode,
-    pub rules_digest: crate::build_identity::Digest,
-}
+pub use crate::workload::format::{Mode, Provenance};
 #[derive(Args, Clone, Debug, Default)]
 pub struct ReplayPlacement {
     /// Historical recorded placement, or current consumer label placement rules
@@ -72,7 +59,7 @@ impl ReplayPlacement {
                 let configuration = configuration.resolve(&directory)?;
                 for r in &mut trace.requests {
                     if r.fact.internal
-                        || crate::rehearsal::internal(r)
+                        || crate::workload::trace::internal(r)
                         || r.fact.synthetic
                         || crate::label_rules::synthetic(r.fact.label.as_deref())
                     {
@@ -119,7 +106,7 @@ pub fn split(trace: &Trace) -> serde_json::Value {
                 && r.fact.requested_at >= trace.since
                 && r.fact.requested_at < trace.until
                 && !r.fact.internal
-                && !crate::rehearsal::internal(r)
+                && !crate::workload::trace::internal(r)
         })
         .collect();
     serde_json::json!({"pinned":roots.iter().filter(|r| r.placement_request == Placement::Pinned).count(),"placeable":roots.iter().filter(|r| r.placement_request == Placement::Placeable).count(),"required":roots.iter().filter(|r| matches!(r.placement_request, Placement::Member(_))).count()})
@@ -179,7 +166,7 @@ mod tests {
         ReplayPlacement::default().apply(&mut t).unwrap();
         assert_eq!(before, serde_json::to_vec(&t).unwrap());
         assert_eq!(
-            crate::simulation::structural_members(&t, &t.requests[0]),
+            crate::workload::trace::structural_members(&t, &t.requests[0]),
             vec!["master"]
         );
         let original = t.requests[0].clone();
@@ -200,7 +187,7 @@ mod tests {
         );
         assert_eq!(report["split"]["placeable"], 1);
         assert_eq!(
-            crate::simulation::structural_members(&t, &t.requests[0]),
+            crate::workload::trace::structural_members(&t, &t.requests[0]),
             vec!["master", "devbox"]
         );
         assert_eq!(t.requests[0].fact.family, original.fact.family);

@@ -147,7 +147,7 @@ mod tests {
         request.fact.waited_ms = Some(0);
         request.hold_limit.as_mut().unwrap().seconds = std::time::Duration::from_secs(30);
         let id = request.fact.run_id.clone();
-        trace.rehearsal = Some(crate::rehearsal::recording::Recording {
+        trace.rehearsal = Some(crate::workload::recording::Recording {
             calibration: BTreeMap::new(),
             ideal_ms: Default::default(),
             uncontended_ms: BTreeMap::new(),

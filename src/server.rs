@@ -65,6 +65,18 @@ async fn identify_caller(
     next.run(request).await
 }
 
+/// Tuning trust evidence for reports, from rehearsal's certificates.
+struct TuningTrust;
+impl crate::report_api::TrustEvidence for TuningTrust {
+    fn fleet_status<'a>(
+        &'a self,
+        paths: &'a crate::paths::Paths,
+        fleet: &'a std::result::Result<Arc<crate::fleet::Fleet>, Failure>,
+    ) -> futures_util::future::BoxFuture<'a, serde_json::Value> {
+        Box::pin(crate::tuning_trust_api::fleet_status(paths, fleet))
+    }
+}
+
 /// The scheduler's latest placed run with each member, as the fleet view shows it.
 struct PlacedRunsOf(Arc<Scheduler>);
 impl crate::fleet_view::PlacedRuns for PlacedRunsOf {
@@ -423,6 +435,7 @@ pub async fn serve_with_updates(
             warnings: warnings.ok(),
         },
         fleet: fleet.clone(),
+        evidence: Arc::new(TuningTrust),
     };
     let sync_routes = match &config_sync {
         Ok(sync) => crate::config_sync_local_api::routes(sync.clone()),

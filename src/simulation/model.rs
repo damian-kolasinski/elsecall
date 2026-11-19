@@ -394,24 +394,7 @@ pub fn reference_speed(trace: &Trace, request: &Request) -> Option<f64> {
     speed(trace, member, at)
 }
 
-/// Structural placement constraints are independent of occupancy and proposals.
-pub fn structural_members(trace: &Trace, request: &Request) -> Vec<String> {
-    use crate::scheduling::request::Placement;
-    trace
-        .members
-        .iter()
-        .filter(|m| match &request.placement_request {
-            Placement::Pinned => m.member == request.fact.calling_member,
-            Placement::Member(name) => &m.member == name,
-            Placement::Placeable => {
-                m.member == request.fact.calling_member
-                    || (trace.master.as_ref() == Some(&request.fact.calling_member)
-                        && request.workspace.is_some())
-            }
-        })
-        .map(|m| m.member.clone())
-        .collect()
-}
+pub use crate::workload::trace::structural_members;
 
 /// Frozen admission capability and explicit transport/workspace availability.
 /// Occupancy, saturation and hold/sync estimates do not constrain a free ideal.
@@ -665,7 +648,7 @@ mod tests {
         trace.members[0].load[0].cpu_mean = Some(0.75);
         trace.members[0].load[0].weighted_cores =
             crate::scheduling::capacity::Cores::from_millis(2000);
-        trace.rehearsal = Some(crate::rehearsal::recording::Recording {
+        trace.rehearsal = Some(crate::workload::recording::Recording {
             calibration: BTreeMap::new(),
             ideal_ms: Default::default(),
             uncontended_ms: BTreeMap::new(),

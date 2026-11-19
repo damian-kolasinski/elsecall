@@ -2,32 +2,8 @@
 //! frozen work units to CPU seconds, never to a required instruction count. This
 //! keeps H1 CPU demand stable across core types and frequency changes. Scheduler
 //! stalls still extend completion; deadline exhaustion fails rather than truncates.
-use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Calibration {
-    pub iterations: u64,
-    pub elapsed_seconds: f64,
-    pub cpu_seconds: f64,
-    pub iterations_per_second: f64,
-    pub logical_cores: u32,
-}
-impl Calibration {
-    pub fn valid(&self) -> bool {
-        self.iterations > 0
-            && self.elapsed_seconds.is_finite()
-            && self.elapsed_seconds > 0.0
-            && self.cpu_seconds.is_finite()
-            && self.cpu_seconds > 0.0
-            && self.iterations_per_second.is_finite()
-            && self.iterations_per_second > 0.0
-            && self.logical_cores > 0
-            && self.logical_cores <= 256
-            && (self.iterations as f64 / self.cpu_seconds / self.iterations_per_second - 1.0).abs()
-                < 0.000001
-    }
-}
+pub use crate::workload::format::{Calibration, logical_demand};
 pub async fn calibrate(
     cores: crate::inspection::CoreCounts,
 ) -> crate::failure::Result<Calibration> {
@@ -128,16 +104,6 @@ my $failed = 0;
 for (@children) { waitpid($_, 0); $failed ||= $?; }
 exit($failed ? 124 : $exit);
 "#;
-
-/// H1 fits machine CPU share times weighted capacity. OS CPU time is measured
-/// against all logical CPUs, so fractional busy workers need this conversion.
-pub fn logical_demand(effective: f64, cores: crate::inspection::CoreCounts) -> f64 {
-    let weighted =
-        crate::scheduling::capacity::Capacity::of(cores, crate::scheduling::capacity::Cores::ZERO)
-            .weighted_cores
-            .as_f64();
-    effective * f64::from(cores.performance + cores.efficiency) / weighted
-}
 
 #[cfg(test)]
 mod tests {

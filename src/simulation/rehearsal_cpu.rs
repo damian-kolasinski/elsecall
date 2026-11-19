@@ -40,7 +40,7 @@ pub fn replay(mut trace: Trace) -> Result<Value> {
             ));
         }
         let demand = recording.demand[r.fact.run_id.as_str()][member];
-        let workers = crate::rehearsal::worker::logical_demand(demand, cores).ceil();
+        let workers = crate::workload::format::logical_demand(demand, cores).ceil();
         let cpu_ms = r
             .fact
             .resources

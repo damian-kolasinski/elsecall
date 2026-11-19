@@ -48,6 +48,17 @@ pub struct Reporter {
     pub own: OwnHistory,
     /// The fleet, or why this member's fleet state could not be read.
     pub fleet: std::result::Result<Arc<Fleet>, Failure>,
+    /// Where a report's tuning evidence comes from.
+    pub evidence: Arc<dyn TrustEvidence>,
+}
+
+/// The tuning evidence a report includes, from the slice that certifies it.
+pub trait TrustEvidence: Send + Sync {
+    fn fleet_status<'a>(
+        &'a self,
+        paths: &'a crate::paths::Paths,
+        fleet: &'a std::result::Result<Arc<Fleet>, Failure>,
+    ) -> futures_util::future::BoxFuture<'a, serde_json::Value>;
 }
 
 fn window(since_ms: u64, until_ms: u64) -> Result<Window> {
@@ -181,8 +192,10 @@ async fn report(State(reporter): State<Reporter>, body: Bytes) -> Response {
             value["peer_io"] =
                 gathering::peer_io(&reporter.fleet(), peer_window, selected_member.as_deref())
                     .await;
-            let evidence =
-                crate::tuning_trust_api::fleet_status(&reporter.paths, &reporter.fleet).await;
+            let evidence = reporter
+                .evidence
+                .fleet_status(&reporter.paths, &reporter.fleet)
+                .await;
             Json(api::Response::new(crate::reporting::tuning::include(
                 value, evidence,
             )))
