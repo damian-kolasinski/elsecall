@@ -101,7 +101,7 @@ impl Recording {
         for r in &trace.requests {
             let id = &r.fact.run_id;
             if !(r.fact.synthetic
-                && crate::labels::rules::belongs(&self.session, r.fact.label.as_deref())
+                && elsecall_labels::rules::belongs(&self.session, r.fact.label.as_deref())
                 && !r.fact.unfinished
                 && !r.fact.nested)
             {

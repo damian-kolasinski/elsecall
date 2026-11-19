@@ -40,7 +40,6 @@ pub mod inspection;
 pub mod install_window;
 pub mod installation;
 pub mod inventory_reader;
-pub mod labels;
 pub mod lan_address;
 pub mod lifecycle_holder;
 pub mod load_log;

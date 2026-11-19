@@ -1066,6 +1066,7 @@ dependencies = [
  "clap",
  "ed25519-dalek",
  "elsecall-failure",
+ "elsecall-labels",
  "futures-util",
  "getrandom 0.3.4",
  "hkdf",
@@ -1097,6 +1098,10 @@ dependencies = [
  "serde",
  "serde_json",
 ]
+
+[[package]]
+name = "elsecall-labels"
+version = "0.3.0"
 
 [[package]]
 name = "elsecall-ui"

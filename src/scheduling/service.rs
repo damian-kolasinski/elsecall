@@ -937,7 +937,7 @@ impl Scheduler {
         let record = Record {
             run_id: id.clone(),
             kind: request.kind,
-            synthetic: crate::labels::rules::synthetic(request.label.as_deref()),
+            synthetic: elsecall_labels::rules::synthetic(request.label.as_deref()),
             internal: requester.pid == std::process::id()
                 && request
                     .label

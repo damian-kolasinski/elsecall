@@ -316,7 +316,7 @@ impl Records {
 
     /// Run times of the label's latest completed requests.
     pub fn run_times(&self, label: &str) -> Result<Vec<Duration>> {
-        if crate::labels::rules::synthetic(Some(label)) {
+        if elsecall_labels::rules::synthetic(Some(label)) {
             return Ok(Vec::new());
         }
         let connection = self.connection();

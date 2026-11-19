@@ -52,10 +52,10 @@ impl<'a> Inputs<'a> {
     fn label(&self, r: &Request) -> Result<String> {
         let label = format!(
             "{}{}",
-            crate::labels::rules::PREFIX,
+            elsecall_labels::rules::PREFIX,
             r.fact.label.as_deref().unwrap_or("unlabelled")
         );
-        if label.chars().count() > crate::labels::rules::label_limit(&label) {
+        if label.chars().count() > elsecall_labels::rules::label_limit(&label) {
             return Err(invalid(
                 "A source label is too long for the reserved namespace.",
             ));

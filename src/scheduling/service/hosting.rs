@@ -126,7 +126,7 @@ impl Scheduler {
             record: Record {
                 run_id: offer.run_id.clone(),
                 kind: Kind::Run,
-                synthetic: crate::labels::rules::synthetic(offer.label.as_deref()),
+                synthetic: elsecall_labels::rules::synthetic(offer.label.as_deref()),
                 internal: false,
                 peer_io: None,
                 label: offer.label.clone(),

@@ -9,7 +9,6 @@
 //! consumer configuration's glob syntax and first matching rule wins, in argument
 //! order. Duplicate keys are errors, as with production parameter overrides.
 use crate::{
-    labels::pattern as label_pattern,
     roster::MemberName,
     scheduling::{
         capacity::{Capacity, Cores},
@@ -20,6 +19,7 @@ use crate::{
     workload_settings::WorkloadSettings,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_labels::pattern as label_pattern;
 use std::{collections::BTreeMap, time::Duration};
 
 #[derive(Debug)]

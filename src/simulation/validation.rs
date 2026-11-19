@@ -148,7 +148,7 @@ pub fn trace(t: &Trace) -> Result<()> {
                 !t.requests.iter().any(|q| {
                     q.fact.run_id == *id
                         && q.fact.synthetic
-                        && crate::labels::rules::belongs(&r.session, q.fact.label.as_deref())
+                        && elsecall_labels::rules::belongs(&r.session, q.fact.label.as_deref())
                 }) || demands.is_empty()
                     || demands.len() > 64
                     || demands.iter().any(|(m, c)| {
@@ -417,7 +417,7 @@ pub fn trace(t: &Trace) -> Result<()> {
     let mut demand_ids = BTreeSet::new();
     for d in &t.demand {
         if !members.contains(d.member.as_str())
-            || !text(&d.family, crate::labels::rules::label_limit(&d.family))
+            || !text(&d.family, elsecall_labels::rules::label_limit(&d.family))
             || !text(&d.status, 100)
             || !demand_ids.insert((d.member.as_str(), d.family.as_str()))
             || [
@@ -440,7 +440,7 @@ pub fn trace(t: &Trace) -> Result<()> {
     let mut curve_ids = BTreeSet::new();
     for c in &t.contention {
         if !members.contains(c.member.as_str())
-            || !text(&c.family, crate::labels::rules::label_limit(&c.family))
+            || !text(&c.family, elsecall_labels::rules::label_limit(&c.family))
             || !text(&c.status, 100)
             || !curve_ids.insert((c.member.as_str(), c.family.as_str()))
             || c.points.len() > 128

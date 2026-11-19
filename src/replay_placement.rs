@@ -59,7 +59,7 @@ impl ReplayPlacement {
                     if r.fact.internal
                         || crate::workload::trace::internal(r)
                         || r.fact.synthetic
-                        || crate::labels::rules::synthetic(r.fact.label.as_deref())
+                        || elsecall_labels::rules::synthetic(r.fact.label.as_deref())
                     {
                         continue;
                     }

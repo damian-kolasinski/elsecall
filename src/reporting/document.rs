@@ -1,7 +1,6 @@
 //! The report as one document: the period, the filters, fleet and member
 //! metrics, estimate accuracy and findings, from what was gathered.
 use crate::{
-    labels::pattern as label_pattern,
     load_log::buckets::Bucket,
     reporting::{
         accuracy::{self, Accuracy},
@@ -18,6 +17,7 @@ use crate::{
     scheduling::{parameters::Parameters, timestamp::Timestamp},
 };
 use elsecall_failure::Failure;
+use elsecall_labels::pattern as label_pattern;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 
@@ -204,10 +204,10 @@ pub fn document(query: &Query, gathered: &Gathered) -> Document {
     // backtests exclude synthetic labels, including when --label is supplied.
     gathered
         .facts
-        .retain(|f| !f.synthetic && !crate::labels::rules::synthetic(f.label.as_deref()));
+        .retain(|f| !f.synthetic && !elsecall_labels::rules::synthetic(f.label.as_deref()));
     gathered
         .leftovers
-        .retain(|f| !crate::labels::rules::synthetic(f.label.as_deref()));
+        .retain(|f| !elsecall_labels::rules::synthetic(f.label.as_deref()));
     // Requests of the period and label; a member's work and waits are the
     // requests that ran there, which the member filter always keeps.
     let labelled: Vec<Fact> = gathered

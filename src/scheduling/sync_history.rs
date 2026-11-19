@@ -56,7 +56,7 @@ pub fn samples(records: &[Record], now: Timestamp, recency: Duration) -> Vec<Syn
     let mut found: Vec<(Timestamp, SyncSample)> = records
         .iter()
         .filter(|r| r.requested_at >= since)
-        .filter(|r| !r.synthetic && !crate::labels::rules::synthetic(r.label.as_deref()))
+        .filter(|r| !r.synthetic && !elsecall_labels::rules::synthetic(r.label.as_deref()))
         .filter_map(|record| {
             let placed = record.placed.as_ref().filter(|p| p.side == Side::Caller)?;
             Some((

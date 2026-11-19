@@ -164,11 +164,11 @@ impl Fact {
             && self
                 .label
                 .as_deref()
-                .is_none_or(|l| plausible_text(l, crate::labels::rules::label_limit(l)))
+                .is_none_or(|l| plausible_text(l, elsecall_labels::rules::label_limit(l)))
             && self
                 .family
                 .as_deref()
-                .is_none_or(|f| plausible_text(f, crate::labels::rules::MAXIMUM_LABEL))
+                .is_none_or(|f| plausible_text(f, elsecall_labels::rules::MAXIMUM_LABEL))
     }
 
     /// The fact as run history learns from it: a completed labelled run that
@@ -177,7 +177,7 @@ impl Fact {
         if !self.completed
             || self.kind != Kind::Run
             || self.synthetic
-            || crate::labels::rules::synthetic(self.label.as_deref())
+            || elsecall_labels::rules::synthetic(self.label.as_deref())
         {
             return None;
         }
@@ -253,7 +253,8 @@ impl Fact {
             label: record.label.clone(),
             workload: record.workload.clone(),
             plan_observation: record.plan_observation.clone(),
-            synthetic: record.synthetic || crate::labels::rules::synthetic(record.label.as_deref()),
+            synthetic: record.synthetic
+                || elsecall_labels::rules::synthetic(record.label.as_deref()),
             internal: record.internal,
             family: record
                 .settings

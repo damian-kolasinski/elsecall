@@ -31,7 +31,6 @@
 //! at_deadline = "start"
 //! ```
 use crate::{
-    labels::pattern as label_pattern,
     scheduling::{
         capacity::Cores,
         request::{AtDeadline, MAXIMUM_DEADLINE, MAXIMUM_HOLD_LIMIT},
@@ -41,6 +40,7 @@ use crate::{
         path::WorkspacePath,
     },
 };
+use elsecall_labels::pattern as label_pattern;
 use serde::Deserialize;
 use std::{
     collections::BTreeMap,

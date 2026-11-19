@@ -85,7 +85,7 @@ pub fn samples_of(
     let mut samples: Vec<RunSample> = records
         .iter()
         .filter(|r| r.kind == kind && r.requested_at >= since)
-        .filter(|r| !r.synthetic && !crate::labels::rules::synthetic(r.label.as_deref()))
+        .filter(|r| !r.synthetic && !elsecall_labels::rules::synthetic(r.label.as_deref()))
         .filter(|r| r.outcome.as_ref().is_some_and(|o| o.completed()))
         .filter(|r| r.placed.as_ref().is_none_or(|p| p.side == Side::Caller))
         .filter_map(|record| {
