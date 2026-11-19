@@ -1,9 +1,9 @@
 //! Offline read-only history adapter, for exports before installing new routes.
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_load_log::{buckets, store::LoadStore};
 use elsecall_local_state::paths::Paths;
 use elsecall_scheduling::records::Records;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workload::trace::{Member, PAGE, Trace, VERSION};
 use std::time::Duration;
 

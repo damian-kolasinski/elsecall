@@ -1,6 +1,6 @@
 use crate::macos::{sysctl, thermal};
-use elsecall_failure::{Failure, Result};
-use elsecall_machine::inspection::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::inspection::{
     CoreCounts, LoadAverage, LoadSample, Machine, MachineInspector, Memory, MemoryPressure,
     ThermalState,
 };

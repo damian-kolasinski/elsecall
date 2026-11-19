@@ -3,7 +3,7 @@ use crate::{
     workload_configuration::{self, Configuration, FILE_NAME},
     workload_settings::WorkloadSettings,
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_local_state::{paths::Paths, private_files};
 use serde::Serialize;
 use std::{

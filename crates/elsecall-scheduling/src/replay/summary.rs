@@ -8,7 +8,7 @@ use crate::{
     placement::Level,
     record::{Record, Verdict},
 };
-use elsecall_scheduling_model::{
+use elsecall_contract::scheduling_model::{
     run_id::RunId,
     timestamp::{Timestamp, seconds},
 };

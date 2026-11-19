@@ -14,8 +14,8 @@ use crate::config_sync::{
     manifest::Manifest,
     report::{Applied, PathReport},
 };
-use elsecall_failure::{Failure, Result};
-use elsecall_wire::wire::{self, Frame};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::wire::{self, Frame};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use zeroize::Zeroizing;

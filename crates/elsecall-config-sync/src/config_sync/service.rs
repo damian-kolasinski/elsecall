@@ -20,7 +20,7 @@ use crate::config_sync::{
     report::{Applied, PathReport, SyncRole, SyncState, SyncSummary},
 };
 use elsecall_config_sync_model::synced_path::SyncedPath;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::fleet::{Fleet, RoleHandover, SyncReport};
 use elsecall_membership::roster::{Member, MemberName, Roster};
 use elsecall_peer_transport::peer_client;

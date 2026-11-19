@@ -18,15 +18,10 @@ test-support = ["elsecall-scheduling/test-support"]
 
 [dependencies]
 clap.workspace = true
-elsecall-build-identity.workspace = true
-elsecall-failure.workspace = true
-elsecall-labels.workspace = true
+elsecall-contract.workspace = true
 elsecall-load-log.workspace = true
-elsecall-machine.workspace = true
-elsecall-rehearsal-identity.workspace = true
 elsecall-report-facts.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-scheduling-model.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 

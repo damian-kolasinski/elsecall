@@ -4,7 +4,9 @@
 use crate::passthrough::executor::{
     CommandLine, Executor, Exit, Finished, ResultReturn, RunContext, RunFailure, RunResult, Running,
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::{run_id::RunId, timestamp::Timestamp};
+use elsecall_contract::wire::Frame;
 use elsecall_local_client::{self as client, Wait};
 use elsecall_remote_run::remote_run::{
     consistency, environment, fingerprint,
@@ -16,8 +18,6 @@ use elsecall_scheduling::{
     placed::{PlacedReport, Reached, SyncSummary},
     run_phases::RemoteFailurePhase,
 };
-use elsecall_scheduling_model::{run_id::RunId, timestamp::Timestamp};
-use elsecall_wire::wire::Frame;
 use elsecall_workload_config::workload_settings::WorkloadSettings;
 use elsecall_workspace::{
     confined::Confined,
@@ -41,7 +41,7 @@ use tokio::sync::mpsc;
 
 /// Runs commands on another member, through the local service's relay.
 pub struct RemoteExecutor {
-    pub workload: Option<elsecall_scheduling_model::workload_metadata::Workload>,
+    pub workload: Option<elsecall_contract::scheduling_model::workload_metadata::Workload>,
     pub socket: PathBuf,
     pub located: Located,
     pub configuration: WorkloadSettings,
@@ -172,7 +172,7 @@ impl Executor for RemoteExecutor {
                 declared: declared.clone(),
             });
             let message = RunMessage::Start(start);
-            if serde_json::to_vec(&message).expect("messages serialize").len() > elsecall_wire::wire::MAXIMUM_PAYLOAD {
+            if serde_json::to_vec(&message).expect("messages serialize").len() > elsecall_contract::wire::MAXIMUM_PAYLOAD {
                 return Err(Failure::new(
                     "invalid_request",
                     "The command line and forwarded variables are too large to place.",
@@ -395,8 +395,8 @@ fn forward_signals(outbox: Outbox) -> Vec<tokio::task::JoinHandle<()>> {
 }
 
 pub struct RemoteRun {
-    workload: Option<elsecall_scheduling_model::workload_metadata::Workload>,
-    plan_observation: Option<elsecall_scheduling_model::workload_metadata::Observation>,
+    workload: Option<elsecall_contract::scheduling_model::workload_metadata::Workload>,
+    plan_observation: Option<elsecall_contract::scheduling_model::workload_metadata::Observation>,
     link: Link,
     execution_started: Instant,
     merged: bool,
@@ -804,7 +804,7 @@ impl RemoteRun {
 }
 
 async fn send_blob(link: &Link, bytes: &[u8]) -> Result<()> {
-    for chunk in bytes.chunks(elsecall_wire::wire::CHUNK) {
+    for chunk in bytes.chunks(elsecall_contract::wire::CHUNK) {
         link.send(Frame::Content(chunk.to_vec())).await?;
     }
     link.send(Frame::Content(Vec::new())).await
@@ -910,7 +910,7 @@ mod tests {
     /// optional telemetry must not turn a confirmed exit into HolderExited.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn invalid_peer_observations_preserve_exit_and_later_return_failure() {
-        use elsecall_scheduling_model::workload_metadata::{Observation, parse_workload};
+        use elsecall_contract::scheduling_model::workload_metadata::{Observation, parse_workload};
         use serde_json::json;
         let plan = parse_workload(&json!({"kind":"sequential","planned_units":3,"stop_policy":"continue_all","estimate_key":"a".repeat(64),"variant_key":"b".repeat(64)}).to_string()).unwrap();
         let cases = vec![
@@ -929,7 +929,7 @@ mod tests {
                 r#"{{"type":"exited","exit":{{"kind":"code","code":7}},"cpu_ms":123,"plan_observation":{observation}}}"#
             );
             let sender = tokio::spawn(async move {
-                elsecall_wire::wire::write(&mut peer, &Frame::Message(terminal.into_bytes()))
+                elsecall_contract::wire::write(&mut peer, &Frame::Message(terminal.into_bytes()))
                     .await
                     .unwrap();
                 // A lost external peer during output return, after Exited.

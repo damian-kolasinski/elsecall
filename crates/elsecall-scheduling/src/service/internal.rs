@@ -3,8 +3,8 @@
 //! while this member drains for an upgrade (a hold). Neither owns capacity, and
 //! production admission continues normally. A running pass drains.
 use super::{Book, Class, Phase, Scheduler, Urgency};
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::run_id::RunId;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::run_id::RunId;
 use std::sync::{Arc, Weak};
 
 /// A rehearsal the scheduler cannot prepare for. Rehearsal reports its own

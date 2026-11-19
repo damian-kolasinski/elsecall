@@ -1,6 +1,6 @@
 //! Choose a synthetic rehearsal population, without hiding competing work.
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_workload::trace::Trace;
 use serde::Serialize;
 use std::{collections::BTreeMap, num::NonZeroUsize};
@@ -191,13 +191,14 @@ pub fn select(source: &Trace, policy: Busiest) -> Result<(Trace, Selection)> {
             terminal.saturating_sub(1),
             format!("active_carry_in: {}", f.run_id),
         );
-        let reason = if f.synthetic || elsecall_labels::rules::synthetic(f.label.as_deref()) {
-            Some(format!("synthetic_work: {}", f.run_id))
-        } else if f.unfinished || request.outcome.is_none() {
-            Some(format!("missing_terminal_outcome: {}", f.run_id))
-        } else {
-            None
-        };
+        let reason =
+            if f.synthetic || elsecall_contract::labels::rules::synthetic(f.label.as_deref()) {
+                Some(format!("synthetic_work: {}", f.run_id))
+            } else if f.unfinished || request.outcome.is_none() {
+                Some(format!("missing_terminal_outcome: {}", f.run_id))
+            } else {
+                None
+            };
         if let Some(reason) = reason {
             blockers.overlaps(at, at + 1, width, reason);
         }
@@ -209,7 +210,7 @@ pub fn select(source: &Trace, policy: Busiest) -> Result<(Trace, Selection)> {
         if !f.nested
             && !f.deferrable
             && !f.synthetic
-            && !elsecall_labels::rules::synthetic(f.label.as_deref())
+            && !elsecall_contract::labels::rules::synthetic(f.label.as_deref())
         {
             interactive.push(at);
         }
@@ -419,15 +420,15 @@ fn slice(source: &Trace, window: &Candidate) -> Trace {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use elsecall_contract::scheduling_model::{
+        capacity::{Capacity, Cores},
+        request::Urgency,
+    };
     use elsecall_scheduling::{
         fixtures::{T0, base, bucket},
         parameters::Parameters,
         record::{HoldBasis, HoldLimitRecord, Outcome},
         records::SchedulerSettings,
-    };
-    use elsecall_scheduling_model::{
-        capacity::{Capacity, Cores},
-        request::Urgency,
     };
     use elsecall_workload::{
         demand::Demand,
@@ -574,7 +575,7 @@ mod tests {
         background.fact.deferrable = true;
         background.urgency = Urgency::Deferrable {
             deadline: t.until,
-            at_deadline: elsecall_scheduling_model::request::AtDeadline::Start,
+            at_deadline: elsecall_contract::scheduling_model::request::AtDeadline::Start,
         };
         t.requests.push(background);
         let (selected, report) = choose(&t).unwrap();
@@ -605,7 +606,7 @@ mod tests {
         carry.fact.deferrable = true;
         carry.urgency = Urgency::Deferrable {
             deadline: t.until,
-            at_deadline: elsecall_scheduling_model::request::AtDeadline::Start,
+            at_deadline: elsecall_contract::scheduling_model::request::AtDeadline::Start,
         };
         carry.fact.requested_at = Timestamp::from_millis(T0 + 4 * 60_000);
         // Admission/setup spans the boundary before command execution starts.
@@ -699,7 +700,7 @@ mod tests {
         background.fact.deferrable = true;
         background.urgency = Urgency::Deferrable {
             deadline: populated.until,
-            at_deadline: elsecall_scheduling_model::request::AtDeadline::Start,
+            at_deadline: elsecall_contract::scheduling_model::request::AtDeadline::Start,
         };
         populated.requests.push(background);
         assert!(select(&populated, "busiest:4m".parse().unwrap()).is_err());

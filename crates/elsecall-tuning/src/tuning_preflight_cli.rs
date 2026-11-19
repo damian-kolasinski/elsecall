@@ -1,7 +1,7 @@
 //! CLI adapter for the offline readiness check. Collection uses read-only trace routes.
 use clap::Args;
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use std::{num::NonZeroUsize, path::PathBuf, time::Duration};
 #[derive(Args, Debug)]
 pub struct PreflightArgs {

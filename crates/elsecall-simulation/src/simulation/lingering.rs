@@ -96,8 +96,8 @@ pub(super) fn settle(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use elsecall_contract::scheduling_model::timestamp::Timestamp;
     use elsecall_scheduling::clock::VirtualClock;
-    use elsecall_scheduling_model::timestamp::Timestamp;
     use std::sync::Arc;
     #[tokio::test(start_paused = true)]
     async fn next_run_claims_copy_then_settles_leftovers_with_real_hold_budget() {

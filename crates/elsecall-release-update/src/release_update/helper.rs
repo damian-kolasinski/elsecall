@@ -4,8 +4,8 @@ use super::{
     selection::{CliSelection, Snapshot},
     store::{self, Store},
 };
-use elsecall_build_identity::build_identity::Digest;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::build_identity::Digest;
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_installation::installation::{ServiceManager, Transaction};
 use elsecall_local_client as client;
 use elsecall_local_state::{paths::Paths, private_files};

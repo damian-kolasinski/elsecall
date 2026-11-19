@@ -1,14 +1,14 @@
 //! Explicit projections: never serialize a Record wholesale into a trace.
 use crate::{contention::Curve, demand::Demand};
+use elsecall_contract::scheduling_model::{
+    request::{Placement, Urgency},
+    timestamp::Timestamp,
+};
 use elsecall_load_log::buckets::Bucket;
 use elsecall_report_facts::facts::Fact;
 use elsecall_scheduling::{
     leftovers::{Ending, Leftovers},
     record::{Decision, HoldLimitRecord, Outcome, Record},
-};
-use elsecall_scheduling_model::{
-    request::{Placement, Urgency},
-    timestamp::Timestamp,
 };
 use serde::{Deserialize, Serialize};
 
@@ -357,13 +357,14 @@ pub fn internal(request: &Request) -> bool {
         || matches!(
             request.fact.label.as_deref(),
             Some("elsecall housekeeping" | "elsecall fidelity drift")
-        ) && (request.placement_request == elsecall_scheduling_model::request::Placement::Pinned
+        ) && (request.placement_request
+            == elsecall_contract::scheduling_model::request::Placement::Pinned
             || request.fact.deferrable)
 }
 
 /// Structural placement constraints are independent of occupancy and proposals.
 pub fn structural_members(trace: &Trace, request: &Request) -> Vec<String> {
-    use elsecall_scheduling_model::request::Placement;
+    use elsecall_contract::scheduling_model::request::Placement;
     trace
         .members
         .iter()
@@ -501,11 +502,11 @@ mod tests {
 
     #[test]
     fn command_ended_before_window_keeps_its_overlapping_leftovers() {
+        use elsecall_contract::scheduling_model::timestamp::Timestamp;
         use elsecall_scheduling::{
             leftovers::{Ending, Leftovers},
             records::Records,
         };
-        use elsecall_scheduling_model::timestamp::Timestamp;
         let temp = tempfile::tempdir().unwrap();
         let db = Records::open(&temp.path().join("records.sqlite")).unwrap();
         let mut r = fixtures::placed(Run {
@@ -549,8 +550,8 @@ mod tests {
 
     #[test]
     fn carry_in_and_equal_time_pagination_read_without_mutating_history() {
+        use elsecall_contract::scheduling_model::timestamp::Timestamp;
         use elsecall_scheduling::records::Records;
-        use elsecall_scheduling_model::timestamp::Timestamp;
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("records.sqlite");
         let db = Records::open(&path).unwrap();

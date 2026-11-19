@@ -8,7 +8,7 @@ use elsecall_add_mac::{
     lan_address::is_lan,
     nearby_macs::{Advertisement, LocalNetwork, Offer},
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use std::{
     collections::{BTreeMap, BTreeSet},
     ffi::{CStr, CString, c_char, c_void},

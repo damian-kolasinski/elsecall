@@ -5,7 +5,7 @@
 use elsecall_add_mac::add_mac::{AddReport, Approval, Event, Step};
 use elsecall_add_mac::nearby_macs::{Membership, NearbyMac, RemoteLogin};
 use elsecall_add_mac::remote_mac::LoginLink;
-use elsecall_failure::Failure;
+use elsecall_contract::failure::Failure;
 use rune::TextEdit;
 use zeroize::Zeroizing;
 

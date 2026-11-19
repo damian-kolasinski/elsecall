@@ -1,6 +1,6 @@
 //! One minute of a member's load, folded from the scheduler's per-second samples.
-use elsecall_machine::inspection::{MemoryPressure, ThermalState};
-use elsecall_scheduling_model::{capacity::Cores, gate::Gate, timestamp::Timestamp};
+use elsecall_contract::inspection::{MemoryPressure, ThermalState};
+use elsecall_contract::scheduling_model::{capacity::Cores, gate::Gate, timestamp::Timestamp};
 use serde::{Deserialize, Serialize};
 
 const MINUTE_MS: u64 = 60_000;

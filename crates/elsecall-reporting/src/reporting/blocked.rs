@@ -8,17 +8,17 @@
 //! as outside. Time without samples, such as a sleeping laptop, proves nothing
 //! either way, so too little of it sampled is not blocked.
 use crate::reporting::outside;
+use elsecall_contract::inspection::MemoryPressure;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_load_log::{
     buckets::Bucket,
     minute::{memory_rank, worst},
 };
-use elsecall_machine::inspection::MemoryPressure;
 use elsecall_outside_pressure::outside_pressure::{blocked::OutsideProcess, store::Episode};
 use elsecall_report_facts::{
     facts::{Fact, PlacementKind},
     window::Window,
 };
-use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 
@@ -422,7 +422,7 @@ mod tests {
             },
             {
                 let mut r = cancelled(7, "other", 0, 7000);
-                r.placement = elsecall_scheduling_model::request::Placement::Placeable;
+                r.placement = elsecall_contract::scheduling_model::request::Placement::Placeable;
                 r
             },
             {

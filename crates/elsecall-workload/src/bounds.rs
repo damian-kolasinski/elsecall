@@ -1,8 +1,8 @@
 //! Validated explicit arrival bounds. Evidence outside the arrival bounds stays.
 use crate::trace::Trace;
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_report_facts::window::invalid;
-use elsecall_scheduling_model::timestamp::Timestamp;
 
 pub fn until(text: Option<&str>, now: Timestamp) -> Result<Timestamp> {
     match text {

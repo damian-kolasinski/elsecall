@@ -1,5 +1,5 @@
 //! Process identity through libproc and exit notification through kqueue.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_scheduling::processes::{ProcessIdentity, ProcessInfo, ProcessTable};
 use std::{
     os::fd::{AsRawFd, FromRawFd, OwnedFd},

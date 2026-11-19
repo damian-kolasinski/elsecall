@@ -1,6 +1,7 @@
 //! Paired live trials and the bounded synced-settings transaction between them.
 use crate::rehearse_cli::{self, RehearseArgs};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use elsecall_rehearsal::rehearsal::{
@@ -8,7 +9,6 @@ use elsecall_rehearsal::rehearsal::{
     protocol::{Action, Reply},
 };
 use elsecall_scheduling::records::SchedulerSettings;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, time::Duration};
 
@@ -179,7 +179,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
         .map(elsecall_rehearsal::tuning_objective::Noise::read)
         .transpose()?;
     let trace = crate::rehearse_cli::source(&args)?;
-    let source_digest = elsecall_build_identity::build_identity::Digest::of(
+    let source_digest = elsecall_contract::build_identity::Digest::of(
         &serde_json::to_vec(&trace).expect("trace serializes"),
     );
     if let Some(noise) = &noise
@@ -187,7 +187,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
             || noise.seed != args.seed
             || noise.compress != args.compress
             || noise.load_factor != args.load_factor
-            || noise.build != elsecall_build_identity::build_identity::this_build()?)
+            || noise.build != elsecall_contract::build_identity::this_build()?)
     {
         return Err(invalid(
             "A/A noise must match the source trace, build, seed, compression and load factor.",
@@ -390,7 +390,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
                 |((am, bm), (ap, bp))| elsecall_rehearsal::tuning_objective::Noise {
                     noise_version: 1,
                     source_digest,
-                    build: elsecall_build_identity::build_identity::this_build()
+                    build: elsecall_contract::build_identity::this_build()
                         .expect("rehearsal build"),
                     seed: baseline["seed"].as_u64().expect("seed"),
                     compress: baseline["compress"].as_f64().expect("compress"),

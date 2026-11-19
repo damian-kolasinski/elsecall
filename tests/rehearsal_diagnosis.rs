@@ -143,9 +143,8 @@ fn traces_keep_their_exact_bytes() {
         ),
     ] {
         let trace: Trace = serde_json::from_str(source).unwrap();
-        let digest = elsecall_build_identity::build_identity::Digest::of(
-            &serde_json::to_vec(&trace).unwrap(),
-        );
+        let digest =
+            elsecall_contract::build_identity::Digest::of(&serde_json::to_vec(&trace).unwrap());
         assert_eq!(format!("{digest:?}"), expected);
     }
 }

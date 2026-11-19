@@ -1,7 +1,7 @@
 //! What the fleet reports of this member's copies: the adapter of
 //! `fleet::CopiesReport` over housekeeping.
 use crate::housekeeping::pass::Housekeeper;
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_fleet::fleet::{CopiesDisk, CopiesReport, CopiesUsage};
 use std::sync::Arc;
 

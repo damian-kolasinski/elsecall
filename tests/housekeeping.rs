@@ -7,6 +7,7 @@ mod diagnostics;
 mod members;
 mod processes;
 
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_housekeeping::housekeeping::{
     caller_state::CallerState,
     callers::Nobody,
@@ -16,7 +17,6 @@ use elsecall_housekeeping::housekeeping::{
     settings::Settings,
     volumes::Statfs,
 };
-use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workspace::{
     copies::Copies,
     framed_link::FramedLink,
@@ -586,13 +586,13 @@ struct Gated<L> {
     gate: Option<(Arc<tokio::sync::Notify>, Arc<tokio::sync::Notify>)>,
 }
 impl<L: sync::Link> sync::Link for Gated<L> {
-    async fn send(&mut self, message: sync::SyncMessage) -> elsecall_failure::Result<()> {
+    async fn send(&mut self, message: sync::SyncMessage) -> elsecall_contract::failure::Result<()> {
         self.inner.send(message).await
     }
-    async fn send_content(&mut self, chunk: Vec<u8>) -> elsecall_failure::Result<()> {
+    async fn send_content(&mut self, chunk: Vec<u8>) -> elsecall_contract::failure::Result<()> {
         self.inner.send_content(chunk).await
     }
-    async fn receive(&mut self) -> elsecall_failure::Result<sync::Received> {
+    async fn receive(&mut self) -> elsecall_contract::failure::Result<sync::Received> {
         let received = self.inner.receive().await?;
         if let Some((release, reached)) = self.gate.take() {
             reached.notify_one();

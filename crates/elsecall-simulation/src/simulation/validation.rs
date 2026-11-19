@@ -1,13 +1,13 @@
 //! Validate the on-disk trace at the simulator boundary. Missing historical
 //! evidence is allowed; the fidelity gate identifies it without inventing data.
-use elsecall_failure::{Failure, Result};
-use elsecall_report_facts::facts::{PlacementKind, is_code};
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::{
     capacity::Capacity,
     request::{Kind, MAXIMUM_DEADLINE, MAXIMUM_HOLD_LIMIT, Placement, Urgency},
     run_id::RunId,
     speed::PLAUSIBLE,
 };
+use elsecall_report_facts::facts::{PlacementKind, is_code};
 use elsecall_workload::trace::{Trace, TraceOutcome, VERSION};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -100,7 +100,7 @@ pub(super) fn trace(t: &Trace) -> Result<()> {
         ));
     }
     if let Some(r) = &t.rehearsal
-        && (!elsecall_rehearsal_identity::identity::valid_session(&r.session)
+        && (!elsecall_contract::rehearsal_identity::identity::valid_session(&r.session)
             || !(1.0..=1000.0).contains(&r.compress)
             || r.calibration.len() > 64
             || r.calibration
@@ -146,7 +146,10 @@ pub(super) fn trace(t: &Trace) -> Result<()> {
                 !t.requests.iter().any(|q| {
                     q.fact.run_id == *id
                         && q.fact.synthetic
-                        && elsecall_labels::rules::belongs(&r.session, q.fact.label.as_deref())
+                        && elsecall_contract::labels::rules::belongs(
+                            &r.session,
+                            q.fact.label.as_deref(),
+                        )
                 }) || demands.is_empty()
                     || demands.len() > 64
                     || demands.iter().any(|(m, c)| {
@@ -291,7 +294,9 @@ pub(super) fn trace(t: &Trace) -> Result<()> {
             Placement::Pinned => PlacementKind::Pinned,
             Placement::Placeable => PlacementKind::Placeable,
             Placement::Member(m) => {
-                if !name(m) || m.len() > elsecall_scheduling_model::request::MAXIMUM_MEMBER {
+                if !name(m)
+                    || m.len() > elsecall_contract::scheduling_model::request::MAXIMUM_MEMBER
+                {
                     return Err(bad("invalid required member name"));
                 }
                 PlacementKind::Required
@@ -415,7 +420,10 @@ pub(super) fn trace(t: &Trace) -> Result<()> {
     let mut demand_ids = BTreeSet::new();
     for d in &t.demand {
         if !members.contains(d.member.as_str())
-            || !text(&d.family, elsecall_labels::rules::label_limit(&d.family))
+            || !text(
+                &d.family,
+                elsecall_contract::labels::rules::label_limit(&d.family),
+            )
             || !text(&d.status, 100)
             || !demand_ids.insert((d.member.as_str(), d.family.as_str()))
             || [
@@ -438,7 +446,10 @@ pub(super) fn trace(t: &Trace) -> Result<()> {
     let mut curve_ids = BTreeSet::new();
     for c in &t.contention {
         if !members.contains(c.member.as_str())
-            || !text(&c.family, elsecall_labels::rules::label_limit(&c.family))
+            || !text(
+                &c.family,
+                elsecall_contract::labels::rules::label_limit(&c.family),
+            )
             || !text(&c.status, 100)
             || !curve_ids.insert((c.member.as_str(), c.family.as_str()))
             || c.points.len() > 128
@@ -472,8 +483,8 @@ pub(super) fn trace(t: &Trace) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use elsecall_contract::scheduling_model::timestamp::Timestamp;
     use elsecall_scheduling::fixtures::{self, T0};
-    use elsecall_scheduling_model::timestamp::Timestamp;
     use elsecall_workload::{
         contention::{Curve, Point},
         trace::{Member, Request},
@@ -526,7 +537,8 @@ mod tests {
     #[test]
     fn malformed_physics_and_zero_capacity_cannot_reach_simulator_arithmetic() {
         let mut t = fixture();
-        t.members[0].load[0].weighted_cores = elsecall_scheduling_model::capacity::Cores::ZERO;
+        t.members[0].load[0].weighted_cores =
+            elsecall_contract::scheduling_model::capacity::Cores::ZERO;
         assert!(trace(&t).is_err());
         t = fixture();
         t.members[0].load[0].cpu_mean = Some(f64::NAN);

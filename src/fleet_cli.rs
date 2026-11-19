@@ -1,7 +1,7 @@
 //! `elsecall fleet` commands: thin requests to the local service, which holds the
 //! member key and talks to the other members.
 use clap::{Args, Subcommand};
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_fleet::fleet_local_api::{
     CodeRequest, EnrollRequest, ForceRequest, MemberRequest, SyncRequest,
 };
@@ -234,7 +234,7 @@ async fn upgrade(
     let executable = executable
         .map(|path| {
             std::fs::canonicalize(&path).map_err(|e| {
-                elsecall_failure::Failure::new(
+                elsecall_contract::failure::Failure::new(
                     "build_unreadable",
                     format!("The build at {} could not be read: {e}", path.display()),
                     "Pass the path of a built elsecall executable.",

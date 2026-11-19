@@ -1,7 +1,7 @@
 //! Reviewable projections of scheduling settings, never an installed-file read or
 //! write. Unrelated fleet/consumer configuration cannot enter the artifact.
 use super::space::{Settings, arguments};
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_simulation::simulation::CandidateSettings;
 use elsecall_workload::trace::Trace;
 use serde_json::{Value, json};
@@ -75,7 +75,7 @@ pub(super) fn render(trace: &Trace, settings: &Settings) -> Result<Value> {
                     r.fact
                         .label
                         .as_ref()
-                        .is_some_and(|l| elsecall_labels::pattern::matches(pattern, l))
+                        .is_some_and(|l| elsecall_contract::labels::pattern::matches(pattern, l))
                 })
                 .map(|r| r.fact.size.to_string())
                 .collect();

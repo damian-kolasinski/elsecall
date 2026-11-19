@@ -19,7 +19,9 @@ use axum::{
     routing::post,
 };
 use elsecall_api_response as api_response;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::api;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_fleet::fleet::Fleet;
 use elsecall_load_log::buckets::Bucket;
 use elsecall_membership::membership_store::Membership;
@@ -27,8 +29,6 @@ use elsecall_report_facts::{
     report_protocol::{Cursor, FactsPage, FactsRequest, LoadRequest},
     window::{Window, invalid},
 };
-use elsecall_scheduling_model::timestamp::Timestamp;
-use elsecall_wire::api;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 
@@ -284,7 +284,7 @@ async fn peer_io(body: Bytes) -> Response {
 #[cfg(test)]
 mod tests {
     use crate::report_api::*;
-    use elsecall_machine::inspection::{MemoryPressure, ThermalState};
+    use elsecall_contract::inspection::{MemoryPressure, ThermalState};
     use elsecall_peer_transport::peer_client::RESPONSE_LIMIT;
     use elsecall_report_facts::{
         facts::{Estimator, Fact, Predicted},

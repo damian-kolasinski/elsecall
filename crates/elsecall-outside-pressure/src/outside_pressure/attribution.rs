@@ -15,7 +15,7 @@ use crate::outside_pressure::{
     blocked::{OutsideProcess, Reason},
     sampling::{Owner, Usage},
 };
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use std::collections::{HashMap, HashSet};
 
 /// Outside processes named per blocked state.
@@ -134,7 +134,7 @@ pub fn own_processes(usage: &[Usage], own_work: &OwnWork) -> HashSet<u32> {
 mod tests {
     use super::*;
     use crate::outside_pressure::sampling::{Memory, ProcessUse};
-    use elsecall_machine::inspection::MemoryPressure;
+    use elsecall_contract::inspection::MemoryPressure;
     use std::time::Duration;
 
     fn usage(pid: u32, parent: u32, gib: u64, cores: f64) -> Usage {

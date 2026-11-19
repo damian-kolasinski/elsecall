@@ -1,10 +1,10 @@
 #![cfg(target_os = "macos")]
 use axum::{Json, Router, routing::get};
 use elsecall::{peer_listener, server};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::inspection::{Inspection, LoadSample, Machine, MachineInspector};
 use elsecall_local_client as client;
 use elsecall_local_state::{paths::Paths, private_files};
-use elsecall_machine::inspection::{Inspection, LoadSample, Machine, MachineInspector};
 use elsecall_os_processes::processes::MacProcesses;
 use elsecall_scheduling::service::Adapters;
 use elsecall_tailnet::tailnet::{Presence, Tailnet};
@@ -70,7 +70,7 @@ async fn inspection_failure_crosses_real_api_without_becoming_false_health_failu
     ));
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(120);
     loop {
-        if client::get::<elsecall_machine::inspection::Health>(&paths.socket(), "/v1/health")
+        if client::get::<elsecall_contract::inspection::Health>(&paths.socket(), "/v1/health")
             .await
             .is_ok()
         {
@@ -155,13 +155,13 @@ async fn fleet_reads_accept_large_diagnostics_with_size_schema_and_timeout_bound
             "/v1/fleet",
             get(move || {
                 let fleet = served_fleet.clone();
-                async move { Json(elsecall_wire::api::Response::new(fleet)) }
+                async move { Json(elsecall_contract::api::Response::new(fleet)) }
             }),
         )
         .route(
             "/oversized",
             get(|| async {
-                Json(elsecall_wire::api::Response::new(
+                Json(elsecall_contract::api::Response::new(
                     "x".repeat(client::LARGE_RESPONSE),
                 ))
             }),

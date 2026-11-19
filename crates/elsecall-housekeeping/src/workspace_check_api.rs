@@ -15,7 +15,7 @@ use axum::{
     routing::post,
 };
 use elsecall_api_response::failure;
-use elsecall_failure::Failure;
+use elsecall_contract::failure::Failure;
 use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet};
 use std::sync::Arc;
 
@@ -55,5 +55,5 @@ async fn check(
     let answer = tokio::task::spawn_blocking(move || state.answer(&asker, &question))
         .await
         .expect("answers do not panic");
-    Json(elsecall_wire::api::Response::new(answer)).into_response()
+    Json(elsecall_contract::api::Response::new(answer)).into_response()
 }

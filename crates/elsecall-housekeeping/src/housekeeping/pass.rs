@@ -28,7 +28,7 @@ use crate::housekeeping::{
     trash::{Moved, Trash},
     volumes::Volumes,
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_workspace::{copies::Copies, copy, location::Locations};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
@@ -139,7 +139,7 @@ impl Housekeeper {
     /// Remove only this synthetic session's copies and now-unreferenced stores.
     /// Uses the same identity checks, reservations and confined trash as a pass.
     pub async fn clean_rehearsal(self: &Arc<Self>, session: String) -> Result<()> {
-        if !elsecall_rehearsal_identity::identity::valid_session(&session) {
+        if !elsecall_contract::rehearsal_identity::identity::valid_session(&session) {
             return Err(elsecall_scheduling::service::invalid_rehearsal(
                 "Invalid rehearsal cleanup identity.",
             ));
@@ -154,7 +154,7 @@ impl Housekeeper {
             };
             let mut stores = BTreeMap::new();
             for entry in this.catalog.entries()? {
-                if elsecall_rehearsal_identity::identity::scratch_of(
+                if elsecall_contract::rehearsal_identity::identity::scratch_of(
                     &session,
                     &entry.location.caller_root,
                 ) {
@@ -177,7 +177,10 @@ impl Housekeeper {
                     caller_path,
                     ..
                 } = removed.removed
-                    && elsecall_rehearsal_identity::identity::scratch_of(&session, &caller_path)
+                    && elsecall_contract::rehearsal_identity::identity::scratch_of(
+                        &session,
+                        &caller_path,
+                    )
                 {
                     let location = this.locations.locate(
                         &calling_member,

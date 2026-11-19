@@ -4,7 +4,7 @@
 //! unique names and keys, at least one endpoint per member, and a master that is a
 //! member. Changes produce a new roster with a higher epoch.
 use crate::member_key::PublicKey;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_tailnet::tailnet::is_member_address;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, net::SocketAddr};

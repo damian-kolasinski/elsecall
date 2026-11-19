@@ -3,13 +3,13 @@ use super::{
     invalid,
     protocol::{Job, Launch},
 };
-use elsecall_failure::{Failure, Result};
-use elsecall_local_state::paths::Paths;
-use elsecall_scheduling::processes::ProcessIdentity;
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::{
     request::{AtDeadline, Placement, Urgency},
     timestamp::Timestamp,
 };
+use elsecall_local_state::paths::Paths;
+use elsecall_scheduling::processes::ProcessIdentity;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -156,7 +156,8 @@ impl Caller {
         }
         if self.run_id.is_none() {
             self.run_id = fs::read_to_string(&self.status).ok().and_then(|s| {
-                elsecall_scheduling_model::run_id::RunId::parse(s.trim()).map(|id| id.to_string())
+                elsecall_contract::scheduling_model::run_id::RunId::parse(s.trim())
+                    .map(|id| id.to_string())
             });
         }
         Ok(Job {

@@ -9,17 +9,17 @@ mod diagnostics;
 mod members;
 mod processes;
 
-use elsecall_build_identity::{build_identity::Digest, executable_format::Architecture};
+use elsecall_contract::scheduling_model::{
+    capacity::Cores,
+    request::{AdmissionRequest, Kind, Placement, Urgency},
+};
+use elsecall_contract::{build_identity::Digest, executable_format::Architecture};
 use elsecall_fleet_upgrade::fleet_upgrade::{
     member::UpgradeStatus,
     protocol::{self, Manifest, Message, Os, UpgradeId},
 };
 use elsecall_local_state::paths::Paths;
 use elsecall_peer_transport::peer_client;
-use elsecall_scheduling_model::{
-    capacity::Cores,
-    request::{AdmissionRequest, Kind, Placement, Urgency},
-};
 use members::{TestMember, enrol, json};
 use serde_json::Value;
 use std::{

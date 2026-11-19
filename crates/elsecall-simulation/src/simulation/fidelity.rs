@@ -1,6 +1,6 @@
 //! Recorded-day validation. Tolerances are fixed by the harness contract, never
 //! inferred from residuals or relaxed to make an incomplete recording pass.
-use elsecall_scheduling_model::{
+use elsecall_contract::scheduling_model::{
     request::{Kind, Placement},
     timestamp::Timestamp,
 };
@@ -522,7 +522,7 @@ pub fn compare(
                 if a == 0
                     && b.seconds == 60
                     && b.busy_seconds == 0
-                    && b.in_use_max == elsecall_scheduling_model::capacity::Cores::ZERO
+                    && b.in_use_max == elsecall_contract::scheduling_model::capacity::Cores::ZERO
                     && value > 0
                 {
                     invented_idle.push(point.clone());
@@ -790,7 +790,8 @@ mod tests {
     fn busy_minutes_keep_the_one_request_sampling_tolerance() {
         let (mut trace, outcomes, mut minutes) = fixture(5);
         trace.members[0].load[0].busy_seconds = 60;
-        trace.members[0].load[0].in_use_max = elsecall_scheduling_model::capacity::Cores::ONE;
+        trace.members[0].load[0].in_use_max =
+            elsecall_contract::scheduling_model::capacity::Cores::ONE;
         minutes[0].queued_max = 1;
         let report = check(&trace, &outcomes, &minutes);
         assert_eq!(report["queues"][0]["status"], "pass");
@@ -819,7 +820,7 @@ mod tests {
                 load.queued_max = point["recorded"].as_u64().unwrap() as usize;
                 load.interactive_queued_max = Some(load.queued_max);
                 load.busy_seconds = 60;
-                load.in_use_max = elsecall_scheduling_model::capacity::Cores::ONE;
+                load.in_use_max = elsecall_contract::scheduling_model::capacity::Cores::ONE;
                 minute.queued_max = point["simulated"].as_u64().unwrap() as usize;
                 minute.interactive_queued_max = minute.queued_max;
             }
@@ -1091,7 +1092,8 @@ mod tests {
     /// replay, but never certify tuning.
     #[test]
     fn original_h4a_v1_artifacts_remain_uncertified_replay_inputs() {
-        let start = elsecall_scheduling_model::timestamp::Timestamp::from_millis(60_000_000);
+        let start =
+            elsecall_contract::scheduling_model::timestamp::Timestamp::from_millis(60_000_000);
         let mut artifact = serde_json::json!({"trace_version":1,"incomplete":false,"since":start,"until":start.after(std::time::Duration::from_secs(60)),"master":"a","members":[{"member":"a","errors":[],"load":[],"scheduler_settings":[{"at":start,"capacity":{"weighted_cores":2,"reserved":0,"capacity":2},"parameters":{}}]}],"requests":[],"leftovers":[],"demand":[],"contention":[],"limits":[]});
         artifact["rehearsal"] = serde_json::json!({"session":"a".repeat(24),"compress":6.0,"seed":0,"requests":[],"aggregated_nested":[]});
         let trace: elsecall_workload::trace::Trace = serde_json::from_value(artifact).unwrap();

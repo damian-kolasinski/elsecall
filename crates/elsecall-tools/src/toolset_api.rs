@@ -18,11 +18,11 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{any, get},
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::api;
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::fleet::Fleet;
 use elsecall_local_state::paths::Paths;
 use elsecall_membership::roster::{MemberName, Roster};
-use elsecall_wire::api;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{path::PathBuf, sync::Arc};
 

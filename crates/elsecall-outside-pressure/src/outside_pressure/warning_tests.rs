@@ -8,8 +8,8 @@ use super::{
     warning::{Concern, Warning},
     watcher::{WarningReport, Watcher},
 };
-use elsecall_failure::Result;
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use std::{
     ops::Range,
     path::PathBuf,

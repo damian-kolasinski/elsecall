@@ -2,7 +2,7 @@
 //! offer reaches a member. The adapter of `scheduling::placed::Members` over the
 //! authenticated member API.
 use crate::fleet::Fleet;
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_membership::roster::Readiness;
 use elsecall_peer_transport::peer_client;
 use elsecall_scheduling::{

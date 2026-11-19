@@ -1,6 +1,6 @@
 //! Controlled rehearsal provenance, distinct from observational production models.
 use crate::trace::{Request, Trace};
-use elsecall_build_identity::build_identity::Build;
+use elsecall_contract::build_identity::Build;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -16,7 +16,7 @@ pub struct Recording {
     #[serde(default)]
     pub work_iterations: BTreeMap<String, u64>,
     pub session: String,
-    pub source_digest: elsecall_build_identity::build_identity::Digest,
+    pub source_digest: elsecall_contract::build_identity::Digest,
     pub build: Build,
     pub compress: f64,
     #[serde(default)]
@@ -89,7 +89,7 @@ impl Recording {
                 self.planned
             ));
         }
-        if !elsecall_rehearsal_identity::identity::valid_session(&self.session) {
+        if !elsecall_contract::rehearsal_identity::identity::valid_session(&self.session) {
             missing.push("the session ID is invalid".to_owned());
         }
         if !(self.compress.is_finite() && self.compress >= 1.0) {
@@ -99,7 +99,10 @@ impl Recording {
         for r in &trace.requests {
             let id = &r.fact.run_id;
             if !(r.fact.synthetic
-                && elsecall_labels::rules::belongs(&self.session, r.fact.label.as_deref())
+                && elsecall_contract::labels::rules::belongs(
+                    &self.session,
+                    r.fact.label.as_deref(),
+                )
                 && !r.fact.unfinished
                 && !r.fact.nested)
             {
@@ -127,7 +130,10 @@ impl Recording {
         }
         missing
     }
-    pub fn original_kind(&self, request: &Request) -> elsecall_scheduling_model::request::Kind {
+    pub fn original_kind(
+        &self,
+        request: &Request,
+    ) -> elsecall_contract::scheduling_model::request::Kind {
         self.requests
             .as_array()
             .into_iter()
@@ -178,7 +184,7 @@ pub fn deserialize<'de, D: serde::Deserializer<'de>>(
         None => Ok(None),
         Some(Provenance::Current(recording)) => Ok(Some(*recording)),
         Some(Provenance::Legacy(legacy)) => {
-            if !elsecall_rehearsal_identity::identity::valid_session(&legacy.session)
+            if !elsecall_contract::rehearsal_identity::identity::valid_session(&legacy.session)
                 || !(1.0..=1000.0).contains(&legacy.compress)
             {
                 return Err(serde::de::Error::custom(
@@ -193,7 +199,7 @@ pub fn deserialize<'de, D: serde::Deserializer<'de>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elsecall_scheduling_model::timestamp::Timestamp;
+    use elsecall_contract::scheduling_model::timestamp::Timestamp;
 
     /// A one-member, one-request rehearsal trace whose recording is complete.
     fn complete() -> Trace {
@@ -220,8 +226,8 @@ mod tests {
             uncontended_ms: BTreeMap::from([(id.clone(), BTreeMap::from([("a".into(), 1000.0)]))]),
             work_iterations: BTreeMap::from([(id.clone(), 1000)]),
             session,
-            source_digest: elsecall_build_identity::build_identity::Digest::of(b"source"),
-            build: elsecall_build_identity::build_identity::this_build().unwrap(),
+            source_digest: elsecall_contract::build_identity::Digest::of(b"source"),
+            build: elsecall_contract::build_identity::this_build().unwrap(),
             load_factor: Default::default(),
             compress: 2.0,
             seed: 0,

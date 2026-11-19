@@ -6,7 +6,7 @@ use crate::{
     messages::MemberState,
     placed::{Warmth, WorkspaceRef},
 };
-use elsecall_scheduling_model::{capacity::Cores, request::Kind, run_id::RunId};
+use elsecall_contract::scheduling_model::{capacity::Cores, request::Kind, run_id::RunId};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -107,7 +107,7 @@ pub fn millis(duration: Duration) -> u64 {
 mod tests {
     use super::*;
     use crate::{admission::QueueCounts, load::Gate};
-    use elsecall_scheduling_model::capacity::Capacity;
+    use elsecall_contract::scheduling_model::capacity::Capacity;
 
     #[test]
     fn the_master_believes_only_plausible_bounded_answers() {

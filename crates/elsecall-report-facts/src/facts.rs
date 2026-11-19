@@ -1,17 +1,17 @@
 //! What a report needs of one request, projected from its record. Members send
 //! these to the member that reports, so they carry no paths, processes or
 //! warnings: only labels, member names, times, outcomes and estimates.
+use elsecall_contract::scheduling_model::{
+    capacity::Cores,
+    request::{Kind, Placement, Urgency},
+    timestamp::Timestamp,
+};
 use elsecall_scheduling::{
     learning::RunSample,
     placed::{Side, Warmth},
     placement::{Level, Source},
     record::{Outcome, Record, Verdict},
     run_phases::RunPhases,
-};
-use elsecall_scheduling_model::{
-    capacity::Cores,
-    request::{Kind, Placement, Urgency},
-    timestamp::Timestamp,
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -33,9 +33,10 @@ pub struct Fact {
     pub kind: Kind,
     pub label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub workload: Option<elsecall_scheduling_model::workload_metadata::Workload>,
+    pub workload: Option<elsecall_contract::scheduling_model::workload_metadata::Workload>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub plan_observation: Option<elsecall_scheduling_model::workload_metadata::Observation>,
+    pub plan_observation:
+        Option<elsecall_contract::scheduling_model::workload_metadata::Observation>,
     #[serde(default)]
     pub synthetic: bool,
     #[serde(default)]
@@ -117,7 +118,7 @@ fn ms(duration: Duration) -> u64 {
     duration.as_millis().min(u128::from(u64::MAX)) as u64
 }
 
-pub use elsecall_failure::is_code;
+pub use elsecall_contract::failure::is_code;
 
 /// Text another member sent that a report may show: bounded and printable.
 fn plausible_text(text: &str, most: usize) -> bool {
@@ -133,7 +134,7 @@ impl Fact {
         self.plan_observation
             .as_ref()
             .is_none_or(|o| o.validate(self.workload.as_ref()).is_ok())
-            && elsecall_scheduling_model::run_id::RunId::parse(&self.run_id).is_some()
+            && elsecall_contract::scheduling_model::run_id::RunId::parse(&self.run_id).is_some()
             && self.resources.as_ref().is_none_or(|r| {
                 r.cpu_ms
                     .is_none_or(|ms| ms <= elsecall_scheduling::record::MAXIMUM_CPU_MS)
@@ -166,11 +167,11 @@ impl Fact {
             && self
                 .label
                 .as_deref()
-                .is_none_or(|l| plausible_text(l, elsecall_labels::rules::label_limit(l)))
+                .is_none_or(|l| plausible_text(l, elsecall_contract::labels::rules::label_limit(l)))
             && self
                 .family
                 .as_deref()
-                .is_none_or(|f| plausible_text(f, elsecall_labels::rules::MAXIMUM_LABEL))
+                .is_none_or(|f| plausible_text(f, elsecall_contract::labels::rules::MAXIMUM_LABEL))
     }
 
     /// The fact as run history learns from it: a completed labelled run that
@@ -179,7 +180,7 @@ impl Fact {
         if !self.completed
             || self.kind != Kind::Run
             || self.synthetic
-            || elsecall_labels::rules::synthetic(self.label.as_deref())
+            || elsecall_contract::labels::rules::synthetic(self.label.as_deref())
         {
             return None;
         }
@@ -256,7 +257,7 @@ impl Fact {
             workload: record.workload.clone(),
             plan_observation: record.plan_observation.clone(),
             synthetic: record.synthetic
-                || elsecall_labels::rules::synthetic(record.label.as_deref()),
+                || elsecall_contract::labels::rules::synthetic(record.label.as_deref()),
             internal: record.internal,
             family: record
                 .settings

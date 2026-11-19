@@ -14,7 +14,7 @@ use crate::{
     placed::{Interruption, Side},
     record::{Outcome, Record},
 };
-use elsecall_scheduling_model::timestamp::{Timestamp, millis};
+use elsecall_contract::scheduling_model::timestamp::{Timestamp, millis};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, time::Duration};
 
@@ -77,7 +77,9 @@ impl LossHistory {
         for record in records
             .iter()
             .filter(|r| !window.is_zero() && r.requested_at >= since)
-            .filter(|r| !r.synthetic && !elsecall_labels::rules::synthetic(r.label.as_deref()))
+            .filter(|r| {
+                !r.synthetic && !elsecall_contract::labels::rules::synthetic(r.label.as_deref())
+            })
         {
             let Some(placed) = record.placed.as_ref().filter(|p| p.side == Side::Caller) else {
                 continue;

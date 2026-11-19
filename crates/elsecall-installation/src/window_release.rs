@@ -1,6 +1,6 @@
 //! The companion window shipped beside a CLI release and staged by installation.
-use elsecall_build_identity::build_identity::Digest;
-use elsecall_failure::Failure;
+use elsecall_contract::build_identity::Digest;
+use elsecall_contract::failure::Failure;
 use elsecall_local_state::{paths::Paths, private_files};
 use std::{fs, path::Path};
 
@@ -11,7 +11,7 @@ pub fn companion(source: &Path) -> std::path::PathBuf {
 
 /// Copies the sibling window into the support directory when the install has one.
 /// A missing sibling leaves any previously stored window in place.
-pub fn store_companion(paths: &Paths, source: &Path) -> elsecall_failure::Result<()> {
+pub fn store_companion(paths: &Paths, source: &Path) -> elsecall_contract::failure::Result<()> {
     let sibling = companion(source);
     if !sibling.is_file() {
         return Ok(());
@@ -22,7 +22,7 @@ pub fn store_companion(paths: &Paths, source: &Path) -> elsecall_failure::Result
 
 pub fn installed_build(
     paths: &Paths,
-) -> elsecall_failure::Result<Option<elsecall_build_identity::build_identity::BuildId>> {
+) -> elsecall_contract::failure::Result<Option<elsecall_contract::build_identity::BuildId>> {
     let path = paths.window_executable();
     if !path.is_file() {
         return Ok(None);

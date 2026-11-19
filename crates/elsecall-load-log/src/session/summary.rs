@@ -5,7 +5,7 @@ use crate::{
     buckets::Bucket,
     minute::{Second, memory_rank, thermal_rank, worst},
 };
-use elsecall_scheduling_model::{capacity::Cores, gate::Gate, timestamp::Timestamp};
+use elsecall_contract::scheduling_model::{capacity::Cores, gate::Gate, timestamp::Timestamp};
 use std::collections::BTreeMap;
 struct Fold {
     bucket: Bucket,

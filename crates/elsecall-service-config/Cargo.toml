@@ -14,10 +14,9 @@ workspace = true
 
 [dependencies]
 elsecall-config-sync-model.workspace = true
-elsecall-failure.workspace = true
+elsecall-contract.workspace = true
 elsecall-housekeeping.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-scheduling-model.workspace = true
 elsecall-service-log.workspace = true
 elsecall-workspace.workspace = true
 humantime.workspace = true

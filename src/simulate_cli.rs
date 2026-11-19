@@ -1,6 +1,6 @@
 //! Offline simulation never connects to, installs or changes an Elsecall service.
 use clap::Args;
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_simulation::{
     evaluation_day::day,
     simulation::{self, Options},

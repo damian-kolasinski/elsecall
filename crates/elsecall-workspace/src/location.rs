@@ -6,7 +6,7 @@
 //! absolute path. Either way, each caller repository's history is kept once, in an
 //! object store under the workspace root that all its worktrees' copies share.
 use crate::{digest::Digest, sync_failed};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 

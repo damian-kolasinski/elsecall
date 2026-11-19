@@ -8,14 +8,14 @@
 //! Quote the entire argument when a pattern contains spaces. Patterns use the
 //! consumer configuration's glob syntax and first matching rule wins, in argument
 //! order. Duplicate keys are errors, as with production parameter overrides.
-use elsecall_failure::{Failure, Result};
-use elsecall_labels::pattern as label_pattern;
-use elsecall_membership::roster::MemberName;
-use elsecall_scheduling::parameters::{Overrides, Parameters};
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::labels::pattern as label_pattern;
+use elsecall_contract::scheduling_model::{
     capacity::{Capacity, Cores},
     request::{MAXIMUM_HOLD_LIMIT, Urgency},
 };
+use elsecall_membership::roster::MemberName;
+use elsecall_scheduling::parameters::{Overrides, Parameters};
 use elsecall_workload::trace::{Request, Trace};
 use elsecall_workload_config::workload_settings::WorkloadSettings;
 use std::{collections::BTreeMap, time::Duration};
@@ -195,7 +195,7 @@ fn reserve_floor(member: &str, reserved: Cores, baseline: &Capacity) -> Result<(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elsecall_scheduling_model::{request::AtDeadline, timestamp::Timestamp};
+    use elsecall_contract::scheduling_model::{request::AtDeadline, timestamp::Timestamp};
 
     fn trace() -> Trace {
         let mut trace = crate::simulation::engine::tests::trace();

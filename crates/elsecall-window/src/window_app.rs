@@ -1,5 +1,5 @@
 //! Publishes a staged, signed app without modifying the running executable.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_local_state::{paths::Paths, private_files};
 use std::{
     fs,
@@ -226,7 +226,7 @@ fn write_bundle(app: &Path, binary: &[u8]) -> Result<()> {
         .map_err(|error| Failure::io("Set Elsecall app permissions", error))?;
     fs::write(
         app.join("Contents/Info.plist"),
-        INFO_PLIST.replace("0.1.0", elsecall_build_identity::build_identity::VERSION),
+        INFO_PLIST.replace("0.1.0", elsecall_contract::build_identity::VERSION),
     )
     .map_err(|error| Failure::io("Write the Elsecall app identity", error))?;
     let resources = app.join("Contents/Resources");
@@ -235,7 +235,7 @@ fn write_bundle(app: &Path, binary: &[u8]) -> Result<()> {
         .map_err(|error| Failure::io("Write the Elsecall app icon", error))?;
     fs::write(
         resources.join("build-id"),
-        elsecall_build_identity::build_identity::Digest::of(binary)
+        elsecall_contract::build_identity::Digest::of(binary)
             .build_id()
             .to_string(),
     )
@@ -268,9 +268,7 @@ fn exchange(_: &Path, _: &Path) -> Result<()> {
 
 /// App signing changes executable bytes. Read the original release identity,
 /// captured at startup by the UI, from the signed bundle instead.
-pub fn running_build(
-    executable: &Path,
-) -> Result<elsecall_build_identity::build_identity::BuildId> {
+pub fn running_build(executable: &Path) -> Result<elsecall_contract::build_identity::BuildId> {
     let parent = executable.parent().expect("executable has a parent");
     if executable
         .file_name()
@@ -285,7 +283,7 @@ pub fn running_build(
             .map_err(|error| Failure::io("Read window release identity", error))?
             .parse();
     }
-    elsecall_build_identity::build_identity::Digest::of_file(executable)
+    elsecall_contract::build_identity::Digest::of_file(executable)
         .map(|digest| digest.build_id())
         .map_err(|error| Failure::io("Read the running window", error))
 }

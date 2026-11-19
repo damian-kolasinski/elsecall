@@ -411,7 +411,7 @@ fn plan_enable_push_overrides_and_local_edits() {
 async fn channel(
     from: &TestMember,
     to: &TestMember,
-) -> elsecall_failure::Result<peer_client::RunChannel> {
+) -> elsecall_contract::failure::Result<peer_client::RunChannel> {
     peer_client::channel(
         &from.key(),
         &to.as_member(),
@@ -467,9 +467,9 @@ async fn interrupted_pushes_change_nothing_and_only_the_master_pushes() {
         panic!("expected need")
     };
     assert_eq!(fingerprints.len(), 1, "only the content beta lacks");
-    elsecall_wire::wire::write(
+    elsecall_contract::wire::write(
         &mut sealed,
-        &elsecall_wire::wire::Frame::Content(content[..5].to_vec()),
+        &elsecall_contract::wire::Frame::Content(content[..5].to_vec()),
     )
     .await
     .unwrap();

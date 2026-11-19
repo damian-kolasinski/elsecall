@@ -2,12 +2,12 @@
 //! work that ran while outside load saturated a member, measured speed, and how
 //! evenly busy the members were.
 use crate::reporting::statistics::{mean, nearest_rank, sorted};
+use elsecall_contract::inspection::{MemoryPressure, ThermalState};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_load_log::{
     buckets::Bucket,
     minute::{memory_rank, thermal_rank, worst},
 };
-use elsecall_machine::inspection::{MemoryPressure, ThermalState};
-use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 

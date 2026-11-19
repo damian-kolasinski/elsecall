@@ -6,13 +6,13 @@ use super::{
     member::Member,
     model,
 };
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
 use elsecall_scheduling::{
     messages::{Grant, Release, RunEnded},
     placed::{PlacedReport, Reached, SyncSummary, Warmth},
     service::HostedEnd,
 };
-use elsecall_scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
 use elsecall_workload::{
     demand::family,
     trace::{Request, Trace, TraceOutcome},
@@ -657,16 +657,16 @@ mod family_tests {
         model::Envelope,
         settings::Settings,
     };
+    use elsecall_contract::scheduling_model::{
+        capacity::{Capacity, Cores},
+        request::{AdmissionRequest, Kind, Placement, Urgency},
+        run_id::RunId,
+    };
     use elsecall_scheduling::{
         clock::VirtualClock,
         messages::{CommandStarted, RunEnded},
         parameters::Parameters,
         record::State,
-    };
-    use elsecall_scheduling_model::{
-        capacity::{Capacity, Cores},
-        request::{AdmissionRequest, Kind, Placement, Urgency},
-        run_id::RunId,
     };
     use std::{
         sync::{Arc, Mutex},

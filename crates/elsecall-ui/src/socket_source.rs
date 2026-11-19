@@ -137,8 +137,8 @@ impl FleetSource for LazySocket {
     }
 }
 
-pub(crate) fn classify(failure: elsecall_failure::Failure) -> SourceFailure {
-    let elsecall_failure::Failure {
+pub(crate) fn classify(failure: elsecall_contract::failure::Failure) -> SourceFailure {
+    let elsecall_contract::failure::Failure {
         code,
         message,
         hint,
@@ -710,7 +710,8 @@ mod tests {
     #[test]
     fn classifies_the_service_unavailable_envelope() {
         let fixture = include_str!("../tests/fixtures/error.json");
-        let response: elsecall_wire::api::ErrorResponse = serde_json::from_str(fixture).unwrap();
+        let response: elsecall_contract::api::ErrorResponse =
+            serde_json::from_str(fixture).unwrap();
         let failure = classify(response.error);
         match failure {
             SourceFailure::ServiceUnavailable { hint, .. } => {

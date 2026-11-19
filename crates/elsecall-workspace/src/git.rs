@@ -6,7 +6,7 @@
 //! lock or follows a redirected repository. On a member, git also ignores the
 //! account's global and system configuration, so copies behave the same everywhere.
 use crate::sync_failed;
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use serde::{Deserialize, Serialize};
 use std::{
     io::Write,

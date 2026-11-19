@@ -5,7 +5,7 @@ use elsecall_add_mac::{
     authorized_keys,
     remote_mac::Build,
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_local_state::paths::Paths;
 use elsecall_openssh_mac::OpensshMac;
 use elsecall_platform_macos::macos::tailscale::TailscaleCli;

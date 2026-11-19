@@ -1,5 +1,5 @@
 //! Arrival density, independent of command work and rehearsal compression.
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_workload::trace::Trace;
 use std::{collections::BTreeMap, time::Duration};
 
@@ -51,8 +51,9 @@ pub fn replay(factor: LoadFactor, source: &Trace, since: Timestamp, until: Times
             resources.started_at = resources.started_at.map(move_time);
             resources.ended_at = resources.ended_at.map(move_time);
         }
-        if let elsecall_scheduling_model::request::Urgency::Deferrable { deadline, .. } =
-            &mut r.urgency
+        if let elsecall_contract::scheduling_model::request::Urgency::Deferrable {
+            deadline, ..
+        } = &mut r.urgency
         {
             *deadline = move_time(*deadline);
         }

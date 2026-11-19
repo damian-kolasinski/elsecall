@@ -5,8 +5,8 @@
 //! and tells it which of its copies it removed. The owner answers only for
 //! workspaces it pushed to the member that asks, so no other member can learn
 //! about its paths or cause a copy's removal.
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 
 pub const ROUTE: &str = "/peer/v1/workspaces/check";

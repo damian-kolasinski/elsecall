@@ -3,8 +3,8 @@ use crate::{
     estimates,
     record::{Record, State},
 };
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::{run_id::RunId, timestamp::Timestamp};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::{run_id::RunId, timestamp::Timestamp};
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -23,7 +23,7 @@ pub use elsecall_sqlite_retention::RETENTION;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SchedulerSettings {
     pub at: Timestamp,
-    pub capacity: elsecall_scheduling_model::capacity::Capacity,
+    pub capacity: elsecall_contract::scheduling_model::capacity::Capacity,
     pub parameters: crate::parameters::Parameters,
 }
 
@@ -315,7 +315,7 @@ impl Records {
 
     /// Run times of the label's latest completed requests.
     pub fn run_times(&self, label: &str) -> Result<Vec<Duration>> {
-        if elsecall_labels::rules::synthetic(Some(label)) {
+        if elsecall_contract::labels::rules::synthetic(Some(label)) {
             return Ok(Vec::new());
         }
         let connection = self.connection();
@@ -487,7 +487,7 @@ mod tests {
     #[test]
     fn settings_history_preserves_baseline_changes_and_retention() {
         use crate::parameters::Parameters;
-        use elsecall_scheduling_model::capacity::{Capacity, Cores};
+        use elsecall_contract::scheduling_model::capacity::{Capacity, Cores};
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("settings.sqlite");
         let records = Records::open(&path).unwrap();
@@ -563,7 +563,7 @@ mod tests {
         );
     }
     use crate::record::Outcome;
-    use elsecall_scheduling_model::{
+    use elsecall_contract::scheduling_model::{
         capacity::Cores,
         request::{Kind, Placement, Urgency},
     };
@@ -671,7 +671,7 @@ mod tests {
     #[test]
     fn learning_reads_families_and_every_label_without_decisions() {
         use crate::record::{Decision, Verdict};
-        use elsecall_scheduling_model::settings::{AppliedRule, Settings, Source};
+        use elsecall_contract::scheduling_model::settings::{AppliedRule, Settings, Source};
         let dir = tempfile::tempdir().unwrap();
         let records = Records::open(&dir.path().join("records.sqlite")).unwrap();
         let exited = Some(Outcome::Exited { exit_code: 0 });

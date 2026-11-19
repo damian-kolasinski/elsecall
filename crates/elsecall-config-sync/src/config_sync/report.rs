@@ -7,7 +7,7 @@ use crate::config_sync::{
     state::Backup,
 };
 use elsecall_config_sync_model::synced_path::SyncedPath;
-use elsecall_failure::Failure;
+use elsecall_contract::failure::Failure;
 use serde::{Deserialize, Serialize};
 
 pub use elsecall_config_sync_model::status::{

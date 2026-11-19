@@ -13,8 +13,7 @@ doctest = false
 workspace = true
 
 [dependencies]
-elsecall-build-identity.workspace = true
-elsecall-failure.workspace = true
+elsecall-contract.workspace = true
 elsecall-fleet.workspace = true
 elsecall-local-client.workspace = true
 elsecall-local-state.workspace = true

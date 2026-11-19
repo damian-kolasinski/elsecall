@@ -1,5 +1,5 @@
 //! macOS signing and LaunchServices adapter for window publication.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_window::window_app::WindowLauncher;
 use std::{path::Path, process::Command};
 

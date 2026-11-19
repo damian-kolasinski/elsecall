@@ -1,4 +1,4 @@
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use std::path::{Path, PathBuf};
 
 pub const LABEL: &str = "dev.elsecall.agent";

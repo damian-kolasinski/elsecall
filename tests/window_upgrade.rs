@@ -1,7 +1,7 @@
 //! Exercise real bundle publication with only macOS signing/launching replaced.
 #![cfg(target_os = "macos")]
-use elsecall_build_identity::build_identity::Digest;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::build_identity::Digest;
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_installation::window_release;
 use elsecall_local_state::{paths::Paths, private_files};
 use elsecall_window::window_app::{self, WindowLauncher};

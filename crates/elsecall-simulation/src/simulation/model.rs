@@ -1,6 +1,6 @@
 //! Execution physics, separate from admission/placement's own estimates.
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_scheduling::placed::Warmth;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workload::{
     demand::{family, interval, median, overlap},
     trace::{Request, Trace},
@@ -340,7 +340,7 @@ pub(super) fn reference(trace: &Trace, request: &Request) -> Option<(f64, bool)>
             } => Some((*milliseconds, *identified)),
         };
     }
-    if request.fact.kind == elsecall_scheduling_model::request::Kind::Lease {
+    if request.fact.kind == elsecall_contract::scheduling_model::request::Kind::Lease {
         return request.fact.run_ms.map(|ms| (ms as f64, true));
     }
     if request.fact.completed && request.fact.run_ms.is_some() && request.fact.member.is_some() {
@@ -387,7 +387,9 @@ pub(super) fn reference_speed(trace: &Trace, request: &Request) -> Option<f64> {
         .member
         .as_deref()
         .unwrap_or(match &request.placement_request {
-            elsecall_scheduling_model::request::Placement::Member(target) => target.as_str(),
+            elsecall_contract::scheduling_model::request::Placement::Member(target) => {
+                target.as_str()
+            }
             _ => request.fact.calling_member.as_str(),
         });
     let at = request
@@ -446,7 +448,7 @@ pub(super) fn ideal_from_reference(
     request: &Request,
     reference: Option<(f64, bool)>,
 ) -> Option<f64> {
-    use elsecall_scheduling_model::request::Kind;
+    use elsecall_contract::scheduling_model::request::Kind;
     if let Some(recording) = &trace.rehearsal {
         return recording
             .ideal_ms
@@ -516,7 +518,7 @@ pub(super) fn ideal_from_reference(
 pub(super) fn original_kind(
     trace: &Trace,
     request: &Request,
-) -> elsecall_scheduling_model::request::Kind {
+) -> elsecall_contract::scheduling_model::request::Kind {
     trace
         .rehearsal
         .as_ref()
@@ -535,8 +537,8 @@ mod tests {
     use super::*;
     #[test]
     fn ideal_respects_frozen_capacity_placement_availability_and_cold_runtime() {
+        use elsecall_contract::scheduling_model::{capacity::Cores, request::Placement};
         use elsecall_scheduling::record::WorkspaceIdentity;
-        use elsecall_scheduling_model::{capacity::Cores, request::Placement};
         let mut t = crate::simulation::engine::tests::trace();
         t.requests.truncate(1);
         let r = &mut t.requests[0];
@@ -657,15 +659,15 @@ mod tests {
         r.fact.resources.as_mut().unwrap().ended_at = Some(trace.until);
         trace.members[0].load[0].cpu_mean = Some(0.75);
         trace.members[0].load[0].weighted_cores =
-            elsecall_scheduling_model::capacity::Cores::from_millis(2000);
+            elsecall_contract::scheduling_model::capacity::Cores::from_millis(2000);
         trace.rehearsal = Some(elsecall_workload::recording::Recording {
             calibration: BTreeMap::new(),
             ideal_ms: Default::default(),
             uncontended_ms: BTreeMap::new(),
             work_iterations: BTreeMap::new(),
             session: "a".repeat(24),
-            source_digest: elsecall_build_identity::build_identity::Digest::of(b"source"),
-            build: elsecall_build_identity::build_identity::this_build().unwrap(),
+            source_digest: elsecall_contract::build_identity::Digest::of(b"source"),
+            build: elsecall_contract::build_identity::this_build().unwrap(),
             load_factor: Default::default(),
             compress: 6.0,
             seed: 0,

@@ -1,10 +1,10 @@
 //! Whether a freshly installed service came up: it answers its local API with
 //! the build that was installed, and keeps running as the same process.
-use elsecall_build_identity::build_identity::{Build, BuildId};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::build_identity::{Build, BuildId};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::inspection::Health;
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
-use elsecall_machine::inspection::Health;
 use std::time::{Duration, Instant};
 
 /// How long a freshly installed service has to answer with its build.

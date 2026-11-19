@@ -8,7 +8,7 @@ use crate::config_sync::{
     fingerprint::{Fingerprint, SyncKey},
     manifest::FileNode,
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_local_state::private_files;
 use std::{
     collections::BTreeSet,

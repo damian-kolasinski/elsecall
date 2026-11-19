@@ -16,8 +16,8 @@ use crate::{
     processes::ProcessIdentity,
     record::{Arrival, Candidate, Decision, Outcome, Scoring, State, Verdict},
 };
-use elsecall_machine::inspection::{CoreCounts, LoadSample, MemoryPressure, ThermalState};
-use elsecall_scheduling_model::{
+use elsecall_contract::inspection::{CoreCounts, LoadSample, MemoryPressure, ThermalState};
+use elsecall_contract::scheduling_model::{
     capacity::{Capacity, Cores},
     request::{Kind, Placement, Urgency},
     run_id::RunId,
@@ -1007,7 +1007,7 @@ fn stored_records_keep_their_exact_bytes() {
         let per_form = actual.len() / expected.len();
         format!(
             "{:?}",
-            elsecall_build_identity::build_identity::Digest::of(
+            elsecall_contract::build_identity::Digest::of(
                 &actual[form * per_form..(form + 1) * per_form].concat()
             )
         )

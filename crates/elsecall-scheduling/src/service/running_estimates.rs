@@ -16,7 +16,7 @@ use crate::{
     placement::{LearnedRun, LearnedTime, Source},
     record::Record,
 };
-use elsecall_scheduling_model::{request::Kind, run_id::RunId};
+use elsecall_contract::scheduling_model::{request::Kind, run_id::RunId};
 use std::{
     collections::{HashMap, HashSet},
     time::Duration,

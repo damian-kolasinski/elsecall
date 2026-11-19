@@ -1,13 +1,13 @@
 //! Signed requests to another member over the tailnet, with verified responses.
 use crate::peer_transport::{self, Progress};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::api::{ErrorResponse, Response, SCHEMA_VERSION};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_membership::{
     member_key::MemberKey,
     peer_auth::{self, SIGNATURE_HEADER},
     roster::Member,
 };
 use elsecall_peer_diagnostics::{self as peer_diagnostics, Attempt, Kind, Phase};
-use elsecall_wire::api::{ErrorResponse, Response, SCHEMA_VERSION};
 use http_body_util::{BodyExt, Full, Limited};
 use hyper::{Method, Request, body::Bytes, client::conn::http1};
 use hyper_util::rt::TokioIo;
@@ -206,9 +206,9 @@ async fn exchange<T: DeserializeOwned>(
     for (name, value) in proof.headers() {
         request = request.header(name, value);
     }
-    if let Some(build) = elsecall_build_identity::build_identity::announced() {
+    if let Some(build) = elsecall_contract::build_identity::announced() {
         request = request.header(
-            elsecall_build_identity::version_skew::BUILD_HEADER,
+            elsecall_contract::version_skew::BUILD_HEADER,
             build.as_str(),
         );
     }
@@ -548,9 +548,9 @@ async fn channel_once(
     for (name, value) in proof.headers() {
         request = request.header(name, value);
     }
-    if let Some(build) = elsecall_build_identity::build_identity::announced() {
+    if let Some(build) = elsecall_contract::build_identity::announced() {
         request = request.header(
-            elsecall_build_identity::version_skew::BUILD_HEADER,
+            elsecall_contract::version_skew::BUILD_HEADER,
             build.as_str(),
         );
     }

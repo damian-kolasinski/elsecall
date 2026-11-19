@@ -3,8 +3,8 @@
 //!
 //! Operator changes live in `fleet_changes` and the fleet-wide view in `fleet_view`;
 //! both act through this module's state.
-use elsecall_failure::{Failure, Result};
-use elsecall_machine::inspection::Inspection;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::inspection::Inspection;
 use elsecall_membership::{
     member_code,
     member_key::{MemberKey, PublicKey},
@@ -30,7 +30,7 @@ pub struct PeerStatus {
     pub version: String,
     /// The member's build ID; absent from members that predate upgrades.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub build: Option<elsecall_build_identity::build_identity::BuildId>,
+    pub build: Option<elsecall_contract::build_identity::BuildId>,
     /// The roster this member records, so others can tell whether they agree.
     pub roster: Roster,
     /// The member's own machine inspection, passed through as reported so newer
@@ -138,7 +138,7 @@ pub struct CopiesUsage {
     pub disk: Option<CopiesDisk>,
     /// The latest pass since the service started.
     #[serde(default)]
-    pub last_pass_at: Option<elsecall_scheduling_model::timestamp::Timestamp>,
+    pub last_pass_at: Option<elsecall_contract::scheduling_model::timestamp::Timestamp>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -479,7 +479,7 @@ impl Fleet {
             .map(|report| tokio::task::spawn_blocking(move || report.usage()));
         let load = self.load_report().map(|log| {
             tokio::task::spawn_blocking(move || {
-                log.summary(elsecall_scheduling_model::timestamp::Timestamp::now())
+                log.summary(elsecall_contract::scheduling_model::timestamp::Timestamp::now())
             })
         });
         let sync = self
@@ -537,8 +537,8 @@ impl Fleet {
         Ok(PeerStatus {
             peer_io: elsecall_peer_diagnostics::recent(),
             member: self.own_name(&roster),
-            version: elsecall_build_identity::build_identity::VERSION.into(),
-            build: elsecall_build_identity::build_identity::this_build()
+            version: elsecall_contract::build_identity::VERSION.into(),
+            build: elsecall_contract::build_identity::this_build()
                 .ok()
                 .map(|b| b.build),
             roster,

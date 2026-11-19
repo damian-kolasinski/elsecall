@@ -1,5 +1,5 @@
 //! Bounded versioned trace-file decoding, shared by simulation and rehearsal.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_workload::trace::Trace;
 use std::io::Read;
 pub fn read(path: &std::path::Path) -> Result<Trace> {

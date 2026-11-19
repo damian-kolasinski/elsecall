@@ -7,9 +7,9 @@ use crate::outside_pressure::{
     sampling::{ProcessSampler, Snapshot, usage_between},
     store::{Episode, EpisodeStore},
 };
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_scheduling::load::Gate;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{
     path::Path,

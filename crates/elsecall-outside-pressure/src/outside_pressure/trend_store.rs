@@ -7,8 +7,8 @@ use crate::outside_pressure::{
     trend::{self, Round, Seen},
     warning::{Warning, WarningEpisode},
 };
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use rusqlite::{Connection, params};
 use std::{
     collections::HashSet, fs::OpenOptions, os::unix::fs::OpenOptionsExt, path::Path, sync::Mutex,

@@ -3,7 +3,7 @@
 //! the [`MemberHistory`] port: this member's own records and load, and other
 //! members' over the member channel.
 use crate::reporting::document::{self, Document, Gathered, MemberInput, Query, RecordsRead};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_load_log::buckets::Bucket;
 use elsecall_report_facts::{
     facts::Fact,
@@ -100,7 +100,7 @@ pub async fn report(fleet: &Fleet, query: &Query) -> Result<Document> {
     }
     if let Some(label) = &query.label
         && (label.is_empty()
-            || label.chars().count() > elsecall_labels::rules::MAXIMUM_LABEL
+            || label.chars().count() > elsecall_contract::labels::rules::MAXIMUM_LABEL
             || label.chars().any(char::is_control))
     {
         return Err(invalid(
@@ -209,8 +209,8 @@ pub async fn peer_io(fleet: &Fleet, window: Window, member: Option<&str>) -> ser
 #[cfg(test)]
 mod tests {
     use super::*;
+    use elsecall_contract::scheduling_model::timestamp::Timestamp;
     use elsecall_scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
-    use elsecall_scheduling_model::timestamp::Timestamp;
 
     struct Fake {
         facts: Result<Facts>,

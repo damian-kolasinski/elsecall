@@ -2,11 +2,11 @@
 //! under changed parameters.
 use crate::replay_api::{ReplayRequest, invalid};
 use clap::Args;
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use elsecall_scheduling::replay::Change;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use serde_json::Value;
 
 #[derive(Args)]

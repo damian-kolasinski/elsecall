@@ -1,7 +1,7 @@
 //! The Mac being added, as the master reaches it: what it is, its tailnet, and the
 //! changes Add Mac makes there. The production adapter is SSH (`openssh_mac`).
 use crate::inbound_firewall::Rule;
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_tailnet::tailscale_bottle::Bottle;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

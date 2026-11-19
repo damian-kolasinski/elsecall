@@ -1,7 +1,8 @@
 //! A member hosting runs its master places on it: it claims the run's copy, asks
 //! its scheduler to admit the run at once, holds the admission until the caller
 //! attaches, and reports the runner's progress back to its records.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::run_id::RunId;
 use elsecall_remote_run::remote_run::{
     leftovers::Cap,
     protocol::Exited,
@@ -14,7 +15,6 @@ use elsecall_scheduling::{
     run_phases::RemoteFailurePhase,
     service::{HostedEnd, HostedExit, Scheduler},
 };
-use elsecall_scheduling_model::run_id::RunId;
 use elsecall_workspace::{
     copies::Copies,
     location::{CopyLocation, Locations},
@@ -140,13 +140,13 @@ impl PlacementHost {
     /// This member's quote for `master`'s placement decision.
     pub fn quote(&self, master: &str, request: &QuoteRequest) -> Result<Quote> {
         if request.workspaces.len() > MAXIMUM_WORKSPACES {
-            return Err(elsecall_scheduling_model::request::invalid(
+            return Err(elsecall_contract::scheduling_model::request::invalid(
                 "A quote may ask about at most 16 workspaces.",
             ));
         }
         // A member waiting to upgrade is left out of placement until it is back.
         if self.scheduler.hosting_held() {
-            return Err(elsecall_failure::Failure::new(
+            return Err(elsecall_contract::failure::Failure::new(
                 "member_upgrading",
                 "This member is waiting for its work to end before it installs a new build, and takes no placed runs meanwhile.",
                 "Placement uses the other members; retry on this member once its upgrade ends.",
@@ -234,7 +234,7 @@ impl Host for PlacementHost {
     fn observation(
         &self,
         run: &RunId,
-    ) -> Option<elsecall_scheduling_model::workload_metadata::Observation> {
+    ) -> Option<elsecall_contract::scheduling_model::workload_metadata::Observation> {
         self.scheduler
             .record(run)
             .ok()

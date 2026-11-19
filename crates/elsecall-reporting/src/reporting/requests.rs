@@ -1,9 +1,9 @@
 //! Metrics of the requests themselves: how they ended, `fleet_busy`, where they
 //! ran, how long they queued, and how much work each member took.
 use crate::reporting::statistics::{Distribution, seconds};
+use elsecall_contract::scheduling_model::request::Kind;
 use elsecall_report_facts::facts::{Fact, PlacementKind};
 use elsecall_scheduling::record::Verdict;
-use elsecall_scheduling_model::request::Kind;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
@@ -197,15 +197,15 @@ pub fn work(facts: &[Fact], members: &[&str]) -> BTreeMap<String, Work> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use elsecall_contract::scheduling_model::{
+        request::{AtDeadline, Placement, Urgency},
+        run_id::RunId,
+        timestamp::Timestamp,
+    };
     use elsecall_scheduling::{
         fixtures::{self, Run},
         placement::Source,
         record::{Outcome, Verdict},
-    };
-    use elsecall_scheduling_model::{
-        request::{AtDeadline, Placement, Urgency},
-        run_id::RunId,
-        timestamp::Timestamp,
     };
 
     fn facts() -> Vec<Fact> {

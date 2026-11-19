@@ -5,7 +5,8 @@ use super::{
     engine::invalid,
     settings::Settings,
 };
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::capacity::Capacity;
 use elsecall_load_log::LoadLog;
 use elsecall_scheduling::{
     clock::Clock,
@@ -13,7 +14,6 @@ use elsecall_scheduling::{
     records::SchedulerSettings,
     service::{Adapters, Driving, Runtime, Scheduler, SchedulerConfiguration, Tasks},
 };
-use elsecall_scheduling_model::capacity::Capacity;
 use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -153,14 +153,14 @@ impl Member {
     }
 }
 
-fn core_types(capacity: Capacity) -> Result<elsecall_machine::inspection::CoreCounts> {
+fn core_types(capacity: Capacity) -> Result<elsecall_contract::inspection::CoreCounts> {
     let weighted = capacity.weighted_cores.millis();
     if !weighted.is_multiple_of(500) {
         return Err(invalid(
             "Weighted capacity cannot be represented by machine core types.",
         ));
     }
-    Ok(elsecall_machine::inspection::CoreCounts {
+    Ok(elsecall_contract::inspection::CoreCounts {
         performance: weighted / 1000,
         efficiency: weighted % 1000 / 500,
     })
@@ -217,17 +217,17 @@ fn start_scheduler(
 mod tests {
     use super::*;
     use crate::simulation::model::Envelope;
+    use elsecall_contract::scheduling_model::{
+        capacity::Cores,
+        request::{AdmissionRequest, Kind, Placement, Urgency},
+        run_id::RunId,
+    };
     use elsecall_scheduling::{
         clock::VirtualClock,
         fixtures,
         placed::Side,
         processes::ProcessIdentity,
         record::{Outcome, State},
-    };
-    use elsecall_scheduling_model::{
-        capacity::Cores,
-        request::{AdmissionRequest, Kind, Placement, Urgency},
-        run_id::RunId,
     };
     use std::time::Duration;
 

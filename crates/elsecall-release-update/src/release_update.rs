@@ -11,8 +11,8 @@ pub mod service;
 pub mod store;
 mod tools;
 
-use elsecall_build_identity::build_identity::Digest;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::build_identity::Digest;
+use elsecall_contract::failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -27,7 +27,7 @@ pub struct ReleaseVersion(semver::Version);
 impl ReleaseVersion {
     pub fn running() -> Self {
         Self(
-            semver::Version::parse(elsecall_build_identity::build_identity::VERSION)
+            semver::Version::parse(elsecall_contract::build_identity::VERSION)
                 .expect("Cargo version"),
         )
     }
@@ -144,7 +144,7 @@ impl Phase {
 pub struct Job {
     pub id: JobId,
     pub release: Release,
-    pub from_build: elsecall_build_identity::build_identity::BuildId,
+    pub from_build: elsecall_contract::build_identity::BuildId,
     #[serde(default)]
     pub started_at_ms: u64,
     pub reopen: bool,

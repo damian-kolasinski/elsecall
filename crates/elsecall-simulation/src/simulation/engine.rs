@@ -15,18 +15,18 @@ use super::{
     timeline::{integrate, record_queues},
     validation,
 };
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling::{
-    clock::{Clock, VirtualClock},
-    parameters::Parameters,
-    record::SizeBasis,
-};
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::{
     capacity::Capacity,
     request::{AdmissionRequest, Urgency},
     run_id::RunId,
     settings::{AppliedRule, Settings, Source},
     timestamp::Timestamp,
+};
+use elsecall_scheduling::{
+    clock::{Clock, VirtualClock},
+    parameters::Parameters,
+    record::SizeBasis,
 };
 use elsecall_workload::trace::{Request, Trace};
 use serde::Serialize;
@@ -58,10 +58,10 @@ pub(super) struct Trial {
 }
 pub fn simulate(trace: Trace, options: Options) -> Result<Value> {
     validation::trace(&trace)?;
-    let trace_digest = elsecall_build_identity::build_identity::Digest::of(
+    let trace_digest = elsecall_contract::build_identity::Digest::of(
         &serde_json::to_vec(&trace).expect("validated trace serializes"),
     );
-    let code_build = elsecall_build_identity::build_identity::this_build().ok();
+    let code_build = elsecall_contract::build_identity::this_build().ok();
     let overrides = CandidateSettings::parse(&trace, &options.settings)?;
     if options.fidelity
         && (!options.settings.is_empty() || options.load_factor != Default::default())
@@ -380,7 +380,7 @@ async fn trial(
         let initial_priority = |i: usize| match trace.requests[i].urgency {
             Urgency::Deferrable {
                 deadline,
-                at_deadline: elsecall_scheduling_model::request::AtDeadline::Start,
+                at_deadline: elsecall_contract::scheduling_model::request::AtDeadline::Start,
             } if deadline.millis() <= start => (0, deadline),
             Urgency::Interactive { .. } => (1, trace.requests[i].fact.requested_at),
             _ => (2, trace.requests[i].fact.requested_at),
@@ -701,7 +701,7 @@ async fn trial(
                 if let Some(speed) = model::speed(&trace, name, now) {
                     // A trace contains the already-aggregated best speed, not
                     // six underlying meter trials. Restore that observation.
-                    for _ in 0..elsecall_scheduling_model::speed::KEPT {
+                    for _ in 0..elsecall_contract::scheduling_model::speed::KEPT {
                         m.scheduler.observe_speed(speed);
                     }
                 }
@@ -788,7 +788,7 @@ async fn trial(
                 && !r.workspace_recorded
                 && !matches!(
                     r.placement_request,
-                    elsecall_scheduling_model::request::Placement::Pinned
+                    elsecall_contract::scheduling_model::request::Placement::Pinned
                 )
             {
                 missing.insert(format!(
@@ -1142,13 +1142,13 @@ pub(super) mod tests {
     use super::*;
     use elsecall_workload::trace::TraceOutcome;
     pub(crate) fn trace() -> Trace {
+        use elsecall_contract::scheduling_model::capacity::Cores;
         use elsecall_load_log::buckets::Bucket;
         use elsecall_scheduling::{
             fixtures,
             record::{Outcome as End, State},
             records::SchedulerSettings,
         };
-        use elsecall_scheduling_model::capacity::Cores;
         use elsecall_workload::{
             contention::{Curve, Point},
             demand::Demand,
@@ -1300,9 +1300,9 @@ pub(super) mod tests {
         r.fact.resources.as_mut().unwrap().started_at = Some(r.fact.requested_at);
         r.fact.resources.as_mut().unwrap().ended_at =
             Some(r.fact.requested_at.after(Duration::from_secs(1)));
-        r.urgency = elsecall_scheduling_model::request::Urgency::Deferrable {
+        r.urgency = elsecall_contract::scheduling_model::request::Urgency::Deferrable {
             deadline: r.fact.requested_at.after(Duration::from_secs(60)),
-            at_deadline: elsecall_scheduling_model::request::AtDeadline::Skip,
+            at_deadline: elsecall_contract::scheduling_model::request::AtDeadline::Skip,
         };
         let reference = crate::simulation::freeze_reference(&source, &source.requests[0]);
         let replay = crate::replay_load::replay(
@@ -1424,7 +1424,7 @@ pub(super) mod tests {
     }
     #[test]
     fn drain_includes_queued_and_deferrable_arrivals() {
-        use elsecall_scheduling_model::request::AtDeadline;
+        use elsecall_contract::scheduling_model::request::AtDeadline;
         let mut trace = trace();
         trace.requests.truncate(2);
         trace.until = trace.since.after(Duration::from_millis(500));
@@ -1524,9 +1524,9 @@ pub(super) mod tests {
     }
     #[test]
     fn next_remote_run_is_admitted_then_settles_leftovers_before_sync() {
+        use elsecall_contract::scheduling_model::request::Placement;
         use elsecall_report_facts::facts::PlacementKind;
         use elsecall_scheduling::{leftovers::Ending, placed::Warmth, record::WorkspaceIdentity};
-        use elsecall_scheduling_model::request::Placement;
         use elsecall_workload::trace::Leftover;
         let mut trace = trace();
         trace.requests.truncate(2);

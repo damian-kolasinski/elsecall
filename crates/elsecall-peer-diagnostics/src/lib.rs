@@ -1,8 +1,8 @@
 //! Bounded private peer-attempt history. No endpoints, request bodies, signatures,
 //! paths or server error text are retained; a verified refusal keeps only its
 //! stable code. A failed retry remains observable.
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -39,7 +39,7 @@ impl RefusalCode {
     /// A failure code as Elsecall writes them. Anything else is no code at all, so
     /// free text never enters history.
     pub fn parse(code: &str) -> Option<Self> {
-        elsecall_failure::is_code(code).then(|| Self(code.to_owned()))
+        elsecall_contract::failure::is_code(code).then(|| Self(code.to_owned()))
     }
     pub fn as_str(&self) -> &str {
         &self.0

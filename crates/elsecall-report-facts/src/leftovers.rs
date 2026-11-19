@@ -2,12 +2,12 @@
 //! runs left some, how much CPU time they used afterwards and how often the cap
 //! stopped them. That work is not admitted, so a label that leaves heavy work
 //! behind loads members outside admission's view; reports make it visible.
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_scheduling::{
     leftovers::{Ending, Leftovers},
     placed::Side,
     record::Record,
 };
-use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -75,12 +75,12 @@ impl LeftoverFact {
                 .cpu_ms
                 .is_none_or(|cpu| cpu <= longest.saturating_mul(MOST_CORES))
             && self.member == member
-            && elsecall_scheduling_model::run_id::RunId::parse(&self.run_id).is_some()
+            && elsecall_contract::scheduling_model::run_id::RunId::parse(&self.run_id).is_some()
             && text(&self.calling_member, 255)
             && self
                 .label
                 .as_deref()
-                .is_none_or(|l| text(l, elsecall_labels::rules::MAXIMUM_LABEL))
+                .is_none_or(|l| text(l, elsecall_contract::labels::rules::MAXIMUM_LABEL))
     }
 }
 

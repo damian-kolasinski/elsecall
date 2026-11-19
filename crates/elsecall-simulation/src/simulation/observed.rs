@@ -8,7 +8,7 @@ use super::{
     model::{self, Envelope},
     timeline::{Minute, Reserve},
 };
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_workload::trace::Trace;
 use serde_json::Value;
 pub fn summarize(trace: &Trace) -> Value {
@@ -154,8 +154,8 @@ mod tests {
             uncontended_ms: BTreeMap::new(),
             work_iterations: BTreeMap::new(),
             session: "a".repeat(24),
-            source_digest: elsecall_build_identity::build_identity::Digest::of(b"source"),
-            build: elsecall_build_identity::build_identity::this_build().unwrap(),
+            source_digest: elsecall_contract::build_identity::Digest::of(b"source"),
+            build: elsecall_contract::build_identity::this_build().unwrap(),
             load_factor: Default::default(),
             compress: 6.0,
             seed: 0,

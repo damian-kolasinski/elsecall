@@ -5,8 +5,8 @@ use crate::housekeeping::{
     policy::Spared,
     settings::Settings,
 };
-use elsecall_failure::Failure;
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::Failure;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_workspace::location::Setting;
 use serde::Serialize;
 use std::path::PathBuf;

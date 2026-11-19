@@ -10,14 +10,14 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
-use elsecall_failure::Failure;
+use elsecall_contract::api;
+use elsecall_contract::failure::Failure;
 use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet};
 use elsecall_membership::{
     peer_auth::{RequestProof, SIGNATURE_HEADER},
     roster::Roster,
 };
 use elsecall_peer_transport::peer_client::RESPONSE_LIMIT;
-use elsecall_wire::api;
 use std::{sync::Arc, time::Duration};
 
 pub use elsecall_peer_transport::peer_transport::REQUEST_LIMIT;
@@ -79,10 +79,10 @@ async fn authenticate(State(fleet): State<Arc<Fleet>>, request: Request, next: N
     let Some(peer) = fleet.authenticate(&proof, parts.method.as_str(), path, &bytes) else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
-    let skew = elsecall_build_identity::version_skew::refusal(
+    let skew = elsecall_contract::version_skew::refusal(
         parts.uri.path(),
-        elsecall_build_identity::build_identity::announced().as_ref(),
-        header(elsecall_build_identity::version_skew::BUILD_HEADER).as_deref(),
+        elsecall_contract::build_identity::announced().as_ref(),
+        header(elsecall_contract::version_skew::BUILD_HEADER).as_deref(),
     );
     let response = match skew {
         Some(error) => failure(StatusCode::CONFLICT, error),

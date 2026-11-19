@@ -1,7 +1,7 @@
 //! Which copies a housekeeping pass removes, and in which order disk pressure
 //! evicts them. Pure decisions over what the pass observed.
 use crate::housekeeping::{catalog::Reason, settings::Settings};
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::path::PathBuf;
 

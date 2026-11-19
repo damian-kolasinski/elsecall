@@ -1,6 +1,6 @@
 //! Service configuration planning, opt-in and application status.
 use super::*;
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 
 impl ConfigSync {
     /// Loads the last accepted service settings before any work is admitted.
@@ -192,7 +192,7 @@ impl ConfigSync {
             let _issuing = self.issuing.lock().await;
             let (roster, own) = self.require_master()?;
             if self.held()
-                || !elsecall_rehearsal_identity::identity::valid_session(&request.session)
+                || !elsecall_contract::rehearsal_identity::identity::valid_session(&request.session)
             {
                 return Err(elsecall_scheduling::service::invalid_rehearsal(
                     "Invalid rehearsal or master handover in progress.",
@@ -236,12 +236,13 @@ impl ConfigSync {
                                 "Proposal names an unenrolled member.",
                             ));
                         }
-                        let reserve = elsecall_scheduling_model::capacity::Cores::parse(value)
-                            .ok_or_else(|| {
-                                elsecall_scheduling::service::invalid_rehearsal(
-                                    "Invalid proposal reserve.",
-                                )
-                            })?;
+                        let reserve =
+                            elsecall_contract::scheduling_model::capacity::Cores::parse(value)
+                                .ok_or_else(|| {
+                                    elsecall_scheduling::service::invalid_rehearsal(
+                                        "Invalid proposal reserve.",
+                                    )
+                                })?;
                         reserves.insert(member.to_owned(), reserve);
                     } else if key.starts_with("placement.")
                         || key.starts_with("admission.")

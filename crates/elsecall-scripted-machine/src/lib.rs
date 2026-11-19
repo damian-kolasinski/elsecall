@@ -3,8 +3,8 @@
 //! load comes from a file the test rewrites, and their speed is fixed. Selected
 //! only by `ELSECALL_MACHINE_LOAD=file:PATH` and `ELSECALL_MACHINE_SPEED`, like the
 //! tailnet discovery overrides.
-use elsecall_failure::Result;
-use elsecall_machine::inspection::{
+use elsecall_contract::failure::Result;
+use elsecall_contract::inspection::{
     CoreCounts, LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState,
 };
 use serde::Deserialize;
@@ -76,4 +76,4 @@ impl<M: MachineInspector> MachineInspector for ScriptedLoad<M> {
     }
 }
 
-pub use elsecall_scheduling_model::speed::FixedSpeed;
+pub use elsecall_contract::scheduling_model::speed::FixedSpeed;

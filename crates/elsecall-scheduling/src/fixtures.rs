@@ -9,14 +9,14 @@ use crate::{
         State, Verdict,
     },
 };
-use elsecall_load_log::buckets::Bucket;
-use elsecall_machine::inspection::ThermalState;
-use elsecall_scheduling_model::{
+use elsecall_contract::inspection::ThermalState;
+use elsecall_contract::scheduling_model::{
     capacity::{Capacity, Cores},
     request::{Kind, Placement, Urgency},
     run_id::RunId,
     timestamp::Timestamp,
 };
+use elsecall_load_log::buckets::Bucket;
 use std::time::Duration;
 
 pub const MINUTE: u64 = 60_000;

@@ -1,6 +1,6 @@
 //! Thermal pressure through the system notification state that backs
 //! `ProcessInfo.thermalState`.
-use elsecall_machine::inspection::ThermalState;
+use elsecall_contract::inspection::ThermalState;
 use std::{
     ffi::{c_char, c_int},
     sync::OnceLock,

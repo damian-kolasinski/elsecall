@@ -1,6 +1,6 @@
 //! Exact admitted grant intervals, independent of sampled host CPU.
 use super::{model, timeline::Reserve};
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_workload::trace::Trace;
 use std::collections::BTreeSet;
 
@@ -73,7 +73,7 @@ pub(super) fn observed(trace: &Trace, reserve: &mut Reserve) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elsecall_scheduling_model::capacity::Cores;
+    use elsecall_contract::scheduling_model::capacity::Cores;
     #[test]
     fn integrates_exact_overload_boundaries_and_missing_settings() {
         let mut trace = crate::simulation::engine::tests::trace();

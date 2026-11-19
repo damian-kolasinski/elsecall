@@ -1,8 +1,8 @@
 //! Blocked episodes in SQLite, one row per episode, kept for [`RETENTION`], so
 //! reports can name what held a member closed after it cleared.
 use crate::outside_pressure::blocked::Blocked;
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use std::{fs::OpenOptions, os::unix::fs::OpenOptionsExt, path::Path, sync::Mutex, time::Duration};
@@ -158,7 +158,7 @@ impl EpisodeStore {
 mod tests {
     use super::*;
     use crate::outside_pressure::blocked::{Blocked, Reason};
-    use elsecall_machine::inspection::MemoryPressure;
+    use elsecall_contract::inspection::MemoryPressure;
 
     fn blocked(since: u64, attributed: u64) -> Blocked {
         Blocked {

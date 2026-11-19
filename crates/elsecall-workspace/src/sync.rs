@@ -29,8 +29,8 @@ use crate::{
     stat_cache::StatCache,
     sync_failed,
 };
-use elsecall_failure::{Failure, Result};
-use elsecall_wire::wire;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::wire;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},

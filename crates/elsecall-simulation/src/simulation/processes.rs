@@ -1,6 +1,6 @@
 //! Virtual process identities, ancestry and lifetime at the process-table port.
+use elsecall_contract::scheduling_model::request::Kind;
 use elsecall_scheduling::processes::{ProcessIdentity, ProcessInfo, ProcessTable};
-use elsecall_scheduling_model::request::Kind;
 use std::{collections::BTreeMap, sync::Mutex};
 
 #[derive(Default)]

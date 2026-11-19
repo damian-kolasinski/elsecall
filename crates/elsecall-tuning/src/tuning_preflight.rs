@@ -1,7 +1,7 @@
 //! Offline unattended-climb readiness. Uses the rehearsal planner and production
 //! scheduler search; never obtains trust, dispatches work or changes settings.
 use crate::tuning::{self, TuneOptions};
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_workload::trace::Trace;
 use serde_json::{Value, json};
 use std::time::Instant;
@@ -246,6 +246,6 @@ pub fn check(trace: Trace, args: Options) -> Result<Value> {
         }
     }
     Ok(
-        json!({"preflight_version":1,"placement_split":placement_split,"load_factor":load_factor,"calibration":calibration,"source":{"digest":elsecall_build_identity::build_identity::Digest::of(&serde_json::to_vec(&trace).expect("trace serializes")),"since":trace.since,"until":trace.until,"requests":trace.requests.len(),"members":trace.members.iter().map(|m|json!({"member":m.member,"load_minutes":m.load.len()})).collect::<Vec<_>>()},"passed":blockers.is_empty(),"offline":true,"read_only":true,"blockers":blockers,"selection":selection,"tune":search,"duration_estimate":estimate,"elapsed_seconds":started.elapsed().as_secs_f64(),"limits":["Offline readiness only. Live calibration, fidelity certification, A/A noise, A/B acceptance, fleet readiness and cleanup still require live preflight.","Only point evidence gates readiness and candidate ranking. Lower/upper envelopes are risk information and never block; observed A/B hard limits gate acceptance.","Internal housekeeping and fidelity drift work are background load, excluded only from synthetic rehearsal workloads."]}),
+        json!({"preflight_version":1,"placement_split":placement_split,"load_factor":load_factor,"calibration":calibration,"source":{"digest":elsecall_contract::build_identity::Digest::of(&serde_json::to_vec(&trace).expect("trace serializes")),"since":trace.since,"until":trace.until,"requests":trace.requests.len(),"members":trace.members.iter().map(|m|json!({"member":m.member,"load_minutes":m.load.len()})).collect::<Vec<_>>()},"passed":blockers.is_empty(),"offline":true,"read_only":true,"blockers":blockers,"selection":selection,"tune":search,"duration_estimate":estimate,"elapsed_seconds":started.elapsed().as_secs_f64(),"limits":["Offline readiness only. Live calibration, fidelity certification, A/A noise, A/B acceptance, fleet readiness and cleanup still require live preflight.","Only point evidence gates readiness and candidate ranking. Lower/upper envelopes are risk information and never block; observed A/B hard limits gate acceptance.","Internal housekeeping and fidelity drift work are background load, excluded only from synthetic rehearsal workloads."]}),
     )
 }

@@ -5,7 +5,7 @@
 //!
 //! The same keys serve `config.toml` (as sections) and `replay --set` (as
 //! `section.key=value`), and both go through the same validation.
-use elsecall_machine::inspection::MemoryPressure;
+use elsecall_contract::inspection::MemoryPressure;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -620,7 +620,7 @@ mod text {
 /// estimates decide with.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct SchedulerConfiguration {
-    pub reserved: elsecall_scheduling_model::capacity::Cores,
+    pub reserved: elsecall_contract::scheduling_model::capacity::Cores,
     pub parameters: Parameters,
 }
 

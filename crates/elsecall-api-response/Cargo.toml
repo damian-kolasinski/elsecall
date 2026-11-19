@@ -14,5 +14,4 @@ workspace = true
 
 [dependencies]
 axum.workspace = true
-elsecall-failure.workspace = true
-elsecall-wire.workspace = true
+elsecall-contract.workspace = true

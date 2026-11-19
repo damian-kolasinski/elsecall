@@ -6,11 +6,11 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
-use elsecall_failure::Result;
+use elsecall_contract::api;
+use elsecall_contract::failure::Result;
 use elsecall_fleet::fleet::Fleet;
 use elsecall_local_state::paths::Paths;
 use elsecall_peer_transport::peer_client;
-use elsecall_wire::api;
 use serde_json::{Value, json};
 use std::{sync::Arc, time::Duration};
 pub async fn fleet_status(paths: &Paths, fleet: &Result<Arc<Fleet>>) -> Value {

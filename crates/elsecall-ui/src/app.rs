@@ -101,7 +101,12 @@ pub(crate) struct AppState {
     add_mac: AddMac,
     add_source: Arc<dyn AddMacSource>,
     nearby_feed: Arc<
-        Latest<Result<Vec<elsecall_add_mac::nearby_macs::NearbyMac>, elsecall_failure::Failure>>,
+        Latest<
+            Result<
+                Vec<elsecall_add_mac::nearby_macs::NearbyMac>,
+                elsecall_contract::failure::Failure,
+            >,
+        >,
     >,
     add_inbox: Arc<Inbox<RunUpdate>>,
     /// When the sheet last asked for the Macs nearby, on the window's clock.
@@ -896,7 +901,7 @@ fn scene_release_failed(state: &mut AppState) {
     scene_release_phase(
         state,
         ReleasePhase::Failed {
-            error: elsecall_failure::Failure::new(
+            error: elsecall_contract::failure::Failure::new(
                 "release_tool_failed",
                 "The release could not be verified.",
                 "Check connectivity and retry the update.",
@@ -911,7 +916,7 @@ fn scene_release_offline(state: &mut AppState) {
         .release_status
         .as_mut()
         .expect("release scene")
-        .check_error = Some(elsecall_failure::Failure::new(
+        .check_error = Some(elsecall_contract::failure::Failure::new(
         "release_tool_failed",
         "The release server could not be reached.",
         "The cached offer remains available.",
@@ -1007,7 +1012,7 @@ fn scene_add_mac_done(state: &mut AppState) {
 fn scene_add_mac_failed(state: &mut AppState) {
     scene_add_mac_sign_in(state);
     state.add_mac.start();
-    state.add_mac.apply_current(AddUpdate::Finished(Err(elsecall_failure::Failure::new(
+    state.add_mac.apply_current(AddUpdate::Finished(Err(elsecall_contract::failure::Failure::new(
         "ssh_password_refused",
         "macbook-pro.local refused the password for devbox.",
         "Check the account's short name and password on that Mac, and that Remote Login allows that account.",

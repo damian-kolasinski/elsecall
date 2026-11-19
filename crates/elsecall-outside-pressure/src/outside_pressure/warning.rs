@@ -2,7 +2,7 @@
 //! this member's gate may still be open. It is advice, never a blocked state:
 //! the member keeps admitting work.
 use crate::outside_pressure::sampling::Owner;
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 
 /// What an outside process has been doing for long enough to warn about.

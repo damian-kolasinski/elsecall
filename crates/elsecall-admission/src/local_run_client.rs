@@ -1,12 +1,12 @@
 //! Local attach negotiation. An actual legacy 101 continues on this same
 //! connection; negotiation never repeats a peer attach or command execution.
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::api::ErrorResponse;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::run_id::RunId;
 use elsecall_local_state::{local_access, private_files};
 use elsecall_remote_run::{remote_run::link::Link, sealed_run};
-use elsecall_scheduling_model::run_id::RunId;
 use elsecall_secure_channel::{Ephemeral, SecureStream};
-use elsecall_wire::api::ErrorResponse;
 use http_body_util::{BodyExt, Full, Limited};
 use hyper::{Method, Request, body::Bytes, client::conn::http1, header};
 use hyper_util::rt::TokioIo;

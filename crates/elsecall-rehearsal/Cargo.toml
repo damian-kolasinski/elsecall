@@ -14,24 +14,18 @@ workspace = true
 
 [dependencies]
 axum.workspace = true
-elsecall-build-identity.workspace = true
-elsecall-failure.workspace = true
+elsecall-contract.workspace = true
 elsecall-fleet.workspace = true
 elsecall-housekeeping.workspace = true
-elsecall-labels.workspace = true
 elsecall-load-log.workspace = true
 elsecall-local-state.workspace = true
-elsecall-machine.workspace = true
 elsecall-membership.workspace = true
 elsecall-os-processes.workspace = true
 elsecall-peer-transport.workspace = true
-elsecall-rehearsal-identity.workspace = true
 elsecall-report-facts.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-scheduling-model.workspace = true
 elsecall-service-log.workspace = true
 elsecall-simulation.workspace = true
-elsecall-wire.workspace = true
 elsecall-workload.workspace = true
 elsecall-workspace.workspace = true
 futures-util.workspace = true

@@ -8,11 +8,11 @@ use crate::fleet_upgrade::{
     member::{UpgradeStatus, WorkInFlight},
     protocol::{self, Manifest, Message, Os, UpgradeId},
 };
-use elsecall_build_identity::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::{
     build_identity::{Build, BuildId, Digest},
     executable_format::{self, Architecture},
 };
-use elsecall_failure::{Failure, Result};
 use elsecall_fleet::fleet::Fleet;
 use elsecall_membership::roster::{Member, MemberName};
 use elsecall_peer_transport::peer_client;

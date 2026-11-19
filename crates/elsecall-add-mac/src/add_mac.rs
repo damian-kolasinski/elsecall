@@ -12,7 +12,7 @@ use crate::{
         Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant,
     },
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::fleet_local_api::EnrollRequest;
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
@@ -244,7 +244,7 @@ pub async fn add<M: RemoteMac>(
     progress(Event::Step {
         step: Step::Install,
     });
-    let wanted = elsecall_build_identity::build_identity::Digest::of_file(&master.build.executable)
+    let wanted = elsecall_contract::build_identity::Digest::of_file(&master.build.executable)
         .map_err(|error| Failure::io("Read the master's build", error))?
         .build_id()
         .to_string();

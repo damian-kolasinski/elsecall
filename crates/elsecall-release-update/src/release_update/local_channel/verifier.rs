@@ -1,7 +1,7 @@
 //! Checks a local bundle with the packslip CLI against the channel's pinned key,
 //! and an archive against the bundle.
 use super::PACKSLIP;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_local_state::{paths::Paths, private_files};
 use serde::Deserialize;
 use std::{

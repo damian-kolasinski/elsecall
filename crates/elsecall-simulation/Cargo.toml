@@ -13,20 +13,15 @@ doctest = false
 workspace = true
 
 [dependencies]
-elsecall-build-identity.workspace = true
-elsecall-failure.workspace = true
-elsecall-labels.workspace = true
+elsecall-contract.workspace = true
 elsecall-load-log.workspace = true
-elsecall-machine.workspace = true
 elsecall-membership.workspace = true
-elsecall-rehearsal-identity.workspace = true
 elsecall-remote-run.workspace = true
 elsecall-replay.workspace = true
 elsecall-report-facts.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-scheduling-model.workspace = true
-elsecall-workload.workspace = true
 elsecall-workload-config.workspace = true
+elsecall-workload.workspace = true
 futures-util.workspace = true
 humantime.workspace = true
 serde.workspace = true

@@ -1,8 +1,8 @@
 //! Recorded pre-run configuration I/O at the real scheduler's sync boundary.
 use super::world::World;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::run_id::RunId;
 use elsecall_scheduling::pre_run_sync::{PreRunSync, Synced};
-use elsecall_scheduling_model::run_id::RunId;
 use futures_util::future::BoxFuture;
 use std::{
     sync::{Arc, Mutex},
@@ -110,9 +110,9 @@ impl PreRunSync for ConfigurationSync {
 mod tests {
     use super::*;
     use crate::simulation::{Options, simulate};
+    use elsecall_contract::scheduling_model::request::Placement;
     use elsecall_report_facts::facts::PlacementKind;
     use elsecall_scheduling::{placed::Warmth, record::WorkspaceIdentity};
-    use elsecall_scheduling_model::request::Placement;
     use elsecall_workload::trace::{PreRunAttempt, Trace, TraceOutcome};
     fn trace() -> Trace {
         let mut trace = crate::simulation::engine::tests::trace();
@@ -187,14 +187,14 @@ mod tests {
             model::Envelope,
             settings::Settings,
         };
+        use elsecall_contract::scheduling_model::{
+            capacity::Cores,
+            request::{AdmissionRequest, Kind, Urgency},
+        };
         use elsecall_scheduling::{
             clock::{Clock, VirtualClock},
             messages::RunEnded,
             placed::WorkspaceRef,
-        };
-        use elsecall_scheduling_model::{
-            capacity::Cores,
-            request::{AdmissionRequest, Kind, Urgency},
         };
         let mut trace = trace();
         let id = RunId::parse(&trace.requests[0].fact.run_id).unwrap();

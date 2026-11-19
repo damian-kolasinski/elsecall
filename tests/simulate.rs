@@ -5,7 +5,7 @@ mod diagnostics;
 mod members;
 mod processes;
 
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use members::{TestMember, enrol};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, fs, path::Path, process::Output};

@@ -3,7 +3,7 @@
 //! `read -r run_id < "$file"`. The file is emptied when the request starts, so a
 //! stale ID is never mistaken for this request's, and holds the ID once admission
 //! decides. It stays empty when there is no record, as for unmanaged work.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use std::path::PathBuf;
 
 pub struct RunIdFile(PathBuf);

@@ -4,7 +4,7 @@
 //! channel is what vouches for the key inside; codes are validated as untrusted input.
 use crate::roster::Member;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 
 const PREFIX: &str = "elsecall-member-v1.";
 const LIMIT: usize = 4096;

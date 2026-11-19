@@ -1,16 +1,16 @@
 //! Validate peer trace projections before they cross into workload modelling.
 use crate::trace::{PAGE, Page, TraceOutcome, sanitize_decision};
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::{
+    request::{MAXIMUM_HOLD_LIMIT, Placement, Urgency},
+    run_id::RunId,
+};
 use elsecall_report_facts::{
     facts::is_code,
     report_protocol::Cursor,
     window::{Window, invalid},
 };
 use elsecall_scheduling::record::MAXIMUM_CPU_MS;
-use elsecall_scheduling_model::{
-    request::{MAXIMUM_HOLD_LIMIT, Placement, Urgency},
-    run_id::RunId,
-};
 fn name(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 255
@@ -59,10 +59,10 @@ pub fn page(mut page: Page, window: Window, before: Option<&Cursor>, member: &st
             || r.shares_capacity_of.as_deref().is_some_and(|s| !id(s))
             || f.resources.as_ref().is_some_and(|v| {
                 v.started_at.is_some_and(|t| {
-                    t > elsecall_scheduling_model::timestamp::Timestamp::now()
+                    t > elsecall_contract::scheduling_model::timestamp::Timestamp::now()
                         .after(std::time::Duration::from_secs(60))
                 }) || v.ended_at.is_some_and(|t| {
-                    t > elsecall_scheduling_model::timestamp::Timestamp::now()
+                    t > elsecall_contract::scheduling_model::timestamp::Timestamp::now()
                         .after(std::time::Duration::from_secs(60))
                 })
             })
@@ -91,7 +91,7 @@ pub fn page(mut page: Page, window: Window, before: Option<&Cursor>, member: &st
         }
         if let Urgency::Deferrable { deadline, .. } = r.urgency
             && (deadline.since(f.requested_at)
-                > elsecall_scheduling_model::request::MAXIMUM_DEADLINE
+                > elsecall_contract::scheduling_model::request::MAXIMUM_DEADLINE
                 || r.placement_request != Placement::Pinned)
         {
             return Err(bad());
@@ -134,7 +134,7 @@ pub fn page(mut page: Page, window: Window, before: Option<&Cursor>, member: &st
                     .since
                     .after(elsecall_report_facts::window::MAXIMUM_PERIOD)
             || l.since
-                > elsecall_scheduling_model::timestamp::Timestamp::now()
+                > elsecall_contract::scheduling_model::timestamp::Timestamp::now()
                     .after(std::time::Duration::from_secs(60))
             || l.cap_ms > 86_400_000
             || l.cpu_ms.is_some_and(|ms| ms > MAXIMUM_CPU_MS)
@@ -154,8 +154,8 @@ pub fn page(mut page: Page, window: Window, before: Option<&Cursor>, member: &st
 mod tests {
     use super::*;
     use crate::trace::Request;
+    use elsecall_contract::scheduling_model::timestamp::Timestamp;
     use elsecall_scheduling::fixtures::{self, Run, T0};
-    use elsecall_scheduling_model::timestamp::Timestamp;
     #[test]
     fn rejects_peer_measurements_and_codes_and_strips_diagnostics() {
         let window = Window::new(
@@ -195,8 +195,8 @@ mod tests {
 
     #[test]
     fn settings_and_workspace_identities_are_validated_at_the_peer_boundary() {
+        use elsecall_contract::scheduling_model::capacity::{Capacity, Cores};
         use elsecall_scheduling::{parameters::Parameters, records::SchedulerSettings};
-        use elsecall_scheduling_model::capacity::{Capacity, Cores};
         let window = Window::new(
             Timestamp::from_millis(T0),
             Timestamp::from_millis(T0 + 60_000),

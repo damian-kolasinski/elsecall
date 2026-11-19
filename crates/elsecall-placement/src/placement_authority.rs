@@ -15,7 +15,7 @@ use std::sync::Arc;
 /// the same way.
 pub async fn probe(State(fleet): State<Arc<Fleet>>, authority: PlacementAuthority) -> Response {
     match fleet.status().await {
-        Ok(status) => Json(elsecall_wire::api::Response::new(PlacementAccepted {
+        Ok(status) => Json(elsecall_contract::api::Response::new(PlacementAccepted {
             member: status.member,
             accepted_from: authority.master().clone(),
         }))

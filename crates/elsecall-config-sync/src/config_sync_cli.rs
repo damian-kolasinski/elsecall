@@ -2,7 +2,7 @@
 use crate::config_sync_local_api::{HistoryRequest, PathRequest, PlanRequest, PushRequest};
 use clap::{Args, Subcommand};
 use elsecall_config_sync_model::synced_path::SyncedPath;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use serde_json::Value;

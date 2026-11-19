@@ -10,8 +10,8 @@ use axum::{
     routing::{any, post},
 };
 use elsecall_config_sync_model::synced_path::SyncedPath;
-use elsecall_failure::Failure;
-use elsecall_wire::api;
+use elsecall_contract::api;
+use elsecall_contract::failure::Failure;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::sync::Arc;
 
@@ -73,14 +73,14 @@ pub fn unavailable(error: Failure) -> Router {
         .route("/v1/sync/{*operation}", any(respond))
 }
 
-fn respond<T: Serialize>(result: elsecall_failure::Result<T>) -> Response {
+fn respond<T: Serialize>(result: elsecall_contract::failure::Result<T>) -> Response {
     match result {
         Ok(value) => Json(api::Response::new(value)).into_response(),
         Err(error) => (StatusCode::CONFLICT, Json(api::ErrorResponse::new(error))).into_response(),
     }
 }
 
-fn parse<T: DeserializeOwned>(body: &Bytes) -> elsecall_failure::Result<T> {
+fn parse<T: DeserializeOwned>(body: &Bytes) -> elsecall_contract::failure::Result<T> {
     serde_json::from_slice(body).map_err(|_| {
         Failure::new(
             "invalid_request",

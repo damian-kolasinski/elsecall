@@ -1,5 +1,5 @@
 //! Latch the first controller signal across preparation and both A/B runs.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 pub struct Signals {
     receiver: tokio::sync::watch::Receiver<Option<&'static str>>,
     task: tokio::task::AbortHandle,

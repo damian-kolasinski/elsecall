@@ -10,7 +10,7 @@
 //! necessarily the highest version; a check only offers a release newer than the
 //! running one, so it can never downgrade.
 use super::{REPOSITORY, Release, ReleaseCatalog, ReleaseVersion, invalid};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use std::{path::Path, time::Duration};
 
 pub struct GithubReleases;

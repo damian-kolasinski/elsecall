@@ -11,11 +11,11 @@ use axum::{
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_api_response::failure;
-use elsecall_failure::Failure;
+use elsecall_contract::failure::Failure;
+use elsecall_contract::scheduling_model::run_id::RunId;
 use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet, PlacementAuthority};
 use elsecall_remote_run::remote_run::runner;
 use elsecall_scheduling::{placed::PlacementOffer, quote::QuoteRequest};
-use elsecall_scheduling_model::run_id::RunId;
 use elsecall_secure_channel::{Ephemeral, SecureStream};
 use hyper_util::rt::TokioIo;
 use serde::Deserialize;
@@ -50,7 +50,7 @@ async fn offer(
         return invalid("The placement offer is invalid.");
     };
     match host.offer(authority.master().as_str(), &offer) {
-        Ok(reply) => Json(elsecall_wire::api::Response::new(reply)).into_response(),
+        Ok(reply) => Json(elsecall_contract::api::Response::new(reply)).into_response(),
         Err(error) => failure(StatusCode::CONFLICT, error),
     }
 }
@@ -64,7 +64,7 @@ async fn quote(
         return invalid("The quote request is invalid.");
     };
     match host.quote(authority.master().as_str(), &request) {
-        Ok(quote) => Json(elsecall_wire::api::Response::new(quote)).into_response(),
+        Ok(quote) => Json(elsecall_contract::api::Response::new(quote)).into_response(),
         Err(error) => failure(StatusCode::CONFLICT, error),
     }
 }

@@ -7,7 +7,7 @@ use crate::{
     path::WorkspacePath,
     sync_failed,
 };
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use std::{
     collections::HashMap,
     ffi::CString,
@@ -22,7 +22,7 @@ pub struct Staging {
     next: u64,
 }
 
-fn failed(action: &str) -> impl Fn(io::Error) -> elsecall_failure::Failure + '_ {
+fn failed(action: &str) -> impl Fn(io::Error) -> elsecall_contract::failure::Failure + '_ {
     move |e| sync_failed(format!("{action} on the member failed: {e}."))
 }
 

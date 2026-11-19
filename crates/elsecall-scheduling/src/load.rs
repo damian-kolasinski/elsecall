@@ -1,7 +1,7 @@
 //! Whether outside load lets a member admit new work.
 use crate::parameters::Admission;
-use elsecall_machine::inspection::{LoadSample, MemoryPressure};
-use elsecall_scheduling_model::capacity::Cores;
+use elsecall_contract::inspection::{LoadSample, MemoryPressure};
+use elsecall_contract::scheduling_model::capacity::Cores;
 use std::collections::VecDeque;
 
 /// Samples averaged for saturation; at one sample a second, about three seconds.
@@ -14,7 +14,7 @@ pub struct LoadHistory {
     unavailable: bool,
 }
 
-pub use elsecall_scheduling_model::gate::Gate;
+pub use elsecall_contract::scheduling_model::gate::Gate;
 
 impl LoadHistory {
     pub fn record(&mut self, sample: LoadSample) {
@@ -117,7 +117,7 @@ pub fn gate(
 mod tests {
     use super::*;
     use crate::parameters::{BlockingPressure, Parameters};
-    use elsecall_machine::inspection::{CoreCounts, ThermalState};
+    use elsecall_contract::inspection::{CoreCounts, ThermalState};
 
     fn sample(cpu: Option<f64>, memory: MemoryPressure) -> LoadSample {
         LoadSample {

@@ -1,7 +1,7 @@
 //! Removes Elsecall from this user's account: the installation, then the request
 //! that makes the user's tool manager resolve the CLI, which the one-command
 //! installer added and which would otherwise keep `elsecall` on the PATH.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_installation::installation::{
     self, InstalledParts, Kept, ServiceManager,
     cli_request::{CliRequest, Request, Selection},

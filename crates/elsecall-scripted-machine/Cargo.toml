@@ -13,8 +13,6 @@ doctest = false
 workspace = true
 
 [dependencies]
-elsecall-failure.workspace = true
-elsecall-machine.workspace = true
-elsecall-scheduling-model.workspace = true
+elsecall-contract.workspace = true
 serde.workspace = true
 serde_json.workspace = true

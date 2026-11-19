@@ -15,7 +15,7 @@ use axum::{
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_api_response::failure;
-use elsecall_failure::Failure;
+use elsecall_contract::failure::Failure;
 use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet, SyncAuthority};
 use elsecall_secure_channel::{Ephemeral, SecureStream};
 use hyper_util::rt::TokioIo;
@@ -109,7 +109,7 @@ async fn attach(
 
 async fn status(Extension(sync): Extension<Arc<ConfigSync>>) -> Response {
     match tokio::task::spawn_blocking(move || sync.summary()).await {
-        Ok(summary) => Json(elsecall_wire::api::Response::new(summary)).into_response(),
+        Ok(summary) => Json(elsecall_contract::api::Response::new(summary)).into_response(),
         Err(_) => failure(
             StatusCode::INTERNAL_SERVER_ERROR,
             Failure::new(
@@ -131,7 +131,7 @@ async fn push(Extension(sync): Extension<Arc<ConfigSync>>, body: axum::body::Byt
         }
     };
     match sync.serve_push(request).await {
-        Ok(round) => Json(elsecall_wire::api::Response::new(round)).into_response(),
+        Ok(round) => Json(elsecall_contract::api::Response::new(round)).into_response(),
         Err(error) => failure(StatusCode::CONFLICT, error),
     }
 }

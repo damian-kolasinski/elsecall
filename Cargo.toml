@@ -55,20 +55,16 @@ elsecall-add-mac = { path = "crates/elsecall-add-mac" }
 elsecall-admission = { path = "crates/elsecall-admission" }
 elsecall-agent-skill = { path = "crates/elsecall-agent-skill" }
 elsecall-api-response = { path = "crates/elsecall-api-response" }
-elsecall-build-identity = { path = "crates/elsecall-build-identity" }
 elsecall-config-sync = { path = "crates/elsecall-config-sync" }
 elsecall-config-sync-model = { path = "crates/elsecall-config-sync-model" }
-elsecall-failure = { path = "crates/elsecall-failure" }
+elsecall-contract = { path = "crates/elsecall-contract" }
 elsecall-fleet = { path = "crates/elsecall-fleet" }
 elsecall-fleet-upgrade = { path = "crates/elsecall-fleet-upgrade" }
-elsecall-guidance = { path = "crates/elsecall-guidance" }
 elsecall-housekeeping = { path = "crates/elsecall-housekeeping" }
 elsecall-installation = { path = "crates/elsecall-installation" }
-elsecall-labels = { path = "crates/elsecall-labels" }
 elsecall-load-log = { path = "crates/elsecall-load-log" }
 elsecall-local-client = { path = "crates/elsecall-local-client" }
 elsecall-local-state = { path = "crates/elsecall-local-state" }
-elsecall-machine = { path = "crates/elsecall-machine" }
 elsecall-membership = { path = "crates/elsecall-membership" }
 elsecall-openssh-mac = { path = "crates/elsecall-openssh-mac" }
 elsecall-os-processes = { path = "crates/elsecall-os-processes" }
@@ -79,15 +75,12 @@ elsecall-placement = { path = "crates/elsecall-placement" }
 elsecall-platform-macos = { path = "crates/elsecall-platform-macos" }
 elsecall-process = { path = "crates/elsecall-process" }
 elsecall-rehearsal = { path = "crates/elsecall-rehearsal" }
-elsecall-rehearsal-identity = { path = "crates/elsecall-rehearsal-identity" }
 elsecall-release-update = { path = "crates/elsecall-release-update" }
 elsecall-remote-run = { path = "crates/elsecall-remote-run" }
 elsecall-replay = { path = "crates/elsecall-replay" }
 elsecall-report-facts = { path = "crates/elsecall-report-facts" }
 elsecall-reporting = { path = "crates/elsecall-reporting" }
-elsecall-run-admission = { path = "crates/elsecall-run-admission" }
 elsecall-scheduling = { path = "crates/elsecall-scheduling" }
-elsecall-scheduling-model = { path = "crates/elsecall-scheduling-model" }
 elsecall-scripted-machine = { path = "crates/elsecall-scripted-machine" }
 elsecall-secure-channel = { path = "crates/elsecall-secure-channel" }
 elsecall-service-config = { path = "crates/elsecall-service-config" }
@@ -100,7 +93,6 @@ elsecall-tools = { path = "crates/elsecall-tools" }
 elsecall-trace = { path = "crates/elsecall-trace" }
 elsecall-tuning = { path = "crates/elsecall-tuning" }
 elsecall-window = { path = "crates/elsecall-window" }
-elsecall-wire = { path = "crates/elsecall-wire" }
 elsecall-workload = { path = "crates/elsecall-workload" }
 elsecall-workload-config = { path = "crates/elsecall-workload-config" }
 elsecall-workspace = { path = "crates/elsecall-workspace" }
@@ -147,20 +139,16 @@ elsecall-add-mac.workspace = true
 elsecall-admission.workspace = true
 elsecall-agent-skill.workspace = true
 elsecall-api-response.workspace = true
-elsecall-build-identity.workspace = true
-elsecall-config-sync.workspace = true
 elsecall-config-sync-model.workspace = true
-elsecall-failure.workspace = true
-elsecall-fleet.workspace = true
+elsecall-config-sync.workspace = true
+elsecall-contract.workspace = true
 elsecall-fleet-upgrade.workspace = true
-elsecall-guidance.workspace = true
+elsecall-fleet.workspace = true
 elsecall-housekeeping.workspace = true
 elsecall-installation.workspace = true
-elsecall-labels.workspace = true
 elsecall-load-log.workspace = true
 elsecall-local-client.workspace = true
 elsecall-local-state.workspace = true
-elsecall-machine.workspace = true
 elsecall-membership.workspace = true
 elsecall-openssh-mac.workspace = true
 elsecall-os-processes.workspace = true
@@ -171,15 +159,12 @@ elsecall-placement.workspace = true
 elsecall-platform-macos.workspace = true
 elsecall-process.workspace = true
 elsecall-rehearsal.workspace = true
-elsecall-rehearsal-identity.workspace = true
 elsecall-release-update.workspace = true
 elsecall-remote-run.workspace = true
 elsecall-replay.workspace = true
 elsecall-report-facts.workspace = true
 elsecall-reporting.workspace = true
-elsecall-run-admission.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-scheduling-model.workspace = true
 elsecall-scripted-machine.workspace = true
 elsecall-secure-channel.workspace = true
 elsecall-service-config.workspace = true
@@ -192,9 +177,8 @@ elsecall-tools.workspace = true
 elsecall-trace.workspace = true
 elsecall-tuning.workspace = true
 elsecall-window.workspace = true
-elsecall-wire.workspace = true
-elsecall-workload.workspace = true
 elsecall-workload-config.workspace = true
+elsecall-workload.workspace = true
 elsecall-workspace.workspace = true
 futures-util.workspace = true
 getrandom.workspace = true
@@ -220,7 +204,7 @@ x25519-dalek.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
-elsecall-machine = { workspace = true, features = ["test-support"] }
+elsecall-contract = { workspace = true, features = ["test-support"] }
 
 [profile.release]
 lto = "thin"

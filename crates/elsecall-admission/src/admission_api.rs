@@ -7,11 +7,11 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
-use elsecall_failure::Result;
+use elsecall_contract::api;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::{request, run_id::RunId};
 use elsecall_local_state::local_access::LocalCaller;
 use elsecall_scheduling::service::{OnHandover, Scheduler};
-use elsecall_scheduling_model::{request, run_id::RunId};
-use elsecall_wire::api;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::sync::Arc;
 
@@ -148,7 +148,7 @@ async fn observation(
     body: Bytes,
 ) -> Response {
     respond((|| {
-        if body.len() > elsecall_scheduling_model::workload_metadata::MAXIMUM_JSON_BYTES {
+        if body.len() > elsecall_contract::scheduling_model::workload_metadata::MAXIMUM_JSON_BYTES {
             return Err(request::invalid("Workload observation is too large."));
         }
         scheduler.observe_workload(peer(&caller)?, &run_id(&id)?, parse(&body)?)

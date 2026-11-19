@@ -8,7 +8,7 @@
 //! never follows links. A pass interrupted after the move finishes the deletion on
 //! its next run, and deletes only a directory that is still the one it moved.
 use crate::housekeeping::catalog::Catalog;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_workspace::confined::{self, Confined};
 use std::{
     ffi::CString,

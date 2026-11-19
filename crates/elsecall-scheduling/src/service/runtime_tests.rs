@@ -6,7 +6,7 @@ use crate::{
     placed::Alone,
     pre_run_sync::{PreRunSync, Synced},
 };
-use elsecall_machine::inspection::{LoadSample, Machine, MemoryPressure, ThermalState};
+use elsecall_contract::inspection::{LoadSample, Machine, MemoryPressure, ThermalState};
 use futures_util::future::BoxFuture;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -444,7 +444,7 @@ async fn draining_active_internal_work_respects_short_preparation_limit_and_neve
 #[tokio::test(start_paused = true)]
 async fn workload_reports_obey_pending_nested_requester_barriers_and_pid_identity() {
     use crate::{binding::fake::FakeProcesses, messages::CommandStarted};
-    use elsecall_scheduling_model::workload_metadata::{Observation, Workload};
+    use elsecall_contract::scheduling_model::workload_metadata::{Observation, Workload};
     let home = tempfile::tempdir().unwrap();
     let clock = Arc::new(VirtualClock::new(Timestamp::from_millis(1_000)));
     let processes = Arc::new(FakeProcesses::default());
@@ -554,7 +554,7 @@ async fn workload_reports_obey_pending_nested_requester_barriers_and_pid_identit
 
 #[tokio::test(start_paused = true)]
 async fn workload_metadata_does_not_change_learned_size_hold_or_admission_decisions() {
-    use elsecall_scheduling_model::workload_metadata::parse_workload;
+    use elsecall_contract::scheduling_model::workload_metadata::parse_workload;
     let mut decisions = Vec::new();
     for structured in [false, true] {
         let home = tempfile::tempdir().unwrap();
@@ -672,7 +672,7 @@ async fn structured_placement_requires_acknowledgement_without_retry_or_attach()
     for ack in [
         None,
         Some(99),
-        Some(elsecall_scheduling_model::workload_metadata::VERSION),
+        Some(elsecall_contract::scheduling_model::workload_metadata::VERSION),
     ] {
         let home = tempfile::tempdir().unwrap();
         let offers = Arc::new(Mutex::new(Vec::new()));
@@ -706,7 +706,8 @@ async fn structured_placement_requires_acknowledgement_without_retry_or_attach()
             root: "/repo".into(),
             common_dir: "/repo/.git".into(),
         });
-        declared.workload = Some(elsecall_scheduling_model::workload_metadata::Workload::Opaque {});
+        declared.workload =
+            Some(elsecall_contract::scheduling_model::workload_metadata::Workload::Opaque {});
         let result = scheduler.request(100, declared).await;
         let id = RunId::parse("r-000000000001").unwrap();
         assert_eq!(
@@ -715,7 +716,7 @@ async fn structured_placement_requires_acknowledgement_without_retry_or_attach()
             "no metadata stripping or admission retry"
         );
         assert!(offers.lock().unwrap()[0].workload.is_some());
-        if ack == Some(elsecall_scheduling_model::workload_metadata::VERSION) {
+        if ack == Some(elsecall_contract::scheduling_model::workload_metadata::VERSION) {
             assert!(result.is_ok());
             assert_eq!(scheduler.placed_member(100, &id).unwrap(), "peer");
         } else {

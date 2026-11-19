@@ -6,7 +6,7 @@ use crate::{
     messages::MemberState,
     quote::{CopyQuote, HeldWork, Quote},
 };
-use elsecall_failure::Failure;
+use elsecall_contract::failure::Failure;
 use std::{collections::HashMap, time::Duration};
 use tokio::time::Instant;
 
@@ -134,7 +134,7 @@ impl Quotes {
 mod tests {
     use super::*;
     use crate::{admission::QueueCounts, load::Gate, placed::Warmth};
-    use elsecall_scheduling_model::capacity::{Capacity, Cores};
+    use elsecall_contract::scheduling_model::capacity::{Capacity, Cores};
 
     fn quote(free: u32, copies: &[(&str, Warmth)]) -> Quote {
         Quote {

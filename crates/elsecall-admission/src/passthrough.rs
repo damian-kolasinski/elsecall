@@ -15,21 +15,21 @@ use crate::admission_cli::{
     resolution::{Layers, resolve},
 };
 use clap::Args;
-use elsecall_failure::{Failure, Result};
-use elsecall_guidance::{self as guidance, Unmanaged};
+use elsecall_contract::api::SCHEMA_VERSION;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::guidance::{self as guidance, Unmanaged};
+use elsecall_contract::run_admission::Admission;
+use elsecall_contract::scheduling_model::{
+    request::{Kind, Placement},
+    timestamp::Timestamp,
+};
 use elsecall_local_client::{self as client, Wait};
 use elsecall_local_state::{local_access, paths::Paths, run_id_file::RunIdFile};
-use elsecall_run_admission::Admission;
 use elsecall_scheduling::{
     messages::{Grant, RunEnded},
     placed::WorkspaceRef,
     run_phases::{RemoteFailurePhase, RunPhases},
 };
-use elsecall_scheduling_model::{
-    request::{Kind, Placement},
-    timestamp::Timestamp,
-};
-use elsecall_wire::api::SCHEMA_VERSION;
 use elsecall_workload_config::workload_settings::WorkloadSettings;
 use elsecall_workspace::{self as workspace, push_cache::CacheFiles};
 use executor::{CommandLine, Executor, Exit, Finished, RunContext, RunFailure, Running};
@@ -177,7 +177,7 @@ pub fn option_argument(arguments: &[OsString], command: &str, option: &str) -> O
 /// secrets. A status file or run ID file named among them still records the
 /// failure, so a stale one is never mistaken for this run's outcome.
 pub fn usage_failure() -> ExitCode {
-    let failure = elsecall_scheduling_model::request::invalid(
+    let failure = elsecall_contract::scheduling_model::request::invalid(
         "Invalid run options; the command goes after --, as in elsecall run --size 2 -- make test.",
     );
     let arguments: Vec<OsString> = std::env::args_os().collect();

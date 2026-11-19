@@ -17,11 +17,9 @@ workspace = true
 test-support = []
 
 [dependencies]
-elsecall-failure.workspace = true
+elsecall-contract.workspace = true
 elsecall-load-log.workspace = true
-elsecall-machine.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-scheduling-model.workspace = true
 elsecall-service-log.workspace = true
 elsecall-sqlite-retention.workspace = true
 libc.workspace = true

@@ -1,10 +1,10 @@
 //! The service's local configuration, written by the operator.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::{capacity::Cores, request::AtDeadline};
 use elsecall_housekeeping::housekeeping::settings::{self, Settings as Housekeeping};
 use elsecall_scheduling::parameters::{
     AdmissionOverrides, EstimatesOverrides, Overrides, Parameters, PlacementOverrides,
 };
-use elsecall_scheduling_model::{capacity::Cores, request::AtDeadline};
 use elsecall_workspace::location::Setting;
 use serde::Deserialize;
 use std::{
@@ -308,7 +308,7 @@ fn housekeeping(section: HousekeepingSection) -> std::result::Result<Housekeepin
         defaults.interval,
         "[housekeeping] interval must be a duration such as \"1h\", at most 7 days.",
     )?;
-    if interval > elsecall_scheduling_model::request::MAXIMUM_DEADLINE {
+    if interval > elsecall_contract::scheduling_model::request::MAXIMUM_DEADLINE {
         return Err("[housekeeping] interval must be a duration such as \"1h\", at most 7 days.");
     }
     let min_free_percent = section

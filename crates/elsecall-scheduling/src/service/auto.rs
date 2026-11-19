@@ -31,8 +31,8 @@ use crate::{
     record::{Arrival, Candidate, Decision, Scoring, Verdict},
     sync_history::{self, SyncHistory},
 };
-use elsecall_failure::Failure;
-use elsecall_scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
+use elsecall_contract::failure::Failure;
+use elsecall_contract::scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
 use futures_util::future::join_all;
 use std::{collections::BTreeSet, sync::Weak, time::Duration};
 use tokio::time::Instant;
@@ -118,11 +118,13 @@ impl Scheduler {
                 .saturating_sub(trust.recency.as_millis() as u64),
         );
         let samples =
-            |kind: Kind, read: elsecall_failure::Result<Vec<crate::record::Record>>| match read {
-                Ok(records) => learning::samples_of(kind, &records, now, trust.recency),
-                Err(error) => {
-                    super::log("run_history_unavailable", &error);
-                    Vec::new()
+            |kind: Kind, read: elsecall_contract::failure::Result<Vec<crate::record::Record>>| {
+                match read {
+                    Ok(records) => learning::samples_of(kind, &records, now, trust.recency),
+                    Err(error) => {
+                        super::log("run_history_unavailable", &error);
+                        Vec::new()
+                    }
                 }
             };
         let own = samples(
@@ -921,7 +923,7 @@ mod tests {
     #[test]
     fn a_member_on_another_build_is_left_out_with_the_upgrade_that_fixes_it() {
         let skewed =
-            elsecall_build_identity::version_skew::skewed("0123456789abcdef", "fedcba9876543210");
+            elsecall_contract::version_skew::skewed("0123456789abcdef", "fedcba9876543210");
         let why = unreachable_why(&skewed);
         assert!(
             why.contains("(version_skew)") && why.contains("elsecall fleet upgrade"),

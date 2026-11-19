@@ -4,7 +4,7 @@
 mod processes;
 mod support;
 
-use elsecall_machine::inspection::MemoryPressure;
+use elsecall_contract::inspection::MemoryPressure;
 use std::time::{Duration, Instant};
 use support::{Fixture, in_use, queued, record};
 
@@ -364,9 +364,11 @@ async fn without_a_handover_an_unreachable_service_fails_the_request_at_once() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_caller_that_disconnects_while_waiting_is_withdrawn() {
+    use elsecall_contract::scheduling_model::request::{
+        AdmissionRequest, Kind, Placement, Urgency,
+    };
     use elsecall_local_client::{self as client, Wait};
     use elsecall_scheduling::messages::Grant;
-    use elsecall_scheduling_model::request::{AdmissionRequest, Kind, Placement, Urgency};
     let mut fx = Fixture::start(1).await;
     fx.script(&holder("holding", ""));
     fx.wait_for_file("order").await;
@@ -406,9 +408,11 @@ async fn a_caller_that_disconnects_while_waiting_is_withdrawn() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_run_is_bound_to_its_caller_and_command_until_it_reports_the_end() {
+    use elsecall_contract::scheduling_model::request::{
+        AdmissionRequest, Kind, Placement, Urgency,
+    };
     use elsecall_local_client::{self as client, Wait};
     use elsecall_scheduling::messages::{CommandStarted, Grant, RunEnded};
-    use elsecall_scheduling_model::request::{AdmissionRequest, Kind, Placement, Urgency};
     let fx = Fixture::start(1).await;
     let socket = fx.paths.socket();
     let request = AdmissionRequest {

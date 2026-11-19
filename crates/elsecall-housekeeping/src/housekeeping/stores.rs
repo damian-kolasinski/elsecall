@@ -1,6 +1,6 @@
 //! The shared object stores under the workspace root: one per caller repository,
 //! at `<root>/.stores/<calling member>/<id>.git`.
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_workspace::git::Git;
 use std::path::{Path, PathBuf};
 

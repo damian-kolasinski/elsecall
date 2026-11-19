@@ -4,13 +4,13 @@
 //! grew before any did. Members answer `POST /peer/v1/report/outside` with it; another
 //! member's answer is untrusted and bounded by [`bounded`].
 use crate::reporting::blocked::Pressure;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_outside_pressure::outside_pressure::{
     blocked::{OutsideProcess, Reason, lenient_list},
     store::Episode,
     warning::{Concern, WarningEpisode},
 };
 use elsecall_report_facts::window::Window;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 
 /// The most episodes one answer carries, the longest kept, so the largest fits
@@ -156,7 +156,7 @@ pub fn behind(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elsecall_machine::inspection::MemoryPressure;
+    use elsecall_contract::inspection::MemoryPressure;
     use elsecall_outside_pressure::outside_pressure::{
         blocked::Blocked,
         sampling::{Memory, Owner},

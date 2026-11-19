@@ -9,8 +9,8 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
-use elsecall_failure::Failure;
-use elsecall_wire::api;
+use elsecall_contract::api;
+use elsecall_contract::failure::Failure;
 use std::sync::Arc;
 
 pub fn routes(distributor: Arc<Distributor>) -> Router {

@@ -1,7 +1,7 @@
 //! Request properties and caller choices as callers write them on the command line.
 use clap::{Args, ValueEnum};
-use elsecall_failure::Result;
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::{
     capacity::Cores,
     request::{AtDeadline, invalid},
     timestamp::Timestamp,
@@ -96,7 +96,7 @@ pub enum UrgencyChoice {
 pub struct Declared {
     pub size: Option<Cores>,
     pub label: Option<String>,
-    pub workload: Option<elsecall_scheduling_model::workload_metadata::Workload>,
+    pub workload: Option<elsecall_contract::scheduling_model::workload_metadata::Workload>,
     pub urgency: Option<UrgencyChoice>,
     pub hold_limit: Option<Duration>,
     pub deadline: Option<Timestamp>,
@@ -143,7 +143,7 @@ impl RequestOptions {
             workload: self
                 .workload
                 .as_deref()
-                .map(elsecall_scheduling_model::workload_metadata::parse_workload)
+                .map(elsecall_contract::scheduling_model::workload_metadata::parse_workload)
                 .transpose()?,
             urgency,
             hold_limit,

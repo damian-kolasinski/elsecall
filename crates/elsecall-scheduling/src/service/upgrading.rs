@@ -15,7 +15,7 @@
 //! restart stops them, which their cap (10 minutes by default) would have done later,
 //! and the next run in that copy starts without them.
 use super::{Entry, Phase, Scheduler};
-use elsecall_scheduling_model::request::Kind;
+use elsecall_contract::scheduling_model::request::Kind;
 use std::sync::Weak;
 
 /// What a caller does when a service handover ends its request before the

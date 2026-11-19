@@ -8,13 +8,13 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
-use elsecall_failure::Failure;
+use elsecall_contract::api;
+use elsecall_contract::failure::Failure;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_scheduling::{
     replay::{self, Change, Replay},
     service::Scheduler,
 };
-use elsecall_scheduling_model::timestamp::Timestamp;
-use elsecall_wire::api;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

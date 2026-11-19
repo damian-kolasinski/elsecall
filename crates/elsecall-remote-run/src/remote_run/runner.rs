@@ -11,12 +11,12 @@ use crate::remote_run::{
     output::{self, Window},
     protocol::{Exited, RunMessage, Start, Stream},
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::run_admission::{self as run_admission, Admission};
+use elsecall_contract::scheduling_model::run_id::RunId;
+use elsecall_contract::wire::Frame;
 use elsecall_os_processes::process_usage;
-use elsecall_run_admission::{self as run_admission, Admission};
 use elsecall_scheduling::leftovers::Leftovers;
-use elsecall_scheduling_model::run_id::RunId;
-use elsecall_wire::wire::Frame;
 use elsecall_workspace::{
     confined::{Confined, Create},
     copies::Claim,
@@ -98,7 +98,7 @@ pub trait Host: Send + Sync {
     fn observation(
         &self,
         _run: &RunId,
-    ) -> Option<elsecall_scheduling_model::workload_metadata::Observation> {
+    ) -> Option<elsecall_contract::scheduling_model::workload_metadata::Observation> {
         None
     }
     /// Processes the command left running, as they run and once they ended;
@@ -455,7 +455,7 @@ async fn return_outputs(
 }
 
 async fn send_blob(link: &Link, bytes: &[u8]) -> Result<()> {
-    for chunk in bytes.chunks(elsecall_wire::wire::CHUNK) {
+    for chunk in bytes.chunks(elsecall_contract::wire::CHUNK) {
         link.send(Frame::Content(chunk.to_vec())).await?;
     }
     link.send(Frame::Content(Vec::new())).await
@@ -526,7 +526,7 @@ async fn send_file(
     let mut sent = 0u64;
     loop {
         let chunk = tokio::task::block_in_place(|| {
-            let mut buffer = vec![0u8; elsecall_wire::wire::CHUNK];
+            let mut buffer = vec![0u8; elsecall_contract::wire::CHUNK];
             let n = std::io::Read::read(&mut reader, &mut buffer)?;
             buffer.truncate(n);
             Ok::<_, std::io::Error>(buffer)

@@ -1,6 +1,6 @@
 //! Synthetic source repositories. No source trace content is executable.
 use super::{invalid, worker};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_workspace::git::Git;
 use std::{fs, path::Path, process::Stdio};
 use tokio::time::Instant;

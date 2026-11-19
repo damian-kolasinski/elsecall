@@ -1,7 +1,7 @@
 #![cfg(target_os = "macos")]
 //! The real installer, transaction, service restart and rollback; provider/OS adapters are fakes.
-use elsecall_build_identity::build_identity::Digest;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::build_identity::Digest;
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_installation::installation::{self, ServiceManager, Session};
 use elsecall_local_state::paths::Paths;
 use elsecall_release_update::release_update::{

@@ -21,13 +21,13 @@ use axum::{
     routing::get,
 };
 use elsecall_api_response as api_response;
-use elsecall_failure::Failure;
+use elsecall_contract::api;
+use elsecall_contract::failure::Failure;
 use elsecall_fleet::fleet::Fleet;
 use elsecall_membership::{
     membership_store::Membership,
     roster::{MemberName, Roster},
 };
-use elsecall_wire::api;
 use serde::Deserialize;
 use std::sync::Arc;
 

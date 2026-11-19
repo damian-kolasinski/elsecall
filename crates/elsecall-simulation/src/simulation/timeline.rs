@@ -4,7 +4,7 @@ use super::{
     execution::{Active, advance},
     member::Member,
 };
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_workload::trace::Trace;
 use serde::Serialize;
 use std::{
@@ -184,7 +184,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn reserve_follows_admitted_work_after_midnight_while_day_timelines_stop() {
         use crate::simulation::adapters::Occupancy;
-        use elsecall_scheduling_model::{
+        use elsecall_contract::scheduling_model::{
             capacity::Cores,
             request::{AdmissionRequest, Kind, Placement, Urgency},
             run_id::RunId,

@@ -4,7 +4,7 @@ use crate::remote_run::{
     link::Outbox,
     protocol::{Stream, WINDOW},
 };
-use elsecall_wire::wire::Frame;
+use elsecall_contract::wire::Frame;
 use std::{
     os::fd::AsRawFd,
     sync::{

@@ -22,7 +22,7 @@ pub use download::LocalDownload;
 pub use verifier::Packslip;
 
 use base64::{Engine, engine::general_purpose::STANDARD};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 
 /// The packslip project that local bundles name. `.localhost` names no host
 /// anyone can publish under, so no published release can carry it.

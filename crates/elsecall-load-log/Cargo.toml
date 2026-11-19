@@ -13,9 +13,7 @@ doctest = false
 workspace = true
 
 [dependencies]
-elsecall-failure.workspace = true
-elsecall-machine.workspace = true
-elsecall-scheduling-model.workspace = true
+elsecall-contract.workspace = true
 elsecall-sqlite-retention.workspace = true
 libc.workspace = true
 rusqlite.workspace = true

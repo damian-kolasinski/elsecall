@@ -1,5 +1,5 @@
 //! Bounded, master-authorized rehearsal operations; never arbitrary commands.
-use elsecall_scheduling_model::{
+use elsecall_contract::scheduling_model::{
     capacity::Cores,
     request::{Placement, Urgency},
     timestamp::Timestamp,
@@ -75,7 +75,7 @@ pub struct Reply {
     pub member: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trust: Option<serde_json::Value>,
-    pub cores: Option<elsecall_machine::inspection::CoreCounts>,
+    pub cores: Option<elsecall_contract::inspection::CoreCounts>,
     #[serde(default)]
     pub calibration: Option<super::worker::Calibration>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -90,4 +90,6 @@ pub struct Reply {
     pub scratch: Option<String>,
     pub clean: bool,
 }
-pub use elsecall_rehearsal_identity::identity::{scratch_of, valid_session, valid_workspace};
+pub use elsecall_contract::rehearsal_identity::identity::{
+    scratch_of, valid_session, valid_workspace,
+};

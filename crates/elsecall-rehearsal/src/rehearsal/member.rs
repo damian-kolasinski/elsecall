@@ -7,11 +7,11 @@ use super::{
     protocol::{Action, Job, Launch, Reply, valid_session, valid_workspace},
     scratch,
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::request::{Placement, Urgency};
 use elsecall_housekeeping::housekeeping::pass::Housekeeper;
 use elsecall_local_state::paths::Paths;
 use elsecall_scheduling::service::Scheduler;
-use elsecall_scheduling_model::request::{Placement, Urgency};
 use std::{
     fs,
     path::PathBuf,
@@ -26,7 +26,7 @@ use tokio::{sync::Mutex, time::Instant};
 struct Session {
     id: String,
     root: PathBuf,
-    until: elsecall_scheduling_model::timestamp::Timestamp,
+    until: elsecall_contract::scheduling_model::timestamp::Timestamp,
     seed: u64,
     expires: Instant,
     stopped: bool,
@@ -106,7 +106,7 @@ impl Member {
                     .scheduler
                     .settings_history(
                         since,
-                        elsecall_scheduling_model::timestamp::Timestamp::now()
+                        elsecall_contract::scheduling_model::timestamp::Timestamp::now()
                             .after(Duration::from_millis(1)),
                     )?
                     .last()
@@ -154,7 +154,7 @@ impl Member {
                 return Err(invalid("Invalid rehearsal lifetime or workspace identity."));
             }
             let expires = Instant::now() + Duration::from_millis(limit_ms);
-            let until = elsecall_scheduling_model::timestamp::Timestamp::now()
+            let until = elsecall_contract::scheduling_model::timestamp::Timestamp::now()
                 .after(Duration::from_millis(limit_ms));
             let internal_pause = self.scheduler.pause_internal()?;
             self.scheduler.drain_internal(expires).await?;
@@ -242,7 +242,7 @@ impl Member {
                     return Err(invalid("The rehearsal has stopped or reached its limit."));
                 }
                 validate(&request)?;
-                if !elsecall_labels::rules::belongs(&session.id, Some(&request.label)) {
+                if !elsecall_contract::labels::rules::belongs(&session.id, Some(&request.label)) {
                     return Err(invalid("Synthetic label does not belong to this session."));
                 }
                 if session.jobs.len() >= 10_000
@@ -298,7 +298,7 @@ impl Member {
             records
                 .iter()
                 .filter(|r| {
-                    elsecall_labels::rules::belongs(id, r.label.as_deref())
+                    elsecall_contract::labels::rules::belongs(id, r.label.as_deref())
                         && r.calling_member == self.scheduler.name()
                         && r.placed
                             .as_ref()
@@ -317,7 +317,7 @@ impl Member {
                         .iter()
                         .filter(|r| {
                             r.requested_by == *caller
-                                && elsecall_labels::rules::belongs(id, r.label.as_deref())
+                                && elsecall_contract::labels::rules::belongs(id, r.label.as_deref())
                         })
                         .flat_map(|r| r.processes.iter().copied()),
                 )
@@ -415,8 +415,8 @@ async fn stop(session: &mut Session) -> Result<()> {
 }
 fn validate(r: &Launch) -> Result<()> {
     if !valid_workspace(&r.workspace)
-        || !elsecall_labels::rules::synthetic(Some(&r.label))
-        || r.label.chars().count() > elsecall_labels::rules::label_limit(&r.label)
+        || !elsecall_contract::labels::rules::synthetic(Some(&r.label))
+        || r.label.chars().count() > elsecall_contract::labels::rules::label_limit(&r.label)
         || r.label.chars().any(char::is_control)
         || r.size.millis() == 0
         || r.duration_ms == 0

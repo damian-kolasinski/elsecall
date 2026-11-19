@@ -7,11 +7,11 @@
 //! macOS weighs for memory pressure, wherever the kernel allows it: this user's
 //! processes. `ps` is asked for the executable's name only (`-c -o comm`), never
 //! its arguments or environment.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_outside_pressure::outside_pressure::sampling::{
     Memory, Owner, ProcessSampler, ProcessUse,
 };
-use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{process::Command, time::Duration};
 
 const PS: &str = "/bin/ps";
@@ -299,7 +299,7 @@ mod tests {
         let usage = usage_between(Some(&earlier), &later);
         for reason in [
             Reason::MemoryPressure {
-                level: elsecall_machine::inspection::MemoryPressure::Warning,
+                level: elsecall_contract::inspection::MemoryPressure::Warning,
             },
             Reason::OutsideSaturation {
                 outside_utilization: 0.95,

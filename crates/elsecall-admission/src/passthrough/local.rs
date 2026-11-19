@@ -4,10 +4,10 @@ use crate::passthrough::{
     executor::{CommandLine, Executor, Exit, Finished, RunContext, RunResult, Running},
     signals,
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::run_admission::Admission;
 use elsecall_local_client::{self as client, Wait};
 use elsecall_os_processes::process_usage;
-use elsecall_run_admission::Admission;
 use elsecall_scheduling::messages::CommandStarted;
 use std::{
     ffi::OsStr,

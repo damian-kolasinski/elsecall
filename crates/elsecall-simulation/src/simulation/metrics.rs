@@ -1,10 +1,10 @@
 //! Harness objective and constraints, evaluated on arrival-window roots only.
 use super::engine::{Outcome, Trial};
-use elsecall_scheduling::placed::Warmth;
-use elsecall_scheduling_model::{
+use elsecall_contract::scheduling_model::{
     request::{Kind, Placement},
     timestamp::Timestamp,
 };
+use elsecall_scheduling::placed::Warmth;
 use elsecall_workload::{
     demand::median,
     trace::{Request, Trace},

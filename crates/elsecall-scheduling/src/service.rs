@@ -42,16 +42,16 @@ use crate::{
     recovery,
 };
 use auto::Auto;
-use elsecall_failure::{Failure, Result};
-use elsecall_load_log::{LoadLog, minute::Second};
-use elsecall_machine::inspection::{CoreCounts, MachineInspector};
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::inspection::{CoreCounts, MachineInspector};
+use elsecall_contract::scheduling_model::{
     capacity::{Capacity, Cores},
     request::{self, AdmissionRequest, AtDeadline, Kind, Placement, Urgency, WorkRequest},
     run_id::{RandomRunIds, RunId, RunIds},
     speed::{SpeedHistory, SpeedMeter},
     timestamp::Timestamp,
 };
+use elsecall_load_log::{LoadLog, minute::Second};
 use placing::Placing;
 use quotes::Quotes;
 use serde::Serialize;
@@ -659,7 +659,7 @@ impl Scheduler {
                 let (runs, syncs, losses) =
                     self.auto_history(request.label.as_deref(), family, history_at);
                 let runs = runs.with_plan(request.workload.as_ref().and_then(
-                    elsecall_scheduling_model::workload_metadata::Workload::planned_units,
+                    elsecall_contract::scheduling_model::workload_metadata::Workload::planned_units,
                 ));
                 Some(Box::new(Auto {
                     workspace,
@@ -931,7 +931,7 @@ impl Scheduler {
         let record = Record {
             run_id: id.clone(),
             kind: request.kind,
-            synthetic: elsecall_labels::rules::synthetic(request.label.as_deref()),
+            synthetic: elsecall_contract::labels::rules::synthetic(request.label.as_deref()),
             internal: requester.pid == std::process::id()
                 && request
                     .label
@@ -1377,7 +1377,9 @@ impl Scheduler {
             .started_at
             .map(|started| now.since(started).as_millis() as u64);
         if record.workload.is_some() && record.plan_observation.is_none() {
-            use elsecall_scheduling_model::workload_metadata::{CensorReason, Observation};
+            use elsecall_contract::scheduling_model::workload_metadata::{
+                CensorReason, Observation,
+            };
             record.plan_observation = Some(match &outcome {
                 _ if record.started_at.is_none() => Observation::Unknown {},
                 Outcome::Signaled { .. } => Observation::Censored {
@@ -1830,7 +1832,7 @@ mod pending_snapshot_tests {
     use crate::{
         binding::fake::FakeProcesses, clock::VirtualClock, placed::Alone, pre_run_sync::Synced,
     };
-    use elsecall_machine::inspection::{LoadSample, Machine, MemoryPressure, ThermalState};
+    use elsecall_contract::inspection::{LoadSample, Machine, MemoryPressure, ThermalState};
     use futures_util::future::BoxFuture;
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -1902,7 +1904,7 @@ mod pending_snapshot_tests {
                 SchedulerConfiguration::default(),
                 Adapters {
                     machine: Arc::new(ObservedMachine),
-                    speed: Arc::new(elsecall_scheduling_model::speed::FixedSpeed(1.0)),
+                    speed: Arc::new(elsecall_contract::scheduling_model::speed::FixedSpeed(1.0)),
                     processes,
                     exits,
                 },

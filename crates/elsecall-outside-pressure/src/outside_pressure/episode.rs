@@ -10,8 +10,8 @@ use crate::outside_pressure::{
     attribution::Attribution,
     blocked::{Blocked, Reason},
 };
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_scheduling::load::Gate;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use std::time::Duration;
 
 /// How long the gate must stay closed before the member counts as blocked.
@@ -235,7 +235,7 @@ impl Watch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elsecall_machine::inspection::MemoryPressure;
+    use elsecall_contract::inspection::MemoryPressure;
 
     const PRESSURE: Gate = Gate::MemoryPressure {
         level: MemoryPressure::Warning,

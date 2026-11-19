@@ -14,7 +14,7 @@ use crate::{
     stat_cache::{StatCache, StatKey},
     sync_failed,
 };
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},

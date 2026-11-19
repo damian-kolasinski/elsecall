@@ -4,9 +4,9 @@
 //! whether to move work elsewhere, make labels placeable, or bring outside work
 //! under admission.
 use crate::reporting::load::{has_room, overloaded, peak_load_per_cpu, weighted_mean};
+use elsecall_contract::scheduling_model::{request::Kind, timestamp::Timestamp};
 use elsecall_load_log::buckets::Bucket;
 use elsecall_report_facts::facts::{Fact, PlacementKind};
-use elsecall_scheduling_model::{request::Kind, timestamp::Timestamp};
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 
@@ -188,11 +188,11 @@ pub fn overload(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use elsecall_contract::scheduling_model::request::Placement;
     use elsecall_scheduling::{
         fixtures::{self, MINUTE, T0, bucket},
         record::Record,
     };
-    use elsecall_scheduling_model::request::Placement;
 
     /// A run on `member` requested at `at` ms that held it for `run` seconds.
     fn ran(n: u64, label: &str, member: &str, at: u64, run: f64) -> Record {

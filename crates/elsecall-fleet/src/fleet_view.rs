@@ -1,8 +1,8 @@
 //! The fleet as this member sees it: every member's reachability, role and state,
 //! each fetched from that member over the authenticated channel.
 use crate::fleet::{Fleet, PeerStatus};
-use elsecall_build_identity::build_identity::{Build, BuildId};
-use elsecall_failure::Failure;
+use elsecall_contract::build_identity::{Build, BuildId};
+use elsecall_contract::failure::Failure;
 use elsecall_membership::{
     member_key::PublicKey,
     membership_store::Membership,
@@ -82,7 +82,7 @@ pub struct VersionSkew {
 #[derive(Debug, Clone, Serialize)]
 pub struct PlacedRunSummary {
     pub run_id: String,
-    pub started_at: Option<elsecall_scheduling_model::timestamp::Timestamp>,
+    pub started_at: Option<elsecall_contract::scheduling_model::timestamp::Timestamp>,
     pub warnings: Vec<String>,
 }
 
@@ -368,11 +368,11 @@ fn without_roster(
 #[cfg(test)]
 mod tests {
     use crate::fleet_view::*;
+    use elsecall_contract::scheduling_model::timestamp::Timestamp;
     use elsecall_outside_pressure::outside_pressure::{
         sampling::Owner,
         warning::{Concern, Warning},
     };
-    use elsecall_scheduling_model::timestamp::Timestamp;
     use serde_json::json;
 
     fn fseventsd() -> Warning {

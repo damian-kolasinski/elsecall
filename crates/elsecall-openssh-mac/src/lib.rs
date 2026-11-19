@@ -12,7 +12,7 @@ use elsecall_add_mac::{
     inbound_firewall::Rule,
     remote_mac::{Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailscaleVariant},
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_platform_macos::macos::application_firewall;
 use elsecall_tailnet::tailscale_bottle::Bottle;
 use serde_json::Value;

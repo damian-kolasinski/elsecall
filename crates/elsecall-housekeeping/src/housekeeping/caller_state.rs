@@ -7,7 +7,7 @@
 use crate::housekeeping::exchange::{
     Answer, Question, WorkspaceAnswer, WorkspaceState, valid_path,
 };
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_workspace::push_cache::{self, CacheFiles, StateFile};
 use serde::Serialize;
 use std::{
@@ -76,14 +76,14 @@ impl CallerState {
     }
 
     /// Forget only caches registered for this removed synthetic session.
-    pub fn forget_rehearsal(&self, session: &str) -> elsecall_failure::Result<()> {
+    pub fn forget_rehearsal(&self, session: &str) -> elsecall_contract::failure::Result<()> {
         let files = push_cache::list(&self.directory);
         let ids: HashSet<_> = files
             .iter()
             .filter_map(|(file, _)| match file {
                 StateFile::Registry { id }
                     if push_cache::registered_root(&self.directory, id).is_some_and(|root| {
-                        elsecall_rehearsal_identity::identity::scratch_of(session, &root)
+                        elsecall_contract::rehearsal_identity::identity::scratch_of(session, &root)
                     }) =>
                 {
                     Some(id.clone())
@@ -102,7 +102,7 @@ impl CallerState {
                     Ok(()) => (),
                     Err(e) if e.kind() == io::ErrorKind::NotFound => (),
                     Err(e) => {
-                        return Err(elsecall_failure::Failure::io(
+                        return Err(elsecall_contract::failure::Failure::io(
                             "Remove rehearsal sync cache",
                             e,
                         ));

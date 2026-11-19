@@ -1,6 +1,6 @@
 //! Select arrival density from complete, observed rehearsals of the same workload.
-use elsecall_failure::Result;
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_simulation::replay_load::LoadFactor;
 use elsecall_workload::trace::Trace;
 use serde::{Deserialize, Serialize};
@@ -39,7 +39,7 @@ pub struct Target {
     master: String,
     since: Timestamp,
     until: Timestamp,
-    source_digest: elsecall_build_identity::build_identity::Digest,
+    source_digest: elsecall_contract::build_identity::Digest,
     shape: Shape,
 }
 impl Target {
@@ -102,7 +102,7 @@ impl Target {
             observed_seconds: seconds,
             wait_p90_ms: waits(trace, since, until, 1.0)?,
         };
-        let source_digest = elsecall_build_identity::build_identity::Digest::of(
+        let source_digest = elsecall_contract::build_identity::Digest::of(
             &serde_json::to_vec(&(&rows, &shape)).expect("reference serializes"),
         );
         Ok(Self {
@@ -310,14 +310,14 @@ pub fn calibrate_preflight(
     )
 }
 
-fn workload_digest(workload: &Trace) -> elsecall_build_identity::build_identity::Digest {
-    elsecall_build_identity::build_identity::Digest::of(
+fn workload_digest(workload: &Trace) -> elsecall_contract::build_identity::Digest {
+    elsecall_contract::build_identity::Digest::of(
         &serde_json::to_vec(workload).expect("trace serializes"),
     )
 }
 
 fn calibrate_observations(
-    workload_digests: &[elsecall_build_identity::build_identity::Digest],
+    workload_digests: &[elsecall_contract::build_identity::Digest],
     target: &Target,
     observations: &[Trace],
     compress: f64,
@@ -468,14 +468,12 @@ mod tests {
                 .unwrap();
         let mut trace = workload.clone();
         trace.rehearsal.as_mut().unwrap().source_digest =
-            elsecall_build_identity::build_identity::Digest::of(
-                &serde_json::to_vec(&workload).unwrap(),
-            );
+            elsecall_contract::build_identity::Digest::of(&serde_json::to_vec(&workload).unwrap());
         let mut target = Target {
             master: trace.master.clone().unwrap(),
             since: trace.since,
             until: trace.until,
-            source_digest: elsecall_build_identity::build_identity::Digest::of(b"busy reference"),
+            source_digest: elsecall_contract::build_identity::Digest::of(b"busy reference"),
             shape: Shape {
                 admitted_capacity_share: 0.0,
                 member_admitted_capacity_share: BTreeMap::new(),
@@ -521,7 +519,7 @@ mod tests {
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
         let (workload, mut trace, target) = observed_fixture();
         trace.rehearsal.as_mut().unwrap().source_digest =
-            elsecall_build_identity::build_identity::Digest::of(b"other workload");
+            elsecall_contract::build_identity::Digest::of(b"other workload");
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
     }
 
@@ -540,8 +538,9 @@ mod tests {
         let (workload, mut trace, target) = observed_fixture();
         let mut changed = trace.members[0].scheduler_settings[0].clone();
         changed.at = trace.since.after(std::time::Duration::from_secs(1));
-        changed.capacity.capacity = elsecall_scheduling_model::capacity::Cores::ONE;
-        changed.capacity.reserved = elsecall_scheduling_model::capacity::Cores::from_millis(11_000);
+        changed.capacity.capacity = elsecall_contract::scheduling_model::capacity::Cores::ONE;
+        changed.capacity.reserved =
+            elsecall_contract::scheduling_model::capacity::Cores::from_millis(11_000);
         trace.members[0].scheduler_settings.push(changed);
         assert!(elsecall_simulation::simulation::validate_trace(&trace).is_ok());
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
@@ -549,8 +548,8 @@ mod tests {
 
     #[test]
     fn placeable_remote_admissions_count_in_master_queue_without_sync_time() {
+        use elsecall_contract::scheduling_model::request::Placement;
         use elsecall_report_facts::facts::PlacementKind;
-        use elsecall_scheduling_model::request::Placement;
         let (workload, mut trace, mut target) = observed_fixture();
         for demands in trace.rehearsal.as_mut().unwrap().demand.values_mut() {
             demands.insert(trace.members[1].member.clone(), 2.0);
@@ -653,7 +652,9 @@ mod tests {
     fn observed_calibration_rejects_carry_in_before_computing_offsets() {
         let (workload, mut trace, target) = observed_fixture();
         trace.requests[0].fact.requested_at =
-            elsecall_scheduling_model::timestamp::Timestamp::from_millis(trace.since.millis() - 1);
+            elsecall_contract::scheduling_model::timestamp::Timestamp::from_millis(
+                trace.since.millis() - 1,
+            );
         assert!(elsecall_simulation::simulation::validate_trace(&trace).is_ok());
         assert!(calibrate(&workload, &target, &[trace], 6.0, 42).is_err());
     }

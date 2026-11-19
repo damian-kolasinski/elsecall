@@ -1,7 +1,8 @@
 //! Time-compressed replay orchestration. Trace parsing and model validation
 //! happen before the first fleet mutation; every exit path tears down sessions.
 use clap::Args;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::{request::Urgency, timestamp::Timestamp};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use elsecall_rehearsal::rehearsal::{
@@ -9,7 +10,6 @@ use elsecall_rehearsal::rehearsal::{
     plan::{Arrival, Plan},
     protocol::{Action, Call, Job, Reply},
 };
-use elsecall_scheduling_model::{request::Urgency, timestamp::Timestamp};
 use elsecall_trace::trace_api::Members;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf, time::Duration};
@@ -122,7 +122,7 @@ pub(crate) async fn single(
     if args.limit.is_zero() || args.limit > Duration::from_secs(3600) {
         return Err(invalid("--limit must be positive and at most 1h."));
     }
-    let source_digest = elsecall_build_identity::build_identity::Digest::of(
+    let source_digest = elsecall_contract::build_identity::Digest::of(
         &serde_json::to_vec(&source).expect("trace serializes"),
     );
     let candidate = elsecall_simulation::simulation::CandidateSettings::parse(
@@ -204,12 +204,12 @@ pub(crate) async fn single(
     for arrival in &mut plan.arrivals {
         arrival.request.label = format!(
             "{}{}:{}",
-            elsecall_labels::rules::PREFIX,
+            elsecall_contract::labels::rules::PREFIX,
             session,
             arrival
                 .request
                 .label
-                .strip_prefix(elsecall_labels::rules::PREFIX)
+                .strip_prefix(elsecall_contract::labels::rules::PREFIX)
                 .expect("planned namespace")
         );
     }
@@ -526,7 +526,7 @@ pub(crate) async fn single(
     }
     trace
         .requests
-        .retain(|r| elsecall_labels::rules::belongs(&session, r.fact.label.as_deref()));
+        .retain(|r| elsecall_contract::labels::rules::belongs(&session, r.fact.label.as_deref()));
     let ids: std::collections::BTreeSet<_> = trace
         .requests
         .iter()
@@ -535,10 +535,10 @@ pub(crate) async fn single(
     trace.leftovers.retain(|r| ids.contains(r.run_id.as_str()));
     trace
         .demand
-        .retain(|d| elsecall_labels::rules::synthetic(Some(&d.family)));
+        .retain(|d| elsecall_contract::labels::rules::synthetic(Some(&d.family)));
     trace
         .contention
-        .retain(|d| elsecall_labels::rules::synthetic(Some(&d.family)));
+        .retain(|d| elsecall_contract::labels::rules::synthetic(Some(&d.family)));
     if inspections.iter().any(|r| r.production_active > 0) {
         trace.incomplete = true;
         trace.limits.push("Forced overlap: pre-existing production grants are outside this rehearsal's request population".into());
@@ -641,7 +641,7 @@ pub(crate) async fn single(
             .collect(),
         session: session.clone(),
         source_digest,
-        build: elsecall_build_identity::build_identity::this_build()?,
+        build: elsecall_contract::build_identity::this_build()?,
         compress: args.compress,
         load_factor: args.load_factor,
         seed: args.seed,

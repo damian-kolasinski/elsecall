@@ -56,7 +56,7 @@ use crate::{
     placed::{Warmth, WorkspaceRef},
     sync_history::{SyncBasis, SyncHistory},
 };
-use elsecall_scheduling_model::{
+use elsecall_contract::scheduling_model::{
     capacity::Cores,
     timestamp::{millis, seconds, whole_millis},
 };
@@ -1232,8 +1232,8 @@ mod tests {
         admission::QueueCounts, learning::RunSample, parameters::Parameters,
         sync_history::SyncSample,
     };
-    use elsecall_machine::inspection::{CoreCounts, LoadSample, MemoryPressure, ThermalState};
-    use elsecall_scheduling_model::{capacity::Capacity, timestamp::Timestamp};
+    use elsecall_contract::inspection::{CoreCounts, LoadSample, MemoryPressure, ThermalState};
+    use elsecall_contract::scheduling_model::{capacity::Capacity, timestamp::Timestamp};
 
     fn cores(n: f64) -> Cores {
         Cores::from_f64(n).unwrap()

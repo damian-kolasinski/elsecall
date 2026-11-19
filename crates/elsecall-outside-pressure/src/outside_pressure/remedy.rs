@@ -6,8 +6,8 @@ use crate::outside_pressure::{
     sampling::Owner,
     warning::{Concern, Warning},
 };
-use elsecall_machine::inspection::MemoryPressure;
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::inspection::MemoryPressure;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 
 /// Processes whose restart ends the user's session or the machine's: the
 /// remedy for them is a reboot, never a kill.

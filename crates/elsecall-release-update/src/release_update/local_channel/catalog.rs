@@ -3,7 +3,7 @@
 //! verification later confirms.
 use super::{LocalChannel, transport};
 use crate::release_update::{Release, ReleaseCatalog, ReleaseVersion, invalid};
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 
 impl ReleaseCatalog for LocalChannel {
     fn latest(&self) -> Result<Option<Release>> {

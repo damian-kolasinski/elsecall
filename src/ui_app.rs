@@ -6,8 +6,8 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+use elsecall_contract::api;
 use elsecall_local_state::paths::Paths;
-use elsecall_wire::api;
 use serde::Serialize;
 
 #[derive(Serialize)]

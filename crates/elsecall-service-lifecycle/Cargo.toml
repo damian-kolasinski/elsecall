@@ -14,8 +14,7 @@ workspace = true
 
 [dependencies]
 elsecall-config-sync.workspace = true
-elsecall-failure.workspace = true
-elsecall-guidance.workspace = true
+elsecall-contract.workspace = true
 elsecall-installation.workspace = true
 elsecall-scheduling.workspace = true
 tokio.workspace = true

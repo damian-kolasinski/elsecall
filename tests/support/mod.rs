@@ -2,12 +2,12 @@
 //! machine's load is faked, as an external observation boundary.
 #![allow(dead_code)]
 use elsecall::{peer_listener, server};
-use elsecall_failure::Result;
-use elsecall_local_state::{paths::Paths, private_files};
-use elsecall_machine::inspection::{
+use elsecall_contract::failure::Result;
+use elsecall_contract::inspection::{
     CoreCounts, Inspection, LoadAverage, LoadSample, Machine, MachineInspector, Memory,
     MemoryPressure, ThermalState,
 };
+use elsecall_local_state::{paths::Paths, private_files};
 use elsecall_os_processes::processes::MacProcesses;
 use elsecall_scheduling::service::Adapters;
 use elsecall_tailnet::tailnet::{Presence, Tailnet};

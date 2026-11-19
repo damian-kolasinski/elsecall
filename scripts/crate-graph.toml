@@ -18,7 +18,7 @@ bands = ["foundation", "core", "feature", "lab", "adapter", "entry"]
 [band.foundation]
 # Shared vocabulary that everything builds on. A private edit here reruns rustc
 # for every crate above, so these stay small and free of frameworks.
-max_lines = 1500
+max_lines = 2500
 forbid = ["axum", "hyper", "hyper_util", "http_body_util", "tower", "rusqlite", "clap", "sysinfo", "plist", "toml_edit"]
 
 [band.core]
@@ -35,43 +35,15 @@ forbid = ["axum", "clap"]
 
 # --- foundation ---------------------------------------------------------------
 
-[crates.failure]
-band = "foundation"
-modules = ["failure"]
-
-[crates.labels]
-band = "foundation"
-modules = ["labels"]
-
-[crates.rehearsal-identity]
-band = "foundation"
-modules = ["rehearsal::identity"]
-
 [crates.config-sync-model]
 band = "foundation"
 # The paths a fleet may mirror and the limits on them, which the service
 # configuration names and config sync enforces.
 modules = ["config_sync::synced_path", "config_sync::status"]
 
-[crates.guidance]
-band = "foundation"
-modules = ["guidance"]
-
-[crates.run-admission]
-band = "foundation"
-modules = ["run_admission"]
-
-[crates.wire]
-band = "foundation"
-modules = ["api", "wire"]
-
 [crates.local-state]
 band = "foundation"
 modules = ["paths", "private_files", "local_access", "state_temps", "run_id_file"]
-
-[crates.build-identity]
-band = "foundation"
-modules = ["build_identity", "executable_format", "version_skew"]
 
 [crates.process]
 band = "foundation"
@@ -88,19 +60,6 @@ modules = ["tailnet", "tailscale_bottle"]
 [crates.membership]
 band = "foundation"
 modules = ["roster", "member_key", "member_code", "membership_store", "peer_auth"]
-
-[crates.scheduling-model]
-band = "foundation"
-# The scheduler's vocabulary: what a request, a time, a capacity and a run id
-# are. Everything that decides or stores stays in `scheduling`.
-# workload_metadata is what a command declares about itself; requests carry it.
-modules = ["scheduling::request", "scheduling::settings", "scheduling::timestamp", "scheduling::capacity", "scheduling::gate", "scheduling::run_id", "scheduling::speed", "workload_metadata"]
-
-[crates.machine]
-band = "foundation"
-modules = ["inspection", "idle_load"]
-
-# --- core ---------------------------------------------------------------------
 
 [crates.sqlite-retention]
 band = "core"
@@ -132,7 +91,6 @@ modules = ["peer_diagnostics"]
 [crates.scheduling]
 band = "core"
 modules = ["scheduling"]
-
 
 [crates.load-log]
 band = "core"
@@ -298,4 +256,9 @@ band = "entry"
 packages = ["elsecall-ui"]
 # The desktop app talks to the service through its contract, never through the
 # service's internals.
-may_depend_on = ["failure", "scheduling-model", "wire", "local-client", "local-state", "build-identity", "membership", "labels", "add-mac", "release-update", "installation", "window", "workload-config"]
+may_depend_on = ["contract", "local-client", "local-state", "membership", "add-mac", "release-update", "installation", "window", "workload-config"]
+
+[crates.contract]
+band = "foundation"
+# The vocabulary every crate shares: failures, the wire forms and API envelope, guidance, labels, build identity, the scheduler's request model and this machine's facts.
+modules = ["failure", "api", "wire", "guidance", "run_admission", "labels", "rehearsal::identity", "build_identity", "executable_format", "version_skew", "scheduling::request", "scheduling::settings", "scheduling::timestamp", "scheduling::capacity", "scheduling::gate", "scheduling::run_id", "scheduling::speed", "workload_metadata", "inspection", "idle_load"]

@@ -12,10 +12,10 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
-use elsecall_failure::Result;
+use elsecall_contract::api;
+use elsecall_contract::failure::Result;
 use elsecall_fleet::fleet::{Fleet, PlacementAuthority};
 use elsecall_peer_transport::peer_client;
-use elsecall_wire::api;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};
 #[derive(Clone)]
@@ -46,7 +46,7 @@ async fn local(State(state): State<Local>, body: Bytes) -> Response {
                 .map_err(|_| invalid("Invalid rehearsal operation."))?;
             let roster = state.fleet.roster()?;
             if state.fleet.name_in(&roster) != roster.master().name {
-                return Err(elsecall_failure::Failure::new(
+                return Err(elsecall_contract::failure::Failure::new(
                     "not_master",
                     "Rehearsal must be orchestrated on the master.",
                     "Run elsecall rehearse on the recorded master.",

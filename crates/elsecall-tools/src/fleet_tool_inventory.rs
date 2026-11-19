@@ -14,7 +14,7 @@ use crate::{
     tool_inventory::{Inventory, ToolManager},
     xcodes::XcodesCli,
 };
-use elsecall_failure::{Failure, is_code};
+use elsecall_contract::failure::{Failure, is_code};
 use elsecall_fleet::fleet::Fleet;
 use elsecall_membership::roster::{Member, MemberName};
 use elsecall_peer_transport::peer_client;
@@ -220,7 +220,7 @@ impl MemberUnavailable {
     }
 
     fn version_skew_between(member: &MemberName, theirs: &str, ours: &str) -> Self {
-        let generated = elsecall_build_identity::version_skew::skewed(theirs, ours);
+        let generated = elsecall_contract::version_skew::skewed(theirs, ours);
         Self {
             code: generated.code,
             message: format!(
@@ -303,7 +303,7 @@ fn client_budget_expired(failure: &Failure) -> bool {
 
 fn build_id(failure: &Failure, field: &str) -> Option<String> {
     let text = failure.details.as_ref()?.get(field)?.as_str()?;
-    text.parse::<elsecall_build_identity::build_identity::BuildId>()
+    text.parse::<elsecall_contract::build_identity::BuildId>()
         .ok()?;
     Some(text.to_owned())
 }
@@ -501,8 +501,7 @@ mod tests {
         );
         assert!(timeout.message.contains("did not report"));
 
-        let skew =
-            elsecall_build_identity::version_skew::skewed("0123456789abcdef", "fedcba9876543210");
+        let skew = elsecall_contract::version_skew::skewed("0123456789abcdef", "fedcba9876543210");
         let mut details = skew
             .details
             .clone()

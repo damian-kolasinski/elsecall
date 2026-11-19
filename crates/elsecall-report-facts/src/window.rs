@@ -1,7 +1,7 @@
 //! The period a report covers, and the widths it compares members' load in.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_scheduling::records::RETENTION;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use std::time::Duration;
 
 const MINUTE_MS: u64 = 60_000;

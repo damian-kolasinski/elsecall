@@ -1,5 +1,5 @@
 //! Time estimates: default hold limits and when a busy member may have room.
-use elsecall_scheduling_model::capacity::Cores;
+use elsecall_contract::scheduling_model::capacity::Cores;
 use std::time::Duration;
 
 /// A run should fit typical agent tool-call limits of about ten minutes.

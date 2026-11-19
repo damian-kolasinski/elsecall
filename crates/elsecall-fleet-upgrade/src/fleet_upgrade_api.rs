@@ -13,7 +13,7 @@ use axum::{
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_api_response::failure;
-use elsecall_failure::Failure;
+use elsecall_contract::failure::Failure;
 use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet, UpgradeAuthority};
 use elsecall_secure_channel::{Ephemeral, SecureStream};
 use hyper_util::rt::TokioIo;
@@ -118,7 +118,7 @@ async fn attach(
 
 async fn status(Extension(upgrades): Extension<Arc<Upgrades>>) -> Response {
     match tokio::task::spawn_blocking(move || upgrades.status()).await {
-        Ok(Ok(state)) => Json(elsecall_wire::api::Response::new(state)).into_response(),
+        Ok(Ok(state)) => Json(elsecall_contract::api::Response::new(state)).into_response(),
         Ok(Err(error)) => failure(StatusCode::SERVICE_UNAVAILABLE, error),
         Err(_) => failure(
             StatusCode::INTERNAL_SERVER_ERROR,

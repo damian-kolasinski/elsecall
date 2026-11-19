@@ -1,8 +1,8 @@
 //! Admission as an upgrade sees it: the scheduler's work in flight that a restart
 //! would cut short, and its holds, behind the upgrade's `MemberWork` port.
 use crate::fleet_upgrade::member::{MemberWork, WorkInFlight, WorkKind, WorkState};
+use elsecall_contract::scheduling_model::request::Kind;
 use elsecall_scheduling::service::Scheduler;
-use elsecall_scheduling_model::request::Kind;
 use std::sync::Arc;
 
 pub struct SchedulerWork(pub Arc<Scheduler>);

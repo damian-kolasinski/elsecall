@@ -4,8 +4,8 @@ use crate::{
     estimates::{self, Holding},
     load::Gate,
 };
-use elsecall_failure::Failure;
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::Failure;
+use elsecall_contract::scheduling_model::{
     capacity::Cores, request::Kind, run_id::RunId, timestamp::Timestamp,
 };
 use serde::Serialize;

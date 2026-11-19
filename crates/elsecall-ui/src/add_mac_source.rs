@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 
 use elsecall_add_mac::add_mac::{AddReport, Event};
 use elsecall_add_mac::nearby_macs::NearbyMac;
-use elsecall_failure::Failure;
+use elsecall_contract::failure::Failure;
 use rune::Waker;
 
 use crate::add_mac_flow::{AddRequest, AddUpdate};

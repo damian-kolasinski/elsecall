@@ -10,7 +10,7 @@ use super::{
     ReleaseCatalog, ReleaseDownload,
     local_channel::{LocalChannel, LocalDownload, Packslip},
 };
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_local_state::paths::Paths;
 use std::sync::Arc;
 
@@ -49,7 +49,7 @@ impl Channel {
 #[cfg(feature = "local-release-channel")]
 mod local {
     use super::LocalChannel;
-    use elsecall_failure::Result;
+    use elsecall_contract::failure::Result;
 
     /// Lets packaging tell this build from a publishable one; see
     /// `distribution/package.py`.

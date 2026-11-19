@@ -7,8 +7,8 @@
 //!
 //! This is placement's port; the adapter over configuration sync lives outside
 //! scheduling. Records keep paths, counts and sizes only, never values.
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use futures_util::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +26,7 @@ pub trait PreRunSync: Send + Sync {
     fn bring_up_to_date_for(
         &self,
         member: &str,
-        _run_id: &elsecall_scheduling_model::run_id::RunId,
+        _run_id: &elsecall_contract::scheduling_model::run_id::RunId,
     ) -> BoxFuture<'static, Result<Synced>> {
         self.bring_up_to_date(member)
     }

@@ -4,7 +4,7 @@ use crate::{
     processes::ProcessIdentity,
     record::{Outcome, Record, State},
 };
-use elsecall_scheduling_model::{capacity::Cores, run_id::RunId, timestamp::Timestamp};
+use elsecall_contract::scheduling_model::{capacity::Cores, run_id::RunId, timestamp::Timestamp};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A surviving grant and the nested grants that share its capacity.
@@ -55,13 +55,13 @@ pub fn plan(
         }
         if record.workload.is_some() && record.plan_observation.is_none() {
             record.plan_observation = Some(if record.state == State::Running {
-                elsecall_scheduling_model::workload_metadata::Observation::Censored {
+                elsecall_contract::scheduling_model::workload_metadata::Observation::Censored {
                     coverage: None,
                     reason:
-                        elsecall_scheduling_model::workload_metadata::CensorReason::ServiceRestart,
+                        elsecall_contract::scheduling_model::workload_metadata::CensorReason::ServiceRestart,
                 }
             } else {
-                elsecall_scheduling_model::workload_metadata::Observation::Unknown {}
+                elsecall_contract::scheduling_model::workload_metadata::Observation::Unknown {}
             });
         }
         record.outcome = Some(match record.state {
@@ -99,7 +99,7 @@ pub fn plan(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elsecall_scheduling_model::request::{Kind, Placement, Urgency};
+    use elsecall_contract::scheduling_model::request::{Kind, Placement, Urgency};
 
     fn process(pid: u32) -> ProcessIdentity {
         ProcessIdentity { pid, started_us: 1 }

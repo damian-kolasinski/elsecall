@@ -15,7 +15,7 @@ workspace = true
 [dependencies]
 base64.workspace = true
 ed25519-dalek.workspace = true
-elsecall-failure.workspace = true
+elsecall-contract.workspace = true
 elsecall-local-state.workspace = true
 elsecall-secure-channel.workspace = true
 elsecall-tailnet.workspace = true

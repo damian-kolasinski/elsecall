@@ -15,7 +15,7 @@ use crate::theme;
 use elsecall_add_mac::add_mac::AddReport;
 use elsecall_add_mac::nearby_macs::NearbyMac;
 use elsecall_add_mac::remote_mac::LoginLink;
-use elsecall_failure::Failure;
+use elsecall_contract::failure::Failure;
 use elsecall_membership::roster::Readiness;
 
 const SHEET_WIDTH: f32 = 680.0;

@@ -1,11 +1,11 @@
 //! `elsecall report`: its arguments, checked here, and the call to the service.
 use crate::report_api::ReportRequest;
 use clap::Args;
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use elsecall_report_facts::window::{MAXIMUM_PERIOD, invalid};
-use elsecall_scheduling_model::timestamp::Timestamp;
 use std::time::Duration;
 
 #[derive(Args, Debug)]

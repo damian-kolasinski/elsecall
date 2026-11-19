@@ -7,7 +7,9 @@ use axum::{
     routing::get,
 };
 use elsecall_admission::run_relay;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::api;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::inspection::Inspection;
 use elsecall_fleet::{fleet::Fleet, fleet_local_api, fleet_placement::FleetMembers};
 use elsecall_housekeeping::{
     fleet_callers::FleetCallers,
@@ -20,11 +22,9 @@ use elsecall_housekeeping::{
     },
 };
 use elsecall_local_state::{local_access, paths::Paths, private_files};
-use elsecall_machine::inspection::Inspection;
 use elsecall_membership::{member_key::MemberKey, membership_store::MembershipStore};
 use elsecall_placement::{placement_api, placement_host::PlacementHost};
 use elsecall_scheduling::service::{Adapters, Scheduler};
-use elsecall_wire::api;
 use elsecall_workspace::{copies::Copies, location::Locations, object_sources::ObjectSources};
 use std::{
     fs,
@@ -146,7 +146,7 @@ pub async fn serve_with_updates(
     }
     // Identify the build before anything could replace this executable, and name
     // it on every member request from now on.
-    let build = elsecall_build_identity::build_identity::announce()?;
+    let build = elsecall_contract::build_identity::announce()?;
     // Fail before binding, so an invalid setting is never silently ignored.
     // Broken fleet state must not take down the local API: status, machine and the
     // fleet commands' diagnosis keep working, and the member listener stays closed.
@@ -579,7 +579,7 @@ pub async fn serve_with_updates(
 
 async fn health(
     State(inspection): State<Arc<Inspection>>,
-) -> Json<api::Response<elsecall_machine::inspection::Health>> {
+) -> Json<api::Response<elsecall_contract::inspection::Health>> {
     Json(api::Response::new(inspection.health()))
 }
 async fn machine(State(inspection): State<Arc<Inspection>>) -> Response {

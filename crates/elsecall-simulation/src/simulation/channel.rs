@@ -3,7 +3,7 @@ use super::{
     model,
     world::{CopyState, World},
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_scheduling::{
     placed::{Members, OfferReply, PlacementOffer, Standing, Warmth},
     quote::{CopyQuote, Quote, QuoteRequest},

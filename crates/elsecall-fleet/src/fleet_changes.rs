@@ -4,7 +4,7 @@
 //! A change is computed from this member's roster, refused while another member is
 //! unreachable unless forced, recorded locally, then delivered to every other member.
 use crate::fleet::{Fleet, OfferOutcome, PeerStatus, PlacementAccepted};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_membership::{
     member_code,
     membership_store::Membership,

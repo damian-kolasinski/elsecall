@@ -1,9 +1,9 @@
 //! Durable simulator certificates and drift revocation. Passing days never clear
 //! a revocation: only a subsequent successful rehearsal can do that.
-use elsecall_build_identity::build_identity::{Build, Digest};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::build_identity::{Build, Digest};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_local_state::paths::Paths;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workload::trace::Trace;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -85,9 +85,9 @@ fn error(e: rusqlite::Error) -> Failure {
     )
 }
 pub fn certify(paths: &Paths, certificate: &Certificate) -> Result<()> {
-    if certificate.build != elsecall_build_identity::build_identity::this_build()?
+    if certificate.build != elsecall_contract::build_identity::this_build()?
         || certificate.fidelity["trusted_for_tuning"] != true
-        || !elsecall_rehearsal_identity::identity::valid_session(&certificate.rehearsal)
+        || !elsecall_contract::rehearsal_identity::identity::valid_session(&certificate.rehearsal)
         || certificate.expires_at.since(certificate.issued_at) > MAX_AGE
     {
         return Err(crate::rehearsal::invalid(
@@ -120,7 +120,7 @@ pub fn monitored(paths: &Paths, day: Timestamp) -> Result<bool> {
 }
 pub fn record_day(paths: &Paths, day: Timestamp, fidelity: &Value) -> Result<()> {
     let now = Timestamp::now();
-    let result = json!({"day":day,"checked_at":now,"build":elsecall_build_identity::build_identity::this_build()?,
+    let result = json!({"day":day,"checked_at":now,"build":elsecall_contract::build_identity::this_build()?,
         "status":match fidelity["status"].as_str(){Some("pass")=>"pass",Some("fail")=>"fail",_=>"not_checkable"},"fidelity":fidelity});
     let mut db = database(paths)?;
     let tx = db.transaction().map_err(error)?;
@@ -154,7 +154,7 @@ pub fn status(paths: &Paths) -> Result<Value> {
     let revoked: bool = db
         .query_row("SELECT EXISTS(SELECT 1 FROM revocation)", [], |r| r.get(0))
         .map_err(error)?;
-    let build = elsecall_build_identity::build_identity::this_build()?;
+    let build = elsecall_contract::build_identity::this_build()?;
     let current = certificate
         .as_ref()
         .is_some_and(|c| c.current(&build, Timestamp::now()));
@@ -232,7 +232,7 @@ mod tests {
     }
     #[test]
     fn certificates_expire_at_the_age_boundary_and_on_build_change() {
-        let build = elsecall_build_identity::build_identity::this_build().unwrap();
+        let build = elsecall_contract::build_identity::this_build().unwrap();
         let issued_at = Timestamp::from_millis(1000);
         let certificate = Certificate {
             rehearsal: "a".repeat(24),
@@ -283,7 +283,7 @@ mod tests {
             work_iterations: std::collections::BTreeMap::from([(id.clone(), 1000)]),
             session,
             source_digest: Digest::of(b"source"),
-            build: elsecall_build_identity::build_identity::this_build().unwrap(),
+            build: elsecall_contract::build_identity::this_build().unwrap(),
             load_factor: Default::default(),
             compress: 6.0,
             seed: 0,

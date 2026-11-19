@@ -6,7 +6,7 @@ use crate::{
     tool_inventory::{Manager, ToolName, ToolVersion},
     toolset::document::{Toolset, invalid},
 };
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_membership::roster::MemberName;
 use toml_edit::{DocumentMut, Entry, Item, Table, Value, value};
 

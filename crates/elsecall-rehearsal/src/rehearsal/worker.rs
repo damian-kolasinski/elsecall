@@ -5,9 +5,9 @@
 
 pub use elsecall_workload::format::{Calibration, logical_demand};
 pub async fn calibrate(
-    cores: elsecall_machine::inspection::CoreCounts,
-) -> elsecall_failure::Result<Calibration> {
-    use elsecall_failure::Failure;
+    cores: elsecall_contract::inspection::CoreCounts,
+) -> elsecall_contract::failure::Result<Calibration> {
+    use elsecall_contract::failure::Failure;
     let script = r#"use Time::HiRes qw(clock_gettime CLOCK_MONOTONIC CLOCK_PROCESS_CPUTIME_ID);
 my $start = clock_gettime(CLOCK_MONOTONIC); my $cpu_start = clock_gettime(CLOCK_PROCESS_CPUTIME_ID); my $x = 17; my $n = 0;
 while (clock_gettime(CLOCK_MONOTONIC) - $start < 0.25) {
@@ -108,7 +108,7 @@ exit($failed ? 124 : $exit);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elsecall_machine::inspection::CoreCounts;
+    use elsecall_contract::inspection::CoreCounts;
     #[test]
     fn converts_h1_weighted_demand_to_the_os_cpu_denominator() {
         assert_eq!(
@@ -167,7 +167,8 @@ mod progress_tests {
             .arg(script)
             .args(["0.7", "17", "0"])
             .arg(
-                (elsecall_scheduling_model::timestamp::Timestamp::now().millis() as f64 / 1000.0
+                (elsecall_contract::scheduling_model::timestamp::Timestamp::now().millis() as f64
+                    / 1000.0
                     + 20.0)
                     .to_string(),
             )
@@ -197,7 +198,7 @@ mod progress_tests {
     }
     #[tokio::test]
     async fn fixed_work_stretches_when_cpu_is_withheld_but_wall_lifetime_does_not() {
-        let c = calibrate(elsecall_machine::inspection::CoreCounts {
+        let c = calibrate(elsecall_contract::inspection::CoreCounts {
             performance: 1,
             efficiency: 0,
         })
@@ -239,7 +240,7 @@ mod cpu_tests {
     async fn slower_instruction_service_does_not_inflate_the_cpu_budget() {
         use elsecall_os_processes::process_usage;
         use std::{fs, process::Command};
-        let c = calibrate(elsecall_machine::inspection::CoreCounts {
+        let c = calibrate(elsecall_contract::inspection::CoreCounts {
             performance: 1,
             efficiency: 0,
         })
@@ -258,7 +259,8 @@ mod cpu_tests {
                 .arg(path)
                 .args(["0.5", "17", "0"])
                 .arg(
-                    (elsecall_scheduling_model::timestamp::Timestamp::now().millis() as f64
+                    (elsecall_contract::scheduling_model::timestamp::Timestamp::now().millis()
+                        as f64
                         / 1000.0
                         + 20.0)
                         .to_string(),
@@ -280,7 +282,7 @@ mod cpu_tests {
     async fn fractional_and_multicore_fixed_work_consumes_the_calibrated_cpu_budget() {
         use elsecall_os_processes::process_usage;
         use std::{fs, process::Command};
-        let c = calibrate(elsecall_machine::inspection::CoreCounts {
+        let c = calibrate(elsecall_contract::inspection::CoreCounts {
             performance: 4,
             efficiency: 4,
         })
@@ -292,7 +294,7 @@ mod cpu_tests {
         for target in [0.25, 1.25] {
             let logical = logical_demand(
                 target,
-                elsecall_machine::inspection::CoreCounts {
+                elsecall_contract::inspection::CoreCounts {
                     performance: 4,
                     efficiency: 4,
                 },
@@ -303,7 +305,8 @@ mod cpu_tests {
                 .arg(&path)
                 .args(["1.5", "17", "0"])
                 .arg(
-                    (elsecall_scheduling_model::timestamp::Timestamp::now().millis() as f64
+                    (elsecall_contract::scheduling_model::timestamp::Timestamp::now().millis()
+                        as f64
                         / 1000.0
                         + 30.0)
                         .to_string(),

@@ -1,6 +1,6 @@
 //! Complete lifecycle records, reopened under a process-shared lock on every
 //! write. No inherited descriptor can keep writing into a rotated archive.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_local_state::private_files;
 use std::{
     fs::{self, OpenOptions},

@@ -1,6 +1,6 @@
 //! Acceptance arithmetic shared by measured comparisons and offline proposals.
 use crate::rehearsal::worker::Calibration;
-use elsecall_build_identity::build_identity::{Build, Digest};
+use elsecall_contract::build_identity::{Build, Digest};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -34,7 +34,7 @@ impl Noise {
             && !self.ideals.is_empty()
             && self.ideals.len() <= 10_000
             && self.ideals.iter().all(|(id, v)| {
-                elsecall_scheduling_model::run_id::RunId::parse(id).is_some()
+                elsecall_contract::scheduling_model::run_id::RunId::parse(id).is_some()
                     && v.is_none_or(|v| v.is_finite() && v > 0.0)
             })
             && self.baseline_settings.len() == self.calibration.len()
@@ -50,12 +50,12 @@ impl Noise {
                 .all(|m| m.parse::<elsecall_membership::roster::MemberName>().is_ok())
             && self.calibration.values().all(Calibration::valid)
     }
-    pub fn read(path: &std::path::Path) -> elsecall_failure::Result<Self> {
+    pub fn read(path: &std::path::Path) -> elsecall_contract::failure::Result<Self> {
         use std::io::Read;
         let mut bytes = Vec::new();
         std::fs::File::open(path)
             .and_then(|f| f.take(32 * 1024 * 1024 + 1).read_to_end(&mut bytes))
-            .map_err(|e| elsecall_failure::Failure::io("Read A/A noise", e))?;
+            .map_err(|e| elsecall_contract::failure::Failure::io("Read A/A noise", e))?;
         if bytes.len() > 32 * 1024 * 1024 {
             return Err(crate::rehearsal::invalid("Noise file exceeds 32 MiB."));
         }
@@ -127,7 +127,7 @@ mod tests {
         let noise = Noise {
             noise_version: 1,
             source_digest: Digest::of(b"fixture"),
-            build: elsecall_build_identity::build_identity::this_build().unwrap(),
+            build: elsecall_contract::build_identity::this_build().unwrap(),
             seed: 0,
             compress: 1.0,
             load_factor: Default::default(),

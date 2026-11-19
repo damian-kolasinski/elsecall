@@ -13,7 +13,7 @@ use elsecall_add_mac::{
         Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant,
     },
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_local_state::paths::Paths;
 use elsecall_tailnet::tailscale_bottle::Bottle;
 use members::{TestMember, free_port};

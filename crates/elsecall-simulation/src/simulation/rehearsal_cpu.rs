@@ -1,7 +1,7 @@
 //! Forensic replay: inject measured CPU service cost, never observed waits or
 //! wall runtimes. This explains an old worker's calibration error without
 //! granting predictive trust to a model fitted on the evaluated population.
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_workload::trace::Trace;
 use serde_json::{Value, json};
 

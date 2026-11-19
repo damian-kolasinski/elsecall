@@ -5,8 +5,8 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use elsecall_failure::Failure;
-use elsecall_wire::api;
+use elsecall_contract::api;
+use elsecall_contract::failure::Failure;
 
 pub fn failure(status: StatusCode, error: Failure) -> Response {
     (status, Json(api::ErrorResponse::new(error))).into_response()

@@ -1,8 +1,8 @@
 //! Read-only placement counterfactuals. Keep measured work, label families and
 //! urgency fixed; only the placement component of current consumer rules applies.
 use clap::Args;
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::request::Placement;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::request::Placement;
 use elsecall_workload::trace::Trace;
 use elsecall_workload_config::workload_settings::RulePlacement;
 use std::{io::Read, path::PathBuf};
@@ -62,7 +62,7 @@ impl ReplayPlacement {
                     if r.fact.internal
                         || elsecall_workload::trace::internal(r)
                         || r.fact.synthetic
-                        || elsecall_labels::rules::synthetic(r.fact.label.as_deref())
+                        || elsecall_contract::labels::rules::synthetic(r.fact.label.as_deref())
                     {
                         continue;
                     }
@@ -74,7 +74,7 @@ impl ReplayPlacement {
                     // Consumer default placement is pinned. Deferrable work is
                     // pinned by the admission contract even in a counterfactual.
                     r.placement_request = if r.fact.kind
-                        == elsecall_scheduling_model::request::Kind::Run
+                        == elsecall_contract::scheduling_model::request::Kind::Run
                         && !r.fact.deferrable
                         && rule.and_then(|r| r.placement) == Some(RulePlacement::Placeable)
                     {
@@ -119,8 +119,8 @@ pub fn split(trace: &Trace) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use crate::replay_placement::*;
+    use elsecall_contract::scheduling_model::timestamp::Timestamp;
     use elsecall_scheduling::fixtures;
-    use elsecall_scheduling_model::timestamp::Timestamp;
     use elsecall_workload::trace::Request;
     fn trace() -> Trace {
         let mut r = Request::of(&fixtures::pinned(1, "acme test Checkout", "master", 1.0)).unwrap();

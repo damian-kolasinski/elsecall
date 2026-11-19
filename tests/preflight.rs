@@ -1,5 +1,5 @@
 //! Offline readiness over the production planner, simulator and tuner.
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_tuning::tuning_preflight::{self, Options};
 use elsecall_workload::trace::Trace;
 use serde_json::{Value, json};
@@ -195,7 +195,7 @@ fn same_request_reports_terminal_reference_demand_and_hold_problems_together() {
     r.fact.resources.as_mut().unwrap().ended_at = None;
     r.outcome = None;
     r.hold_limit = None;
-    r.urgency = elsecall_scheduling_model::request::Urgency::Interactive {
+    r.urgency = elsecall_contract::scheduling_model::request::Urgency::Interactive {
         hold_limit_ms: None,
     };
     let result = tuning_preflight::check(source, options()).unwrap();

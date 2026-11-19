@@ -15,7 +15,7 @@ workspace = true
 [dependencies]
 axum.workspace = true
 clap.workspace = true
-elsecall-failure.workspace = true
+elsecall-contract.workspace = true
 elsecall-fleet.workspace = true
 elsecall-load-log.workspace = true
 elsecall-local-client.workspace = true
@@ -24,8 +24,6 @@ elsecall-rehearsal.workspace = true
 elsecall-report-facts.workspace = true
 elsecall-reporting.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-scheduling-model.workspace = true
-elsecall-wire.workspace = true
 elsecall-workload.workspace = true
 libc.workspace = true
 serde.workspace = true

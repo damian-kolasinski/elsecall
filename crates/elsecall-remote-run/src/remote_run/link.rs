@@ -3,8 +3,8 @@
 //! the stream ending, as a lost connection.
 
 use crate::remote_run::protocol::RunMessage;
-use elsecall_failure::{Failure, Result};
-use elsecall_wire::wire::{self, Frame};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::wire::{self, Frame};
 use elsecall_workspace::sync::{self, Received, SyncMessage};
 use std::{
     sync::{Arc, Mutex},

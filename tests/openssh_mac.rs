@@ -51,7 +51,7 @@ async fn the_adapter_reads_installs_and_authorizes_on_a_real_mac() {
     };
     let installed = mac.install(&build).await.unwrap();
     eprintln!("installed: {installed}");
-    let wanted = elsecall_build_identity::build_identity::Digest::of_file(elsecall)
+    let wanted = elsecall_contract::build_identity::Digest::of_file(elsecall)
         .unwrap()
         .build_id()
         .to_string();

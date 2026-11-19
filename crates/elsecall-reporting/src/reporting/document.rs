@@ -9,8 +9,9 @@ use crate::reporting::{
     requests::{self, FleetBusy, PlacementMix, Requests, Waits, Work},
     run_phases::{self, PhaseMetrics},
 };
-use elsecall_failure::Failure;
-use elsecall_labels::pattern as label_pattern;
+use elsecall_contract::failure::Failure;
+use elsecall_contract::labels::pattern as label_pattern;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_load_log::buckets::Bucket;
 use elsecall_report_facts::{
     facts::Fact,
@@ -18,7 +19,6 @@ use elsecall_report_facts::{
     window::Window,
 };
 use elsecall_scheduling::parameters::Parameters;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 
@@ -203,12 +203,12 @@ pub fn document(query: &Query, gathered: &Gathered) -> Document {
     let mut gathered = gathered.clone();
     // Machine load remains actual fleet load. Request metrics and learned
     // backtests exclude synthetic labels, including when --label is supplied.
-    gathered
-        .facts
-        .retain(|f| !f.synthetic && !elsecall_labels::rules::synthetic(f.label.as_deref()));
+    gathered.facts.retain(|f| {
+        !f.synthetic && !elsecall_contract::labels::rules::synthetic(f.label.as_deref())
+    });
     gathered
         .leftovers
-        .retain(|f| !elsecall_labels::rules::synthetic(f.label.as_deref()));
+        .retain(|f| !elsecall_contract::labels::rules::synthetic(f.label.as_deref()));
     // Requests of the period and label; a member's work and waits are the
     // requests that ran there, which the member filter always keeps.
     let labelled: Vec<Fact> = gathered

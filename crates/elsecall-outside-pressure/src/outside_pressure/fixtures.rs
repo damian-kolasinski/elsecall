@@ -1,5 +1,5 @@
 //! Fixed outside-pressure episodes the report's tests compute from.
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use std::time::Duration;
 
 /// A blocked episode by memory pressure from `since` to `until` (`None` while it
@@ -17,7 +17,7 @@ pub fn episode(
     crate::outside_pressure::store::Episode {
         blocked: Blocked {
             reason: Reason::MemoryPressure {
-                level: elsecall_machine::inspection::MemoryPressure::Warning,
+                level: elsecall_contract::inspection::MemoryPressure::Warning,
             },
             since,
             attributed_at: since.after(Duration::from_secs(300)),

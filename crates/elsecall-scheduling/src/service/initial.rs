@@ -8,7 +8,7 @@ use crate::{
     processes,
     record::{Record, State},
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use std::{collections::BTreeSet, time::Duration};
 
 impl Scheduler {

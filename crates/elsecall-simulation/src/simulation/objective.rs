@@ -1,6 +1,6 @@
 //! Per-request normalized scheduling objective. No ratio of aggregate latencies.
 use super::{engine::Trial, metrics::distribution};
-use elsecall_scheduling_model::{request::Kind, timestamp::Timestamp};
+use elsecall_contract::scheduling_model::{request::Kind, timestamp::Timestamp};
 use elsecall_workload::trace::{Trace, TraceOutcome};
 use serde_json::{Value, json};
 
@@ -176,7 +176,7 @@ mod tests {
         trace.requests.truncate(2);
         let start = trace.since;
         for (i, r) in trace.requests.iter_mut().enumerate() {
-            r.fact.size = elsecall_scheduling_model::capacity::Cores::from_millis(250);
+            r.fact.size = elsecall_contract::scheduling_model::capacity::Cores::from_millis(250);
             r.fact.requested_at = start;
             r.fact.member = Some("a".into());
             r.fact.deferrable = false;
@@ -188,8 +188,8 @@ mod tests {
         }
         trace.rehearsal = Some(Recording {
             session: "a".repeat(24),
-            source_digest: elsecall_build_identity::build_identity::Digest::of(b"fixture"),
-            build: elsecall_build_identity::build_identity::this_build().unwrap(),
+            source_digest: elsecall_contract::build_identity::Digest::of(b"fixture"),
+            build: elsecall_contract::build_identity::this_build().unwrap(),
             load_factor: Default::default(),
             compress: 1.0,
             seed: 0,

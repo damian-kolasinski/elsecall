@@ -8,12 +8,12 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
-use elsecall_failure::Result;
+use elsecall_contract::api;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_fleet::fleet::Fleet;
 use elsecall_report_facts::window::{Window, invalid};
 use elsecall_reporting::{report_api::Reporter, reporting::gathering::Source};
-use elsecall_scheduling_model::timestamp::Timestamp;
-use elsecall_wire::api;
 use elsecall_workload::trace::Page;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};

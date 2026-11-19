@@ -5,7 +5,7 @@
 //! directory it created. OpenSSH runs this executable as its `SSH_ASKPASS`
 //! program, with the socket's path in `ELSECALL_ASKPASS_SOCKET`; that process
 //! reads the password from the socket and prints it for OpenSSH.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use std::{
     io::{Read, Write},
     os::unix::net::UnixStream,

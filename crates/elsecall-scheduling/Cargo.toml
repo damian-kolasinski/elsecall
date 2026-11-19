@@ -17,14 +17,10 @@ workspace = true
 test-support = []
 
 [dependencies]
-elsecall-build-identity.workspace = true
-elsecall-failure.workspace = true
-elsecall-labels.workspace = true
+elsecall-contract.workspace = true
 elsecall-load-log.workspace = true
-elsecall-machine.workspace = true
 elsecall-peer-diagnostics.workspace = true
 elsecall-peer-transport.workspace = true
-elsecall-scheduling-model.workspace = true
 elsecall-service-log.workspace = true
 elsecall-sqlite-retention.workspace = true
 futures-util.workspace = true

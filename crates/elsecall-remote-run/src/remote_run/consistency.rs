@@ -6,7 +6,7 @@
 //! the warnings, naming only what its own declaration names, and tells the member
 //! which names differed. The caller's fingerprints never leave it, and only the
 //! names of mismatches are kept. A mismatch is a warning; the run proceeds.
-use elsecall_wire::wire;
+use elsecall_contract::wire;
 use elsecall_workload_config::workload_settings::{
     self, ConfigurationLocation, MAXIMUM_LOCATIONS, WorkloadSettings,
 };

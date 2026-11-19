@@ -6,10 +6,10 @@ use super::{
     sampling::{Memory, Owner, ProcessSampler, ProcessUse},
 };
 use crate::outside_pressure::Reason;
-use elsecall_failure::Result;
-use elsecall_machine::inspection::MemoryPressure;
+use elsecall_contract::failure::Result;
+use elsecall_contract::inspection::MemoryPressure;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_scheduling::{load, parameters::Parameters};
-use elsecall_scheduling_model::timestamp::Timestamp;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,

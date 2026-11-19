@@ -1,5 +1,5 @@
 //! Time at the scheduling boundary, shared by deadlines, records and learning.
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 
 pub trait Clock: Send + Sync {
     fn now(&self) -> Timestamp;

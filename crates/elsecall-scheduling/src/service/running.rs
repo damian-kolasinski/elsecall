@@ -7,8 +7,8 @@ use crate::{
     record::{MAXIMUM_CPU_MS, Outcome},
     run_phases::{RemoteFailurePhase, RunPhases},
 };
-use elsecall_failure::Result;
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::{
     request::{self, Kind},
     run_id::RunId,
 };
@@ -103,7 +103,7 @@ impl Scheduler {
         &self,
         peer: u32,
         id: &RunId,
-        observation: elsecall_scheduling_model::workload_metadata::Observation,
+        observation: elsecall_contract::scheduling_model::workload_metadata::Observation,
     ) -> Result<()> {
         let lineage = processes::lineage(&*self.processes, peer);
         let mut book = self.book();

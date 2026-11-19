@@ -1,5 +1,5 @@
 //! Reads one file of a local channel with curl, over HTTP(S) or from a directory.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use std::{path::Path, time::Duration};
 
 /// Reads `url` into `output` when given, else into memory, refusing more than

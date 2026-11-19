@@ -2,8 +2,8 @@
 mod proposal;
 mod search;
 mod space;
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_simulation::simulation::{self, Options};
 use elsecall_workload::trace::Trace;
 use serde_json::{Value, json};
@@ -267,7 +267,7 @@ pub fn tune(trace: Trace, held_out: Option<Trace>, options: TuneOptions) -> Resu
             .is_some_and(|h| h["fidelity_evidence"]["trusted_for_tuning"] == true);
     let recorded_day_certificate=trusted.then(|| {
         let issued_at=Timestamp::now();
-        json!({"basis":"recorded_day_and_held_out","trace_digest":fidelity["trace_digest"],"held_out_trace_digest":held.as_ref().map(|h|&h["baseline"]["trace_digest"]),"build":fidelity["code_build"],"issued_at":issued_at,"expires_at":issued_at.after(elsecall_rehearsal::tuning_trust::MAX_AGE),"fidelity_digest":elsecall_build_identity::build_identity::Digest::of(&serde_json::to_vec(&fidelity["fidelity"]).expect("fidelity serializes")),"held_out_fidelity_digest":held.as_ref().map(|h|elsecall_build_identity::build_identity::Digest::of(&serde_json::to_vec(&h["fidelity_evidence"]).expect("fidelity serializes")))})
+        json!({"basis":"recorded_day_and_held_out","trace_digest":fidelity["trace_digest"],"held_out_trace_digest":held.as_ref().map(|h|&h["baseline"]["trace_digest"]),"build":fidelity["code_build"],"issued_at":issued_at,"expires_at":issued_at.after(elsecall_rehearsal::tuning_trust::MAX_AGE),"fidelity_digest":elsecall_contract::build_identity::Digest::of(&serde_json::to_vec(&fidelity["fidelity"]).expect("fidelity serializes")),"held_out_fidelity_digest":held.as_ref().map(|h|elsecall_contract::build_identity::Digest::of(&serde_json::to_vec(&h["fidelity_evidence"]).expect("fidelity serializes")))})
     });
     let sensitivity = sensitivity(&space, &candidates);
     let alternatives = order

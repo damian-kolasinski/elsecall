@@ -3,8 +3,8 @@
 mod diagnostics;
 mod members;
 mod processes;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_replay::replay_placement::{Mode, ReplayPlacement};
-use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_tuning::busy_hour_calibration::{Target, calibrate};
 use elsecall_workload::trace::Trace;
 use members::{TestMember, enrol};
@@ -248,7 +248,7 @@ fn exercise(mode: Mode) {
             .placement_replay
             .as_mut()
             .unwrap()
-            .rules_digest = elsecall_build_identity::build_identity::Digest::of(
+            .rules_digest = elsecall_contract::build_identity::Digest::of(
             b"different rules with the same placement",
         );
         let error = elsecall_tuning::tuning_preflight::check(different_rules, preflight_options())

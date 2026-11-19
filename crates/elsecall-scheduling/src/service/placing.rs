@@ -15,8 +15,8 @@ use crate::{
     quote::{self, HeldWork},
     record::{Candidate, Decision, Outcome, SizeBasis, Verdict},
 };
-use elsecall_failure::Failure;
-use elsecall_scheduling_model::{run_id::RunId, timestamp::Timestamp};
+use elsecall_contract::failure::Failure;
+use elsecall_contract::scheduling_model::{run_id::RunId, timestamp::Timestamp};
 use std::{collections::BTreeSet, sync::Weak, time::Duration};
 use tokio::time::Instant;
 use tokio::{sync::oneshot, task::AbortHandle};
@@ -605,7 +605,9 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
                     workload_contract, ..
                 }) if record.workload.is_some()
                     && workload_contract
-                        != Some(elsecall_scheduling_model::workload_metadata::VERSION) =>
+                        != Some(
+                            elsecall_contract::scheduling_model::workload_metadata::VERSION,
+                        ) =>
                 {
                     Err(Failure::new(
                         "workload_contract_unsupported",

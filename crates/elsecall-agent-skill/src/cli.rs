@@ -7,7 +7,7 @@ use super::{
     targets::{self, Done, Outcome, Target},
 };
 use clap::{Args, Subcommand};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_local_state::paths::Paths;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};

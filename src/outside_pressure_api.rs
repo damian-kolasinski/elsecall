@@ -8,9 +8,9 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
-use elsecall_failure::Failure;
+use elsecall_contract::api;
+use elsecall_contract::failure::Failure;
 use elsecall_outside_pressure::outside_pressure::{BlockedReport, Warning, WarningReport};
-use elsecall_wire::api;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

@@ -1,8 +1,8 @@
 //! Freeze per-request rehearsal inputs once, using the same contract for
 //! workload selection and execution planning.
 use super::{invalid, plan::Arrival, protocol::Launch};
-use elsecall_failure::Result;
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::{
     request::{Kind, Placement, Urgency},
     timestamp::Timestamp,
 };
@@ -50,10 +50,10 @@ impl<'a> Inputs<'a> {
     fn label(&self, r: &Request) -> Result<String> {
         let label = format!(
             "{}{}",
-            elsecall_labels::rules::PREFIX,
+            elsecall_contract::labels::rules::PREFIX,
             r.fact.label.as_deref().unwrap_or("unlabelled")
         );
-        if label.chars().count() > elsecall_labels::rules::label_limit(&label) {
+        if label.chars().count() > elsecall_contract::labels::rules::label_limit(&label) {
             return Err(invalid(
                 "A source label is too long for the reserved namespace.",
             ));

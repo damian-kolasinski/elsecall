@@ -5,7 +5,7 @@ use crate::housekeeping::{
     callers::Callers,
     exchange::{Answer, Question, ROUTE},
 };
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_fleet::fleet::Fleet;
 use elsecall_peer_transport::peer_client;
 use futures_util::future::BoxFuture;

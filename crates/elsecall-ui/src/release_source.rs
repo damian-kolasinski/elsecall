@@ -42,7 +42,7 @@ impl SocketReleases {
 }
 #[derive(serde::Deserialize)]
 struct WindowOffer {
-    build: Option<elsecall_build_identity::build_identity::BuildId>,
+    build: Option<elsecall_contract::build_identity::BuildId>,
 }
 impl ReleaseSource for SocketReleases {
     fn snapshot(&self) -> Result<ReleaseSnapshot, String> {

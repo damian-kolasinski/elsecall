@@ -1,7 +1,7 @@
 //! Bounded file input and CLI routing for the offline tuner.
 use crate::tuning::{self, Space, TuneOptions};
 use clap::{Args, Subcommand};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_simulation::{evaluation_day::day, workload_input::read as read_trace};
 use std::{io::Read, path::PathBuf};
 #[derive(Subcommand, Debug)]
@@ -103,13 +103,14 @@ pub async fn current_trust(mut result: serde_json::Value) -> serde_json::Value {
     if !paths.data.join("tuning-evidence.sqlite").exists() && !paths.socket().exists() {
         return result;
     }
-    let evidence: elsecall_failure::Result<serde_json::Value> = elsecall_local_client::post(
-        &paths.socket(),
-        "/v1/tuning/trust",
-        &json!({}),
-        elsecall_local_client::Wait::Bounded,
-    )
-    .await;
+    let evidence: elsecall_contract::failure::Result<serde_json::Value> =
+        elsecall_local_client::post(
+            &paths.socket(),
+            "/v1/tuning/trust",
+            &json!({}),
+            elsecall_local_client::Wait::Bounded,
+        )
+        .await;
     let mut evidence = evidence
         .unwrap_or_else(|e| json!({"trusted_for_tuning":false,"incomplete":true,"error":e.code}));
     let matches = certificate_build_matches(&evidence, &result["baseline"]["code_build"]);

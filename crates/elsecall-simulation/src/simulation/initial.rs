@@ -4,7 +4,8 @@ use super::{
     adapters::{Processes, workspace},
     engine::settings,
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
 use elsecall_scheduling::{
     messages::Grant,
     placed::{PlacedRecord, Reached, Side, SyncSummary},
@@ -12,7 +13,6 @@ use elsecall_scheduling::{
     record::{Record, State},
     service::Scheduler,
 };
-use elsecall_scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
 use elsecall_workload::trace::{Request, Trace};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -255,6 +255,10 @@ mod tests {
         adapters::{Channel, ConfigurationSync, Ids, Observation, Registry, Speed, World},
         model::Envelope,
     };
+    use elsecall_contract::scheduling_model::{
+        capacity::Cores,
+        request::{Kind, Placement},
+    };
     use elsecall_load_log::LoadLog;
     use elsecall_scheduling::{
         clock::{Clock, VirtualClock},
@@ -263,10 +267,6 @@ mod tests {
         placed::{OfferReply, PlacementOffer, Warmth},
         record::Outcome,
         service::{Adapters, Driving, Runtime, SchedulerConfiguration},
-    };
-    use elsecall_scheduling_model::{
-        capacity::Cores,
-        request::{Kind, Placement},
     };
     use std::sync::Mutex;
     use tokio::sync::mpsc;
@@ -371,7 +371,7 @@ mod tests {
                     machine: Arc::new(Observation {
                         world: world.clone(),
                         member: member.member.clone(),
-                        cores: elsecall_machine::inspection::CoreCounts {
+                        cores: elsecall_contract::inspection::CoreCounts {
                             performance: 2,
                             efficiency: 0,
                         },

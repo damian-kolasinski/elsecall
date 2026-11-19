@@ -13,11 +13,9 @@ doctest = false
 workspace = true
 
 [dependencies]
-elsecall-build-identity.workspace = true
-elsecall-failure.workspace = true
+elsecall-contract.workspace = true
 elsecall-local-client.workspace = true
 elsecall-local-state.workspace = true
-elsecall-machine.workspace = true
 elsecall-os-processes.workspace = true
 elsecall-scheduling.workspace = true
 serde.workspace = true

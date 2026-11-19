@@ -15,13 +15,11 @@ workspace = true
 [dependencies]
 base64.workspace = true
 elsecall-add-mac.workspace = true
-elsecall-failure.workspace = true
+elsecall-contract.workspace = true
 elsecall-installation.workspace = true
 elsecall-local-state.workspace = true
-elsecall-machine.workspace = true
 elsecall-outside-pressure.workspace = true
 elsecall-process.workspace = true
-elsecall-scheduling-model.workspace = true
 elsecall-service-log.workspace = true
 elsecall-tailnet.workspace = true
 elsecall-window.workspace = true

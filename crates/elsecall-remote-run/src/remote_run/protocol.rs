@@ -7,8 +7,8 @@
 //! drained, the member sends `Exited`, then the outputs from its snapshot at exit;
 //! the caller says what did not come back (`Returned`) and ends the run with `Done`.
 use crate::remote_run::consistency::{self, Fingerprints, Mismatches};
-use elsecall_failure::Failure;
-use elsecall_wire::wire;
+use elsecall_contract::failure::Failure;
+use elsecall_contract::wire;
 use elsecall_workspace::{
     not_returned::{Cause, NotReturned},
     outputs::MAXIMUM_DECLARED,
@@ -183,12 +183,12 @@ pub use elsecall_peer_diagnostics::StreamFailure;
 /// assertion independently, so it cannot erase valid exit/CPU/phase facts.
 pub fn received_observation(
     value: Option<Box<serde_json::value::RawValue>>,
-    workload: Option<&elsecall_scheduling_model::workload_metadata::Workload>,
+    workload: Option<&elsecall_contract::scheduling_model::workload_metadata::Workload>,
 ) -> (
-    Option<elsecall_scheduling_model::workload_metadata::Observation>,
+    Option<elsecall_contract::scheduling_model::workload_metadata::Observation>,
     bool,
 ) {
-    use elsecall_scheduling_model::workload_metadata::{MAXIMUM_JSON_BYTES, Observation};
+    use elsecall_contract::scheduling_model::workload_metadata::{MAXIMUM_JSON_BYTES, Observation};
     let Some(value) = value else {
         return (None, false);
     };

@@ -5,7 +5,7 @@ use crate::{
     git::{Git, ObjectFormat, Oid},
     sync_failed,
 };
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

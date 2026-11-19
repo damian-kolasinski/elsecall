@@ -6,8 +6,8 @@ use crate::admission_cli::{
     environment::CallerEnvironment,
     options::{Declared, UrgencyChoice},
 };
-use elsecall_failure::Result;
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::{
     request::{AdmissionRequest, Kind, Placement, Urgency, invalid},
     settings::{AppliedRule, Settings, Source},
     timestamp::Timestamp,
@@ -201,7 +201,7 @@ pub fn when_unavailable(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elsecall_scheduling_model::{capacity::Cores, request::AtDeadline};
+    use elsecall_contract::scheduling_model::{capacity::Cores, request::AtDeadline};
     use std::time::Duration;
 
     fn now() -> Timestamp {

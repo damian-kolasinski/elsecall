@@ -3,8 +3,8 @@ use super::{
     Discovery, FleetDistribution, FleetFollowUp, FollowUpState, Job, JobId, Phase, ReleaseCatalog,
     ReleaseVersion, Status, invalid, now, store::Store,
 };
-use elsecall_build_identity::build_identity::BuildId;
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::build_identity::BuildId;
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_local_state::{paths::Paths, private_files};
 use elsecall_scheduling::service::{Scheduler, UpdateHold};
 use std::{
@@ -28,8 +28,7 @@ impl HelperLauncher for DetachedHelper {
         let worker = store.worker(&job.id);
         let bytes =
             fs::read(paths.executable()).map_err(|e| Failure::io("Read update helper", e))?;
-        if elsecall_build_identity::build_identity::Digest::of(&bytes).build_id() != job.from_build
-        {
+        if elsecall_contract::build_identity::Digest::of(&bytes).build_id() != job.from_build {
             return Err(invalid(
                 "The installed CLI changed while preparing the update; retry.",
             ));

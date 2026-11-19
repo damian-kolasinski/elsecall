@@ -1,12 +1,18 @@
 #![cfg(target_os = "macos")]
 //! Update policy exercised with a real scheduler/API and fakes only at provider boundaries.
-use elsecall_build_identity::build_identity::Digest;
-use elsecall_failure::Result;
-use elsecall_load_log::LoadLog;
-use elsecall_local_state::{paths::Paths, private_files};
-use elsecall_machine::inspection::{
+use elsecall_contract::build_identity::Digest;
+use elsecall_contract::failure::Result;
+use elsecall_contract::inspection::{
     CoreCounts, LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState,
 };
+use elsecall_contract::scheduling_model::{
+    capacity::Cores,
+    request::{AdmissionRequest, Kind, Placement, Urgency},
+    run_id::{RandomRunIds, RunId},
+    speed::SpeedMeter,
+};
+use elsecall_load_log::LoadLog;
+use elsecall_local_state::{paths::Paths, private_files};
 use elsecall_release_update::release_update::{
     self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
     service::{HelperLauncher, UpdateService},
@@ -18,12 +24,6 @@ use elsecall_scheduling::{
     pre_run_sync::{PreRunSync, Synced},
     processes::{ProcessIdentity, ProcessInfo, ProcessTable},
     service::{Adapters, Driving, HostedEnd, Runtime, Scheduler, SchedulerConfiguration},
-};
-use elsecall_scheduling_model::{
-    capacity::Cores,
-    request::{AdmissionRequest, Kind, Placement, Urgency},
-    run_id::{RandomRunIds, RunId},
-    speed::SpeedMeter,
 };
 use std::{
     future::IntoFuture,

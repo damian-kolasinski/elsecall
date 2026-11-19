@@ -13,9 +13,8 @@ doctest = false
 workspace = true
 
 [dependencies]
-elsecall-failure.workspace = true
+elsecall-contract.workspace = true
 elsecall-local-state.workspace = true
-elsecall-wire.workspace = true
 http-body-util.workspace = true
 hyper.workspace = true
 hyper-util.workspace = true

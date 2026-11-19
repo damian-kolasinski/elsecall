@@ -1,5 +1,5 @@
 #![cfg(target_os = "macos")]
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_installation::installation::{self, ServiceManager, Session};
 use elsecall_local_state::paths::Paths;
 use std::{cell::RefCell, fs, path::Path};

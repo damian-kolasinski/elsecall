@@ -5,7 +5,7 @@
 use elsecall_add_mac::nearby_macs::{
     KnownMember, LocalNetwork, Membership, NearbyMac, RemoteLogin, nearby,
 };
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use elsecall_platform_macos::macos::dns_sd::Bonjour;
@@ -100,7 +100,7 @@ fn next_step(macs: &[NearbyMac]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elsecall_machine::inspection::Machine;
+    use elsecall_contract::inspection::Machine;
 
     fn mac(name: &str, remote_login: RemoteLogin, membership: Membership) -> NearbyMac {
         NearbyMac {

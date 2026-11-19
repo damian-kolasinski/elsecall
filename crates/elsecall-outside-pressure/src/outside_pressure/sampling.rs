@@ -3,8 +3,8 @@
 //!
 //! A sample names processes only: never their arguments, environment or paths,
 //! which can hold secrets.
-use elsecall_failure::Result;
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
 

@@ -5,8 +5,8 @@ use crate::{
     record::Record,
     run_phases::{RemoteFailurePhase, RunPhases},
 };
-use elsecall_machine::inspection::LoadSample;
-use elsecall_scheduling_model::{
+use elsecall_contract::inspection::LoadSample;
+use elsecall_contract::scheduling_model::{
     capacity::{Capacity, Cores},
     request::Kind,
     run_id::RunId,
@@ -50,7 +50,8 @@ pub enum RunEnded {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         run_phases: Option<RunPhases>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        plan_observation: Option<elsecall_scheduling_model::workload_metadata::Observation>,
+        plan_observation:
+            Option<elsecall_contract::scheduling_model::workload_metadata::Observation>,
     },
     Signaled {
         signal: i32,
@@ -59,7 +60,8 @@ pub enum RunEnded {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         run_phases: Option<RunPhases>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        plan_observation: Option<elsecall_scheduling_model::workload_metadata::Observation>,
+        plan_observation:
+            Option<elsecall_contract::scheduling_model::workload_metadata::Observation>,
     },
     /// Elsecall failed the run after admission, such as a command that could not start.
     Failed {
@@ -137,7 +139,7 @@ pub struct MemberState {
     /// another member reports outside a plausible range is dropped.
     #[serde(
         default,
-        deserialize_with = "elsecall_scheduling_model::speed::plausible"
+        deserialize_with = "elsecall_contract::scheduling_model::speed::plausible"
     )]
     pub speed: Option<f64>,
 }
@@ -155,16 +157,17 @@ pub struct RunSummary {
     pub kind: Kind,
     pub label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub workload: Option<elsecall_scheduling_model::workload_metadata::Workload>,
+    pub workload: Option<elsecall_contract::scheduling_model::workload_metadata::Workload>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub plan_observation: Option<elsecall_scheduling_model::workload_metadata::Observation>,
+    pub plan_observation:
+        Option<elsecall_contract::scheduling_model::workload_metadata::Observation>,
     pub size: Cores,
     pub urgency: String,
     pub state: crate::record::State,
     pub outcome: Option<crate::record::Outcome>,
     pub member: Option<String>,
     pub nested_in: Option<RunId>,
-    pub requested_at: elsecall_scheduling_model::timestamp::Timestamp,
+    pub requested_at: elsecall_contract::scheduling_model::timestamp::Timestamp,
     pub waited_ms: Option<u64>,
     pub run_ms: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -173,7 +176,7 @@ pub struct RunSummary {
     pub calling_member: String,
     /// What the caller asked for: `pinned`, `placeable` or a required member.
     #[serde(default = "pinned")]
-    pub placement: elsecall_scheduling_model::request::Placement,
+    pub placement: elsecall_contract::scheduling_model::request::Placement,
     /// Set when the work ran on another member than the one that asked for it.
     #[serde(default)]
     pub placed: Option<PlacedSummary>,
@@ -186,8 +189,8 @@ pub struct RunSummary {
 fn unknown() -> String {
     "unknown".into()
 }
-fn pinned() -> elsecall_scheduling_model::request::Placement {
-    elsecall_scheduling_model::request::Placement::Pinned
+fn pinned() -> elsecall_contract::scheduling_model::request::Placement {
+    elsecall_contract::scheduling_model::request::Placement::Pinned
 }
 
 /// A placed run in `elsecall runs`.
@@ -213,8 +216,12 @@ impl From<Record> for RunSummary {
             plan_observation: record.plan_observation,
             size: record.size,
             urgency: match record.urgency {
-                elsecall_scheduling_model::request::Urgency::Interactive { .. } => "interactive",
-                elsecall_scheduling_model::request::Urgency::Deferrable { .. } => "deferrable",
+                elsecall_contract::scheduling_model::request::Urgency::Interactive { .. } => {
+                    "interactive"
+                }
+                elsecall_contract::scheduling_model::request::Urgency::Deferrable { .. } => {
+                    "deferrable"
+                }
             }
             .into(),
             state: record.state,

@@ -1,5 +1,5 @@
 //! Deterministic request identities supplied to the admission port.
-use elsecall_scheduling_model::run_id::{RunId, RunIds};
+use elsecall_contract::scheduling_model::run_id::{RunId, RunIds};
 use std::{collections::VecDeque, sync::Mutex};
 
 #[derive(Default)]

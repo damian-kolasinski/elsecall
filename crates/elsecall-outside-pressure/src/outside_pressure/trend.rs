@@ -10,7 +10,7 @@ use crate::outside_pressure::{
     sampling::Owner,
     warning::{Concern, Warning},
 };
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use std::{collections::BTreeMap, time::Duration};
 
 /// How often processes are sampled for trends.

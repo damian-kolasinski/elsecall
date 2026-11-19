@@ -2,7 +2,7 @@
 //! `elsecall fleet upgrade` and the fleet half of a release update never distribute
 //! at the same time.
 use super::master::{self, Outcome, UpgradeReport, UpgradeRequest};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::fleet::Fleet;
 use elsecall_release_update::release_update::{FleetDistribution, FleetOutcome, MemberOutcome};
 use std::{future::Future, path::PathBuf, pin::Pin, sync::Arc};

@@ -15,7 +15,7 @@ use crate::{
     head::{Reference, RemoteName, Upstream},
     sync_failed,
 };
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 

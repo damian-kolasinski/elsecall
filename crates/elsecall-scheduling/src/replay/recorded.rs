@@ -12,7 +12,9 @@ use crate::{
     placement::{self, Contender, Estimate, Level, Observation, Scored, Wanted},
     record::{ArrivalEstimate, Candidate, Record},
 };
-use elsecall_scheduling_model::{capacity::Cores, request::Placement, timestamp::Timestamp};
+use elsecall_contract::scheduling_model::{
+    capacity::Cores, request::Placement, timestamp::Timestamp,
+};
 use serde::{Serialize, de::DeserializeOwned};
 use std::time::Duration;
 

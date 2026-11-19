@@ -3,7 +3,7 @@
 //! calibration. Replay, simulation, rehearsal and tuning all read traces, so the
 //! format lives with them in workload, below each of them.
 use clap::ValueEnum;
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, serde::Deserialize, ValueEnum)]
@@ -17,7 +17,7 @@ pub enum Mode {
 #[serde(deny_unknown_fields)]
 pub struct Provenance {
     pub mode: Mode,
-    pub rules_digest: elsecall_build_identity::build_identity::Digest,
+    pub rules_digest: elsecall_contract::build_identity::Digest,
 }
 
 /// Bound both manual replay density and the automatic calibration search.
@@ -31,12 +31,12 @@ impl Default for LoadFactor {
     }
 }
 impl TryFrom<f64> for LoadFactor {
-    type Error = elsecall_failure::Failure;
+    type Error = elsecall_contract::failure::Failure;
     fn try_from(f: f64) -> Result<Self> {
         if f.is_finite() && (1.0..=MAXIMUM).contains(&f) {
             Ok(Self(f))
         } else {
-            Err(elsecall_failure::Failure::new(
+            Err(elsecall_contract::failure::Failure::new(
                 "invalid_request",
                 "--load-factor must be finite and from 1 to 32.",
                 "Use an arrival load factor from 1 to 32.",
@@ -45,7 +45,7 @@ impl TryFrom<f64> for LoadFactor {
     }
 }
 impl std::str::FromStr for LoadFactor {
-    type Err = elsecall_failure::Failure;
+    type Err = elsecall_contract::failure::Failure;
     fn from_str(s: &str) -> Result<Self> {
         Self::try_from(s.parse::<f64>().unwrap_or(f64::NAN))
     }
@@ -93,10 +93,10 @@ impl Calibration {
 
 /// H1 fits machine CPU share times weighted capacity. OS CPU time is measured
 /// against all logical CPUs, so fractional busy workers need this conversion.
-pub fn logical_demand(effective: f64, cores: elsecall_machine::inspection::CoreCounts) -> f64 {
-    let weighted = elsecall_scheduling_model::capacity::Capacity::of(
+pub fn logical_demand(effective: f64, cores: elsecall_contract::inspection::CoreCounts) -> f64 {
+    let weighted = elsecall_contract::scheduling_model::capacity::Capacity::of(
         cores,
-        elsecall_scheduling_model::capacity::Cores::ZERO,
+        elsecall_contract::scheduling_model::capacity::Cores::ZERO,
     )
     .weighted_cores
     .as_f64();

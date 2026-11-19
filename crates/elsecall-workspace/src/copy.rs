@@ -20,7 +20,7 @@ use crate::{
     staging::Staging,
     sync_failed,
 };
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use std::{
     collections::HashMap,
     fs,
@@ -75,7 +75,7 @@ pub struct Applied {
     pub extras_removed: usize,
 }
 
-fn failed(action: &str) -> impl Fn(io::Error) -> elsecall_failure::Failure + '_ {
+fn failed(action: &str) -> impl Fn(io::Error) -> elsecall_contract::failure::Failure + '_ {
     move |e| sync_failed(format!("{action} on the member failed: {e}."))
 }
 

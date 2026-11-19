@@ -3,7 +3,8 @@
 //! buckets of the period and bounded, and a member's own error text is never
 //! quoted.
 use crate::reporting::gathering::{Facts, MAXIMUM_FACTS, MemberHistory};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::speed::PLAUSIBLE;
 use elsecall_fleet::fleet::Fleet;
 use elsecall_load_log::buckets::Bucket;
 use elsecall_membership::roster::Member;
@@ -13,7 +14,6 @@ use elsecall_report_facts::{
     report_protocol::{FactsPage, FactsRequest, LoadRequest, PAGE},
     window::{FINE_BUCKETS, Window},
 };
-use elsecall_scheduling_model::speed::PLAUSIBLE;
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};
@@ -198,9 +198,9 @@ impl MemberHistory for PeerHistory {
                 .error
                 .as_deref()
                 .is_some_and(|code| !elsecall_report_facts::facts::is_code(code))
-                || result
-                    .coverage_since
-                    .is_some_and(|at| at > elsecall_scheduling_model::timestamp::Timestamp::now())
+                || result.coverage_since.is_some_and(|at| {
+                    at > elsecall_contract::scheduling_model::timestamp::Timestamp::now()
+                })
                 || result.attempts.len() > 1000
                 || result.attempts.iter().any(|a| {
                     a.at < window.since

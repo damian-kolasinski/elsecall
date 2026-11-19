@@ -12,8 +12,8 @@ use crate::{
     record::{Decision, HoldBasis, HoldLimitRecord, Outcome, Record, SizeBasis, State, Verdict},
     run_phases::{RemoteFailurePhase, RunPhases},
 };
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::{
     capacity::Cores,
     request::{self, Kind, Placement, Urgency},
     run_id::RunId,
@@ -128,7 +128,7 @@ impl Scheduler {
             record: Record {
                 run_id: offer.run_id.clone(),
                 kind: Kind::Run,
-                synthetic: elsecall_labels::rules::synthetic(offer.label.as_deref()),
+                synthetic: elsecall_contract::labels::rules::synthetic(offer.label.as_deref()),
                 internal: false,
                 peer_io: None,
                 label: offer.label.clone(),
@@ -203,7 +203,9 @@ impl Scheduler {
         self.persist(&mut entry);
         book.entries.insert(offer.run_id.clone(), entry);
         Ok(OfferReply::Accepted {
-            workload_contract: Some(elsecall_scheduling_model::workload_metadata::VERSION),
+            workload_contract: Some(
+                elsecall_contract::scheduling_model::workload_metadata::VERSION,
+            ),
             state: self.state_of(&book),
             copy: copy.into(),
             location: location.into(),

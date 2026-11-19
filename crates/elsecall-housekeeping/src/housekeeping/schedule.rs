@@ -4,14 +4,14 @@
 //! start within its interval does what `at_deadline` says, and the next interval
 //! tries again. Each attempt leaves a record labelled `elsecall housekeeping`.
 use crate::housekeeping::pass::Housekeeper;
-use elsecall_failure::Result;
-use elsecall_scheduling::{messages::RunEnded, service::Scheduler};
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::{
     capacity::Cores,
     request::{AdmissionRequest, Kind, Placement, Urgency},
     run_id::RunId,
     timestamp::Timestamp,
 };
+use elsecall_scheduling::{messages::RunEnded, service::Scheduler};
 use futures_util::future::BoxFuture;
 use std::{sync::Arc, time::Duration};
 

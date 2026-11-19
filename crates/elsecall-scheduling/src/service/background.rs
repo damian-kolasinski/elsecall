@@ -4,7 +4,7 @@
 //! reconsidering where waiting work is placed. Each holds the scheduler weakly
 //! and ends once it is gone; dropping [`Tasks`] stops them all.
 use super::{SAMPLE_INTERVAL, Scheduler, auto, log};
-use elsecall_scheduling_model::speed::{self, SpeedMeter};
+use elsecall_contract::scheduling_model::speed::{self, SpeedMeter};
 use std::{
     sync::{Arc, Weak},
     time::Duration,

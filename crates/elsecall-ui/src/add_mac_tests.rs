@@ -25,7 +25,7 @@ struct FakeCli {
 }
 
 impl AddMacSource for FakeCli {
-    fn nearby(&self) -> Result<Vec<NearbyMac>, elsecall_failure::Failure> {
+    fn nearby(&self) -> Result<Vec<NearbyMac>, elsecall_contract::failure::Failure> {
         Ok(vec![
             mac("MacBook Pro", true, None),
             mac("Studio", false, None),

@@ -14,12 +14,10 @@ workspace = true
 
 [dependencies]
 base64.workspace = true
-elsecall-build-identity.workspace = true
-elsecall-failure.workspace = true
+elsecall-contract.workspace = true
 elsecall-membership.workspace = true
 elsecall-peer-diagnostics.workspace = true
 elsecall-secure-channel.workspace = true
-elsecall-wire.workspace = true
 futures-util.workspace = true
 http-body-util.workspace = true
 hyper.workspace = true

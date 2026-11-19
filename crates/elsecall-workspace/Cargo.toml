@@ -13,10 +13,9 @@ doctest = false
 workspace = true
 
 [dependencies]
-elsecall-failure.workspace = true
+elsecall-contract.workspace = true
 elsecall-local-state.workspace = true
 elsecall-process.workspace = true
-elsecall-wire.workspace = true
 futures-util.workspace = true
 getrandom.workspace = true
 libc.workspace = true

@@ -5,20 +5,20 @@ pub mod resolution;
 
 use crate::admission_api::{self, MAXIMUM_LISTED};
 use clap::Subcommand;
-use elsecall_failure::{Failure, Result};
-use elsecall_guidance::{self as guidance, Unmanaged};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::guidance::{self as guidance, Unmanaged};
+use elsecall_contract::scheduling_model::{
+    capacity::Cores,
+    request::{AdmissionRequest, Kind, Urgency, invalid},
+    run_id::RunId,
+    timestamp::Timestamp,
+};
 use elsecall_local_client::{self as client, Wait};
 use elsecall_local_state::{local_access, paths::Paths, run_id_file::RunIdFile};
 use elsecall_scheduling::{
     estimates,
     messages::{Grant, Release, Runs},
     record::Record,
-};
-use elsecall_scheduling_model::{
-    capacity::Cores,
-    request::{AdmissionRequest, Kind, Urgency, invalid},
-    run_id::RunId,
-    timestamp::Timestamp,
 };
 use elsecall_service_lifecycle::service_handover;
 use elsecall_workload_config::workload_settings::{WhenUnavailable, WorkloadSettings};

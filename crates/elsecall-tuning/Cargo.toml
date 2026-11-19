@@ -14,9 +14,7 @@ workspace = true
 
 [dependencies]
 clap.workspace = true
-elsecall-build-identity.workspace = true
-elsecall-failure.workspace = true
-elsecall-labels.workspace = true
+elsecall-contract.workspace = true
 elsecall-load-log.workspace = true
 elsecall-local-client.workspace = true
 elsecall-local-state.workspace = true
@@ -24,12 +22,11 @@ elsecall-rehearsal.workspace = true
 elsecall-replay.workspace = true
 elsecall-reporting.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-scheduling-model.workspace = true
 elsecall-service-log.workspace = true
 elsecall-simulation.workspace = true
 elsecall-trace.workspace = true
-elsecall-workload.workspace = true
 elsecall-workload-config.workspace = true
+elsecall-workload.workspace = true
 humantime.workspace = true
 serde.workspace = true
 serde_json.workspace = true

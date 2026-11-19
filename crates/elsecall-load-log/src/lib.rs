@@ -14,8 +14,8 @@ pub mod session;
 pub mod store;
 
 use buckets::{Bucket, LoadSummary};
-use elsecall_failure::Result;
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use minute::{Accumulator, Second};
 use std::{path::Path, sync::Mutex, time::Duration};
 use store::LoadStore;

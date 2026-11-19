@@ -30,8 +30,8 @@
 //! deadline = "30m"
 //! at_deadline = "start"
 //! ```
-use elsecall_labels::pattern as label_pattern;
-use elsecall_scheduling_model::{
+use elsecall_contract::labels::pattern as label_pattern;
+use elsecall_contract::scheduling_model::{
     capacity::Cores,
     request::{AtDeadline, MAXIMUM_DEADLINE, MAXIMUM_HOLD_LIMIT},
 };

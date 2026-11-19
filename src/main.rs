@@ -2,11 +2,12 @@ use clap::{Parser, Subcommand};
 use elsecall::{fleet_cli, peer_listener};
 use elsecall_add_mac::inbound_firewall::{Inbound, InboundFirewall};
 use elsecall_admission::admission_cli::{self, LeaseCommand};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::api;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::inspection::{Health, Inspection, Machine};
 use elsecall_installation::installation::{self, ServiceManager};
 use elsecall_local_client as client;
 use elsecall_local_state::{local_access, paths::Paths};
-use elsecall_machine::inspection::{Health, Inspection, Machine};
 use elsecall_os_processes::processes::MacProcesses;
 use elsecall_platform_macos::macos::{
     application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
@@ -15,7 +16,6 @@ use elsecall_platform_macos::macos::{
 use elsecall_scheduling as scheduling;
 use elsecall_tailnet::tailnet;
 use elsecall_window::install_window;
-use elsecall_wire::api;
 use serde::Serialize;
 use std::{process::ExitCode, sync::Arc, time::Duration};
 
@@ -199,7 +199,9 @@ async fn main() -> ExitCode {
                     "Invalid lease acquire options.",
                     "Run elsecall lease acquire --help for valid options, then rerun the corrected command.",
                 );
-                elsecall_guidance::write(&elsecall_guidance::failure_line(&failure));
+                elsecall_contract::guidance::write(&elsecall_contract::guidance::failure_line(
+                    &failure,
+                ));
                 failure
             } else {
                 Failure::new(
@@ -295,7 +297,9 @@ async fn main() -> ExitCode {
                 }
                 Err(error) => {
                     if acquire {
-                        elsecall_guidance::write(&elsecall_guidance::failure_line(&error));
+                        elsecall_contract::guidance::write(
+                            &elsecall_contract::guidance::failure_line(&error),
+                        );
                     }
                     fail(error)
                 }
@@ -572,7 +576,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 elsecall_outside_pressure::outside_pressure::remedy::next_step(
                     &first.member,
                     &first.blocked,
-                    elsecall_scheduling_model::timestamp::Timestamp::now(),
+                    elsecall_contract::scheduling_model::timestamp::Timestamp::now(),
                 )
             } else if service_configurations
                 .as_ref()
@@ -589,7 +593,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 elsecall_outside_pressure::outside_pressure::remedy::warning_step(
                     &first.member,
                     &first.warning,
-                    elsecall_scheduling_model::timestamp::Timestamp::now(),
+                    elsecall_contract::scheduling_model::timestamp::Timestamp::now(),
                 )
             } else {
                 "No action needed.".to_owned()
@@ -633,18 +637,18 @@ async fn run(cli: Cli) -> Result<bool> {
         Command::Serve => {
             // After an upgrade, the stubs an older build wrote point at this one.
             elsecall_agent_skill::refresh_if_installed(&paths);
-            let machine: Arc<dyn elsecall_machine::inspection::MachineInspector> =
+            let machine: Arc<dyn elsecall_contract::inspection::MachineInspector> =
                 if let Some(file) = elsecall_scripted_machine::load_file() {
                     Arc::new(elsecall_scripted_machine::ScriptedLoad {
                         machine: MacMachine::default(),
                         file,
                     })
-                } else if elsecall_machine::idle_load::requested() {
-                    Arc::new(elsecall_machine::idle_load::IdleLoad(MacMachine::default()))
+                } else if elsecall_contract::idle_load::requested() {
+                    Arc::new(elsecall_contract::idle_load::IdleLoad(MacMachine::default()))
                 } else {
                     Arc::new(MacMachine::default())
                 };
-            let speed: Arc<dyn elsecall_scheduling_model::speed::SpeedMeter> =
+            let speed: Arc<dyn elsecall_contract::scheduling_model::speed::SpeedMeter> =
                 match elsecall_scripted_machine::speed() {
                     Some(fixed) => Arc::new(fixed),
                     None => Arc::new(elsecall_platform_macos::macos::core_benchmark::CoreBenchmark),
@@ -721,7 +725,7 @@ async fn wait_ready(paths: &Paths) -> Result<Health> {
     let ready = async {
         loop {
             if let Ok(health) = client::get::<Health>(&paths.socket(), "/v1/health").await
-                && health.version == elsecall_build_identity::build_identity::VERSION
+                && health.version == elsecall_contract::build_identity::VERSION
             {
                 return health;
             }

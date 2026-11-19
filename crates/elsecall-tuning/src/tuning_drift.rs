@@ -1,13 +1,13 @@
 //! Recorded days are monitored as the service's own pinned deferrable work.
 //! Missing inputs are retained as not_checkable, never a successful validation.
-use elsecall_failure::Result;
-use elsecall_local_state::paths::Paths;
-use elsecall_scheduling::{messages::RunEnded, service::Scheduler};
-use elsecall_scheduling_model::{
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::{
     capacity::Cores,
     request::{AdmissionRequest, AtDeadline, Kind, Placement, Urgency},
     timestamp::Timestamp,
 };
+use elsecall_local_state::paths::Paths;
+use elsecall_scheduling::{messages::RunEnded, service::Scheduler};
 use std::{sync::Arc, time::Duration};
 const DAY: u64 = 86_400_000;
 pub async fn monitor(paths: &Paths, scheduler: &Scheduler) -> Result<()> {

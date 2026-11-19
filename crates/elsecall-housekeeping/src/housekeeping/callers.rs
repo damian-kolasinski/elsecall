@@ -1,7 +1,7 @@
 //! How housekeeping reaches the calling members that own this member's copies: a
 //! port, with the authenticated member API as its adapter (`fleet_callers`).
 use crate::housekeeping::exchange::{Answer, Question};
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use futures_util::future::BoxFuture;
 
 pub trait Callers: Send + Sync {

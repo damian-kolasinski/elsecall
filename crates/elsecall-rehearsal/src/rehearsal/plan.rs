@@ -1,7 +1,7 @@
 //! Freeze trace inputs before creating scratch trees or submitting any work.
 use super::{invalid, protocol::Launch};
-use elsecall_failure::Result;
-use elsecall_scheduling_model::request::Kind;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::request::Kind;
 use elsecall_workload::trace::Trace;
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
@@ -80,10 +80,12 @@ impl Plan {
                 .round() as u64;
             let shift = arrival.at_ms - at_ms;
             arrival.at_ms = at_ms;
-            if let elsecall_scheduling_model::request::Urgency::Deferrable { deadline, .. } =
-                &mut arrival.request.urgency
+            if let elsecall_contract::scheduling_model::request::Urgency::Deferrable {
+                deadline,
+                ..
+            } = &mut arrival.request.urgency
             {
-                *deadline = elsecall_scheduling_model::timestamp::Timestamp::from_millis(
+                *deadline = elsecall_contract::scheduling_model::timestamp::Timestamp::from_millis(
                     deadline.millis().saturating_sub(shift),
                 );
             }
@@ -148,13 +150,13 @@ pub fn nested_problems(trace: &Trace) -> Vec<(String, &'static str)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use elsecall_contract::scheduling_model::{
+        request::{AtDeadline, Placement, Urgency},
+        timestamp::Timestamp,
+    };
     use elsecall_scheduling::{
         fixtures::{T0, base},
         record::{HoldBasis, HoldLimitRecord, Outcome, WorkspaceIdentity},
-    };
-    use elsecall_scheduling_model::{
-        request::{AtDeadline, Placement, Urgency},
-        timestamp::Timestamp,
     };
     use elsecall_workload::{
         demand::Demand,

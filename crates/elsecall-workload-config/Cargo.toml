@@ -13,11 +13,8 @@ doctest = false
 workspace = true
 
 [dependencies]
-elsecall-build-identity.workspace = true
-elsecall-failure.workspace = true
-elsecall-labels.workspace = true
+elsecall-contract.workspace = true
 elsecall-local-state.workspace = true
-elsecall-scheduling-model.workspace = true
 elsecall-workspace.workspace = true
 humantime.workspace = true
 libc.workspace = true

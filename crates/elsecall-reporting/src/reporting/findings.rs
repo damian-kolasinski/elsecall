@@ -9,6 +9,7 @@ use crate::reporting::{
     outside_warnings::PeriodWarning,
     overload::{How, Overload},
 };
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_outside_pressure::outside_pressure::{
     blocked::OutsideProcess,
     remedy::{self, Act},
@@ -16,7 +17,6 @@ use elsecall_outside_pressure::outside_pressure::{
     warning::Concern,
 };
 use elsecall_report_facts::leftovers::LabelLeftovers;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 
 /// At most this many findings, the most severe first.
@@ -923,6 +923,7 @@ pub fn findings(metrics: &Metrics, gathered: &Gathered) -> Vec<Finding> {
 mod tests {
     use super::*;
     use crate::reporting::document::{Gathered, MemberInput, Query, RecordsRead, document};
+    use elsecall_contract::scheduling_model::{request::Placement, timestamp::Timestamp};
     use elsecall_outside_pressure::outside_pressure::sampling::Owner;
     use elsecall_report_facts::{facts::Fact, leftovers::LeftoverFact, window::Window};
     use elsecall_scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
@@ -930,7 +931,6 @@ mod tests {
         placement::Source,
         record::{Outcome, Verdict},
     };
-    use elsecall_scheduling_model::{request::Placement, timestamp::Timestamp};
 
     /// A fleet with one of every problem.
     fn troubled() -> Gathered {
@@ -1237,7 +1237,7 @@ mod tests {
             let mut gathered = troubled();
             // Two pinned checks and a lease ran on the mini during it.
             let mut lease = fixtures::pinned(11, "warm", "mini", 120.0);
-            lease.kind = elsecall_scheduling_model::request::Kind::Lease;
+            lease.kind = elsecall_contract::scheduling_model::request::Kind::Lease;
             gathered.facts = [
                 fixtures::pinned(9, "check", "mini", 30.0),
                 fixtures::pinned(10, "check", "mini", 30.0),
@@ -1561,7 +1561,7 @@ mod tests {
                 if closed(m) == Some(Pressure::MemoryPressure) {
                     b.memory_pressure_seconds = 60;
                     b.worst_memory_pressure =
-                        Some(elsecall_machine::inspection::MemoryPressure::Warning);
+                        Some(elsecall_contract::inspection::MemoryPressure::Warning);
                 }
                 b
             })
@@ -1579,10 +1579,10 @@ mod tests {
         outcome: Outcome,
     ) -> elsecall_scheduling::record::Record {
         let mut record = fixtures::base(n, label, member);
-        record.kind = elsecall_scheduling_model::request::Kind::Lease;
-        record.urgency = elsecall_scheduling_model::request::Urgency::Deferrable {
+        record.kind = elsecall_contract::scheduling_model::request::Kind::Lease;
+        record.urgency = elsecall_contract::scheduling_model::request::Urgency::Deferrable {
             deadline: incident_at(at + 1800),
-            at_deadline: elsecall_scheduling_model::request::AtDeadline::Start,
+            at_deadline: elsecall_contract::scheduling_model::request::AtDeadline::Start,
         };
         record.requested_at = incident_at(at);
         record.ended_at = Some(incident_at(at + waited));
@@ -1613,7 +1613,7 @@ mod tests {
                 code: "deadline_skipped".into(),
             },
         );
-        housekeeping.kind = elsecall_scheduling_model::request::Kind::Run;
+        housekeeping.kind = elsecall_contract::scheduling_model::request::Kind::Run;
         housekeeping.internal = true;
         let records = [
             queued(
@@ -1698,7 +1698,7 @@ mod tests {
 
         // A member that could not say what held it closed: the remedy is generic.
         let mut unnamed = incident();
-        unnamed.members[1].outside = Err(elsecall_failure::Failure::new(
+        unnamed.members[1].outside = Err(elsecall_contract::failure::Failure::new(
             "member_unavailable",
             "macbook-pro's outside pressure history could not be read.",
             "Check the member with elsecall fleet.",

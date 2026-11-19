@@ -7,13 +7,13 @@ use crate::{
     quote::{Quote, QuoteRequest},
     record::SizeBasis,
 };
-use elsecall_failure::{Failure, Result};
-use elsecall_scheduling_model::{capacity::Cores, run_id::RunId, timestamp::Timestamp};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::{capacity::Cores, run_id::RunId, timestamp::Timestamp};
 use futures_util::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-pub use elsecall_scheduling_model::request::WorkspaceRef;
+pub use elsecall_contract::scheduling_model::request::WorkspaceRef;
 
 /// What the master asks a member to admit.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -23,7 +23,7 @@ pub struct PlacementOffer {
     pub size: Cores,
     pub label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub workload: Option<elsecall_scheduling_model::workload_metadata::Workload>,
+    pub workload: Option<elsecall_contract::scheduling_model::workload_metadata::Workload>,
     pub workspace: WorkspaceRef,
     /// How long the request may still take to start, sync included.
     pub start_within_ms: u64,

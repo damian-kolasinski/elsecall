@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use elsecall_scheduling_model::request::AtDeadline;
+use elsecall_contract::scheduling_model::request::AtDeadline;
 use elsecall_workload_config::workload_configuration::FILE_NAME;
 use elsecall_workload_config::workload_settings::{
     LabelRule, RulePlacement, RuleUrgency, WhenUnavailable,

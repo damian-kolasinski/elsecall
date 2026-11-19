@@ -7,7 +7,8 @@ mod diagnostics;
 mod members;
 mod processes;
 
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_housekeeping::housekeeping::{
     caller_state::CallerState,
     callers::Callers,
@@ -20,7 +21,6 @@ use elsecall_housekeeping::housekeeping::{
 };
 use elsecall_local_state::paths::Paths;
 use elsecall_peer_transport::peer_client;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workspace::{
     copies::Copies,
     location::{CopyLocation, Locations, Setting},

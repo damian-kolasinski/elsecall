@@ -6,6 +6,7 @@ use crate::reporting::{
     backtest::{self, Backtest},
     statistics::{mean, nearest_rank, seconds, sorted},
 };
+use elsecall_contract::scheduling_model::request::Kind;
 use elsecall_report_facts::facts::{Estimator, Fact};
 use elsecall_scheduling::{
     learning::{
@@ -16,7 +17,6 @@ use elsecall_scheduling::{
     placed::Warmth,
     placement::Level,
 };
-use elsecall_scheduling_model::request::Kind;
 use serde::Serialize;
 use std::collections::BTreeMap;
 

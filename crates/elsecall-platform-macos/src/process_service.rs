@@ -3,7 +3,7 @@
 //! registering LaunchAgents. `ELSECALL_SERVICE_MANAGER=process` selects it in debug
 //! builds only; release builds always use launchd. It keeps nothing alive after a
 //! crash, which launchd would.
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_installation::installation::{ServiceManager, Session};
 use elsecall_local_state::{paths::Paths, private_files};
 use std::{

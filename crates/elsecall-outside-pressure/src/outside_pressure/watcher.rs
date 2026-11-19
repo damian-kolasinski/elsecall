@@ -10,8 +10,8 @@ use crate::outside_pressure::{
     trend_store::TrendStore,
     warning::{Warning, WarningEpisode},
 };
-use elsecall_failure::Result;
-use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{
     path::Path,

@@ -4,7 +4,7 @@
 //! decides which advertisements are Macs, whether each can be reached over Remote
 //! Login, and which are already fleet members.
 use crate::lan_address::is_lan;
-use elsecall_failure::Result;
+use elsecall_contract::failure::Result;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, net::IpAddr, time::Duration};
 

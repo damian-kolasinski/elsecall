@@ -2,15 +2,15 @@
 //! Public CLI/socket lifecycle. Only machine observation is faked.
 mod processes;
 mod support;
+use elsecall_contract::scheduling_model::{
+    request::{AdmissionRequest, Kind, Placement, Urgency},
+    timestamp::Timestamp,
+    workload_metadata::{Observation, Workload},
+};
 use elsecall_local_client::{self as client, Wait};
 use elsecall_scheduling::{
     messages::{CommandStarted, Grant, RunEnded},
     record::Record,
-};
-use elsecall_scheduling_model::{
-    request::{AdmissionRequest, Kind, Placement, Urgency},
-    timestamp::Timestamp,
-    workload_metadata::{Observation, Workload},
 };
 use serde_json::{Value, json};
 use std::os::unix::process::ExitStatusExt;

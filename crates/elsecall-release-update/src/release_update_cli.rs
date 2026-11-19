@@ -1,7 +1,7 @@
 //! Release updates for operators and scripts; the service owns the durable job.
 use crate::release_update::{Job, Phase, Status};
 use clap::{Args, Subcommand};
-use elsecall_failure::{Failure, Result};
+use elsecall_contract::failure::{Failure, Result};
 use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use std::time::Duration;

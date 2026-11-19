@@ -10,7 +10,7 @@ struct State {
 pub(super) struct Activity(Arc<Mutex<State>>);
 pub(super) struct Guard(Activity);
 impl Activity {
-    pub(super) fn enter(&self) -> elsecall_failure::Result<Guard> {
+    pub(super) fn enter(&self) -> elsecall_contract::failure::Result<Guard> {
         let mut state = self.0.lock().expect("sync activity lock");
         if state.closed {
             return Err(crate::service_configuration::pending());

@@ -30,7 +30,7 @@ use crate::{
     placed::Side,
     record::{Outcome, Record},
 };
-use elsecall_scheduling_model::{capacity::Cores, request::Kind, timestamp::Timestamp};
+use elsecall_contract::scheduling_model::{capacity::Cores, request::Kind, timestamp::Timestamp};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -83,7 +83,9 @@ pub fn samples_of(
     let mut samples: Vec<RunSample> = records
         .iter()
         .filter(|r| r.kind == kind && r.requested_at >= since)
-        .filter(|r| !r.synthetic && !elsecall_labels::rules::synthetic(r.label.as_deref()))
+        .filter(|r| {
+            !r.synthetic && !elsecall_contract::labels::rules::synthetic(r.label.as_deref())
+        })
         .filter(|r| r.outcome.as_ref().is_some_and(|o| o.completed()))
         .filter(|r| r.placed.as_ref().is_none_or(|p| p.side == Side::Caller))
         .filter_map(|record| {
@@ -119,7 +121,7 @@ pub fn samples_of(
 /// plan its wrapper saw through, or the prefix it stopped after. A run that did
 /// not exit, or whose wrapper reported no coverage, covers no known number.
 fn observed_units(record: &Record) -> Option<u32> {
-    use elsecall_scheduling_model::workload_metadata::Observation;
+    use elsecall_contract::scheduling_model::workload_metadata::Observation;
     if !matches!(record.outcome, Some(Outcome::Exited { .. })) {
         return None;
     }
@@ -235,7 +237,7 @@ pub mod tests {
             processes::ProcessIdentity,
             record::{Outcome, State},
         };
-        use elsecall_scheduling_model::{
+        use elsecall_contract::scheduling_model::{
             request::{Placement, Urgency},
             run_id::RunId,
             settings::{AppliedRule, Settings, Source},
@@ -358,8 +360,10 @@ pub mod tests {
         let observed = |outcome: Outcome, observation: &str| {
             let mut run = record(99 * day, Some(outcome), None);
             run.plan_observation = Some(
-                elsecall_scheduling_model::workload_metadata::parse_observation(observation)
-                    .unwrap(),
+                elsecall_contract::scheduling_model::workload_metadata::parse_observation(
+                    observation,
+                )
+                .unwrap(),
             );
             run
         };
