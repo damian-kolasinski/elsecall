@@ -21,7 +21,9 @@ use crate::uninstalled::{self, Bundle};
 use crate::view;
 use crate::window_upgrade::{self, UpgradeState, WindowUpgrade};
 use crate::workload_policy::{Policy, ReadError};
-use elsecall::release_update::{Job, Phase as ReleasePhase, Status as ReleaseStatus};
+use elsecall_release_update::release_update::{
+    Job, Phase as ReleasePhase, Status as ReleaseStatus,
+};
 
 const CHROME: Chrome = Chrome {
     full_size_content: false,
@@ -274,7 +276,7 @@ impl AppState {
             && job.release.version == status.current_version
             && matches!(
                 fleet.state,
-                elsecall::release_update::FollowUpState::Distributing { .. }
+                elsecall_release_update::release_update::FollowUpState::Distributing { .. }
             )
     }
     pub(crate) fn release_notice(&self) -> Option<String> {
@@ -514,7 +516,7 @@ fn init() -> AppState {
         release_status: None,
         release_feed: Arc::new(Latest::default()),
         release_start: Latest::default(),
-        opened_at_ms: elsecall::release_update::now_millis(),
+        opened_at_ms: elsecall_release_update::release_update::now_millis(),
         release_disconnected: false,
         bundle: Arc::new(uninstalled::RunningBundle::current()),
         add_mac: AddMac::default(),
@@ -798,7 +800,7 @@ fn scene_upgrade_failed(state: &mut AppState) {
 }
 
 fn release_fixture(phase: Option<ReleasePhase>) -> ReleaseSnapshot {
-    use elsecall::release_update::{JobId, Release, ReleaseVersion};
+    use elsecall_release_update::release_update::{JobId, Release, ReleaseVersion};
     let release = Release {
         version: ReleaseVersion::try_from("0.1.1".to_owned()).expect("fixture version"),
     };
@@ -828,7 +830,9 @@ fn release_fixture(phase: Option<ReleasePhase>) -> ReleaseSnapshot {
 /// The master updated itself and now gives its build to the members, which still
 /// run the previous release.
 fn scene_release_fleet(state: &mut AppState) {
-    use elsecall::release_update::{FleetFollowUp, FollowUpState, JobId, Release, ReleaseVersion};
+    use elsecall_release_update::release_update::{
+        FleetFollowUp, FollowUpState, JobId, Release, ReleaseVersion,
+    };
     scene_outdated_member(state);
     let current = ReleaseVersion::try_from("0.2.2".to_owned()).expect("fixture current");
     let id = JobId::try_from("a".repeat(32)).expect("fixture job");
@@ -1327,7 +1331,9 @@ mod tests {
         assert_eq!(rt.state.rows().len(), 3);
         rt.state
             .apply_release(Ok(release_fixture(Some(ReleasePhase::Failed {
-                error: elsecall::release_update::invalid("The release could not be verified."),
+                error: elsecall_release_update::release_update::invalid(
+                    "The release could not be verified.",
+                ),
                 rolled_back: false,
             }))));
         assert!(!rt.state.updating());
@@ -1342,7 +1348,8 @@ mod tests {
         rt.frame(0.0);
         click_upgrade(&mut rt);
         let mut second = first.clone();
-        second.id = elsecall::release_update::JobId::try_from("b".repeat(32)).unwrap();
+        second.id =
+            elsecall_release_update::release_update::JobId::try_from("b".repeat(32)).unwrap();
         second.started_at_ms = 30;
         reply.send(Ok(second.clone())).unwrap();
         ready
@@ -1353,7 +1360,7 @@ mod tests {
         // An old poll arriving after the new request cannot put the previous failure back.
         rt.state
             .apply_release(Ok(release_fixture(Some(ReleasePhase::Failed {
-                error: elsecall::release_update::invalid("old failure"),
+                error: elsecall_release_update::release_update::invalid("old failure"),
                 rolled_back: false,
             }))));
         assert!(rt.state.updating());

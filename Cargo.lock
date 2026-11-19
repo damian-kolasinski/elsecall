@@ -1088,6 +1088,7 @@ dependencies = [
  "elsecall-platform-macos",
  "elsecall-process",
  "elsecall-rehearsal-identity",
+ "elsecall-release-update",
  "elsecall-remote-run",
  "elsecall-replay",
  "elsecall-report-facts",
@@ -1455,6 +1456,35 @@ name = "elsecall-rehearsal-identity"
 version = "0.3.0"
 
 [[package]]
+name = "elsecall-release-update"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "clap",
+ "elsecall-build-identity",
+ "elsecall-failure",
+ "elsecall-installation",
+ "elsecall-local-client",
+ "elsecall-local-state",
+ "elsecall-process",
+ "elsecall-scheduling",
+ "elsecall-service-log",
+ "elsecall-window",
+ "elsecall-wire",
+ "getrandom 0.3.4",
+ "humantime",
+ "libc",
+ "semver",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "toml",
+ "toml_edit",
+]
+
+[[package]]
 name = "elsecall-remote-run"
 version = "0.3.0"
 dependencies = [
@@ -1684,6 +1714,7 @@ dependencies = [
  "elsecall-local-client",
  "elsecall-local-state",
  "elsecall-membership",
+ "elsecall-release-update",
  "elsecall-scheduling-model",
  "elsecall-window",
  "elsecall-wire",

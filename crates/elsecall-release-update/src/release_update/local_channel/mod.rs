@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn the_pinned_verifier_is_the_packslip_release_the_repository_uses() {
         let manifest: toml::Value =
-            toml::from_str(include_str!("../../../mise.toml")).expect("mise.toml");
+            toml::from_str(include_str!("../../../../../mise.toml")).expect("mise.toml");
         let (tool, version) = PACKSLIP.rsplit_once('@').expect("pinned version");
         assert_eq!(manifest["tools"][tool].as_str(), Some(version));
     }

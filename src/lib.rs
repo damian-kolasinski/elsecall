@@ -67,7 +67,4 @@ mod local_run_client;
 
 pub mod workload_observation_cli;
 
-pub mod release_update;
-pub mod release_update_api;
-pub mod release_update_cli;
 pub mod workload_input;

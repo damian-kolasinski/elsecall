@@ -4,6 +4,12 @@ use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::{Failure, Result};
 use elsecall_installation::installation::{self, ServiceManager, Session};
 use elsecall_local_state::paths::Paths;
+use elsecall_release_update::release_update::{
+    self, Job, JobId, Phase, Release, ReleaseDownload, ReleaseVersion, StagedRelease, helper,
+    selection::{CliSelection, Snapshot},
+    store::Store,
+};
+use elsecall_window::window_app::{self, WindowLauncher};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -13,14 +19,6 @@ use std::{
         atomic::{AtomicUsize, Ordering},
     },
     time::Duration,
-};
-use {
-    elsecall::release_update::{
-        self, Job, JobId, Phase, Release, ReleaseDownload, ReleaseVersion, StagedRelease, helper,
-        selection::{CliSelection, Snapshot},
-        store::Store,
-    },
-    elsecall_window::window_app::{self, WindowLauncher},
 };
 
 struct Manager {

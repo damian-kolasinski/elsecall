@@ -2,7 +2,7 @@
 
 pub trait WindowUpgrade: Send + Sync {
     fn replace_and_reopen(&self) -> Result<(), String>;
-    fn start_release(&self) -> Result<elsecall::release_update::Job, String>;
+    fn start_release(&self) -> Result<elsecall_release_update::release_update::Job, String>;
     /// Called only after a fresh instance has been launched successfully.
     fn close_old_window(&self);
 }
@@ -12,7 +12,7 @@ pub enum UpgradeState {
     Installing,
     StartingRelease,
     Retiring,
-    Release(elsecall::release_update::JobId),
+    Release(elsecall_release_update::release_update::JobId),
     Failed(String),
 }
 

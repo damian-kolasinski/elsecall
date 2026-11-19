@@ -57,7 +57,7 @@ enum Command {
     /// Open the fleet window installed with this CLI release
     Ui,
     /// Check for and install signed Elsecall releases
-    Update(elsecall::release_update_cli::UpdateArgs),
+    Update(elsecall_release_update::release_update_cli::UpdateArgs),
     #[command(hide = true)]
     UpdateHelper {
         #[arg(long)]
@@ -409,7 +409,7 @@ async fn run(cli: Cli) -> Result<bool> {
             let uninstalled = elsecall::uninstall::uninstall(
                 &paths,
                 manager,
-                &elsecall::release_update::helper::production_selection(&paths),
+                &elsecall_release_update::release_update::helper::production_selection(&paths),
                 force,
                 if keep_mise {
                     elsecall_installation::installation::cli_request::Request::Keep
@@ -436,17 +436,18 @@ async fn run(cli: Cli) -> Result<bool> {
             output(launched);
         }
         Command::Update(args) => {
-            let (data, complete) = elsecall::release_update_cli::run(&paths, args).await?;
+            let (data, complete) =
+                elsecall_release_update::release_update_cli::run(&paths, args).await?;
             output(data);
             return Ok(complete);
         }
         Command::UpdateHelper { id } => {
-            let id = elsecall::release_update::JobId::try_from(id)?;
-            elsecall::release_update::helper::run(
+            let id = elsecall_release_update::release_update::JobId::try_from(id)?;
+            elsecall_release_update::release_update::helper::run(
                 &paths,
                 &id,
-                &*elsecall::release_update::helper::production_download(&paths)?,
-                &elsecall::release_update::helper::production_selection(&paths),
+                &*elsecall_release_update::release_update::helper::production_download(&paths)?,
+                &elsecall_release_update::release_update::helper::production_selection(&paths),
                 manager,
                 &elsecall_platform_macos::macos::window_launcher::MacWindowLauncher,
             )

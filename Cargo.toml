@@ -51,6 +51,7 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 elsecall = { path = "." }
+elsecall-release-update = { path = "crates/elsecall-release-update" }
 elsecall-platform-macos = { path = "crates/elsecall-platform-macos" }
 elsecall-window = { path = "crates/elsecall-window" }
 elsecall-tools = { path = "crates/elsecall-tools" }
@@ -146,6 +147,7 @@ elsecall-peer-transport.workspace = true
 elsecall-platform-macos.workspace = true
 elsecall-process.workspace = true
 elsecall-rehearsal-identity.workspace = true
+elsecall-release-update.workspace = true
 elsecall-remote-run.workspace = true
 elsecall-replay.workspace = true
 elsecall-report-facts.workspace = true

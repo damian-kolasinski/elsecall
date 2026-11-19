@@ -7,6 +7,18 @@ use elsecall_local_state::{paths::Paths, private_files};
 use elsecall_machine::inspection::{
     CoreCounts, LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState,
 };
+use elsecall_release_update::release_update::{
+    self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
+    service::{HelperLauncher, UpdateService},
+    store::Store,
+};
+use elsecall_scheduling::{
+    clock::SystemClock,
+    placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},
+    pre_run_sync::{PreRunSync, Synced},
+    processes::{ProcessIdentity, ProcessInfo, ProcessTable},
+    service::{Adapters, Driving, HostedEnd, Runtime, Scheduler, SchedulerConfiguration},
+};
 use elsecall_scheduling_model::{
     capacity::Cores,
     request::{AdmissionRequest, Kind, Placement, Urgency},
@@ -16,20 +28,6 @@ use elsecall_scheduling_model::{
 use std::{
     future::IntoFuture,
     sync::{Arc, Mutex},
-};
-use {
-    elsecall::release_update::{
-        self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
-        service::{HelperLauncher, UpdateService},
-        store::Store,
-    },
-    elsecall_scheduling::{
-        clock::SystemClock,
-        placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},
-        pre_run_sync::{PreRunSync, Synced},
-        processes::{ProcessIdentity, ProcessInfo, ProcessTable},
-        service::{Adapters, Driving, HostedEnd, Runtime, Scheduler, SchedulerConfiguration},
-    },
 };
 
 struct MachineBoundary;
@@ -257,7 +255,7 @@ async fn api_and_real_cli_check_start_and_follow_the_same_durable_job() {
     let task = tokio::spawn(
         axum::serve(
             listener,
-            elsecall::release_update_api::routes(service.clone()),
+            elsecall_release_update::release_update_api::routes(service.clone()),
         )
         .into_future(),
     );

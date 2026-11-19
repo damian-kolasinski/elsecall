@@ -100,8 +100,8 @@ pub async fn serve(
     process_sampler: Arc<dyn elsecall_outside_pressure::outside_pressure::ProcessSampler>,
     members_listener: peer_listener::Settings,
 ) -> Result<()> {
-    crate::release_update::rehearsal::startup()?;
-    let updates = crate::release_update::service::UpdateAdapters::production(
+    elsecall_release_update::release_update::rehearsal::startup()?;
+    let updates = elsecall_release_update::release_update::service::UpdateAdapters::production(
         !elsecall_platform_macos::process_service::requested()?,
     )?;
     serve_with_updates(
@@ -121,7 +121,7 @@ pub async fn serve_with_updates(
     scheduling: Adapters,
     process_sampler: Arc<dyn elsecall_outside_pressure::outside_pressure::ProcessSampler>,
     members_listener: peer_listener::Settings,
-    updates: crate::release_update::service::UpdateAdapters,
+    updates: elsecall_release_update::release_update::service::UpdateAdapters,
 ) -> Result<()> {
     private_files::owned_tree(&paths.home, &paths.data)?;
     private_files::directory(&paths.data)?;
@@ -328,9 +328,9 @@ pub async fn serve_with_updates(
     let distributor = fleet.as_ref().ok().map(|fleet| {
         crate::fleet_upgrade::distributor::Distributor::new(fleet.clone(), paths.executable())
     });
-    let updates = crate::release_update::service::UpdateService::open(
+    let updates = elsecall_release_update::release_update::service::UpdateService::open(
         paths.clone(),
-        crate::release_update::ReleaseVersion::running(),
+        elsecall_release_update::release_update::ReleaseVersion::running(),
         build.build.clone(),
         updates.catalog,
         updates.launcher,
@@ -355,8 +355,8 @@ pub async fn serve_with_updates(
             )
         });
     let update_routes = match updates {
-        Ok(updates) => crate::release_update_api::routes(updates),
-        Err(error) => crate::release_update_api::unavailable(error),
+        Ok(updates) => elsecall_release_update::release_update_api::routes(updates),
+        Err(error) => elsecall_release_update::release_update_api::unavailable(error),
     };
     let catalog = Arc::new(Catalog::open(
         &paths.data.join("copies.sqlite"),

@@ -1,5 +1,5 @@
 //! Release offers and install progress, read separately from slower fleet snapshots.
-use elsecall::release_update::Status;
+use elsecall_release_update::release_update::Status;
 use rune::Latest;
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
@@ -158,7 +158,7 @@ mod tests {
                 if future {
                     assert!(matches!(
                         release.job.unwrap().phase,
-                        elsecall::release_update::Phase::Unknown
+                        elsecall_release_update::release_update::Phase::Unknown
                     ));
                 }
             }

@@ -1,14 +1,12 @@
 #![cfg(target_os = "macos")]
 //! Controlled external mise executable: verification policy, isolation, and config preservation.
-use std::{fs, os::unix::fs::PermissionsExt};
-use {
-    elsecall::release_update::{
-        self, Release, ReleaseDownload, ReleaseVersion,
-        download::MiseDownload,
-        selection::{CliSelection, MiseSelection},
-    },
-    elsecall_local_state::{paths::Paths, private_files},
+use elsecall_local_state::{paths::Paths, private_files};
+use elsecall_release_update::release_update::{
+    self, Release, ReleaseDownload, ReleaseVersion,
+    download::MiseDownload,
+    selection::{CliSelection, MiseSelection},
 };
+use std::{fs, os::unix::fs::PermissionsExt};
 fn fixture() -> (tempfile::TempDir, Paths) {
     let home = tempfile::Builder::new()
         .prefix("ec-release-tools-")
@@ -174,7 +172,7 @@ fn mise_activation_and_rollback_preserve_other_tools_options_and_concurrent_user
 #[test]
 #[ignore]
 fn live_latest_release_is_read_without_the_rate_limited_api() {
-    use elsecall::release_update::{ReleaseCatalog, catalog::GithubReleases};
+    use elsecall_release_update::release_update::{ReleaseCatalog, catalog::GithubReleases};
     let latest = GithubReleases.latest().unwrap();
     println!("{latest:?}");
     assert!(latest.is_some());

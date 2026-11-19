@@ -2,19 +2,17 @@
 //! The local release channel with real curl, tar and packslip: releases are signed
 //! here with throwaway local keys and read from a directory or a loopback server.
 //! The only fakes are the release's executables, which report a version.
+use elsecall_local_state::paths::Paths;
+use elsecall_release_update::release_update::{
+    Release, ReleaseCatalog, ReleaseDownload, ReleaseVersion,
+    local_channel::{self, LocalChannel, LocalDownload, Packslip},
+};
 use std::{
     fs,
     io::{Read, Write},
     net::TcpListener,
     path::{Path, PathBuf},
     process::Command,
-};
-use {
-    elsecall::release_update::{
-        Release, ReleaseCatalog, ReleaseDownload, ReleaseVersion,
-        local_channel::{self, LocalChannel, LocalDownload, Packslip},
-    },
-    elsecall_local_state::paths::Paths,
 };
 
 /// The packslip CLI that `mise.toml` pins. Tests fail rather than skip without it.
@@ -155,7 +153,7 @@ impl Fixture {
     fn stage(
         &self,
         version: &str,
-    ) -> elsecall_failure::Result<elsecall::release_update::StagedRelease> {
+    ) -> elsecall_failure::Result<elsecall_release_update::release_update::StagedRelease> {
         let stage = self
             .paths
             .home
