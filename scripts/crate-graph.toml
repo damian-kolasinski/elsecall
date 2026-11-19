@@ -40,7 +40,7 @@ modules = ["failure"]
 
 [crates.labels]
 band = "foundation"
-modules = ["label_pattern"]
+modules = ["label_pattern", "label_rules"]
 
 [crates.wire]
 band = "foundation"

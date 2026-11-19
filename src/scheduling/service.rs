@@ -7,7 +7,7 @@ mod expiry;
 mod hosting;
 mod initial;
 mod internal;
-pub use internal::{InternalHold, InternalPause};
+pub use internal::{InternalHold, InternalPause, invalid_rehearsal};
 #[cfg(test)]
 mod runtime_tests;
 pub use hosting::{HostedEnd, HostedExit};
@@ -937,7 +937,7 @@ impl Scheduler {
         let record = Record {
             run_id: id.clone(),
             kind: request.kind,
-            synthetic: crate::rehearsal::synthetic(request.label.as_deref()),
+            synthetic: crate::label_rules::synthetic(request.label.as_deref()),
             internal: requester.pid == std::process::id()
                 && request
                     .label

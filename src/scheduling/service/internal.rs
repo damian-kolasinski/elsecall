@@ -3,8 +3,21 @@
 //! while this member drains for an upgrade (a hold). Neither owns capacity, and
 //! production admission continues normally. A running pass drains.
 use super::{Book, Class, Phase, Scheduler, Urgency};
-use crate::{failure::Result, scheduling::run_id::RunId};
+use crate::{
+    failure::{Failure, Result},
+    scheduling::run_id::RunId,
+};
 use std::sync::{Arc, Weak};
+
+/// A rehearsal the scheduler cannot prepare for. Rehearsal reports its own
+/// invalid inputs with the same failure.
+pub fn invalid_rehearsal(message: impl Into<String>) -> Failure {
+    Failure::new(
+        "invalid_rehearsal",
+        message,
+        "Check the trace and rehearsal options; no production settings are changed.",
+    )
+}
 
 pub struct InternalPause(Arc<Scheduler>);
 impl Drop for InternalPause {
@@ -63,7 +76,7 @@ impl Scheduler {
         let drain = (tokio::time::Instant::now() + std::time::Duration::from_secs(20)).min(expires);
         while self.internal_active() {
             if tokio::time::Instant::now() >= drain {
-                return Err(crate::rehearsal::invalid(
+                return Err(invalid_rehearsal(
                     "Internal work is still draining; retry the rehearsal.",
                 ));
             }
@@ -73,7 +86,7 @@ impl Scheduler {
             .await;
         }
         if tokio::time::Instant::now() >= expires {
-            return Err(crate::rehearsal::invalid(
+            return Err(invalid_rehearsal(
                 "Rehearsal preparation reached its execution limit.",
             ));
         }
@@ -83,9 +96,7 @@ impl Scheduler {
     pub fn pause_internal(self: &Arc<Self>) -> Result<InternalPause> {
         let mut book = self.book();
         if book.internal_paused.is_some() {
-            return Err(crate::rehearsal::invalid(
-                "Internal work is already paused.",
-            ));
+            return Err(invalid_rehearsal("Internal work is already paused."));
         }
         book.internal_paused = Some(self.clock.now());
         book.withdraw_internal();

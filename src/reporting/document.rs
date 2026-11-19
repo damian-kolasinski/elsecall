@@ -204,10 +204,10 @@ pub fn document(query: &Query, gathered: &Gathered) -> Document {
     // backtests exclude synthetic labels, including when --label is supplied.
     gathered
         .facts
-        .retain(|f| !f.synthetic && !crate::rehearsal::synthetic(f.label.as_deref()));
+        .retain(|f| !f.synthetic && !crate::label_rules::synthetic(f.label.as_deref()));
     gathered
         .leftovers
-        .retain(|f| !crate::rehearsal::synthetic(f.label.as_deref()));
+        .retain(|f| !crate::label_rules::synthetic(f.label.as_deref()));
     // Requests of the period and label; a member's work and waits are the
     // requests that ran there, which the member filter always keeps.
     let labelled: Vec<Fact> = gathered

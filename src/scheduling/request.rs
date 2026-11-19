@@ -87,7 +87,6 @@ pub struct WorkRequest {
 pub const DEFAULT_SIZE: Cores = Cores::ONE;
 pub const MAXIMUM_HOLD_LIMIT: Duration = Duration::from_secs(24 * 60 * 60);
 pub const MAXIMUM_DEADLINE: Duration = Duration::from_secs(7 * 24 * 60 * 60);
-pub const MAXIMUM_LABEL: usize = 200;
 pub const MAXIMUM_MEMBER: usize = 64;
 
 pub fn invalid(message: impl Into<String>) -> Failure {
@@ -106,11 +105,12 @@ impl AdmissionRequest {
         }
         if let Some(label) = &self.label
             && (label.is_empty()
-                || label.chars().count() > crate::rehearsal::label_limit(label)
+                || label.chars().count() > crate::label_rules::label_limit(label)
                 || label.chars().any(char::is_control))
         {
             return Err(invalid(format!(
-                "A label must be 1 to {MAXIMUM_LABEL} characters without control characters."
+                "A label must be 1 to {} characters without control characters.",
+                crate::label_rules::MAXIMUM_LABEL
             )));
         }
         match (self.kind, &self.placement, self.holder_pid) {

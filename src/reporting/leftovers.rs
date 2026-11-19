@@ -80,7 +80,7 @@ impl LeftoverFact {
             && self
                 .label
                 .as_deref()
-                .is_none_or(|l| text(l, crate::scheduling::request::MAXIMUM_LABEL))
+                .is_none_or(|l| text(l, crate::label_rules::MAXIMUM_LABEL))
     }
 }
 

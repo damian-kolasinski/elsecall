@@ -102,7 +102,7 @@ pub async fn report(fleet: &Fleet, query: &Query) -> Result<Document> {
     }
     if let Some(label) = &query.label
         && (label.is_empty()
-            || label.chars().count() > crate::scheduling::request::MAXIMUM_LABEL
+            || label.chars().count() > crate::label_rules::MAXIMUM_LABEL
             || label.chars().any(char::is_control))
     {
         return Err(invalid(

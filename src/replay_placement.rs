@@ -74,7 +74,7 @@ impl ReplayPlacement {
                     if r.fact.internal
                         || crate::rehearsal::internal(r)
                         || r.fact.synthetic
-                        || crate::rehearsal::synthetic(r.fact.label.as_deref())
+                        || crate::label_rules::synthetic(r.fact.label.as_deref())
                     {
                         continue;
                     }

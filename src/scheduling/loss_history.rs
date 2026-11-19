@@ -77,7 +77,7 @@ impl LossHistory {
         for record in records
             .iter()
             .filter(|r| !window.is_zero() && r.requested_at >= since)
-            .filter(|r| !r.synthetic && !crate::rehearsal::synthetic(r.label.as_deref()))
+            .filter(|r| !r.synthetic && !crate::label_rules::synthetic(r.label.as_deref()))
         {
             let Some(placed) = record.placed.as_ref().filter(|p| p.side == Side::Caller) else {
                 continue;
