@@ -1,7 +1,6 @@
 //! The report as one document: the period, the filters, fleet and member
 //! metrics, estimate accuracy and findings, from what was gathered.
 use crate::{
-    load_log::buckets::Bucket,
     reporting::{
         accuracy::{self, Accuracy},
         blocked::{self, Blocked, BlockedQueue},
@@ -18,6 +17,7 @@ use crate::{
 };
 use elsecall_failure::Failure;
 use elsecall_labels::pattern as label_pattern;
+use elsecall_load_log::buckets::Bucket;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};

@@ -1,12 +1,10 @@
 //! Metrics of members' load history: utilization over the period and over time,
 //! work that ran while outside load saturated a member, measured speed, and how
 //! evenly busy the members were.
-use crate::{
-    load_log::{
-        buckets::Bucket,
-        minute::{memory_rank, thermal_rank, worst},
-    },
-    reporting::statistics::{mean, nearest_rank, sorted},
+use crate::reporting::statistics::{mean, nearest_rank, sorted};
+use elsecall_load_log::{
+    buckets::Bucket,
+    minute::{memory_rank, thermal_rank, worst},
 };
 use elsecall_machine::inspection::{MemoryPressure, ThermalState};
 use elsecall_scheduling_model::timestamp::Timestamp;

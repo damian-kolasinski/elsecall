@@ -1,17 +1,15 @@
 //! Fixed records and load buckets the report's tests compute from.
-use crate::{
-    load_log::buckets::Bucket,
-    scheduling::{
-        load::Gate,
-        placed::{PlacedRecord, Reached, Side, SyncSummary, Warmth},
-        placement::{CopyState, Estimate, Source, Start},
-        processes::ProcessIdentity,
-        record::{
-            Arrival, ArrivalEstimate, Candidate, Decision, HoldBasis, HoldLimitRecord, Outcome,
-            Record, State, Verdict,
-        },
+use crate::scheduling::{
+    load::Gate,
+    placed::{PlacedRecord, Reached, Side, SyncSummary, Warmth},
+    placement::{CopyState, Estimate, Source, Start},
+    processes::ProcessIdentity,
+    record::{
+        Arrival, ArrivalEstimate, Candidate, Decision, HoldBasis, HoldLimitRecord, Outcome, Record,
+        State, Verdict,
     },
 };
+use elsecall_load_log::buckets::Bucket;
 use elsecall_machine::inspection::ThermalState;
 use elsecall_scheduling_model::{
     capacity::{Capacity, Cores},

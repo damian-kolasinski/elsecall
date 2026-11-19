@@ -1383,10 +1383,8 @@ fn seed_recorded_day(
     day: Timestamp,
     complete: bool,
 ) {
-    use elsecall::{
-        load_log::{minute::Minute, store::LoadStore},
-        scheduling::records::{Records, SchedulerSettings},
-    };
+    use elsecall::scheduling::records::{Records, SchedulerSettings};
+    use elsecall_load_log::{minute::Minute, store::LoadStore};
     use elsecall_scheduling_model::capacity::Cores;
     let records = Records::open(&member.data().join("records.sqlite")).unwrap();
     let current = records

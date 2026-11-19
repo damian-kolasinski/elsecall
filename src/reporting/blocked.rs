@@ -8,16 +8,16 @@
 //! as outside. Time without samples, such as a sleeping laptop, proves nothing
 //! either way, so too little of it sampled is not blocked.
 use crate::{
-    load_log::{
-        buckets::Bucket,
-        minute::{memory_rank, worst},
-    },
     outside_pressure::{blocked::OutsideProcess, store::Episode},
     reporting::{
         facts::{Fact, PlacementKind},
         outside,
         window::Window,
     },
+};
+use elsecall_load_log::{
+    buckets::Bucket,
+    minute::{memory_rank, worst},
 };
 use elsecall_machine::inspection::MemoryPressure;
 use elsecall_scheduling_model::timestamp::Timestamp;

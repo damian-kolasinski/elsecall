@@ -47,7 +47,7 @@ pub struct PeerStatus {
     /// The member's load over the last hour and day; absent from members that
     /// predate the load history.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub load_history: Option<crate::load_log::buckets::LoadSummary>,
+    pub load_history: Option<elsecall_load_log::buckets::LoadSummary>,
     /// Why the load history could not be read.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub load_history_error: Option<Failure>,
@@ -208,7 +208,7 @@ pub struct Fleet {
     replay: ReplayGuard,
     inspection: Arc<Inspection>,
     copies: std::sync::OnceLock<Arc<dyn CopiesReport>>,
-    load: std::sync::OnceLock<Arc<dyn crate::load_log::LoadReport>>,
+    load: std::sync::OnceLock<Arc<dyn elsecall_load_log::LoadReport>>,
     blocked: std::sync::OnceLock<Arc<dyn crate::outside_pressure::BlockedReport>>,
     warnings: std::sync::OnceLock<Arc<dyn crate::outside_pressure::WarningReport>>,
     sync: std::sync::OnceLock<Arc<dyn SyncReport>>,
@@ -256,7 +256,7 @@ impl Fleet {
     }
 
     /// Reports this member's load history with its status from now on.
-    pub fn report_load(&self, report: Arc<dyn crate::load_log::LoadReport>) {
+    pub fn report_load(&self, report: Arc<dyn elsecall_load_log::LoadReport>) {
         let _ = self.load.set(report);
     }
 
@@ -297,7 +297,7 @@ impl Fleet {
     }
 
     /// This member's load history, once the service reports it.
-    pub fn load_report(&self) -> Option<Arc<dyn crate::load_log::LoadReport>> {
+    pub fn load_report(&self) -> Option<Arc<dyn elsecall_load_log::LoadReport>> {
         self.load.get().cloned()
     }
 

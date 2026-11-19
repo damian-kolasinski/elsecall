@@ -254,7 +254,6 @@ pub fn restore(
 mod tests {
     use super::*;
     use crate::{
-        load_log::LoadLog,
         scheduling::{
             clock::{Clock, VirtualClock},
             fixtures,
@@ -268,6 +267,7 @@ mod tests {
             model::Envelope,
         },
     };
+    use elsecall_load_log::LoadLog;
     use elsecall_scheduling_model::{
         capacity::Cores,
         request::{Kind, Placement},

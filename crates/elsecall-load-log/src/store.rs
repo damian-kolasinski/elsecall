@@ -1,5 +1,5 @@
 //! Minutes of load in SQLite, one row per minute, for [`RETENTION`].
-use crate::load_log::minute::Minute;
+use crate::minute::Minute;
 use elsecall_failure::{Failure, Result};
 use elsecall_scheduling_model::timestamp::Timestamp;
 use rusqlite::{Connection, params};

@@ -5,16 +5,14 @@ use super::{
     engine::invalid,
     settings::Settings,
 };
-use crate::{
-    load_log::LoadLog,
-    scheduling::{
-        clock::Clock,
-        parameters::Parameters,
-        records::SchedulerSettings,
-        service::{Adapters, Driving, Runtime, Scheduler, SchedulerConfiguration, Tasks},
-    },
+use crate::scheduling::{
+    clock::Clock,
+    parameters::Parameters,
+    records::SchedulerSettings,
+    service::{Adapters, Driving, Runtime, Scheduler, SchedulerConfiguration, Tasks},
 };
 use elsecall_failure::Result;
+use elsecall_load_log::LoadLog;
 use elsecall_scheduling_model::capacity::Capacity;
 use std::{
     path::{Path, PathBuf},

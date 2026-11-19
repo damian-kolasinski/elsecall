@@ -167,7 +167,7 @@ pub async fn serve_with_updates(
         .and_then(|f| f.roster().ok().map(|r| f.name_in(&r)));
     let mut configuration = crate::service_configuration::load(&paths, name.as_ref())?;
     let members = Arc::new(FleetMembers::new(fleet.as_ref().ok().cloned()));
-    let load_log = Arc::new(crate::load_log::LoadLog::open(&paths.load_history())?);
+    let load_log = Arc::new(elsecall_load_log::LoadLog::open(&paths.load_history())?);
     let mut locations = configured_locations(&paths, &configuration);
     // Configuration sync needs fleet state; broken sync state degrades only sync.
     let mut config_sync = match &fleet {

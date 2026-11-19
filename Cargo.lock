@@ -1072,6 +1072,7 @@ dependencies = [
  "elsecall-failure",
  "elsecall-guidance",
  "elsecall-labels",
+ "elsecall-load-log",
  "elsecall-local-client",
  "elsecall-local-state",
  "elsecall-machine",
@@ -1172,6 +1173,21 @@ dependencies = [
 [[package]]
 name = "elsecall-labels"
 version = "0.3.0"
+
+[[package]]
+name = "elsecall-load-log"
+version = "0.3.0"
+dependencies = [
+ "elsecall-failure",
+ "elsecall-machine",
+ "elsecall-scheduling-model",
+ "elsecall-sqlite-retention",
+ "libc",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
 
 [[package]]
 name = "elsecall-local-client"

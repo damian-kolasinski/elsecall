@@ -1,6 +1,6 @@
 //! Bounded session load capture. Normal minute totals cannot prove in-window
 //! coverage because they also include observations before a rehearsal began.
-use crate::load_log::{buckets::Bucket, minute::Second};
+use crate::{buckets::Bucket, minute::Second};
 use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 mod summary;

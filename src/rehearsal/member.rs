@@ -37,7 +37,7 @@ pub struct Member {
     paths: Paths,
     scheduler: Arc<Scheduler>,
     housekeeper: Arc<Housekeeper>,
-    load: Arc<crate::load_log::LoadLog>,
+    load: Arc<elsecall_load_log::LoadLog>,
     session: Mutex<Option<Session>>,
     recovering: AtomicBool,
 }
@@ -46,7 +46,7 @@ impl Member {
         paths: Paths,
         scheduler: Arc<Scheduler>,
         housekeeper: Arc<Housekeeper>,
-        load: Arc<crate::load_log::LoadLog>,
+        load: Arc<elsecall_load_log::LoadLog>,
     ) -> Arc<Self> {
         let this = Arc::new(Self {
             paths,

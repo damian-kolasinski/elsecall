@@ -1,6 +1,5 @@
 //! Explicit projections: never serialize a Record wholesale into a trace.
 use crate::{
-    load_log::buckets::Bucket,
     reporting::facts::Fact,
     scheduling::{
         leftovers::{Ending, Leftovers},
@@ -8,6 +7,7 @@ use crate::{
     },
     workload::{contention::Curve, demand::Demand},
 };
+use elsecall_load_log::buckets::Bucket;
 use elsecall_scheduling_model::{
     request::{Placement, Urgency},
     timestamp::Timestamp,

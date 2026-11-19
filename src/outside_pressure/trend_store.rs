@@ -16,7 +16,7 @@ use std::{
 };
 
 /// Warnings that ended longer ago than this are deleted, as load minutes are.
-pub const RETENTION: Duration = crate::load_log::store::RETENTION;
+pub const RETENTION: Duration = elsecall_load_log::store::RETENTION;
 
 pub struct TrendStore {
     connection: Mutex<Connection>,

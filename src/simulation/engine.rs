@@ -1145,7 +1145,6 @@ pub(super) mod tests {
     use crate::workload::trace::TraceOutcome;
     pub fn trace() -> Trace {
         use crate::{
-            load_log::buckets::Bucket,
             scheduling::{
                 fixtures,
                 record::{Outcome as End, State},
@@ -1157,6 +1156,7 @@ pub(super) mod tests {
                 trace::Member as TraceMember,
             },
         };
+        use elsecall_load_log::buckets::Bucket;
         use elsecall_scheduling_model::capacity::Cores;
         let start = Timestamp::parse_rfc3339("2026-11-03T00:00:00Z").unwrap();
         let mut trace:Trace=serde_json::from_value(json!({"trace_version":1,"since":start,"until":start.after(Duration::from_secs(60)),"incomplete":false,"master":"a","members":[],"requests":[],"leftovers":[],"demand":[],"contention":[],"limits":[]})).unwrap();

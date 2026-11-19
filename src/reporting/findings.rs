@@ -1236,12 +1236,13 @@ mod tests {
     #[test]
     fn a_member_overloaded_while_another_had_room_is_a_finding_that_says_what_ran() {
         // A 14-CPU minute at `cpu` with `load` threads and `in_use` granted cores.
-        let loaded = |m: u64, cpu: f64, load: f64, in_use: f64| crate::load_log::buckets::Bucket {
-            load_mean: Some(load),
-            load_max: Some(load + 14.0),
-            logical_cpus: Some(14),
-            ..bucket(m, cpu, in_use, 0, 0, 1.0)
-        };
+        let loaded =
+            |m: u64, cpu: f64, load: f64, in_use: f64| elsecall_load_log::buckets::Bucket {
+                load_mean: Some(load),
+                load_max: Some(load + 14.0),
+                logical_cpus: Some(14),
+                ..bucket(m, cpu, in_use, 0, 0, 1.0)
+            };
         let gathered = |mini_minutes: u64, devbox_cpu: f64| {
             let mut gathered = troubled();
             // Two pinned checks and a lease ran on the mini during it.
@@ -1559,7 +1560,7 @@ mod tests {
     fn minutes(
         closed: impl Fn(u64) -> Option<Pressure>,
         in_use: impl Fn(u64) -> f64,
-    ) -> Vec<crate::load_log::buckets::Bucket> {
+    ) -> Vec<elsecall_load_log::buckets::Bucket> {
         (0..660)
             .map(|m| {
                 let mut b = match closed(m) {

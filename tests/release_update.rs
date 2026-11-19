@@ -1,37 +1,35 @@
 #![cfg(target_os = "macos")]
 //! Update policy exercised with a real scheduler/API and fakes only at provider boundaries.
+use elsecall::{
+    release_update::{
+        self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
+        service::{HelperLauncher, UpdateService},
+        store::Store,
+    },
+    scheduling::{
+        clock::SystemClock,
+        placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},
+        pre_run_sync::{PreRunSync, Synced},
+        processes::{ProcessIdentity, ProcessInfo, ProcessTable},
+        service::{Adapters, Driving, HostedEnd, Runtime, Scheduler, SchedulerConfiguration},
+    },
+};
 use elsecall_build_identity::build_identity::Digest;
 use elsecall_failure::Result;
+use elsecall_load_log::LoadLog;
 use elsecall_local_state::{paths::Paths, private_files};
 use elsecall_machine::inspection::{
     CoreCounts, LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState,
 };
+use elsecall_scheduling_model::{
+    capacity::Cores,
+    request::{AdmissionRequest, Kind, Placement, Urgency},
+    run_id::{RandomRunIds, RunId},
+    speed::SpeedMeter,
+};
 use std::{
     future::IntoFuture,
     sync::{Arc, Mutex},
-};
-use {
-    elsecall::{
-        load_log::LoadLog,
-        release_update::{
-            self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
-            service::{HelperLauncher, UpdateService},
-            store::Store,
-        },
-        scheduling::{
-            clock::SystemClock,
-            placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},
-            pre_run_sync::{PreRunSync, Synced},
-            processes::{ProcessIdentity, ProcessInfo, ProcessTable},
-            service::{Adapters, Driving, HostedEnd, Runtime, Scheduler, SchedulerConfiguration},
-        },
-    },
-    elsecall_scheduling_model::{
-        capacity::Cores,
-        request::{AdmissionRequest, Kind, Placement, Urgency},
-        run_id::{RandomRunIds, RunId},
-        speed::SpeedMeter,
-    },
 };
 
 struct MachineBoundary;

@@ -20,32 +20,30 @@ mod running_estimates;
 mod upgrading;
 pub use upgrading::{HostingHold, OnHandover, UpdateHold, WorkInFlight};
 
-use crate::{
-    load_log::{LoadLog, minute::Second},
-    scheduling::{
-        admission::{Admission, Class},
-        binding::{Bindings, Lost},
-        busy::{self, Situation, Work},
-        clock::{Clock, SystemClock},
-        estimates::{self, HoldBasis},
-        learning,
-        leftovers::Leftovers,
-        load::{Gate, LoadHistory},
-        messages::{Grant, MemberState, RunSummary, Runs},
-        parameters::Parameters,
-        placed::{Members, PlacedGrant, Side},
-        pre_run_sync::PreRunSync,
-        processes::{self, ProcessIdentity, ProcessInfo, ProcessTable},
-        record::{
-            Candidate, Decision, HoldBasis as RecordBasis, HoldLimitRecord, Outcome, Record,
-            SizeBasis, State, Verdict,
-        },
-        records::Records,
-        recovery,
+use crate::scheduling::{
+    admission::{Admission, Class},
+    binding::{Bindings, Lost},
+    busy::{self, Situation, Work},
+    clock::{Clock, SystemClock},
+    estimates::{self, HoldBasis},
+    learning,
+    leftovers::Leftovers,
+    load::{Gate, LoadHistory},
+    messages::{Grant, MemberState, RunSummary, Runs},
+    parameters::Parameters,
+    placed::{Members, PlacedGrant, Side},
+    pre_run_sync::PreRunSync,
+    processes::{self, ProcessIdentity, ProcessInfo, ProcessTable},
+    record::{
+        Candidate, Decision, HoldBasis as RecordBasis, HoldLimitRecord, Outcome, Record, SizeBasis,
+        State, Verdict,
     },
+    records::Records,
+    recovery,
 };
 use auto::Auto;
 use elsecall_failure::{Failure, Result};
+use elsecall_load_log::{LoadLog, minute::Second};
 use elsecall_machine::inspection::{CoreCounts, MachineInspector};
 use elsecall_scheduling_model::{
     capacity::{Capacity, Cores},

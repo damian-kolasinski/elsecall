@@ -227,7 +227,7 @@ pub async fn collect(paths: &Paths, start: Timestamp, until: Timestamp) -> Resul
         let mut at = start.millis() / 60_000 * 60_000;
         while at < load_until.millis() {
             let end = (at + 12 * 3_600_000).min(load_until.millis());
-            let load: Result<Vec<crate::load_log::buckets::Bucket>> = client::post_large(
+            let load: Result<Vec<elsecall_load_log::buckets::Bucket>> = client::post_large(
                 &paths.socket(),
                 "/v1/trace/load",
                 &PageRequest {
@@ -240,14 +240,17 @@ pub async fn collect(paths: &Paths, start: Timestamp, until: Timestamp) -> Resul
             .await;
             match load {
                 Ok(mut buckets) => {
-                    if buckets.iter().any(|b: &crate::load_log::buckets::Bucket| {
-                        b.at.millis() < at
+                    if buckets
+                        .iter()
+                        .any(|b: &elsecall_load_log::buckets::Bucket| {
+                            b.at.millis() < at
                             || b.at.millis() >= end
                             || !b.at.millis().is_multiple_of(60_000)
                             // `seconds` counts observations, not distinct wall
                             // seconds. Timer jitter can put 61 in a minute.
                             || b.seconds > u64::from(u32::MAX)
-                    }) {
+                        })
+                    {
                         entry.errors.push("invalid_trace_load_page".into());
                         break;
                     }

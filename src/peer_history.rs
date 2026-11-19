@@ -4,7 +4,6 @@
 //! quoted.
 use crate::{
     fleet::Fleet,
-    load_log::buckets::Bucket,
     peer_client,
     report_protocol::{FactsPage, FactsRequest, LoadRequest, PAGE},
     reporting::{
@@ -14,6 +13,7 @@ use crate::{
     },
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_load_log::buckets::Bucket;
 use elsecall_membership::roster::Member;
 use elsecall_scheduling_model::speed::PLAUSIBLE;
 use futures_util::future::BoxFuture;
