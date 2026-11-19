@@ -108,14 +108,14 @@ fn expired_records_return_substantial_slack_and_wal_to_disk() {
 
 #[test]
 fn backup_retention_removes_content_and_empty_directories_and_applies_lowered_limits_on_open() {
-    use elsecall_config_sync::config_sync::{
+    use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
+    use elsecall_host::private_files;
+    use elsecall_sync::config_sync::{
         compare::Change,
         replica::{Layout, Replica},
         state::{Backup, State},
         store::FileStore,
     };
-    use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
-    use elsecall_host::private_files;
     let home = tempfile::tempdir().unwrap();
     let data = home.path().join("state");
     let layout = Layout::for_home(home.path(), &data);
@@ -176,14 +176,14 @@ fn backup_retention_removes_content_and_empty_directories_and_applies_lowered_li
 
 #[test]
 fn retention_removes_recorded_cross_volume_backup_without_removing_its_neighbors() {
-    use elsecall_config_sync::config_sync::{
+    use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
+    use elsecall_host::private_files;
+    use elsecall_sync::config_sync::{
         compare::Change,
         replica::{Layout, Replica},
         state::{Backup, State},
         store::FileStore,
     };
-    use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
-    use elsecall_host::private_files;
     let home = tempfile::tempdir().unwrap();
     let data = home.path().join("state");
     let layout = Layout::for_home(home.path(), &data);

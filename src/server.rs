@@ -163,8 +163,7 @@ pub async fn serve_with_updates(
         .as_ref()
         .ok()
         .and_then(|f| f.roster().ok().map(|r| f.name_in(&r)));
-    let mut configuration =
-        elsecall_config_sync::service_configuration::load(&paths, name.as_ref())?;
+    let mut configuration = elsecall_sync::service_configuration::load(&paths, name.as_ref())?;
     let members = Arc::new(FleetMembers::new(fleet.as_ref().ok().cloned()));
     let load_log = Arc::new(elsecall_scheduling::load_log::LoadLog::open(
         &paths.load_history(),
@@ -202,9 +201,9 @@ pub async fn serve_with_updates(
     if let (Ok(fleet), Ok(sync)) = (&fleet, &config_sync) {
         fleet.report_sync(sync.clone());
         fleet.hand_over_with(sync.clone());
-        fleet.observe_role_with(Arc::new(
-            elsecall_config_sync::config_sync::service::RoleChanges(sync.clone()),
-        ));
+        fleet.observe_role_with(Arc::new(elsecall_sync::config_sync::service::RoleChanges(
+            sync.clone(),
+        )));
     }
     if let (Ok(fleet), Err(error)) = (&fleet, &config_sync) {
         elsecall_host::service_log!(
@@ -213,7 +212,7 @@ pub async fn serve_with_updates(
         );
         // A move must not skip the handover because sync is broken here.
         fleet.hand_over_with(Arc::new(
-            elsecall_config_sync::config_sync::service::UnavailableHandover(error.clone()),
+            elsecall_sync::config_sync::service::UnavailableHandover(error.clone()),
         ));
     }
     // Placed runs bring their member's synced configuration up to date first.
@@ -446,8 +445,8 @@ pub async fn serve_with_updates(
         evidence: Arc::new(TuningTrust),
     };
     let sync_routes = match &config_sync {
-        Ok(sync) => elsecall_config_sync::config_sync_local_api::routes(sync.clone()),
-        Err(error) => elsecall_config_sync::config_sync_local_api::unavailable(error.clone()),
+        Ok(sync) => elsecall_sync::config_sync_local_api::routes(sync.clone()),
+        Err(error) => elsecall_sync::config_sync_local_api::unavailable(error.clone()),
     };
     let tools_routes = elsecall_tools::tools_api::routes(fleet.clone());
     let desired_routes = elsecall_tools::toolset_api::routes(fleet.clone(), &paths);
@@ -469,8 +468,8 @@ pub async fn serve_with_updates(
                 ))
                 .merge(elsecall_tools::tools_api::peer_routes());
             if let Ok(sync) = &config_sync {
-                member_routes = member_routes
-                    .merge(elsecall_config_sync::config_sync_api::routes(sync.clone()));
+                member_routes =
+                    member_routes.merge(elsecall_sync::config_sync_api::routes(sync.clone()));
             }
             member_routes = member_routes.merge(match &upgrades {
                 Ok(upgrades) => elsecall_fleet_upgrade::fleet_upgrade_api::routes(upgrades.clone()),
@@ -598,7 +597,7 @@ async fn machine(State(inspection): State<Arc<Inspection>>) -> Response {
 
 fn configured_locations(
     paths: &Paths,
-    configuration: &elsecall_service_config::ServiceConfiguration,
+    configuration: &elsecall_sync::configuration::ServiceConfiguration,
 ) -> Locations {
     Locations {
         setting: configuration.location,
@@ -616,8 +615,8 @@ fn open_config_sync(
     locations: &Locations,
     fleet: &Arc<Fleet>,
     backup_limit: usize,
-) -> Result<Arc<elsecall_config_sync::config_sync::service::ConfigSync>> {
-    use elsecall_config_sync::config_sync::{
+) -> Result<Arc<elsecall_sync::config_sync::service::ConfigSync>> {
+    use elsecall_sync::config_sync::{
         replica::{Layout, Replica},
         service::ConfigSync,
         store::FileStore,

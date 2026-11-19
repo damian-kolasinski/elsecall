@@ -13,10 +13,10 @@ doctest = false
 workspace = true
 
 [dependencies]
-elsecall-config-sync.workspace = true
 elsecall-contract.workspace = true
 elsecall-installation.workspace = true
 elsecall-scheduling.workspace = true
+elsecall-sync.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]

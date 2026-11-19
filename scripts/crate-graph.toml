@@ -35,14 +35,6 @@ forbid = ["axum", "clap"]
 
 # --- foundation ---------------------------------------------------------------
 
-[crates.service-config]
-band = "feature"
-modules = ["configuration"]
-
-[crates.config-sync]
-band = "feature"
-modules = ["config_sync", "config_sync_api", "config_sync_cli", "config_sync_local_api", "service_configuration"]
-
 [crates.tools]
 band = "feature"
 modules = ["toolset", "toolset_api", "tools_api", "tools_cli", "tool_inventory", "fleet_tool_inventory", "mise_cli", "macos::xcodes", "inventory_reader"]
@@ -189,3 +181,8 @@ modules = ["fleet", "fleet_changes", "fleet_local_api", "fleet_view", "fleet_pla
 band = "feature"
 # Running commands on the fleet: admitting a run, placing it on a member, running it remotely, and the workload configuration that shapes it.
 modules = ["admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "remote_run", "sealed_run", "placement_api", "placement_authority", "placement_host", "placement_config_sync", "workload_settings", "workload_configuration", "workload_migration"]
+
+[crates.sync]
+band = "feature"
+# Keeping members alike: syncing configuration between them, and this member's service configuration.
+modules = ["config_sync", "config_sync_api", "config_sync_cli", "config_sync_local_api", "service_configuration", "configuration"]

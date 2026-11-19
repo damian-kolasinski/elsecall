@@ -143,7 +143,7 @@ async fn settings(
     let result: Value = client::post_large(
         &paths.socket(),
         "/v1/sync/rehearsal",
-        &elsecall_config_sync::service_configuration::RehearsalSettings {
+        &elsecall_sync::service_configuration::RehearsalSettings {
             session: session.into(),
             until,
             settings,

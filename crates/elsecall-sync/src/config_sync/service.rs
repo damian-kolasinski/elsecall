@@ -19,12 +19,12 @@ use crate::config_sync::{
     replica::{ApplyAs, Replica},
     report::{Applied, PathReport, SyncRole, SyncState, SyncSummary},
 };
+use crate::configuration;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
 use elsecall_fleet::fleet::{Fleet, RoleHandover, SyncReport};
 use elsecall_peers::peer_client;
 use elsecall_peers::roster::{Member, MemberName, Roster};
-use elsecall_service_config as configuration;
 use elsecall_workspace::digest::Digest;
 use hyper::Method;
 use serde::{Deserialize, Serialize};

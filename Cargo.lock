@@ -1067,7 +1067,6 @@ dependencies = [
  "ed25519-dalek",
  "elsecall-agent-skill",
  "elsecall-api-response",
- "elsecall-config-sync",
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-fleet-upgrade",
@@ -1084,9 +1083,9 @@ dependencies = [
  "elsecall-reporting",
  "elsecall-runs",
  "elsecall-scheduling",
- "elsecall-service-config",
  "elsecall-service-lifecycle",
  "elsecall-simulation",
+ "elsecall-sync",
  "elsecall-tools",
  "elsecall-trace",
  "elsecall-tuning",
@@ -1136,35 +1135,6 @@ version = "0.3.0"
 dependencies = [
  "axum",
  "elsecall-contract",
-]
-
-[[package]]
-name = "elsecall-config-sync"
-version = "0.3.0"
-dependencies = [
- "axum",
- "base64 0.22.1",
- "clap",
- "elsecall-api-response",
- "elsecall-contract",
- "elsecall-fleet",
- "elsecall-host",
- "elsecall-peers",
- "elsecall-scheduling",
- "elsecall-service-config",
- "elsecall-workspace",
- "futures-util",
- "getrandom 0.3.4",
- "hyper",
- "hyper-util",
- "libc",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "tokio",
- "toml",
- "zeroize",
 ]
 
 [[package]]
@@ -1447,14 +1417,13 @@ dependencies = [
  "base64 0.22.1",
  "clap",
  "elsecall-api-response",
- "elsecall-config-sync",
  "elsecall-contract",
  "elsecall-fleet",
  "elsecall-host",
  "elsecall-peers",
  "elsecall-scheduling",
- "elsecall-service-config",
  "elsecall-service-lifecycle",
+ "elsecall-sync",
  "elsecall-workspace",
  "futures-util",
  "getrandom 0.3.4",
@@ -1491,29 +1460,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-service-config"
-version = "0.3.0"
-dependencies = [
- "elsecall-contract",
- "elsecall-fleet",
- "elsecall-host",
- "elsecall-housekeeping",
- "elsecall-scheduling",
- "elsecall-workspace",
- "humantime",
- "serde",
- "tempfile",
- "toml",
-]
-
-[[package]]
 name = "elsecall-service-lifecycle"
 version = "0.3.0"
 dependencies = [
- "elsecall-config-sync",
  "elsecall-contract",
  "elsecall-installation",
  "elsecall-scheduling",
+ "elsecall-sync",
  "tempfile",
  "tokio",
 ]
@@ -1536,6 +1489,36 @@ dependencies = [
  "tempfile",
  "tokio",
  "toml",
+]
+
+[[package]]
+name = "elsecall-sync"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "clap",
+ "elsecall-api-response",
+ "elsecall-contract",
+ "elsecall-fleet",
+ "elsecall-host",
+ "elsecall-housekeeping",
+ "elsecall-peers",
+ "elsecall-scheduling",
+ "elsecall-workspace",
+ "futures-util",
+ "getrandom 0.3.4",
+ "humantime",
+ "hyper",
+ "hyper-util",
+ "libc",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "toml",
+ "zeroize",
 ]
 
 [[package]]
@@ -1586,7 +1569,6 @@ name = "elsecall-tuning"
 version = "0.3.0"
 dependencies = [
  "clap",
- "elsecall-config-sync",
  "elsecall-contract",
  "elsecall-host",
  "elsecall-rehearsal",
@@ -1596,6 +1578,7 @@ dependencies = [
  "elsecall-runs",
  "elsecall-scheduling",
  "elsecall-simulation",
+ "elsecall-sync",
  "elsecall-trace",
  "elsecall-workload",
  "humantime",

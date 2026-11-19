@@ -31,5 +31,5 @@ tokio.workspace = true
 toml.workspace = true
 
 [dev-dependencies]
-elsecall-config-sync.workspace = true
 elsecall-report-facts.workspace = true
+elsecall-sync.workspace = true

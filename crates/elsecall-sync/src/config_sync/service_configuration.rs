@@ -4,9 +4,7 @@ use elsecall_contract::scheduling_model::timestamp::Timestamp;
 
 impl ConfigSync {
     /// Loads the last accepted service settings before any work is admitted.
-    pub fn service_settings(
-        &self,
-    ) -> Result<Option<elsecall_service_config::ServiceConfiguration>> {
+    pub fn service_settings(&self) -> Result<Option<crate::configuration::ServiceConfiguration>> {
         if !self.replica.manifest().is_some_and(|m| m.service.is_some()) {
             return Ok(None);
         }

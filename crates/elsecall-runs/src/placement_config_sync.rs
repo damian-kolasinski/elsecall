@@ -1,14 +1,14 @@
 //! Placement's way to bring a member's synced configuration up to date before a
 //! run starts there: the adapter of `scheduling::pre_run_sync::PreRunSync` over
 //! configuration sync.
-use elsecall_config_sync::config_sync::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_peers::roster::MemberName;
+use elsecall_scheduling::pre_run_sync::{PreRunSync, PushedPath, Synced};
+use elsecall_sync::config_sync::{
     compare::Change,
     report::Applied,
     service::{ConfigSync, MemberSync},
 };
-use elsecall_contract::failure::{Failure, Result};
-use elsecall_peers::roster::MemberName;
-use elsecall_scheduling::pre_run_sync::{PreRunSync, PushedPath, Synced};
 use futures_util::future::BoxFuture;
 use std::sync::Arc;
 
@@ -76,8 +76,8 @@ fn pushed(applied: &Applied) -> Vec<PushedPath> {
 #[cfg(test)]
 mod tests {
     use crate::placement_config_sync::*;
-    use elsecall_config_sync::config_sync::history::{FileRecord, PathRecord};
     use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
+    use elsecall_sync::config_sync::history::{FileRecord, PathRecord};
 
     fn file(change: Change, size: Option<u64>) -> FileRecord {
         FileRecord {

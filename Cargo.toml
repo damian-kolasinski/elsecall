@@ -53,7 +53,6 @@ zeroize = "1"
 # The workspace's own crates.
 elsecall-agent-skill = { path = "crates/elsecall-agent-skill" }
 elsecall-api-response = { path = "crates/elsecall-api-response" }
-elsecall-config-sync = { path = "crates/elsecall-config-sync" }
 elsecall-contract = { path = "crates/elsecall-contract" }
 elsecall-fleet = { path = "crates/elsecall-fleet" }
 elsecall-fleet-upgrade = { path = "crates/elsecall-fleet-upgrade" }
@@ -70,9 +69,9 @@ elsecall-report-facts = { path = "crates/elsecall-report-facts" }
 elsecall-reporting = { path = "crates/elsecall-reporting" }
 elsecall-runs = { path = "crates/elsecall-runs" }
 elsecall-scheduling = { path = "crates/elsecall-scheduling" }
-elsecall-service-config = { path = "crates/elsecall-service-config" }
 elsecall-service-lifecycle = { path = "crates/elsecall-service-lifecycle" }
 elsecall-simulation = { path = "crates/elsecall-simulation" }
+elsecall-sync = { path = "crates/elsecall-sync" }
 elsecall-tools = { path = "crates/elsecall-tools" }
 elsecall-trace = { path = "crates/elsecall-trace" }
 elsecall-tuning = { path = "crates/elsecall-tuning" }
@@ -120,7 +119,6 @@ clap.workspace = true
 ed25519-dalek.workspace = true
 elsecall-agent-skill.workspace = true
 elsecall-api-response.workspace = true
-elsecall-config-sync.workspace = true
 elsecall-contract.workspace = true
 elsecall-fleet-upgrade.workspace = true
 elsecall-fleet.workspace = true
@@ -137,9 +135,9 @@ elsecall-report-facts.workspace = true
 elsecall-reporting.workspace = true
 elsecall-runs.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-service-config.workspace = true
 elsecall-service-lifecycle.workspace = true
 elsecall-simulation.workspace = true
+elsecall-sync.workspace = true
 elsecall-tools.workspace = true
 elsecall-trace.workspace = true
 elsecall-tuning.workspace = true

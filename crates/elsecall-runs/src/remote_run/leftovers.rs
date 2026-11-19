@@ -28,7 +28,7 @@ const RECORDED: usize = 8;
 /// The longest stopping leftovers takes, from the request to the end of the watch.
 pub const STOPPING: Duration = Duration::from_secs(8);
 
-pub use elsecall_service_config::Cap;
+pub use elsecall_sync::configuration::Cap;
 
 /// Watches one run's leftovers; cloned handles share them.
 #[derive(Clone)]

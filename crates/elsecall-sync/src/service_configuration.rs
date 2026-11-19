@@ -1,8 +1,8 @@
 //! Fleet service settings: a complete document, with defaults and member overlays.
 //! Bootstrap identity, trust, transport and installation never enter this schema.
+use crate::configuration::{self as configuration, ServiceConfiguration};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_peers::roster::MemberName;
-use elsecall_service_config::{self as configuration, ServiceConfiguration};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::Path};
 

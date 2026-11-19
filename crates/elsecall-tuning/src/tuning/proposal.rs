@@ -132,7 +132,7 @@ keep_local_margin=0.2
 [members.mini.capacity]
 reserved_cores=1.5
 "#;
-        elsecall_config_sync::service_configuration::Configuration::parse(projection).unwrap();
+        elsecall_sync::service_configuration::Configuration::parse(projection).unwrap();
     }
     #[test]
     fn missing_baseline_and_noop_golden() {

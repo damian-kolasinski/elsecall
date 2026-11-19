@@ -1,7 +1,7 @@
 //! Automatic service configuration application at an atomic idle boundary.
-use elsecall_config_sync::config_sync::service::ConfigSync;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_scheduling::service::Scheduler;
+use elsecall_sync::config_sync::service::ConfigSync;
 use std::{os::unix::process::CommandExt, sync::Arc, time::Duration};
 
 pub async fn when_idle(sync: Option<Arc<ConfigSync>>, scheduler: Arc<Scheduler>) {

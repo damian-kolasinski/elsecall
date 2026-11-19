@@ -342,7 +342,7 @@ fn housekeeping(section: HousekeepingSection) -> std::result::Result<Housekeepin
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::configuration::*;
 
     #[test]
     fn reads_log_and_backup_limits() {

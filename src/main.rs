@@ -81,7 +81,7 @@ enum Command {
     #[command(
         after_help = "Output names files and shows short keyed fingerprints only, never their content. README \"Configuration sync\" describes the rules."
     )]
-    Sync(elsecall_config_sync::config_sync_cli::SyncArgs),
+    Sync(elsecall_sync::config_sync_cli::SyncArgs),
     /// Manage the installed background service
     Service {
         #[command(subcommand)]
@@ -362,7 +362,7 @@ async fn run(cli: Cli) -> Result<bool> {
         Command::Serve | Command::UpgradeHelper { .. } | Command::UpdateHelper { .. }
     ) {
         elsecall_host::service_log::initialize(&paths, || {
-            elsecall_config_sync::service_configuration::load(&paths, None).map(|c| c.logs)
+            elsecall_sync::service_configuration::load(&paths, None).map(|c| c.logs)
         })?;
     }
     let manager: Box<dyn ServiceManager> = if elsecall_platform_macos::process_service::requested()?
@@ -461,7 +461,7 @@ async fn run(cli: Cli) -> Result<bool> {
         Command::Machine => output(client::get::<Machine>(&paths.socket(), "/v1/machine").await?),
         Command::Tools(args) => output(elsecall_tools::tools_cli::run(&paths, args).await?),
         Command::Doctor => {
-            let configuration = elsecall_config_sync::service_configuration::load(&paths, None);
+            let configuration = elsecall_sync::service_configuration::load(&paths, None);
             let log_settings = configuration
                 .as_ref()
                 .map(|c| c.logs.clone())
@@ -672,7 +672,7 @@ async fn run(cli: Cli) -> Result<bool> {
             return Ok(complete);
         }
         Command::Sync(args) => {
-            let (data, complete) = elsecall_config_sync::config_sync_cli::run(&paths, args).await?;
+            let (data, complete) = elsecall_sync::config_sync_cli::run(&paths, args).await?;
             output(data);
             return Ok(complete);
         }
