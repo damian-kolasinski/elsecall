@@ -5,7 +5,7 @@
 //! always lands in the same, warm copy. A **same-path** copy lives at the caller's
 //! absolute path. Either way, each caller repository's history is kept once, in an
 //! object store under the workspace root that all its worktrees' copies share.
-use crate::workspace::{digest::Digest, sync_failed};
+use crate::{digest::Digest, sync_failed};
 use elsecall_failure::{Failure, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};

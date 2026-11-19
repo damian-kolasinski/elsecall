@@ -1,7 +1,7 @@
 //! File operations confined to one directory tree. Every path is walked component
 //! by component from an open handle on the root, refusing symbolic links, so no
 //! operation reaches outside the tree, even through a link planted inside it.
-use crate::workspace::path::WorkspacePath;
+use crate::path::WorkspacePath;
 use std::{
     collections::HashMap,
     ffi::{CStr, CString},

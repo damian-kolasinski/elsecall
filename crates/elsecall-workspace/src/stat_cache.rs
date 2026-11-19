@@ -1,7 +1,7 @@
 //! The caller's record of file digests by file status, so an unchanged file is
 //! never read again. A file whose inode, size, modification or change time or mode
 //! differs is hashed afresh.
-use crate::workspace::{confined::Status, digest::Digest, path::WorkspacePath};
+use crate::{confined::Status, digest::Digest, path::WorkspacePath};
 use std::{collections::HashMap, path::Path};
 
 const VERSION: u8 = 1;

@@ -1,9 +1,7 @@
 //! What a member should hold and how it differs from what it holds: overrides laid
 //! over the mirrored tree, and each file classed by fingerprints alone.
-use crate::{
-    config_sync::manifest::{FileKey, FileNode, Node, Tree},
-    workspace::path::WorkspacePath,
-};
+use crate::config_sync::manifest::{FileKey, FileNode, Node, Tree};
+use elsecall_workspace::path::WorkspacePath;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// The tree a member holds at a synced path: the mirrored tree with the member's

@@ -5,7 +5,7 @@
 //! did not arrive is left out of its directory's rebuild, and a single file that
 //! did not arrive leaves the caller's version as it was; either is noted with its
 //! cause.
-use crate::workspace::{
+use crate::{
     confined::{Confined, Create, Kind, remove_at, temporary_name},
     digest::{Digest, Hasher},
     not_returned::{Cause, Shortfall},
@@ -377,7 +377,7 @@ impl Returning {
                     returning.rebuilds.push(rebuild);
                 }
                 Err(e) => {
-                    let _ = crate::workspace::confined::remove_at(&parent, &temporary);
+                    let _ = crate::confined::remove_at(&parent, &temporary);
                     returning
                         .shortfall
                         .add_error(&output, &output, Cause::TransferError, &e);
@@ -508,7 +508,7 @@ impl Drop for Returning {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::workspace::outputs::{Content, OutputFile};
+    use crate::outputs::{Content, OutputFile};
 
     fn path(text: &str) -> WorkspacePath {
         WorkspacePath::parse(text).unwrap()

@@ -14,22 +14,22 @@ use crate::{
         protocol::{Exited, RunMessage, Start, Stream},
     },
     scheduling::{leftovers::Leftovers, run_id::RunId},
-    workspace::{
-        confined::{Confined, Create},
-        copies::Claim,
-        digest::Digest,
-        location::CopyLocation,
-        not_returned::{Account, Cause},
-        object_sources::ObjectSources,
-        output_snapshot::{AtExit, Limits, Snapshot},
-        output_survey, outputs,
-        path::WorkspacePath,
-        sync::{self, MemberStats},
-    },
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_run_admission::{self as run_admission, Admission};
 use elsecall_wire::wire::Frame;
+use elsecall_workspace::{
+    confined::{Confined, Create},
+    copies::Claim,
+    digest::Digest,
+    location::CopyLocation,
+    not_returned::{Account, Cause},
+    object_sources::ObjectSources,
+    output_snapshot::{AtExit, Limits, Snapshot},
+    output_survey, outputs,
+    path::WorkspacePath,
+    sync::{self, MemberStats},
+};
 use std::{
     ffi::{OsStr, OsString},
     os::{

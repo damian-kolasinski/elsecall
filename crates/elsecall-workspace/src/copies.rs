@@ -11,7 +11,7 @@
 //! and released it. The copy is free for the next run, which gets them with its
 //! claim and waits for them or stops them before it syncs; housekeeping does not
 //! reserve the copy while they run.
-use crate::workspace::location::CopyLocation;
+use crate::location::CopyLocation;
 use futures_util::future::BoxFuture;
 use std::{
     collections::{HashMap, HashSet},
@@ -237,7 +237,7 @@ impl Drop for StoreLock {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::workspace::location::Setting;
+    use crate::location::Setting;
 
     fn location(root: &str, store: &str) -> CopyLocation {
         CopyLocation {

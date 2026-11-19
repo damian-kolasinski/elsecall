@@ -1,7 +1,7 @@
 //! A point-in-time copy of one open regular file: an APFS clone, which shares the
 //! file's blocks until either side changes, or a plain copy where the volume
 //! cannot clone.
-use crate::workspace::confined::Confined;
+use crate::confined::Confined;
 use std::{
     ffi::CStr,
     fs::File,

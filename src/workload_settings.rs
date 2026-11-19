@@ -30,17 +30,15 @@
 //! deadline = "30m"
 //! at_deadline = "start"
 //! ```
-use crate::{
-    scheduling::{
-        capacity::Cores,
-        request::{AtDeadline, MAXIMUM_DEADLINE, MAXIMUM_HOLD_LIMIT},
-    },
-    workspace::{
-        carried_refs::{self, RefPattern},
-        path::WorkspacePath,
-    },
+use crate::scheduling::{
+    capacity::Cores,
+    request::{AtDeadline, MAXIMUM_DEADLINE, MAXIMUM_HOLD_LIMIT},
 };
 use elsecall_labels::pattern as label_pattern;
+use elsecall_workspace::{
+    carried_refs::{self, RefPattern},
+    path::WorkspacePath,
+};
 use serde::Deserialize;
 use std::{
     collections::BTreeMap,

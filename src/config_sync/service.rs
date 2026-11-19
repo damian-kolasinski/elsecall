@@ -24,10 +24,10 @@ use crate::{
     configuration,
     fleet::{Fleet, RoleHandover, SyncReport},
     peer_client,
-    workspace::digest::Digest,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_membership::roster::{Member, MemberName, Roster};
+use elsecall_workspace::digest::Digest;
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use std::{

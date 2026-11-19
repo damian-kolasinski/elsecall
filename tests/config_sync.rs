@@ -12,9 +12,9 @@ use elsecall::{
         state::State,
     },
     peer_client,
-    workspace::path::WorkspacePath,
 };
 use elsecall_local_state::paths::Paths;
+use elsecall_workspace::path::WorkspacePath;
 use members::{TestMember, enrol};
 use serde_json::Value;
 use std::{

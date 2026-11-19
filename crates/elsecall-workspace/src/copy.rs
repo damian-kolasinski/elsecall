@@ -4,7 +4,7 @@
 //! shared object store. Its record says what Elsecall last wrote. A run may change
 //! the copy; the next sync finds what it changed by file status alone and puts back
 //! the caller's state, never touching files git ignores.
-use crate::workspace::{
+use crate::{
     carried_refs::CarriedRefs,
     confined::{Confined, Create, Kind, stat_at},
     copy_record::{CopyRecord, Written},
@@ -618,9 +618,7 @@ impl Copy {
         // Submodules are not copied, but each keeps an empty directory, as in a
         // fresh clone, so git sees them as not checked out rather than deleted.
         for (path, entries) in index.paths() {
-            if entries
-                .iter()
-                .any(|e| e.mode == crate::workspace::index::GITLINK)
+            if entries.iter().any(|e| e.mode == crate::index::GITLINK)
                 && self
                     .confined
                     .directory(Some(path), Create::ReplacingOthers)

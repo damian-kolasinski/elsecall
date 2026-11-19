@@ -19,20 +19,20 @@ use crate::{
         timestamp::Timestamp,
     },
     workload_settings::WorkloadSettings,
-    workspace::{
-        confined::Confined,
-        not_returned::{self, Cause},
-        output_return::{Receiving, Returning},
-        outputs::{self, Changed},
-        path::WorkspacePath,
-        push_cache::CacheFiles,
-        snapshot::Located,
-        sync,
-    },
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client::{self as client, Wait};
 use elsecall_wire::wire::Frame;
+use elsecall_workspace::{
+    confined::Confined,
+    not_returned::{self, Cause},
+    output_return::{Receiving, Returning},
+    outputs::{self, Changed},
+    path::WorkspacePath,
+    push_cache::CacheFiles,
+    snapshot::Located,
+    sync,
+};
 use std::{
     fs::File,
     io::{Read, Write},

@@ -1,7 +1,7 @@
 //! Synthetic source repositories. No source trace content is executable.
 use super::{invalid, worker};
-use crate::workspace::git::Git;
 use elsecall_failure::{Failure, Result};
+use elsecall_workspace::git::Git;
 use std::{fs, path::Path, process::Stdio};
 use tokio::time::Instant;
 pub fn create(session: &str, member: &str) -> Result<tempfile::TempDir> {

@@ -7,8 +7,8 @@
 use crate::{
     housekeeping::exchange::{Answer, Question, WorkspaceAnswer, WorkspaceState, valid_path},
     scheduling::timestamp::Timestamp,
-    workspace::push_cache::{self, CacheFiles, StateFile},
 };
+use elsecall_workspace::push_cache::{self, CacheFiles, StateFile};
 use serde::Serialize;
 use std::{
     collections::HashSet,

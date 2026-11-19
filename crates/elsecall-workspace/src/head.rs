@@ -1,7 +1,7 @@
 //! What a working tree has checked out, as validated values: a detached commit, or a
 //! branch with its commit and upstream. Names are checked when they are read, so no
 //! untrusted name reaches git's arguments.
-use crate::workspace::{
+use crate::{
     git::{Git, ObjectFormat, Oid},
     sync_failed,
 };

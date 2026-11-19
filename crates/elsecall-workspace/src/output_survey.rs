@@ -1,6 +1,6 @@
 //! The member's side of declared outputs: what they held before the command and
 //! when it exited, cheaply, to tell which ones the run changed.
-use crate::workspace::{
+use crate::{
     confined::{Confined, Kind, Status},
     outputs::MAXIMUM_ENTRIES,
     path::WorkspacePath,

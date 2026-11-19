@@ -4,8 +4,8 @@
 use crate::{
     remote_run::consistency::{Declared, Fingerprints},
     workload_settings::ConfigurationLocation,
-    workspace::digest::{Digest, Hasher},
 };
+use elsecall_workspace::digest::{Digest, Hasher};
 use std::{
     ffi::OsString,
     io::Read,

@@ -1,7 +1,7 @@
 //! Declared outputs, or paths inside them, that a placed run did not bring back,
 //! and why. Both members record them; the protocol carries them grouped by output
 //! and cause, so a directory of thousands of links is one entry.
-use crate::workspace::{
+use crate::{
     outputs::{Changed, sanitized},
     path::WorkspacePath,
 };
@@ -47,7 +47,7 @@ impl Cause {
 /// The longest detail kept, such as an I/O error's text.
 const DETAIL: usize = 200;
 /// At most one entry per declared output and cause.
-pub const MAXIMUM: usize = crate::workspace::outputs::MAXIMUM_DECLARED * 6;
+pub const MAXIMUM: usize = crate::outputs::MAXIMUM_DECLARED * 6;
 
 /// The first path of one output that was not returned for one cause, and how many
 /// more of that output were not returned for it.

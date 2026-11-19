@@ -25,7 +25,7 @@
 //!   or configuration.
 //! - Every git command a source answers is killed when the sync is dropped, so a
 //!   stalled source never outlives a sync's deadline.
-use crate::workspace::git::{Git, ObjectFormat, Oid};
+use crate::git::{Git, ObjectFormat, Oid};
 use std::{
     ffi::OsStr,
     fs,

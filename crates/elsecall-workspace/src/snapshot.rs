@@ -2,7 +2,7 @@
 //! upstream and the other refs a copy carries, its ignore rules, its index, and
 //! every tracked or untracked non-ignored file. Reading it changes nothing in the
 //! caller's repository.
-use crate::workspace::{
+use crate::{
     carried_refs::{CarriedRefs, RefPattern},
     confined::{Confined, Kind},
     digest::Digest,
@@ -302,7 +302,7 @@ pub fn tree(located: &Located, format: ObjectFormat, cache: &mut StatCache) -> R
     })
 }
 
-fn file_entry(status: &crate::workspace::confined::Status, digest: Digest) -> Entry {
+fn file_entry(status: &crate::confined::Status, digest: Digest) -> Entry {
     Entry::File {
         mode: status.mode & PERMISSIONS,
         size: status.size,
@@ -310,7 +310,7 @@ fn file_entry(status: &crate::workspace::confined::Status, digest: Digest) -> En
     }
 }
 
-type Hashed = (WorkspacePath, crate::workspace::confined::Status, Digest);
+type Hashed = (WorkspacePath, crate::confined::Status, Digest);
 
 /// Hashes files on several threads. A file that changes while it is read is read
 /// again; one that disappears is absent.
@@ -354,15 +354,15 @@ fn hash_all(confined: &Confined, paths: Vec<WorkspacePath>) -> Result<Vec<Hashed
 fn hash_one(
     confined: &Confined,
     path: &WorkspacePath,
-) -> Result<Option<(crate::workspace::confined::Status, Digest)>> {
+) -> Result<Option<(crate::confined::Status, Digest)>> {
     let failed = |e: std::io::Error| sync_failed(format!("{path} could not be read: {e}."));
     for _ in 0..3 {
         let Some(file) = confined.open_file(path).map_err(failed)? else {
             return Ok(None);
         };
-        let before = crate::workspace::confined::fstat(&file).map_err(failed)?;
+        let before = crate::confined::fstat(&file).map_err(failed)?;
         let (digest, size) = Digest::of_reader(&file).map_err(failed)?;
-        let after = crate::workspace::confined::fstat(&file).map_err(failed)?;
+        let after = crate::confined::fstat(&file).map_err(failed)?;
         if StatKey::from(&before) == StatKey::from(&after) && size == after.size {
             return Ok(Some((after, digest)));
         }

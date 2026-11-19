@@ -6,17 +6,15 @@
 //! would. Signals go to the member. When the command has exited and its output is
 //! drained, the member sends `Exited`, then the outputs from its snapshot at exit;
 //! the caller says what did not come back (`Returned`) and ends the run with `Done`.
-use crate::{
-    remote_run::consistency::{self, Fingerprints, Mismatches},
-    workspace::{
-        not_returned::{Cause, NotReturned},
-        outputs::MAXIMUM_DECLARED,
-        path::WorkspacePath,
-        sync::SyncMessage,
-    },
-};
+use crate::remote_run::consistency::{self, Fingerprints, Mismatches};
 use elsecall_failure::Failure;
 use elsecall_wire::wire;
+use elsecall_workspace::{
+    not_returned::{Cause, NotReturned},
+    outputs::MAXIMUM_DECLARED,
+    path::WorkspacePath,
+    sync::SyncMessage,
+};
 use serde::{Deserialize, Serialize};
 
 /// How many output or input bytes may be in flight unacknowledged per stream.

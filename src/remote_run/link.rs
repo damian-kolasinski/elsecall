@@ -2,12 +2,10 @@
 //! every second it has nothing else to send, and treats ten seconds of silence, or
 //! the stream ending, as a lost connection.
 
-use crate::{
-    remote_run::protocol::RunMessage,
-    workspace::sync::{self, Received, SyncMessage},
-};
+use crate::remote_run::protocol::RunMessage;
 use elsecall_failure::{Failure, Result};
 use elsecall_wire::wire::{self, Frame};
+use elsecall_workspace::sync::{self, Received, SyncMessage};
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
@@ -277,11 +275,11 @@ impl sync::Link for SyncOverLink<'_> {
             Frame::Message(bytes) => match decode(&bytes)? {
                 RunMessage::Sync(message) => Ok(Received::Message(message)),
                 RunMessage::Failed { failure } => Err(failure),
-                _ => Err(crate::workspace::sync_failed(
+                _ => Err(elsecall_workspace::sync_failed(
                     "The other side sent a run message during the sync.",
                 )),
             },
-            _ => Err(crate::workspace::sync_failed(
+            _ => Err(elsecall_workspace::sync_failed(
                 "The other side sent output during the sync.",
             )),
         }

@@ -12,7 +12,7 @@
 //!    history.
 //! 5. The member asks only for content it cannot take from its own copy or object
 //!    store; the caller sends it; the member applies everything and confirms.
-use crate::workspace::{
+use crate::{
     carried_refs::{CarriedRefs, RefPattern},
     confined::Confined,
     copy::{Applied, Copy, MAXIMUM_PACK},
@@ -226,7 +226,7 @@ pub struct SyncStats {
     pub member: MemberStats,
 }
 
-pub(crate) fn unexpected() -> Failure {
+pub fn unexpected() -> Failure {
     sync_failed("The other side of the sync sent something unexpected.")
 }
 
@@ -597,7 +597,7 @@ async fn send_file(
         .open_file(path)
         .map_err(failed)?
         .ok_or_else(|| sync_failed(format!("{path} disappeared during the sync; retry.")))?;
-    let mut hasher = crate::workspace::digest::Hasher::default();
+    let mut hasher = crate::digest::Hasher::default();
     let mut total = 0u64;
     loop {
         let (chunk, read) = tokio::task::block_in_place(|| {

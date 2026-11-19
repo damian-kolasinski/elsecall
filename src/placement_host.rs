@@ -15,14 +15,14 @@ use crate::{
         run_phases::RemoteFailurePhase,
         service::{HostedEnd, HostedExit, Scheduler},
     },
-    workspace::{
-        copies::Copies,
-        location::{CopyLocation, Locations},
-        object_sources::ObjectSources,
-        sync::{self, MemberStats},
-    },
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_workspace::{
+    copies::Copies,
+    location::{CopyLocation, Locations},
+    object_sources::ObjectSources,
+    sync::{self, MemberStats},
+};
 use std::{
     collections::HashMap,
     ffi::OsString,
@@ -84,8 +84,8 @@ impl PlacementHost {
         let claim = self.copies.claim(&location);
         let warmth = warmth(&location);
         let setting = match location.setting {
-            crate::workspace::location::Setting::Mapped => "mapped",
-            crate::workspace::location::Setting::SamePath => "same-path",
+            elsecall_workspace::location::Setting::Mapped => "mapped",
+            elsecall_workspace::location::Setting::SamePath => "same-path",
         };
         let reply = self.scheduler.accept_placed(
             master,

@@ -1,7 +1,7 @@
 //! Content gathered for a sync before the copy's tree changes: blobs in a private
 //! directory inside the copy's git directory, named by order and kept by digest,
 //! then moved into place in one quick pass.
-use crate::workspace::{
+use crate::{
     confined::{Confined, remove_at, stat_at, temporary_name},
     digest::{Digest, Hasher},
     path::WorkspacePath,

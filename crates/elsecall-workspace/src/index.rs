@@ -1,7 +1,7 @@
 //! The staged state: git's index as `git ls-files -s` lists it, without stat data.
 //! Copies reproduce it entry by entry, so unchanged entries keep their stat data
 //! on the member and git does not re-read unchanged files.
-use crate::workspace::{
+use crate::{
     digest::Digest,
     git::{ObjectFormat, Oid},
     path::WorkspacePath,

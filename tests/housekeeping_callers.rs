@@ -20,14 +20,14 @@ use elsecall::{
     },
     peer_client,
     scheduling::timestamp::Timestamp,
-    workspace::{
-        copies::Copies,
-        location::{CopyLocation, Locations, Setting},
-        push_cache::CacheFiles,
-    },
 };
 use elsecall_failure::Result;
 use elsecall_local_state::paths::Paths;
+use elsecall_workspace::{
+    copies::Copies,
+    location::{CopyLocation, Locations, Setting},
+    push_cache::CacheFiles,
+};
 use futures_util::future::BoxFuture;
 use members::{TestMember, enrol};
 use serde_json::Value;

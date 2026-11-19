@@ -51,6 +51,7 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 elsecall = { path = "." }
+elsecall-workspace = { path = "crates/elsecall-workspace" }
 elsecall-service-log = { path = "crates/elsecall-service-log" }
 elsecall-membership = { path = "crates/elsecall-membership" }
 elsecall-machine = { path = "crates/elsecall-machine" }
@@ -118,6 +119,7 @@ elsecall-service-log.workspace = true
 elsecall-sqlite-retention.workspace = true
 elsecall-tailnet.workspace = true
 elsecall-wire.workspace = true
+elsecall-workspace.workspace = true
 futures-util.workspace = true
 getrandom.workspace = true
 hkdf.workspace = true

@@ -9,8 +9,8 @@ use crate::{
         processes::ProcessIdentity,
         timestamp::Timestamp,
     },
-    workspace::copies::Lingering,
 };
+use elsecall_workspace::copies::Lingering;
 use futures_util::future::BoxFuture;
 use std::{
     collections::HashMap,

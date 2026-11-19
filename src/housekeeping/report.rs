@@ -7,9 +7,9 @@ use crate::{
         settings::Settings,
     },
     scheduling::timestamp::Timestamp,
-    workspace::location::Setting,
 };
 use elsecall_failure::Failure;
+use elsecall_workspace::location::Setting;
 use serde::Serialize;
 use std::path::PathBuf;
 

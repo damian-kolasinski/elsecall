@@ -9,9 +9,9 @@ use crate::{
         },
         request::AtDeadline,
     },
-    workspace::location::Setting,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_workspace::location::Setting;
 use serde::Deserialize;
 use std::{
     io::Read,

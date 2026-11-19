@@ -6,20 +6,18 @@
 //! path really resolves is checked against the same rules as the declaration.
 //! Nothing below the synced path is ever followed: links and special files there
 //! are skipped when reading and replaced when writing.
-use crate::{
-    config_sync::{
-        fingerprint::{Fingerprint, SyncKey},
-        manifest::{
-            FileKey, FileNode, MAXIMUM_ENTRIES, MAXIMUM_FILE_BYTES, MAXIMUM_TOTAL_BYTES, Node, Tree,
-        },
-        synced_path::SyncedPath,
+use crate::config_sync::{
+    fingerprint::{Fingerprint, SyncKey},
+    manifest::{
+        FileKey, FileNode, MAXIMUM_ENTRIES, MAXIMUM_FILE_BYTES, MAXIMUM_TOTAL_BYTES, Node, Tree,
     },
-    workspace::{
-        confined::{self, Confined, Create, Kind, Status},
-        path::WorkspacePath,
-    },
+    synced_path::SyncedPath,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_workspace::{
+    confined::{self, Confined, Create, Kind, Status},
+    path::WorkspacePath,
+};
 use std::{
     collections::{BTreeMap, HashMap},
     ffi::{CStr, CString},

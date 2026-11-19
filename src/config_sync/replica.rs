@@ -18,11 +18,11 @@ use crate::{
         synced_path::SyncedPath,
     },
     scheduling::timestamp::Timestamp,
-    workspace::confined::Confined,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_state::private_files;
 use elsecall_membership::roster::MemberName;
+use elsecall_workspace::confined::Confined;
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},
@@ -919,7 +919,7 @@ fn remove_backups(removed: &[Backup], root: &Path) -> Vec<Backup> {
         let result = (|| {
             let directory = Confined::open(parent)?;
             let name = std::ffi::CString::new(name.as_encoded_bytes()).expect("filesystem name");
-            crate::workspace::confined::remove_at(directory.root(), &name)
+            elsecall_workspace::confined::remove_at(directory.root(), &name)
         })();
         if result.is_err() && backup.location.try_exists().unwrap_or(true) {
             // Retry later instead of forgetting an undeleted secret backup.
@@ -960,7 +960,7 @@ fn remove_orphan_backups(root: &Path, keep: &[Backup]) -> Result<()> {
         }
         let name =
             std::ffi::CString::new(entry.file_name().as_encoded_bytes()).expect("filesystem name");
-        crate::workspace::confined::remove_at(directory.root(), &name)
+        elsecall_workspace::confined::remove_at(directory.root(), &name)
             .map_err(|e| Failure::io("Remove expired orphan sync backup", e))?;
     }
     Ok(())

@@ -1,7 +1,7 @@
 //! What a working tree contains, as far as a copy must match it: every tracked or
 //! untracked non-ignored file and symlink, with its permissions and content digest.
 //! Ignored files are never listed, so a copy's ignored build state is never touched.
-use crate::workspace::{digest::Digest, path::WorkspacePath};
+use crate::{digest::Digest, path::WorkspacePath};
 use std::collections::BTreeMap;
 
 /// Permission bits a copy reproduces; set-id and sticky bits are never copied.

@@ -1,8 +1,6 @@
 //! What the caller last pushed to one member's copy of a workspace, so the next sync
 //! sends only the difference when the copy still matches it.
-use crate::workspace::{
-    digest::Digest, git::ObjectFormat, index::IndexListing, manifest::Manifest,
-};
+use crate::{digest::Digest, git::ObjectFormat, index::IndexListing, manifest::Manifest};
 use std::path::{Path, PathBuf};
 
 /// Where a caller keeps its caches for one workspace.

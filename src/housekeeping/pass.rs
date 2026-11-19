@@ -10,28 +10,26 @@
 //! Every removal holds the copy, or the store, exclusively, so it never races a run
 //! or a sync; a copy used between the judgement and its removal is judged again
 //! next pass.
-use crate::{
-    housekeeping::{
-        adoption,
-        caller_state::CallerState,
-        callers::Callers,
-        catalog::{Catalog, Entry, Measured, Reason, Removal, Removed},
-        exchange::{Question, RemovedCopy as Notice, WorkspaceState},
-        measure,
-        policy::{self, CallerSays, Observed, Verdict},
-        report::{
-            CopyState, CopyView, DiskView, HousekeepingView, KeptStore, Listing, OwnerAsked,
-            PassSummary, Pressure, Relief, RemovedCopy, Report, SparedCopy, StoreChange, StoreView,
-            Summary,
-        },
-        settings::Settings,
-        stores::{self, Store},
-        trash::{Moved, Trash},
-        volumes::Volumes,
+use crate::housekeeping::{
+    adoption,
+    caller_state::CallerState,
+    callers::Callers,
+    catalog::{Catalog, Entry, Measured, Reason, Removal, Removed},
+    exchange::{Question, RemovedCopy as Notice, WorkspaceState},
+    measure,
+    policy::{self, CallerSays, Observed, Verdict},
+    report::{
+        CopyState, CopyView, DiskView, HousekeepingView, KeptStore, Listing, OwnerAsked,
+        PassSummary, Pressure, Relief, RemovedCopy, Report, SparedCopy, StoreChange, StoreView,
+        Summary,
     },
-    workspace::{copies::Copies, copy, location::Locations},
+    settings::Settings,
+    stores::{self, Store},
+    trash::{Moved, Trash},
+    volumes::Volumes,
 };
 use elsecall_failure::{Failure, Result};
+use elsecall_workspace::{copies::Copies, copy, location::Locations};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     io,

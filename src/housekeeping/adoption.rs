@@ -1,13 +1,10 @@
 //! Finding mapped copies the member does not track yet, such as those made before
 //! housekeeping existed. A directory counts only if its mark names a calling member
 //! and a caller path that map to exactly that directory.
-use crate::{
-    housekeeping::stores,
-    scheduling::timestamp::Timestamp,
-    workspace::{
-        copy,
-        location::{CopyLocation, Locations, Setting},
-    },
+use crate::{housekeeping::stores, scheduling::timestamp::Timestamp};
+use elsecall_workspace::{
+    copy,
+    location::{CopyLocation, Locations, Setting},
 };
 use std::{path::Path, time::SystemTime};
 

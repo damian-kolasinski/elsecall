@@ -10,7 +10,7 @@
 //! answer `rev-parse`, `merge-base`, `rev-list` and `log`, but `git fetch` in a
 //! copy fails. Names are validated where they are read, so no untrusted name
 //! reaches git's arguments, and a copy never holds two refs git could not.
-use crate::workspace::{
+use crate::{
     git::{Git, ObjectFormat, Oid},
     head::{Reference, RemoteName, Upstream},
     sync_failed,

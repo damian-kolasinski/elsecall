@@ -23,7 +23,6 @@ use crate::{
         timestamp::Timestamp,
     },
     workload_settings::WorkloadSettings,
-    workspace::{self, push_cache::CacheFiles},
 };
 use clap::Args;
 use elsecall_failure::{Failure, Result};
@@ -32,6 +31,7 @@ use elsecall_local_client::{self as client, Wait};
 use elsecall_local_state::{local_access, paths::Paths, run_id_file::RunIdFile};
 use elsecall_run_admission::Admission;
 use elsecall_wire::api::SCHEMA_VERSION;
+use elsecall_workspace::{self as workspace, push_cache::CacheFiles};
 use executor::{CommandLine, Executor, Exit, Finished, RunContext, RunFailure, Running};
 use local::LocalExecutor;
 use remote::RemoteExecutor;

@@ -7,7 +7,7 @@
 //! that vanished, could not be read or would not fit is left out with its cause;
 //! it never keeps the others from coming back. The staging area goes with the
 //! snapshot.
-use crate::workspace::{
+use crate::{
     confined::{Confined, Create, Kind},
     digest::Digest,
     file_clone,

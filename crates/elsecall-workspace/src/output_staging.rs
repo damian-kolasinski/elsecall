@@ -1,7 +1,7 @@
 //! A run's own area for the snapshot of its outputs, inside a directory that holds
 //! only such areas. It exists from before the command starts until the outputs
 //! are returned, and is removed when dropped.
-use crate::workspace::confined::{Confined, remove_at};
+use crate::confined::{Confined, remove_at};
 use std::{ffi::CString, io, os::fd::AsRawFd};
 
 pub struct OutputStaging {

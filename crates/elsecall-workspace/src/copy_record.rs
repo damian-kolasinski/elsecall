@@ -2,7 +2,7 @@
 //! directory: the caller's manifest, each file's status as written, the index, the
 //! index file's status, HEAD and the carried refs. Any status that differs later
 //! means a run changed the file.
-use crate::workspace::{
+use crate::{
     carried_refs::CarriedRefs, confined::Status, git::ObjectFormat, head::Head,
     index::IndexListing, manifest::Manifest, path::WorkspacePath,
 };

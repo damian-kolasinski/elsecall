@@ -4,14 +4,12 @@
 //!
 //! A manifest arriving from a member is untrusted: deserializing validates it, so a
 //! `Manifest` value always respects the limits and shapes below.
-use crate::{
-    config_sync::{
-        fingerprint::{Fingerprint, SyncKey},
-        synced_path::{self, SyncedPath},
-    },
-    workspace::path::WorkspacePath,
+use crate::config_sync::{
+    fingerprint::{Fingerprint, SyncKey},
+    synced_path::{self, SyncedPath},
 };
 use elsecall_membership::roster::MemberName;
+use elsecall_workspace::path::WorkspacePath;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 

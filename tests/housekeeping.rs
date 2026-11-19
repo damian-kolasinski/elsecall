@@ -18,14 +18,14 @@ use elsecall::{
         volumes::Statfs,
     },
     scheduling::timestamp::Timestamp,
-    workspace::{
-        copies::Copies,
-        framed_link::FramedLink,
-        location::{Locations, Setting},
-        object_sources::ObjectSources,
-        push_cache::CacheFiles,
-        snapshot, sync,
-    },
+};
+use elsecall_workspace::{
+    copies::Copies,
+    framed_link::FramedLink,
+    location::{Locations, Setting},
+    object_sources::ObjectSources,
+    push_cache::CacheFiles,
+    snapshot, sync,
 };
 use members::{TestMember, enrol};
 use serde_json::Value;

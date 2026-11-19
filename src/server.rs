@@ -6,7 +6,6 @@ use crate::{
     placement_host::PlacementHost,
     run_relay,
     scheduling::service::{Adapters, Scheduler},
-    workspace::{copies::Copies, location::Locations, object_sources::ObjectSources},
 };
 use crate::{
     fleet_callers::FleetCallers,
@@ -30,6 +29,7 @@ use elsecall_local_state::{local_access, paths::Paths, private_files};
 use elsecall_machine::inspection::Inspection;
 use elsecall_membership::{member_key::MemberKey, membership_store::MembershipStore};
 use elsecall_wire::api;
+use elsecall_workspace::{copies::Copies, location::Locations, object_sources::ObjectSources};
 use std::{
     fs,
     os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},

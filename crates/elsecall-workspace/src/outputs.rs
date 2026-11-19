@@ -9,7 +9,7 @@
 //! ([`output_return`](super::output_return)). Whatever does not come back is named
 //! with its cause ([`not_returned`](super::not_returned)). Links are neither
 //! followed nor returned, on either side.
-use crate::workspace::{digest::Digest, path::WorkspacePath};
+use crate::{digest::Digest, path::WorkspacePath};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 

@@ -80,7 +80,6 @@ pub mod window_app;
 pub mod window_release;
 pub mod window_startup;
 pub mod workload_settings;
-pub mod workspace;
 pub mod workspace_check_api;
 
 pub mod state_sizes;
