@@ -210,7 +210,7 @@ def destination(move: Move, old: str) -> str:
 
 
 USE = re.compile(r"\b(?P<vis>pub(?:\s*\([^)]*\))?\s+)?use\s+(?P<tree>[^;]+);")
-PATH = re.compile(r"(?<![\w:$])(?P<root>\$crate|crate|elsecall|super|self)(?P<rest>(?:\s*::\s*[A-Za-z_]\w*)+)")
+PATH = re.compile(r"(?<![\w$])(?<!::)(?P<root>\$crate|crate|elsecall|super|self)(?P<rest>(?:\s*::\s*[A-Za-z_]\w*)+)")
 STRING_PATH = re.compile(r'"(crate::[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)"')
 MACRO_AFTER = re.compile(r"\s*!")
 

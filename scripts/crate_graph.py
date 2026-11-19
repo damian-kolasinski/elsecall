@@ -207,7 +207,7 @@ def blank_line(line: str, lexer: shape.Lexer) -> str:
 
 
 USE = re.compile(r"\buse\s+([^;{]*(?:\{[^;]*\})?[^;]*);", re.S)
-PATH = re.compile(r"(?<![\w:$])((?:[A-Za-z_]\w*)(?:\s*::\s*[A-Za-z_]\w*)+)")
+PATH = re.compile(r"(?<![\w$])(?<!::)((?:[A-Za-z_]\w*)(?:\s*::\s*[A-Za-z_]\w*)+)")
 
 
 def expand_use(tree: str) -> list[str]:
