@@ -571,7 +571,8 @@ def run(name: str, dry_run: bool) -> int:
     # up to the library's top level first.
     relocations: dict[Path_, str] = {}
     for path, crate in plan.modules.items():
-        if crate != name and move.owner(path) is not None and len(path) > 1:
+        already = (root / f"crates/{LIBRARY}-{crate}").exists()
+        if crate != name and not already and move.owner(path) is not None and len(path) > 1:
             relocations[path] = "_".join(path)
     files = {}
     for module in modules:
