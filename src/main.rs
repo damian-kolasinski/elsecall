@@ -327,8 +327,8 @@ fn output<T: Serialize>(data: T) {
     );
 }
 fn print_error(error: Failure) {
-    if elsecall::service_log::active() {
-        elsecall::service_log!(
+    if elsecall_service_log::active() {
+        elsecall_service_log::service_log!(
             "{}",
             serde_json::json!({"event":"service_failed", "code":error.code})
         );
@@ -353,7 +353,7 @@ async fn run(cli: Cli) -> Result<bool> {
         &cli.command,
         Command::Serve | Command::UpgradeHelper { .. } | Command::UpdateHelper { .. }
     ) {
-        elsecall::service_log::initialize(
+        elsecall_service_log::initialize(
             &paths,
             elsecall::service_configuration::load(&paths, None).map(|c| c.logs),
         )?;

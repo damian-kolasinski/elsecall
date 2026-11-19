@@ -208,7 +208,7 @@ fn log(event: &str, fields: serde_json::Value) {
     if let (Some(line), serde_json::Value::Object(fields)) = (line.as_object_mut(), fields) {
         line.extend(fields);
     }
-    crate::service_log!("{line}");
+    elsecall_service_log::service_log!("{line}");
 }
 
 async fn blocking<T: Send + 'static>(

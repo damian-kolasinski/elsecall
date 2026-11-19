@@ -20,7 +20,7 @@ use elsecall_machine::inspection::Health;
 use std::path::Path;
 
 fn log(event: &str, id: &UpgradeId, detail: serde_json::Value) {
-    crate::service_log!(
+    elsecall_service_log::service_log!(
         "{}",
         serde_json::json!({"event": event, "upgrade": id, "detail": detail})
     );

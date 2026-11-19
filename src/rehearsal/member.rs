@@ -75,7 +75,7 @@ impl Member {
                         break;
                     }
                     Err(error) => {
-                        crate::service_log!(
+                        elsecall_service_log::service_log!(
                             "{}",
                             serde_json::json!({"event":"rehearsal_cleanup_pending","code":error.code})
                         );

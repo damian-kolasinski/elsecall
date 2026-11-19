@@ -101,7 +101,7 @@ pub fn start(
                     },
                 );
                 if let Err(error) = result {
-                    crate::service_log!(
+                    elsecall_service_log::service_log!(
                         "{}",
                         serde_json::json!({"event":"fidelity_monitor_failed","code":error.code})
                     );

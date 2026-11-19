@@ -111,7 +111,7 @@ impl Journal {
         if matches!(self.read(), Err(ref e) if e.code == "invalid_upgrade_state") {
             let aside = self.directory.join("state.json.unreadable");
             if std::fs::rename(self.state_path(), aside).is_ok() {
-                crate::service_log!("{{\"event\":\"upgrade_record_set_aside\"}}");
+                elsecall_service_log::service_log!("{{\"event\":\"upgrade_record_set_aside\"}}");
             }
         }
     }

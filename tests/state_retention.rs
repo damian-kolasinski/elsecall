@@ -1,9 +1,7 @@
 //! Real filesystem and SQLite boundaries, including writers in separate processes.
 mod processes;
-use elsecall::{
-    scheduling::{records::Records, timestamp::Timestamp},
-    service_log::{Log, Settings},
-};
+use elsecall::scheduling::{records::Records, timestamp::Timestamp};
+use elsecall_service_log::{Log, Settings};
 use std::{fs, process::Stdio};
 
 #[test]

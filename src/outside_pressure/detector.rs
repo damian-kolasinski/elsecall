@@ -58,7 +58,7 @@ struct State {
 }
 
 fn log(event: &str, detail: impl Serialize) {
-    crate::service_log!("{}", serde_json::json!({"event": event, "detail": detail}));
+    elsecall_service_log::service_log!("{}", serde_json::json!({"event": event, "detail": detail}));
 }
 
 impl Detector {

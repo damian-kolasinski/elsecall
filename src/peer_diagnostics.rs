@@ -246,13 +246,13 @@ pub fn record(attempt: &Attempt) {
     if let Some(store) = STORE.get()
         && let Err(error) = store.record(attempt)
     {
-        crate::service_log!(
+        elsecall_service_log::service_log!(
             "{}",
             serde_json::json!({"event":"peer_history_failed","code":error.code})
         );
     }
     if attempt.failure_kind.is_some() {
-        crate::service_log!(
+        elsecall_service_log::service_log!(
             "{}",
             serde_json::json!({"event":"peer_request_failed","peer_io":attempt})
         );

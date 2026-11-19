@@ -163,7 +163,7 @@ impl UpdateService {
     /// the fleet window. Nothing here can undo this machine's own update.
     fn follow_fleet(&self) {
         if let Err(error) = self.try_follow_fleet() {
-            crate::service_log!(
+            elsecall_service_log::service_log!(
                 "{{\"event\":\"release_fleet_follow_up_failed\",\"code\":{:?}}}",
                 error.code
             );
@@ -222,7 +222,7 @@ impl UpdateService {
             };
             let ended = FleetFollowUp { job: job.id, state };
             if let Err(error) = store.save_fleet_follow_up(&ended) {
-                crate::service_log!(
+                elsecall_service_log::service_log!(
                     "{{\"event\":\"release_fleet_follow_up_unrecorded\",\"code\":{:?}}}",
                     error.code
                 );
@@ -386,7 +386,7 @@ impl UpdateAdapters {
     pub fn production(automatic: bool) -> Result<Self> {
         let channel = super::channel::Channel::this_build()?;
         if let super::channel::Channel::Local(local) = &channel {
-            crate::service_log!(
+            elsecall_service_log::service_log!(
                 "{}",
                 serde_json::json!({"event": "test_seam_in_use", "detail": format!("this build follows the local release channel at {}", local.location())})
             );

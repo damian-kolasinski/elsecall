@@ -40,7 +40,7 @@ impl Admission for Arc<Scheduler> {
     }
     fn end(&self, id: &RunId, ended: RunEnded) {
         if let Err(error) = self.run_ended(std::process::id(), id, ended) {
-            crate::service_log!(
+            elsecall_service_log::service_log!(
                 "{}",
                 serde_json::json!({"event": "housekeeping_unrecorded", "detail": error})
             );
@@ -94,7 +94,7 @@ pub fn start(
                         },
                     );
                 }
-                Err(error) => crate::service_log!(
+                Err(error) => elsecall_service_log::service_log!(
                     "{}",
                     serde_json::json!({"event": "housekeeping_not_admitted", "detail": error})
                 ),

@@ -252,7 +252,7 @@ impl Host for PlacementHost {
         self.scheduler.hosted_leftovers(run, leftovers);
     }
     fn waiting_for_leftovers(&self, run: &RunId) {
-        crate::service_log!(
+        elsecall_service_log::service_log!(
             "{}",
             serde_json::json!({"event": "waiting_for_leftovers", "run_id": run})
         );

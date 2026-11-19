@@ -206,7 +206,7 @@ fn lifecycle_logs_rotate_while_running_and_doctor_reports_sizes_without_secrets(
         let path = if number == 0 {
             paths.log()
         } else {
-            elsecall::service_log::Log::archive(&paths.log(), number)
+            elsecall_service_log::Log::archive(&paths.log(), number)
         };
         let text = fs::read_to_string(&path).unwrap();
         assert!(text.ends_with('\n'));
@@ -220,7 +220,7 @@ fn lifecycle_logs_rotate_while_running_and_doctor_reports_sizes_without_secrets(
             0o600
         );
     }
-    assert!(!elsecall::service_log::Log::archive(&paths.log(), 3).exists());
+    assert!(!elsecall_service_log::Log::archive(&paths.log(), 3).exists());
     // A restart also opens the current pathname, rather than retaining an archive.
     drop(service);
     let _replacement = start(home.path());

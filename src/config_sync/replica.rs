@@ -550,13 +550,15 @@ impl Replica {
                             // One override that does not fit the master's files is
                             // left unlaid, shown in status; the rest of the fleet
                             // keeps syncing.
-                            Err(error) if error.code == "override_conflict" => crate::service_log!(
-                                "{}",
-                                serde_json::json!({
-                                    "event": "config_sync_override_conflict",
-                                    "file": report::file_name(&step.path, &difference.key),
-                                })
-                            ),
+                            Err(error) if error.code == "override_conflict" => {
+                                elsecall_service_log::service_log!(
+                                    "{}",
+                                    serde_json::json!({
+                                        "event": "config_sync_override_conflict",
+                                        "file": report::file_name(&step.path, &difference.key),
+                                    })
+                                )
+                            }
                             Err(error) => return Err(error),
                         }
                     }

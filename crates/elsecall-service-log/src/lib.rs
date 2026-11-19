@@ -173,11 +173,11 @@ pub fn write(arguments: std::fmt::Arguments<'_>) {
     }
 }
 #[macro_export]
-macro_rules! service_log { ($($arg:tt)*) => { $crate::service_log::write(format_args!($($arg)*)) }; }
+macro_rules! service_log { ($($arg:tt)*) => { $crate::write(format_args!($($arg)*)) }; }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::*;
     #[test]
     fn rotates_whole_lines_keeps_count_and_restricts_existing_files() {
         let dir = tempfile::tempdir().unwrap();

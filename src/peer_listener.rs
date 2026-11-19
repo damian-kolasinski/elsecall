@@ -130,7 +130,7 @@ async fn attempt(
         match TcpListener::bind(endpoint).await {
             Ok(listener) => {
                 bound.insert(address);
-                crate::service_log!(
+                elsecall_service_log::service_log!(
                     "{{\"event\":\"member_listener_bound\",\"endpoint\":\"{endpoint}\"}}"
                 );
                 tokio::spawn(accept(listener, app.clone(), limit.clone()));
@@ -153,7 +153,9 @@ async fn attempt(
 /// Logs a listener problem once per change, so retries do not flood the log.
 fn note(last: &mut Option<String>, problem: &str) {
     if last.as_deref() != Some(problem) {
-        crate::service_log!("{{\"event\":\"member_listener_unavailable\",\"reason\":{problem:?}}}");
+        elsecall_service_log::service_log!(
+            "{{\"event\":\"member_listener_unavailable\",\"reason\":{problem:?}}}"
+        );
         *last = Some(problem.to_owned());
     }
 }

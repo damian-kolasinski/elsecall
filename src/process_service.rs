@@ -37,7 +37,7 @@ pub struct ProcessService {
 }
 impl ProcessService {
     pub fn new(paths: Paths) -> Self {
-        crate::service_log!(
+        elsecall_service_log::service_log!(
             "{}",
             serde_json::json!({"event": "test_seam_in_use", "detail": "ELSECALL_SERVICE_MANAGER=process runs the service as a plain process instead of a LaunchAgent"})
         );

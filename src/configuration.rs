@@ -23,7 +23,7 @@ use std::{
 pub struct ServiceConfiguration {
     /// Capacity kept free of Elsecall work so the machine stays responsive.
     pub reserved: Cores,
-    pub logs: crate::service_log::Settings,
+    pub logs: elsecall_service_log::Settings,
     pub sync_backups: usize,
     /// Where copies of other members' workspaces live here.
     pub location: Setting,
@@ -254,7 +254,7 @@ pub fn parse(text: &str, path: &Path) -> Result<ServiceConfiguration> {
             .map(|()| paths)
         })
         .map_err(|why| invalid(format!("[sync] paths: {why}.")))?;
-    let mut logs = crate::service_log::Settings::default();
+    let mut logs = elsecall_service_log::Settings::default();
     if let Some(size) = file.logs.max_size {
         logs.max_bytes = settings::parse_size(&size)
             .filter(|n| (1024..=1024 * 1024 * 1024).contains(n))
@@ -345,7 +345,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.toml");
         let defaults = load(&path).unwrap();
-        assert_eq!(defaults.logs, crate::service_log::Settings::default());
+        assert_eq!(defaults.logs, elsecall_service_log::Settings::default());
         assert_eq!(defaults.sync_backups, 1000);
         std::fs::write(
             &path,

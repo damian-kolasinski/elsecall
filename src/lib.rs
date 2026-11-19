@@ -83,8 +83,6 @@ pub mod workload_settings;
 pub mod workspace;
 pub mod workspace_check_api;
 
-pub mod service_log;
-
 pub mod state_sizes;
 
 pub mod trace_api;

@@ -141,7 +141,7 @@ pub async fn serve_with_updates(
     crate::peer_diagnostics::initialize(&paths)?;
     if let Err(error) = elsecall_local_state::state_temps::prune(&paths) {
         // Optional sync/upgrade state must not take down local admission.
-        crate::service_log!(
+        elsecall_service_log::service_log!(
             "{}",
             serde_json::json!({"event":"state_scratch_cleanup_failed", "code":error.code})
         );
@@ -197,7 +197,7 @@ pub async fn serve_with_updates(
             _ => (),
         }
     }
-    crate::service_log::configure(configuration.logs.clone());
+    elsecall_service_log::configure(configuration.logs.clone());
     if let (Ok(fleet), Ok(sync)) = (&fleet, &config_sync) {
         fleet.report_sync(sync.clone());
         fleet.hand_over_with(sync.clone());
@@ -206,7 +206,7 @@ pub async fn serve_with_updates(
         )));
     }
     if let (Ok(fleet), Err(error)) = (&fleet, &config_sync) {
-        crate::service_log!(
+        elsecall_service_log::service_log!(
             "{{\"event\":\"config_sync_unavailable\",\"code\":{:?}}}",
             error.code
         );
@@ -256,7 +256,7 @@ pub async fn serve_with_updates(
             .abort_handle(),
         )),
         Err(error) => {
-            crate::service_log!(
+            elsecall_service_log::service_log!(
                 "{}",
                 serde_json::json!({"event":"outside_processes_unavailable", "code":error.code})
             );
@@ -282,7 +282,7 @@ pub async fn serve_with_updates(
             .abort_handle(),
         )),
         Err(error) => {
-            crate::service_log!(
+            elsecall_service_log::service_log!(
                 "{}",
                 serde_json::json!({"event":"outside_pressure_unavailable", "code":error.code})
             );
@@ -471,7 +471,7 @@ pub async fn serve_with_updates(
                 ))
         }
         Err(error) => {
-            crate::service_log!(
+            elsecall_service_log::service_log!(
                 "{{\"event\":\"fleet_unavailable\",\"code\":{:?}}}",
                 error.code
             );
@@ -515,7 +515,7 @@ pub async fn serve_with_updates(
     // Register handlers before signaling readiness, and release the socket on shutdown.
     let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
         .map_err(|e| Failure::io("Register shutdown handler", e))?;
-    crate::service_log!(
+    elsecall_service_log::service_log!(
         "{{\"event\":\"service_ready\",\"version\":\"{}\",\"build\":\"{}\"}}",
         build.version,
         build.build
@@ -545,7 +545,7 @@ pub async fn serve_with_updates(
     }
     result?;
     if relaunch.load(std::sync::atomic::Ordering::SeqCst) {
-        crate::service_log!("{{\"event\":\"service_configuration_relaunch\"}}");
+        elsecall_service_log::service_log!("{{\"event\":\"service_configuration_relaunch\"}}");
         return crate::service_relaunch::execute(&service_lock);
     }
     Ok(())

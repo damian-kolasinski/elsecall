@@ -1079,6 +1079,7 @@ dependencies = [
  "elsecall-rehearsal-identity",
  "elsecall-run-admission",
  "elsecall-secure-channel",
+ "elsecall-service-log",
  "elsecall-sqlite-retention",
  "elsecall-tailnet",
  "elsecall-wire",
@@ -1243,6 +1244,17 @@ dependencies = [
  "tokio",
  "x25519-dalek",
  "zeroize",
+]
+
+[[package]]
+name = "elsecall-service-log"
+version = "0.3.0"
+dependencies = [
+ "elsecall-failure",
+ "elsecall-local-state",
+ "libc",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]
