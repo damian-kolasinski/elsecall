@@ -168,7 +168,7 @@ impl Configuration {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::workload_configuration::*;
 
     #[test]
     fn does_not_wait_for_a_writer_on_a_nonregular_policy_file() {

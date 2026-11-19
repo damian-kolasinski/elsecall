@@ -11,7 +11,6 @@
 use crate::{
     scheduling::parameters::{Overrides, Parameters},
     workload::trace::{Request, Trace},
-    workload_settings::WorkloadSettings,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_labels::pattern as label_pattern;
@@ -20,6 +19,7 @@ use elsecall_scheduling_model::{
     capacity::{Capacity, Cores},
     request::{MAXIMUM_HOLD_LIMIT, Urgency},
 };
+use elsecall_workload_config::workload_settings::WorkloadSettings;
 use std::{collections::BTreeMap, time::Duration};
 
 #[derive(Debug)]

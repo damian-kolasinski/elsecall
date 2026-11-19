@@ -1088,6 +1088,7 @@ dependencies = [
  "elsecall-sqlite-retention",
  "elsecall-tailnet",
  "elsecall-wire",
+ "elsecall-workload-config",
  "elsecall-workspace",
  "futures-util",
  "getrandom 0.3.4",
@@ -1355,6 +1356,7 @@ dependencies = [
  "elsecall-membership",
  "elsecall-scheduling-model",
  "elsecall-wire",
+ "elsecall-workload-config",
  "libc",
  "png 0.18.1",
  "rune",
@@ -1375,6 +1377,24 @@ dependencies = [
  "elsecall-failure",
  "serde",
  "tokio",
+]
+
+[[package]]
+name = "elsecall-workload-config"
+version = "0.3.0"
+dependencies = [
+ "elsecall-build-identity",
+ "elsecall-failure",
+ "elsecall-labels",
+ "elsecall-local-state",
+ "elsecall-scheduling-model",
+ "elsecall-workspace",
+ "humantime",
+ "libc",
+ "serde",
+ "tempfile",
+ "toml",
+ "toml_edit",
 ]
 
 [[package]]

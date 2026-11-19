@@ -563,7 +563,7 @@ pub fn parse_location(location: &str) -> std::result::Result<ConfigurationLocati
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::workload_settings::*;
 
     #[test]
     fn parses_a_full_configuration() {
@@ -801,8 +801,8 @@ mod tests {
     fn the_readme_examples_are_valid() {
         // The README holds the reference; the integration guide, the other example.
         let readme = concat!(
-            include_str!("../README.md"),
-            include_str!("../skill/elsecall/references/integrate.md")
+            include_str!("../../../README.md"),
+            include_str!("../../../skill/elsecall/references/integrate.md")
         );
         let examples: Vec<&str> = readme
             .split("```toml\n")

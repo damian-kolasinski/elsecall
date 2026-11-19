@@ -16,6 +16,7 @@ elsecall-local-state.workspace = true
 elsecall-membership.workspace = true
 elsecall-scheduling-model.workspace = true
 elsecall-wire.workspace = true
+elsecall-workload-config.workspace = true
 libc.workspace = true
 rune.workspace = true
 rune-kit.workspace = true

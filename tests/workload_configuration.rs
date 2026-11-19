@@ -1,7 +1,7 @@
 //! Personal policy import through the real CLI and filesystem; no service needed.
 mod processes;
-use elsecall::workload_configuration::{self, FILE_NAME};
 use elsecall_local_state::paths::Paths;
+use elsecall_workload_config::workload_configuration::{self, FILE_NAME};
 use serde_json::Value;
 use std::{os::unix::fs::PermissionsExt, path::Path};
 
@@ -45,7 +45,7 @@ at_deadline = "skip"
 
 #[test]
 fn migration_preserves_complete_policy_and_unrelated_settings_and_is_repeatable() {
-    elsecall::workload_settings::WorkloadSettings::parse(LEGACY).unwrap();
+    elsecall_workload_config::workload_settings::WorkloadSettings::parse(LEGACY).unwrap();
     let home = tempfile::Builder::new()
         .prefix("ec-policy-")
         .tempdir_in("/tmp")
@@ -87,7 +87,7 @@ fn migration_preserves_complete_policy_and_unrelated_settings_and_is_repeatable(
     let resolved = workload_configuration::load(&paths, repo.path()).unwrap();
     assert_eq!(
         resolved,
-        elsecall::workload_settings::WorkloadSettings::parse(LEGACY).unwrap()
+        elsecall_workload_config::workload_settings::WorkloadSettings::parse(LEGACY).unwrap()
     );
     assert_eq!(
         workload_configuration::load(&paths, home.path())

@@ -16,12 +16,12 @@ use crate::{
         placed::{PlacedReport, Reached, SyncSummary},
         run_phases::RemoteFailurePhase,
     },
-    workload_settings::WorkloadSettings,
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client::{self as client, Wait};
 use elsecall_scheduling_model::{run_id::RunId, timestamp::Timestamp};
 use elsecall_wire::wire::Frame;
+use elsecall_workload_config::workload_settings::WorkloadSettings;
 use elsecall_workspace::{
     confined::Confined,
     not_returned::{self, Cause},

@@ -77,7 +77,6 @@ pub mod upgrade_helper_process;
 pub mod window_app;
 pub mod window_release;
 pub mod window_startup;
-pub mod workload_settings;
 pub mod workspace_check_api;
 
 pub mod state_sizes;
@@ -128,5 +127,3 @@ pub mod workload_observation_cli;
 pub mod release_update;
 pub mod release_update_api;
 pub mod release_update_cli;
-pub mod workload_configuration;
-pub mod workload_migration;

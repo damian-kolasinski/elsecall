@@ -20,7 +20,6 @@ use crate::{
         placed::WorkspaceRef,
         run_phases::{RemoteFailurePhase, RunPhases},
     },
-    workload_settings::WorkloadSettings,
 };
 use clap::Args;
 use elsecall_failure::{Failure, Result};
@@ -33,6 +32,7 @@ use elsecall_scheduling_model::{
     timestamp::Timestamp,
 };
 use elsecall_wire::api::SCHEMA_VERSION;
+use elsecall_workload_config::workload_settings::WorkloadSettings;
 use elsecall_workspace::{self as workspace, push_cache::CacheFiles};
 use executor::{CommandLine, Executor, Exit, Finished, RunContext, RunFailure, Running};
 use local::LocalExecutor;
@@ -222,7 +222,7 @@ async fn run(args: RunArgs, reports: &Reports) -> Result<Exit> {
     let configuration = if args.isolated_workload {
         WorkloadSettings::default()
     } else {
-        crate::workload_configuration::load(&paths, &directory)?
+        elsecall_workload_config::workload_configuration::load(&paths, &directory)?
     };
     let placement = match (args.pinned, args.placeable, args.member) {
         (true, _, _) => Some(Placement::Pinned),

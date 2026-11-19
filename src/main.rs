@@ -370,7 +370,9 @@ async fn run(cli: Cli) -> Result<bool> {
         Command::Config {
             command: ConfigCommand::Migrate { sources },
         } => {
-            output(elsecall::workload_migration::migrate(&paths, &sources)?);
+            output(elsecall_workload_config::workload_migration::migrate(
+                &paths, &sources,
+            )?);
         }
         Command::Install { session, open } => {
             let source =

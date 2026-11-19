@@ -1,9 +1,10 @@
 //! Read-only placement counterfactuals. Keep measured work, label families and
 //! urgency fixed; only the placement component of current consumer rules applies.
-use crate::{workload::trace::Trace, workload_settings::RulePlacement};
+use crate::workload::trace::Trace;
 use clap::Args;
 use elsecall_failure::{Failure, Result};
 use elsecall_scheduling_model::request::Placement;
+use elsecall_workload_config::workload_settings::RulePlacement;
 use std::{io::Read, path::PathBuf};
 
 pub use crate::workload::format::{Mode, Provenance};
@@ -31,17 +32,20 @@ impl ReplayPlacement {
                 let mut bytes = Vec::new();
                 std::fs::File::open(path)
                     .and_then(|f| {
-                        f.take(crate::workload_configuration::LIMIT + 1)
+                        f.take(elsecall_workload_config::workload_configuration::LIMIT + 1)
                             .read_to_end(&mut bytes)
                     })
                     .map_err(|e| Failure::io("Read replay rules", e))?;
-                if bytes.len() as u64 > crate::workload_configuration::LIMIT {
+                if bytes.len() as u64 > elsecall_workload_config::workload_configuration::LIMIT {
                     return Err(invalid());
                 }
                 // Do not echo parser messages or file contents into artifacts.
                 let configuration = std::str::from_utf8(&bytes)
                     .ok()
-                    .and_then(|s| crate::workload_configuration::Configuration::parse(s).ok())
+                    .and_then(|s| {
+                        elsecall_workload_config::workload_configuration::Configuration::parse(s)
+                            .ok()
+                    })
                     .ok_or_else(|| {
                         Failure::new(
                             "invalid_request",
@@ -175,7 +179,7 @@ mod tests {
         }
         .apply(&mut t)
         .unwrap();
-        let policy = crate::workload_configuration::Configuration::parse(
+        let policy = elsecall_workload_config::workload_configuration::Configuration::parse(
             std::str::from_utf8(bytes).unwrap(),
         )
         .unwrap();

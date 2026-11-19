@@ -6,8 +6,10 @@
 //! the warnings, naming only what its own declaration names, and tells the member
 //! which names differed. The caller's fingerprints never leave it, and only the
 //! names of mismatches are kept. A mismatch is a warning; the run proceeds.
-use crate::workload_settings::{self, ConfigurationLocation, MAXIMUM_LOCATIONS, WorkloadSettings};
 use elsecall_wire::wire;
+use elsecall_workload_config::workload_settings::{
+    self, ConfigurationLocation, MAXIMUM_LOCATIONS, WorkloadSettings,
+};
 use elsecall_workspace::digest::Digest;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::Path};

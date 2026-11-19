@@ -2,18 +2,18 @@
 //! order: command-line flags, then the caller's environment, then the first label
 //! rule of `workloads.toml` that matches the label, then defaults. The result says
 //! where each property came from, so `explain` can show it.
-use crate::{
-    admission_cli::{
-        environment::CallerEnvironment,
-        options::{Declared, UrgencyChoice},
-    },
-    workload_settings::{LabelRule, RulePlacement, RuleUrgency, WhenUnavailable, WorkloadSettings},
+use crate::admission_cli::{
+    environment::CallerEnvironment,
+    options::{Declared, UrgencyChoice},
 };
 use elsecall_failure::Result;
 use elsecall_scheduling_model::{
     request::{AdmissionRequest, Kind, Placement, Urgency, invalid},
     settings::{AppliedRule, Settings, Source},
     timestamp::Timestamp,
+};
+use elsecall_workload_config::workload_settings::{
+    LabelRule, RulePlacement, RuleUrgency, WhenUnavailable, WorkloadSettings,
 };
 
 /// Everything a request's properties may come from.
