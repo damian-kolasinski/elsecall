@@ -2498,7 +2498,10 @@ smoke-tests and installs the archive (`.github/workflows/release.yml`), so a
 packaging mistake shows before the next release. While Check, Module shape or
 Privacy fails on `main`, that workflow's issue, `main is red: <workflow>` labelled
 `main-red`, stays open (`.github/workflows/main-status.yml`): each failed run
-comments on it, and the workflow's next passing run closes it.
+comments on it, and the workflow's next passing run closes it. A run that GitHub
+found no runner for says nothing about the code: it runs again, up to three
+attempts unless a later run will test `main` anyway, and only then counts, as
+untested.
 
 The mise tasks use the consumer entry pattern in "Integrating a consumer".
 The repository contains no workload policy. Set label rules for `elsecall check`,
