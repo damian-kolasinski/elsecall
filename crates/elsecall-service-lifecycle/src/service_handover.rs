@@ -97,7 +97,7 @@ mod tests {
             .arg("30")
             .spawn()
             .unwrap();
-        let identity = elsecall_os_processes::processes::describe(child.id())
+        let identity = elsecall_scheduling::os_processes::processes::describe(child.id())
             .unwrap()
             .identity;
         std::fs::write(

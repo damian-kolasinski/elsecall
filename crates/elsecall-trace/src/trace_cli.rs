@@ -225,22 +225,23 @@ pub async fn collect(paths: &Paths, start: Timestamp, until: Timestamp) -> Resul
         let mut at = start.millis() / 60_000 * 60_000;
         while at < load_until.millis() {
             let end = (at + 12 * 3_600_000).min(load_until.millis());
-            let load: Result<Vec<elsecall_load_log::buckets::Bucket>> = client::post_large(
-                &paths.socket(),
-                "/v1/trace/load",
-                &PageRequest {
-                    since_ms: at,
-                    until_ms: end,
-                    member: Some(member.clone()),
-                    before: None,
-                },
-            )
-            .await;
+            let load: Result<Vec<elsecall_scheduling::load_log::buckets::Bucket>> =
+                client::post_large(
+                    &paths.socket(),
+                    "/v1/trace/load",
+                    &PageRequest {
+                        since_ms: at,
+                        until_ms: end,
+                        member: Some(member.clone()),
+                        before: None,
+                    },
+                )
+                .await;
             match load {
                 Ok(mut buckets) => {
                     if buckets
                         .iter()
-                        .any(|b: &elsecall_load_log::buckets::Bucket| {
+                        .any(|b: &elsecall_scheduling::load_log::buckets::Bucket| {
                             b.at.millis() < at
                             || b.at.millis() >= end
                             || !b.at.millis().is_multiple_of(60_000)

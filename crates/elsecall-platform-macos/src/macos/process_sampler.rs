@@ -9,9 +9,7 @@
 //! its arguments or environment.
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_outside_pressure::outside_pressure::sampling::{
-    Memory, Owner, ProcessSampler, ProcessUse,
-};
+use elsecall_scheduling::outside_pressure::sampling::{Memory, Owner, ProcessSampler, ProcessUse};
 use std::{process::Command, time::Duration};
 
 const PS: &str = "/bin/ps";
@@ -282,7 +280,7 @@ mod tests {
             println!("fseventsd: {p:?}");
         }
         // Attribution as the detector would make it, over two seconds.
-        use elsecall_outside_pressure::outside_pressure::{
+        use elsecall_scheduling::outside_pressure::{
             attribution::attribute,
             blocked::Reason,
             sampling::{Snapshot, usage_between},
@@ -310,13 +308,14 @@ mod tests {
                 serde_json::to_string_pretty(&match attribute(
                     &reason,
                     &usage,
-                    &elsecall_outside_pressure::outside_pressure::attribution::OwnWork {
+                    &elsecall_scheduling::outside_pressure::attribution::OwnWork {
                         roots: vec![std::process::id()],
                         granted_since: None,
                     }
                 ) {
-                    elsecall_outside_pressure::outside_pressure::attribution::Attribution::Outside(outside) =>
-                        serde_json::to_value(outside).unwrap(),
+                    elsecall_scheduling::outside_pressure::attribution::Attribution::Outside(
+                        outside,
+                    ) => serde_json::to_value(outside).unwrap(),
                     own => serde_json::Value::String(format!("{own:?}")),
                 })
                 .unwrap()

@@ -4,8 +4,8 @@ use elsecall_contract::scheduling_model::{
     request::{Placement, Urgency},
     timestamp::Timestamp,
 };
-use elsecall_load_log::buckets::Bucket;
 use elsecall_report_facts::facts::Fact;
+use elsecall_scheduling::load_log::buckets::Bucket;
 use elsecall_scheduling::{
     leftovers::{Ending, Leftovers},
     record::{Decision, HoldLimitRecord, Outcome, Record},

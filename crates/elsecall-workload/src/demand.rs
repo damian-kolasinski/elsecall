@@ -1,7 +1,7 @@
 //! Machine CPU attribution by family. Grant-derived outside load is circular,
 //! so fit an idle baseline and active family counts to total machine CPU.
-use elsecall_load_log::buckets::Bucket;
 use elsecall_report_facts::facts::Fact;
+use elsecall_scheduling::load_log::buckets::Bucket;
 use elsecall_scheduling::record::SizeBasis;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

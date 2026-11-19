@@ -5,8 +5,8 @@
 //! under admission.
 use crate::reporting::load::{has_room, overloaded, peak_load_per_cpu, weighted_mean};
 use elsecall_contract::scheduling_model::{request::Kind, timestamp::Timestamp};
-use elsecall_load_log::buckets::Bucket;
 use elsecall_report_facts::facts::{Fact, PlacementKind};
+use elsecall_scheduling::load_log::buckets::Bucket;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 

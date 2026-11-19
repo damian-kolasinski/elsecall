@@ -10,13 +10,13 @@ use crate::reporting::{
     overload::{How, Overload},
 };
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_outside_pressure::outside_pressure::{
+use elsecall_report_facts::leftovers::LabelLeftovers;
+use elsecall_scheduling::outside_pressure::{
     blocked::OutsideProcess,
     remedy::{self, Act},
     trend,
     warning::Concern,
 };
-use elsecall_report_facts::leftovers::LabelLeftovers;
 use serde::Serialize;
 
 /// At most this many findings, the most severe first.
@@ -924,9 +924,9 @@ mod tests {
     use super::*;
     use crate::reporting::document::{Gathered, MemberInput, Query, RecordsRead, document};
     use elsecall_contract::scheduling_model::{request::Placement, timestamp::Timestamp};
-    use elsecall_outside_pressure::outside_pressure::sampling::Owner;
     use elsecall_report_facts::{facts::Fact, leftovers::LeftoverFact, window::Window};
     use elsecall_scheduling::fixtures::{self, MINUTE, Run, T0, bucket};
+    use elsecall_scheduling::outside_pressure::sampling::Owner;
     use elsecall_scheduling::{
         placement::Source,
         record::{Outcome, Verdict},
@@ -1081,7 +1081,7 @@ mod tests {
     #[test]
     fn outside_processes_that_spun_or_grew_are_findings_with_their_remedy() {
         use crate::reporting::outside::OutsideHistory;
-        use elsecall_outside_pressure::outside_pressure::warning::{Warning, WarningEpisode};
+        use elsecall_scheduling::outside_pressure::warning::{Warning, WarningEpisode};
         const HOUR: u64 = 60 * MINUTE;
         let at = |ms: u64| Timestamp::from_millis(ms);
         // An hour two days after T0.
@@ -1226,13 +1226,14 @@ mod tests {
     #[test]
     fn a_member_overloaded_while_another_had_room_is_a_finding_that_says_what_ran() {
         // A 14-CPU minute at `cpu` with `load` threads and `in_use` granted cores.
-        let loaded =
-            |m: u64, cpu: f64, load: f64, in_use: f64| elsecall_load_log::buckets::Bucket {
+        let loaded = |m: u64, cpu: f64, load: f64, in_use: f64| {
+            elsecall_scheduling::load_log::buckets::Bucket {
                 load_mean: Some(load),
                 load_max: Some(load + 14.0),
                 logical_cpus: Some(14),
                 ..bucket(m, cpu, in_use, 0, 0, 1.0)
-            };
+            }
+        };
         let gathered = |mini_minutes: u64, devbox_cpu: f64| {
             let mut gathered = troubled();
             // Two pinned checks and a lease ran on the mini during it.
@@ -1550,7 +1551,7 @@ mod tests {
     fn minutes(
         closed: impl Fn(u64) -> Option<Pressure>,
         in_use: impl Fn(u64) -> f64,
-    ) -> Vec<elsecall_load_log::buckets::Bucket> {
+    ) -> Vec<elsecall_scheduling::load_log::buckets::Bucket> {
         (0..660)
             .map(|m| {
                 let mut b = match closed(m) {
@@ -1641,13 +1642,11 @@ mod tests {
                 MemberInput {
                     // What the member recorded: fseventsd hung at 56 GB.
                     outside: Ok(crate::reporting::outside::OutsideHistory {
-                        episodes: vec![
-                            elsecall_outside_pressure::outside_pressure::fixtures::episode(
-                                incident_at(108 * 60),
-                                Some(incident_at(490 * 60)),
-                                &[("fseventsd", 56 << 30, 1.0), ("mds_stores", 2 << 30, 0.1)],
-                            ),
-                        ],
+                        episodes: vec![elsecall_scheduling::outside_pressure::fixtures::episode(
+                            incident_at(108 * 60),
+                            Some(incident_at(490 * 60)),
+                            &[("fseventsd", 56 << 30, 1.0), ("mds_stores", 2 << 30, 0.1)],
+                        )],
                         ..Default::default()
                     }),
                     ..input("macbook-pro", macbook)
@@ -1854,9 +1853,9 @@ mod tests {
 
     #[test]
     fn the_remedy_names_the_leading_process_and_suits_its_owner() {
-        use elsecall_outside_pressure::outside_pressure::sampling::Owner;
+        use elsecall_scheduling::outside_pressure::sampling::Owner;
         let process = |name: &str, owner, footprint| {
-            let mut episode = elsecall_outside_pressure::outside_pressure::fixtures::episode(
+            let mut episode = elsecall_scheduling::outside_pressure::fixtures::episode(
                 incident_start(),
                 None,
                 &[(name, 3 << 29, 2.5)],
@@ -1909,13 +1908,13 @@ mod tests {
             |m| (60..210).contains(&m).then_some(Pressure::CpuSaturation),
             |_| 0.0,
         ));
-        let mut episode = elsecall_outside_pressure::outside_pressure::fixtures::episode(
+        let mut episode = elsecall_scheduling::outside_pressure::fixtures::episode(
             incident_at(3600),
             None,
             &[("mds_stores", 1 << 30, 7.9)],
         );
         episode.blocked.reason =
-            elsecall_outside_pressure::outside_pressure::blocked::Reason::OutsideSaturation {
+            elsecall_scheduling::outside_pressure::blocked::Reason::OutsideSaturation {
                 outside_utilization: 0.97,
             };
         saturated.members[1].outside = Ok(crate::reporting::outside::OutsideHistory {

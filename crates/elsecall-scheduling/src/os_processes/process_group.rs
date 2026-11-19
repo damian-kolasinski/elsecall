@@ -1,8 +1,8 @@
 //! The processes of one process group: who is in it, what CPU time each has used,
 //! and signals to all of them. A placed command leads its own group, so what it
 //! leaves running after it exits is found here.
-use crate::{process_usage, processes};
-use elsecall_scheduling::processes::ProcessIdentity;
+use crate::os_processes::{process_usage, processes};
+use crate::processes::ProcessIdentity;
 use std::time::Duration;
 
 /// A live process of the group.
@@ -73,7 +73,7 @@ pub fn signal(group: u32, signal: i32) {
 
 #[cfg(test)]
 mod tests {
-    use crate::process_group::*;
+    use crate::os_processes::process_group::*;
     use std::os::unix::process::CommandExt;
 
     #[test]

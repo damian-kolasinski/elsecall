@@ -1,7 +1,7 @@
 //! Time-weighted rehearsal observations, clipped to the recorded window. A real
 //! one-second observation may straddle a UTC-minute boundary; it belongs to both
 //! buckets. Repeated observations never create extra observed time.
-use crate::{
+use crate::load_log::{
     buckets::Bucket,
     minute::{Second, memory_rank, thermal_rank, worst},
 };

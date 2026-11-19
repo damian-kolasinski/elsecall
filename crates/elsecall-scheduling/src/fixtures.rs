@@ -1,4 +1,5 @@
 //! Fixed records and load buckets the report's tests compute from.
+use crate::load_log::buckets::Bucket;
 use crate::{
     load::Gate,
     placed::{PlacedRecord, Reached, Side, SyncSummary, Warmth},
@@ -16,7 +17,6 @@ use elsecall_contract::scheduling_model::{
     run_id::RunId,
     timestamp::Timestamp,
 };
-use elsecall_load_log::buckets::Bucket;
 use std::time::Duration;
 
 pub const MINUTE: u64 = 60_000;

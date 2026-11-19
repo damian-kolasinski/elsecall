@@ -12,12 +12,12 @@ use elsecall_contract::scheduling_model::{
     speed::SpeedMeter,
 };
 use elsecall_host::{paths::Paths, private_files};
-use elsecall_load_log::LoadLog;
 use elsecall_release_update::release_update::{
     self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
     service::{HelperLauncher, UpdateService},
     store::Store,
 };
+use elsecall_scheduling::load_log::LoadLog;
 use elsecall_scheduling::{
     clock::SystemClock,
     placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},

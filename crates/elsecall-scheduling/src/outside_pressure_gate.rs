@@ -1,7 +1,7 @@
 //! The scheduler's gate as outside pressure detection sees it: the gate, and
 //! the processes whose descendants are Elsecall's own work.
 use crate::outside_pressure::{GateSource, Observation, attribution::OwnWork};
-use elsecall_scheduling::service::Scheduler;
+use crate::service::Scheduler;
 use std::sync::Arc;
 
 pub struct SchedulerGate(pub Arc<Scheduler>);

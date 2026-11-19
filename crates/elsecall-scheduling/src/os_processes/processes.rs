@@ -1,6 +1,6 @@
 //! Process identity through libproc and exit notification through kqueue.
+use crate::processes::{ProcessIdentity, ProcessInfo, ProcessTable};
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_scheduling::processes::{ProcessIdentity, ProcessInfo, ProcessTable};
 use std::{
     os::fd::{AsRawFd, FromRawFd, OwnedFd},
     sync::Arc,
@@ -162,8 +162,8 @@ impl ProcessTable for MacProcesses {
 
 #[cfg(test)]
 mod tests {
-    use crate::processes::*;
-    use elsecall_scheduling::processes::lineage;
+    use crate::os_processes::processes::*;
+    use crate::processes::lineage;
     use std::process::Command;
 
     #[tokio::test]

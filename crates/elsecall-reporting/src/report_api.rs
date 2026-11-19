@@ -23,12 +23,12 @@ use elsecall_contract::api;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_fleet::fleet::Fleet;
-use elsecall_load_log::buckets::Bucket;
 use elsecall_peers::membership_store::Membership;
 use elsecall_report_facts::{
     report_protocol::{Cursor, FactsPage, FactsRequest, LoadRequest},
     window::{Window, invalid},
 };
+use elsecall_scheduling::load_log::buckets::Bucket;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 
@@ -346,16 +346,16 @@ mod tests {
         // The most episodes, each naming the most processes by the longest
         // names, of four-byte characters.
         // Every timestamp serializes to the same length.
-        let mut episode = elsecall_outside_pressure::outside_pressure::fixtures::episode(
+        let mut episode = elsecall_scheduling::outside_pressure::fixtures::episode(
             Timestamp::from_millis(fixtures::T0),
             Some(Timestamp::from_millis(fixtures::T0)),
             &[],
         );
-        let process = elsecall_outside_pressure::outside_pressure::blocked::OutsideProcess {
+        let process = elsecall_scheduling::outside_pressure::blocked::OutsideProcess {
             name: "𝄞".repeat(crate::reporting::outside::MAXIMUM_NAME),
             pid: u32::MAX,
-            owner: elsecall_outside_pressure::outside_pressure::sampling::Owner::OtherUser,
-            memory: elsecall_outside_pressure::outside_pressure::sampling::Memory {
+            owner: elsecall_scheduling::outside_pressure::sampling::Owner::OtherUser,
+            memory: elsecall_scheduling::outside_pressure::sampling::Memory {
                 resident_bytes: u64::MAX,
                 footprint_bytes: Some(u64::MAX),
             },

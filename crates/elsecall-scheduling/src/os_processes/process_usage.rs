@@ -104,7 +104,7 @@ fn nanoseconds(ticks: u64) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::process_usage::*;
+    use crate::os_processes::process_usage::*;
     use std::process::Command;
 
     #[test]

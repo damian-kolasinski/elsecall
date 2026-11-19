@@ -5,12 +5,12 @@
 //! member's answer is untrusted and bounded by [`bounded`].
 use crate::reporting::blocked::Pressure;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_outside_pressure::outside_pressure::{
+use elsecall_report_facts::window::Window;
+use elsecall_scheduling::outside_pressure::{
     blocked::{OutsideProcess, Reason, lenient_list},
     store::Episode,
     warning::{Concern, WarningEpisode},
 };
-use elsecall_report_facts::window::Window;
 use serde::{Deserialize, Serialize};
 
 /// The most episodes one answer carries, the longest kept, so the largest fits
@@ -157,7 +157,7 @@ pub fn behind(
 mod tests {
     use super::*;
     use elsecall_contract::inspection::MemoryPressure;
-    use elsecall_outside_pressure::outside_pressure::{
+    use elsecall_scheduling::outside_pressure::{
         blocked::Blocked,
         sampling::{Memory, Owner},
     };
@@ -282,7 +282,7 @@ mod tests {
 
     #[test]
     fn keeps_only_plausible_warnings_of_the_period() {
-        use elsecall_outside_pressure::outside_pressure::warning::Warning;
+        use elsecall_scheduling::outside_pressure::warning::Warning;
         let warning =
             |process: &str, since: u64, observed: u64, until: Option<u64>| WarningEpisode {
                 warning: Warning {

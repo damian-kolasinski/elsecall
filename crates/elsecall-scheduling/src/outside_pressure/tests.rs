@@ -6,10 +6,10 @@ use super::{
     sampling::{Memory, Owner, ProcessSampler, ProcessUse},
 };
 use crate::outside_pressure::Reason;
+use crate::{load, parameters::Parameters};
 use elsecall_contract::failure::Result;
 use elsecall_contract::inspection::MemoryPressure;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_scheduling::{load, parameters::Parameters};
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
@@ -270,7 +270,7 @@ fn a_restart_during_a_block_keeps_its_onset() {
     for second_at in 421..424 {
         second.detector.observe(Observation {
             at: at(second_at),
-            gate: elsecall_scheduling::load::Gate::Unknown,
+            gate: crate::load::Gate::Unknown,
             own: OwnWork::default(),
         });
     }

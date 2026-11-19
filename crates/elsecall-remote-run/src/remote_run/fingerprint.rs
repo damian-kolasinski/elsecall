@@ -260,7 +260,7 @@ mod tests {
             .parse()
             .unwrap();
         let deadline = Instant::now() + Duration::from_secs(120);
-        while !elsecall_os_processes::process_group::members(group).is_empty() {
+        while !elsecall_scheduling::os_processes::process_group::members(group).is_empty() {
             assert!(
                 Instant::now() < deadline,
                 "the timed-out probe's descendants were not stopped"

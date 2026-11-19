@@ -2,8 +2,8 @@
 //! each warning that held in the period and how long it had held. Pure.
 use crate::reporting::outside::OutsideHistory;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_outside_pressure::outside_pressure::warning::Warning;
 use elsecall_report_facts::window::Window;
+use elsecall_scheduling::outside_pressure::warning::Warning;
 use serde::Serialize;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -44,7 +44,7 @@ pub fn in_period(history: &OutsideHistory, window: Window) -> Vec<PeriodWarning>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use elsecall_outside_pressure::outside_pressure::{
+    use elsecall_scheduling::outside_pressure::{
         sampling::Owner,
         warning::{Concern, WarningEpisode},
     };

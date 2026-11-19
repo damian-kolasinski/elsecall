@@ -259,7 +259,7 @@ mod tests {
         capacity::Cores,
         request::{Kind, Placement},
     };
-    use elsecall_load_log::LoadLog;
+    use elsecall_scheduling::load_log::LoadLog;
     use elsecall_scheduling::{
         clock::{Clock, VirtualClock},
         fixtures,

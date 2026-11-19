@@ -2,7 +2,7 @@
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_host::paths::Paths;
-use elsecall_load_log::{buckets, store::LoadStore};
+use elsecall_scheduling::load_log::{buckets, store::LoadStore};
 use elsecall_scheduling::records::Records;
 use elsecall_workload::trace::{Member, PAGE, Trace, VERSION};
 use std::time::Duration;

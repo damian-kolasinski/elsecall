@@ -23,9 +23,11 @@ pub async fn monitor(paths: &Paths, scheduler: &Scheduler) -> Result<()> {
         }
         // Check only days for which this member actually recorded inputs.
         if scheduler.trace_records(since, until, None, 1)?.is_empty()
-            && elsecall_load_log::store::LoadStore::open_read_only(&paths.load_history())?
-                .between(since, until)?
-                .is_empty()
+            && elsecall_scheduling::load_log::store::LoadStore::open_read_only(
+                &paths.load_history(),
+            )?
+            .between(since, until)?
+            .is_empty()
         {
             continue;
         }

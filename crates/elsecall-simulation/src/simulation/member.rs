@@ -7,7 +7,7 @@ use super::{
 };
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::capacity::Capacity;
-use elsecall_load_log::LoadLog;
+use elsecall_scheduling::load_log::LoadLog;
 use elsecall_scheduling::{
     clock::Clock,
     parameters::Parameters,

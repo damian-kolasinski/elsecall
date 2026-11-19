@@ -20,5 +20,5 @@ elsecall-scheduling.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]
-elsecall-os-processes.workspace = true
+elsecall-scheduling.workspace = true
 tempfile.workspace = true

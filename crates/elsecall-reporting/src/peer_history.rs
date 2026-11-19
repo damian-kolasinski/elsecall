@@ -6,7 +6,6 @@ use crate::reporting::gathering::{Facts, MAXIMUM_FACTS, MemberHistory};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::speed::PLAUSIBLE;
 use elsecall_fleet::fleet::Fleet;
-use elsecall_load_log::buckets::Bucket;
 use elsecall_peers::peer_client;
 use elsecall_peers::roster::Member;
 use elsecall_report_facts::{
@@ -14,6 +13,7 @@ use elsecall_report_facts::{
     report_protocol::{FactsPage, FactsRequest, LoadRequest, PAGE},
     window::{FINE_BUCKETS, Window},
 };
+use elsecall_scheduling::load_log::buckets::Bucket;
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};

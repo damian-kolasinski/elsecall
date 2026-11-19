@@ -20,7 +20,6 @@ elsecall-api-response.workspace = true
 elsecall-contract.workspace = true
 elsecall-fleet.workspace = true
 elsecall-host.workspace = true
-elsecall-os-processes.workspace = true
 elsecall-peers.workspace = true
 elsecall-remote-run.workspace = true
 elsecall-scheduling.workspace = true

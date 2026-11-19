@@ -19,8 +19,6 @@ elsecall-api-response.workspace = true
 elsecall-contract.workspace = true
 elsecall-fleet.workspace = true
 elsecall-host.workspace = true
-elsecall-load-log.workspace = true
-elsecall-outside-pressure.workspace = true
 elsecall-peers.workspace = true
 elsecall-report-facts.workspace = true
 elsecall-scheduling.workspace = true
@@ -33,6 +31,5 @@ serde_json.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]
-elsecall-outside-pressure = { workspace = true, features = ["test-support"] }
 elsecall-scheduling = { workspace = true, features = ["test-support"] }
 elsecall-workload = { workspace = true, features = ["test-support"] }

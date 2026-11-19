@@ -15,7 +15,6 @@ workspace = true
 [dependencies]
 elsecall-contract.workspace = true
 elsecall-host.workspace = true
-elsecall-os-processes.workspace = true
 elsecall-scheduling.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -81,7 +81,7 @@ pub struct Reply {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub settings: Option<elsecall_scheduling::records::SchedulerSettings>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub recorded_load: Option<elsecall_load_log::session::Recorded>,
+    pub recorded_load: Option<elsecall_scheduling::load_log::session::Recorded>,
     #[serde(default)]
     pub observations_ready: Option<bool>,
     pub production_active: usize,

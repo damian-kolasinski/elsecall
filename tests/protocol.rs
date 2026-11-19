@@ -5,8 +5,8 @@ use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::inspection::{Inspection, LoadSample, Machine, MachineInspector};
 use elsecall_host::client;
 use elsecall_host::{paths::Paths, private_files};
-use elsecall_os_processes::processes::MacProcesses;
 use elsecall_peers::tailnet::{Presence, Tailnet};
+use elsecall_scheduling::os_processes::processes::MacProcesses;
 use elsecall_scheduling::service::Adapters;
 use std::{future::IntoFuture, sync::Arc};
 

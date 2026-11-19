@@ -1,4 +1,6 @@
-//! Admission of work onto this member.
+//! Scheduling work on this member: admitting it, the records and estimates it
+//! learns from, the load log, outside pressure, and the operating system's
+//! processes it watches.
 pub mod admission;
 pub mod binding;
 pub mod busy;
@@ -9,8 +11,12 @@ pub mod fixtures;
 pub mod learning;
 pub mod leftovers;
 pub mod load;
+pub mod load_log;
 pub mod loss_history;
 pub mod messages;
+pub mod os_processes;
+pub mod outside_pressure;
+pub mod outside_pressure_gate;
 pub mod parameters;
 pub mod placed;
 pub mod placement;

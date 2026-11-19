@@ -1,5 +1,6 @@
 //! Follows this member's gate each second, samples processes while it stays
 //! closed, and keeps the blocked state and its episodes.
+use crate::load::Gate;
 use crate::outside_pressure::{
     attribution::{self, OwnWork},
     blocked::Blocked,
@@ -9,7 +10,6 @@ use crate::outside_pressure::{
 };
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_scheduling::load::Gate;
 use serde::Serialize;
 use std::{
     path::Path,

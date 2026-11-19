@@ -91,7 +91,7 @@ pub(super) fn bucket<'a>(
     trace: &'a Trace,
     member: &str,
     now: u64,
-) -> Option<&'a elsecall_load_log::buckets::Bucket> {
+) -> Option<&'a elsecall_scheduling::load_log::buckets::Bucket> {
     let loads = &trace.members.iter().find(|m| m.member == member)?.load;
     let i = loads.partition_point(|b| b.at.millis() <= now);
     i.checked_sub(1)

@@ -101,7 +101,7 @@ pub async fn serve(
     paths: Paths,
     inspection: Arc<Inspection>,
     scheduling: Adapters,
-    process_sampler: Arc<dyn elsecall_outside_pressure::outside_pressure::ProcessSampler>,
+    process_sampler: Arc<dyn elsecall_scheduling::outside_pressure::ProcessSampler>,
     members_listener: peer_listener::Settings,
 ) -> Result<()> {
     elsecall_release_update::release_update::rehearsal::startup()?;
@@ -123,7 +123,7 @@ pub async fn serve_with_updates(
     paths: Paths,
     inspection: Arc<Inspection>,
     scheduling: Adapters,
-    process_sampler: Arc<dyn elsecall_outside_pressure::outside_pressure::ProcessSampler>,
+    process_sampler: Arc<dyn elsecall_scheduling::outside_pressure::ProcessSampler>,
     members_listener: peer_listener::Settings,
     updates: elsecall_release_update::release_update::service::UpdateAdapters,
 ) -> Result<()> {
@@ -166,7 +166,9 @@ pub async fn serve_with_updates(
     let mut configuration =
         elsecall_config_sync::service_configuration::load(&paths, name.as_ref())?;
     let members = Arc::new(FleetMembers::new(fleet.as_ref().ok().cloned()));
-    let load_log = Arc::new(elsecall_load_log::LoadLog::open(&paths.load_history())?);
+    let load_log = Arc::new(elsecall_scheduling::load_log::LoadLog::open(
+        &paths.load_history(),
+    )?);
     let mut locations = configured_locations(&paths, &configuration);
     // Configuration sync needs fleet state; broken sync state degrades only sync.
     let mut config_sync = match &fleet {
@@ -230,7 +232,7 @@ pub async fn serve_with_updates(
         sync.report_effective_settings(scheduler.effective_settings_fingerprint());
     }
     // Broken outside pressure history must not take down admission.
-    let outside_pressure = elsecall_outside_pressure::outside_pressure::Detector::open(
+    let outside_pressure = elsecall_scheduling::outside_pressure::Detector::open(
         &paths.outside_pressure(),
         process_sampler.clone(),
     )
@@ -239,7 +241,7 @@ pub async fn serve_with_updates(
     let outside_processes = inspection
         .machine()
         .and_then(|machine| {
-            elsecall_outside_pressure::outside_pressure::Watcher::open(
+            elsecall_scheduling::outside_pressure::Watcher::open(
                 &paths.outside_processes(),
                 process_sampler,
                 machine.memory.total_bytes,
@@ -248,16 +250,12 @@ pub async fn serve_with_updates(
         .map(Arc::new);
     let _outside_processes = match &outside_processes {
         Ok(watcher) => Some(AbortOnDrop(
-            tokio::spawn(
-                elsecall_outside_pressure::outside_pressure::watcher::follow(
-                    watcher.clone(),
-                    Arc::new(
-                        elsecall_outside_pressure::outside_pressure_gate::SchedulerGate(
-                            scheduler.clone(),
-                        ),
-                    ),
-                ),
-            )
+            tokio::spawn(elsecall_scheduling::outside_pressure::watcher::follow(
+                watcher.clone(),
+                Arc::new(elsecall_scheduling::outside_pressure_gate::SchedulerGate(
+                    scheduler.clone(),
+                )),
+            ))
             .abort_handle(),
         )),
         Err(error) => {
@@ -271,7 +269,7 @@ pub async fn serve_with_updates(
     let warnings = outside_processes
         .as_ref()
         .map(|watcher| {
-            watcher.clone() as Arc<dyn elsecall_outside_pressure::outside_pressure::WarningReport>
+            watcher.clone() as Arc<dyn elsecall_scheduling::outside_pressure::WarningReport>
         })
         .map_err(Clone::clone);
     if let (Ok(fleet), Ok(warnings)) = (&fleet, &warnings) {
@@ -279,17 +277,13 @@ pub async fn serve_with_updates(
     }
     let _outside_pressure = match &outside_pressure {
         Ok(detector) => Some(AbortOnDrop(
-            tokio::spawn(
-                elsecall_outside_pressure::outside_pressure::detector::follow(
-                    detector.clone(),
-                    Arc::new(
-                        elsecall_outside_pressure::outside_pressure_gate::SchedulerGate(
-                            scheduler.clone(),
-                        ),
-                    ),
-                    elsecall_scheduling::service::SAMPLE_INTERVAL,
-                ),
-            )
+            tokio::spawn(elsecall_scheduling::outside_pressure::detector::follow(
+                detector.clone(),
+                Arc::new(elsecall_scheduling::outside_pressure_gate::SchedulerGate(
+                    scheduler.clone(),
+                )),
+                elsecall_scheduling::service::SAMPLE_INTERVAL,
+            ))
             .abort_handle(),
         )),
         Err(error) => {

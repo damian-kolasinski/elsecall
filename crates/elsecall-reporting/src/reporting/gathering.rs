@@ -4,12 +4,12 @@
 //! members' over the member channel.
 use crate::reporting::document::{self, Document, Gathered, MemberInput, Query, RecordsRead};
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_load_log::buckets::Bucket;
 use elsecall_report_facts::{
     facts::Fact,
     leftovers::LeftoverFact,
     window::{Window, invalid},
 };
+use elsecall_scheduling::load_log::buckets::Bucket;
 use futures_util::future::BoxFuture;
 use std::{collections::BTreeSet, sync::Arc, time::Duration};
 
@@ -407,7 +407,7 @@ mod tests {
 
     #[tokio::test]
     async fn outside_histories_name_processes_and_a_member_without_one_is_still_complete() {
-        let episode = elsecall_outside_pressure::outside_pressure::fixtures::episode(
+        let episode = elsecall_scheduling::outside_pressure::fixtures::episode(
             Timestamp::from_millis(T0),
             None,
             &[("fseventsd", 56 << 30, 1.0)],

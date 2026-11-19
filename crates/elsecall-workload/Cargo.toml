@@ -19,7 +19,6 @@ test-support = ["elsecall-scheduling/test-support"]
 [dependencies]
 clap.workspace = true
 elsecall-contract.workspace = true
-elsecall-load-log.workspace = true
 elsecall-report-facts.workspace = true
 elsecall-scheduling.workspace = true
 serde.workspace = true

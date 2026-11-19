@@ -8,13 +8,13 @@ use elsecall_contract::inspection::{Health, Inspection, Machine};
 use elsecall_host::client;
 use elsecall_host::{local_access, paths::Paths};
 use elsecall_installation::installation::{self, ServiceManager};
-use elsecall_os_processes::processes::MacProcesses;
 use elsecall_peers::tailnet;
 use elsecall_platform_macos::macos::{
     application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
     tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
 };
 use elsecall_scheduling as scheduling;
+use elsecall_scheduling::os_processes::processes::MacProcesses;
 use elsecall_window::install_window;
 use serde::Serialize;
 use std::{process::ExitCode, sync::Arc, time::Duration};
@@ -573,7 +573,7 @@ async fn run(cli: Cli) -> Result<bool> {
             } else if launch_agent_current == Some(false) {
                 "The LaunchAgent predates this build (a fleet upgrade installs through the build it replaces): run elsecall install here to apply it; it restarts the service.".to_owned()
             } else if let Some(first) = blocked.first() {
-                elsecall_outside_pressure::outside_pressure::remedy::next_step(
+                elsecall_scheduling::outside_pressure::remedy::next_step(
                     &first.member,
                     &first.blocked,
                     elsecall_contract::scheduling_model::timestamp::Timestamp::now(),
@@ -590,7 +590,7 @@ async fn run(cli: Cli) -> Result<bool> {
             {
                 "Service configuration needs attention: follow configuration_sync.next_step and each member's service state.".to_owned()
             } else if let Some(first) = warnings.first() {
-                elsecall_outside_pressure::outside_pressure::remedy::warning_step(
+                elsecall_scheduling::outside_pressure::remedy::warning_step(
                     &first.member,
                     &first.warning,
                     elsecall_contract::scheduling_model::timestamp::Timestamp::now(),

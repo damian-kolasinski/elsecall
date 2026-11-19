@@ -16,7 +16,6 @@ workspace = true
 clap.workspace = true
 elsecall-contract.workspace = true
 elsecall-host.workspace = true
-elsecall-load-log.workspace = true
 elsecall-rehearsal.workspace = true
 elsecall-replay.workspace = true
 elsecall-reporting.workspace = true

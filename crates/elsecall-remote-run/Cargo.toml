@@ -16,7 +16,6 @@ workspace = true
 base64.workspace = true
 elsecall-contract.workspace = true
 elsecall-host.workspace = true
-elsecall-os-processes.workspace = true
 elsecall-peers.workspace = true
 elsecall-scheduling.workspace = true
 elsecall-service-config.workspace = true

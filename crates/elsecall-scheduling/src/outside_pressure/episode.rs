@@ -6,12 +6,12 @@
 //! it has lasted [`SUSTAINED`] without the gate staying open for [`REOPENED`],
 //! and a blocked state ends only once the gate has stayed open for [`CLEARED`],
 //! so neither a spike nor a moment's relief flips the status.
+use crate::load::Gate;
 use crate::outside_pressure::{
     attribution::Attribution,
     blocked::{Blocked, Reason},
 };
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_scheduling::load::Gate;
 use std::time::Duration;
 
 /// How long the gate must stay closed before the member counts as blocked.

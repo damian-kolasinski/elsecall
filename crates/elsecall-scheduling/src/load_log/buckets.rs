@@ -1,6 +1,6 @@
 //! Minutes of load rolled into longer periods. Buckets start at whole multiples
 //! of their width since the Unix epoch, so every member's buckets line up.
-use crate::minute::{Minute, memory_rank, thermal_rank, worst};
+use crate::load_log::minute::{Minute, memory_rank, thermal_rank, worst};
 use elsecall_contract::inspection::{MemoryPressure, ThermalState};
 use elsecall_contract::scheduling_model::{capacity::Cores, timestamp::Timestamp};
 use serde::{Deserialize, Serialize};

@@ -10,7 +10,7 @@ use axum::{
 };
 use elsecall_contract::api;
 use elsecall_contract::failure::Failure;
-use elsecall_outside_pressure::outside_pressure::{BlockedReport, Warning, WarningReport};
+use elsecall_scheduling::outside_pressure::{BlockedReport, Warning, WarningReport};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -23,14 +23,14 @@ pub struct ThisMember {
     pub member: String,
     #[serde(
         default,
-        deserialize_with = "elsecall_outside_pressure::outside_pressure::blocked::lenient"
+        deserialize_with = "elsecall_scheduling::outside_pressure::blocked::lenient"
     )]
-    pub blocked: Option<elsecall_outside_pressure::outside_pressure::Blocked>,
+    pub blocked: Option<elsecall_scheduling::outside_pressure::Blocked>,
     /// Early warnings about outside processes, the longest-standing first;
     /// empty from services that predate them.
     #[serde(
         default,
-        deserialize_with = "elsecall_outside_pressure::outside_pressure::blocked::lenient_list"
+        deserialize_with = "elsecall_scheduling::outside_pressure::blocked::lenient_list"
     )]
     pub warnings: Vec<Warning>,
 }

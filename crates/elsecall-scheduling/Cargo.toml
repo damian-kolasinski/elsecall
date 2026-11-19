@@ -19,7 +19,6 @@ test-support = []
 [dependencies]
 elsecall-contract.workspace = true
 elsecall-host.workspace = true
-elsecall-load-log.workspace = true
 elsecall-peers.workspace = true
 futures-util.workspace = true
 humantime.workspace = true

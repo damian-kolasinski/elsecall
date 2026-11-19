@@ -183,7 +183,7 @@ fn exports_paginated_fleet_history_without_commands_or_environment() {
 fn exports_real_overrun_shape_across_load_pages_without_losing_history() {
     use elsecall_contract::scheduling_model::timestamp::Timestamp;
     use elsecall_host::paths::Paths;
-    use elsecall_load_log::{minute::Minute, store::LoadStore};
+    use elsecall_scheduling::load_log::{minute::Minute, store::LoadStore};
     let alpha = TestMember::start("alpha");
     let paths = Paths::for_home(alpha.home.path()).unwrap();
     let store = LoadStore::open(&paths.load_history()).unwrap();
@@ -233,7 +233,7 @@ fn exports_real_overrun_shape_across_load_pages_without_losing_history() {
 fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
     use elsecall_contract::scheduling_model::{run_id::RunId, timestamp::Timestamp};
     use elsecall_host::paths::Paths;
-    use elsecall_load_log::{minute::Minute, store::LoadStore};
+    use elsecall_scheduling::load_log::{minute::Minute, store::LoadStore};
     use elsecall_scheduling::{record::Record, records::Records};
     use elsecall_workload::trace::Trace;
     use std::time::Duration;

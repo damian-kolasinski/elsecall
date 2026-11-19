@@ -38,7 +38,7 @@ pub struct Member {
     paths: Paths,
     scheduler: Arc<Scheduler>,
     housekeeper: Arc<Housekeeper>,
-    load: Arc<elsecall_load_log::LoadLog>,
+    load: Arc<elsecall_scheduling::load_log::LoadLog>,
     session: Mutex<Option<Session>>,
     recovering: AtomicBool,
 }
@@ -47,7 +47,7 @@ impl Member {
         paths: Paths,
         scheduler: Arc<Scheduler>,
         housekeeper: Arc<Housekeeper>,
-        load: Arc<elsecall_load_log::LoadLog>,
+        load: Arc<elsecall_scheduling::load_log::LoadLog>,
     ) -> Arc<Self> {
         let this = Arc::new(Self {
             paths,
@@ -323,17 +323,20 @@ impl Member {
                 )
                 .collect();
             let alive = || {
-                elsecall_os_processes::process_group::members(caller.pid)
+                elsecall_scheduling::os_processes::process_group::members(caller.pid)
                     .iter()
                     .any(|m| witnesses.contains(&m.identity))
             };
             if alive() {
-                elsecall_os_processes::process_group::signal(caller.pid, libc::SIGTERM);
+                elsecall_scheduling::os_processes::process_group::signal(caller.pid, libc::SIGTERM);
             }
             let deadline = Instant::now() + Duration::from_secs(5);
             while alive() {
                 if Instant::now() >= deadline {
-                    elsecall_os_processes::process_group::signal(caller.pid, libc::SIGKILL);
+                    elsecall_scheduling::os_processes::process_group::signal(
+                        caller.pid,
+                        libc::SIGKILL,
+                    );
                     break;
                 }
                 tokio::time::sleep(Duration::from_millis(20)).await;

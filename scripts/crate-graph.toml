@@ -41,27 +41,6 @@ band = "foundation"
 # configuration names and config sync enforces.
 modules = ["config_sync::synced_path", "config_sync::status"]
 
-[crates.os-processes]
-band = "core"
-# The operating system's processes: identity and exit notification, process
-# groups and their signals, and the CPU time a command used. A second platform
-# adds its implementation here.
-modules = ["macos::process_group", "macos::process_usage", "macos::processes"]
-
-[crates.scheduling]
-band = "core"
-modules = ["scheduling"]
-
-[crates.load-log]
-band = "core"
-modules = ["load_log"]
-
-[crates.outside-pressure]
-band = "core"
-modules = ["outside_pressure", "outside_pressure_gate"]
-
-# --- feature slices -----------------------------------------------------------
-
 [crates.workload-config]
 band = "feature"
 modules = ["workload_settings", "workload_configuration", "workload_migration"]
@@ -225,3 +204,8 @@ modules = ["child_start", "command_capture", "paths", "private_files", "local_ac
 band = "core"
 # Talking to the other members: the tailnet, the secure channel between members, membership and its keys, peer transport and its diagnostics.
 modules = ["tailnet", "tailscale_bottle", "secure_channel", "roster", "member_key", "member_code", "membership_store", "peer_auth", "peer_client", "peer_transport", "socket_io", "send_inactivity", "receive_inactivity", "peer_diagnostics"]
+
+[crates.scheduling]
+band = "core"
+# Scheduling work on this member: admitting it, the records and estimates it learns from, the load log, outside pressure, and the operating system's processes it watches.
+modules = ["scheduling", "load_log", "outside_pressure", "outside_pressure_gate", "macos::process_group", "macos::process_usage", "macos::processes"]

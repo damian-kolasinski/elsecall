@@ -20,6 +20,7 @@ mod running_estimates;
 mod upgrading;
 pub use upgrading::{HostingHold, OnHandover, UpdateHold, WorkInFlight};
 
+use crate::load_log::{LoadLog, minute::Second};
 use crate::{
     admission::{Admission, Class},
     binding::{Bindings, Lost},
@@ -51,7 +52,6 @@ use elsecall_contract::scheduling_model::{
     speed::{SpeedHistory, SpeedMeter},
     timestamp::Timestamp,
 };
-use elsecall_load_log::{LoadLog, minute::Second};
 use placing::Placing;
 use quotes::Quotes;
 use serde::Serialize;

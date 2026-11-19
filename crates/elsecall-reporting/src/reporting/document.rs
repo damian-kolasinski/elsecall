@@ -12,12 +12,12 @@ use crate::reporting::{
 use elsecall_contract::failure::Failure;
 use elsecall_contract::labels::pattern as label_pattern;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_load_log::buckets::Bucket;
 use elsecall_report_facts::{
     facts::Fact,
     leftovers::{self, LeftoverFact, LeftoverMetrics},
     window::Window,
 };
+use elsecall_scheduling::load_log::buckets::Bucket;
 use elsecall_scheduling::parameters::Parameters;
 use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};

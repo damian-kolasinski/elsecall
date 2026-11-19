@@ -7,10 +7,10 @@ use crate::reporting::{
 };
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
-use elsecall_load_log::{LoadReport, buckets::Bucket};
 use elsecall_report_facts::{
     facts::Fact, leftovers::LeftoverFact, report_protocol::PAGE, window::Window,
 };
+use elsecall_scheduling::load_log::{LoadReport, buckets::Bucket};
 use elsecall_scheduling::service::Scheduler;
 use futures_util::future::BoxFuture;
 use std::{sync::Arc, time::Duration};
@@ -32,10 +32,10 @@ pub struct OwnHistory {
     pub load: Arc<dyn LoadReport>,
     /// Outside pressure's detector, which keeps blocked episodes; `None` when
     /// its history could not be opened.
-    pub outside: Option<Arc<elsecall_outside_pressure::outside_pressure::Detector>>,
+    pub outside: Option<Arc<elsecall_scheduling::outside_pressure::Detector>>,
     /// Early warnings about outside processes; `None` when their history could
     /// not be opened.
-    pub warnings: Option<Arc<dyn elsecall_outside_pressure::outside_pressure::WarningReport>>,
+    pub warnings: Option<Arc<dyn elsecall_scheduling::outside_pressure::WarningReport>>,
 }
 
 impl OwnHistory {

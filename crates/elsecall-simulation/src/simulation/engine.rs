@@ -1143,7 +1143,7 @@ pub(super) mod tests {
     use elsecall_workload::trace::TraceOutcome;
     pub(crate) fn trace() -> Trace {
         use elsecall_contract::scheduling_model::capacity::Cores;
-        use elsecall_load_log::buckets::Bucket;
+        use elsecall_scheduling::load_log::buckets::Bucket;
         use elsecall_scheduling::{
             fixtures,
             record::{Outcome as End, State},
