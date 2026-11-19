@@ -5,11 +5,18 @@
 # lands. Choose the band by what the crate may depend on, not by what depends
 # on it.
 #
-# `modules` are the `elsecall` library modules each crate was moved out of, by
-# their path from the library root (`scheduling` or `scheduling::timestamp`).
-# For the entry crates `cli` and `service`, which stay in the `elsecall`
-# package, they are its modules today. scripts/crate_split.py reads them to
-# move code written against the single crate onto the crates.
+# Crates are coarse on purpose: an edit reruns rustc for the edited crate and
+# every crate above it, so many small crates make one edit rebuild many of
+# them. A crate holds a responsibility of several thousand lines; a module
+# inside it, not a crate of its own, isolates a smaller one. Split a crate when
+# it grows past what one edit should rebuild, along a boundary few edits cross.
+#
+# `modules` are the `elsecall` library modules each crate holds, by their path
+# in the single library crate that came before it (`scheduling` or
+# `scheduling::timestamp`). A library module `m` is now `elsecall_<crate>::m`
+# unless its entry says otherwise, which is how code written against the
+# single crate finds its paths. For the entry crates `cli` and `service`, which
+# stay in the `elsecall` package, they are its modules today.
 
 # Lowest first. A crate may depend on crates in its own band or a lower one,
 # never a higher one, and the planned crates may not form a cycle.
@@ -17,12 +24,12 @@ bands = ["foundation", "core", "feature", "lab", "adapter", "entry"]
 
 [band.foundation]
 # Shared vocabulary that everything builds on. A private edit here reruns rustc
-# for every crate above, so these stay small and free of frameworks.
+# for every crate above, so it stays small and free of frameworks.
 max_lines = 2500
 forbid = ["axum", "hyper", "hyper_util", "http_body_util", "tower", "rusqlite", "clap", "sysinfo", "plist", "toml_edit"]
 
 [band.core]
-# Scheduling, the records it keeps and peer transport. No HTTP routes and no
+# This machine's plumbing, peer transport and scheduling. No HTTP routes and no
 # command line: the service mounts their routes and the binary their commands.
 forbid = ["axum", "clap"]
 
@@ -35,14 +42,106 @@ forbid = ["axum", "clap"]
 
 # --- foundation ---------------------------------------------------------------
 
-[crates.tools]
-band = "feature"
-modules = ["toolset", "toolset_api", "tools_api", "tools_cli", "tool_inventory", "fleet_tool_inventory", "mise_cli", "macos::xcodes", "inventory_reader"]
+[crates.contract]
+band = "foundation"
+# The vocabulary every crate shares: failures, the wire forms and API envelope,
+# guidance, labels, build identity, the scheduler's request model and this
+# machine's facts. `rehearsal::identity` is `rehearsal_identity::identity`;
+# `scheduling::{request, settings, timestamp, capacity, gate, run_id, speed}`
+# and `workload_metadata` are under `scheduling_model::`.
+modules = ["failure", "api", "wire", "guidance", "run_admission", "labels", "rehearsal::identity", "build_identity", "executable_format", "version_skew", "scheduling::request", "scheduling::settings", "scheduling::timestamp", "scheduling::capacity", "scheduling::gate", "scheduling::run_id", "scheduling::speed", "workload_metadata", "inspection", "idle_load"]
+
+# --- core ---------------------------------------------------------------------
+
+[crates.host]
+band = "core"
+# This machine's local plumbing: starting child processes, the state directory
+# and its private files, SQLite retention, the service log, the client for the
+# local service, and scripted machine observations for tests.
+modules = ["child_start", "command_capture", "paths", "private_files", "local_access", "state_temps", "run_id_file", "sqlite_retention", "service_log", "client", "machine_script"]
+
+[crates.peers]
+band = "core"
+# Talking to the other members: the tailnet, the secure channel between
+# members, membership and its keys, peer transport and its diagnostics.
+modules = ["tailnet", "tailscale_bottle", "secure_channel", "roster", "member_key", "member_code", "membership_store", "peer_auth", "peer_client", "peer_transport", "socket_io", "send_inactivity", "receive_inactivity", "peer_diagnostics"]
+
+[crates.scheduling]
+band = "core"
+# Scheduling work on this member: admitting it, the records and estimates it
+# learns from, the load log, outside pressure, and the operating system's
+# processes it watches. The library's `scheduling` module is this crate's root
+# (`scheduling::service` is `elsecall_scheduling::service`), and
+# `macos::{process_group, process_usage, processes}` are under `os_processes::`.
+modules = ["scheduling", "load_log", "outside_pressure", "outside_pressure_gate", "macos::process_group", "macos::process_usage", "macos::processes"]
+
+# --- feature ------------------------------------------------------------------
 
 [crates.api-response]
 band = "feature"
 # The error envelope slices' HTTP routes answer with.
 modules = ["api_response"]
+
+[crates.fleet]
+band = "feature"
+# The fleet: its members and their authority, adding a Mac to it, and the
+# paths it may mirror between members, `config_sync::{synced_path, status}`,
+# which are under `config_sync_model::`.
+modules = ["fleet", "fleet_changes", "fleet_local_api", "fleet_view", "fleet_placement", "add_mac", "nearby_macs", "remote_mac", "askpass", "authorized_keys", "inbound_firewall", "lan_address", "config_sync::synced_path", "config_sync::status"]
+
+[crates.runs]
+band = "feature"
+# Running commands on the fleet: admitting a run, placing it on a member,
+# running it remotely, and the workload configuration that shapes it.
+modules = ["admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "remote_run", "sealed_run", "placement_api", "placement_authority", "placement_host", "placement_config_sync", "workload_settings", "workload_configuration", "workload_migration"]
+
+[crates.sync]
+band = "feature"
+# Keeping members alike: syncing configuration between them, and this member's
+# service configuration.
+modules = ["config_sync", "config_sync_api", "config_sync_cli", "config_sync_local_api", "service_configuration", "configuration"]
+
+[crates.workspace]
+band = "feature"
+# Workspace copies on members, and the housekeeping that keeps their storage in
+# check. The library's `workspace` module is this crate's root.
+modules = ["workspace", "housekeeping", "fleet_callers", "fleet_copies", "copies_api", "copies_cli", "workspace_check_api"]
+
+[crates.lifecycle]
+band = "feature"
+# Elsecall's own lifecycle: installing it, its window, updating it and the
+# fleet, starting and stopping the service, and the agent skill it installs.
+modules = ["installation", "lifecycle_holder", "window_release", "window_app", "window_startup", "install_window", "release_update", "release_update_api", "release_update_cli", "fleet_upgrade", "fleet_upgrade_api", "fleet_upgrade_local_api", "upgrade_drain", "upgrade_helper_process", "service_handover", "service_relaunch", "agent_skill"]
+
+[crates.tools]
+band = "feature"
+# Tool versions across the fleet: the desired toolset, inventories of what each
+# member has, and mise. `macos::xcodes` is `xcodes`.
+modules = ["toolset", "toolset_api", "tools_api", "tools_cli", "tool_inventory", "fleet_tool_inventory", "mise_cli", "macos::xcodes", "inventory_reader"]
+
+# --- lab ----------------------------------------------------------------------
+
+[crates.reports]
+band = "lab"
+# What the fleet did: the facts runs leave behind, the workload model fitted on
+# them, and the reports built from both. `reporting::{facts, window,
+# leftovers}` and `report_protocol` are under `report_facts::`.
+modules = ["reporting::facts", "reporting::window", "reporting::leftovers", "report_protocol", "workload", "reporting", "report_api", "report_cli", "own_history", "peer_history"]
+
+[crates.tuning]
+band = "lab"
+# Tuning the scheduler: recording traces, replaying and simulating them,
+# rehearsing on the fleet, and choosing settings from the results.
+modules = ["tuning", "tune_cli", "tuning_drift", "tuning_preflight", "tuning_preflight_cli", "busy_hour_calibration", "trace_api", "trace_cli", "trace_snapshot", "replay_api", "replay_cli", "replay_placement", "simulation", "evaluation_day", "workload_input", "replay_load", "rehearsal", "rehearsal_api", "tuning_trust", "tuning_trust_api", "tuning_objective"]
+
+# --- adapter ------------------------------------------------------------------
+
+[crates.macos]
+band = "adapter"
+# macOS adapters: the platform's services, and OpenSSH on a Mac.
+modules = ["macos", "process_service", "openssh_mac"]
+
+# --- entry --------------------------------------------------------------------
 
 [crates.service]
 band = "entry"
@@ -63,63 +162,3 @@ packages = ["elsecall-ui"]
 # The desktop app talks to the service through its contract, never through the
 # service's internals.
 may_depend_on = ["contract", "host", "peers", "fleet", "lifecycle", "runs"]
-
-[crates.contract]
-band = "foundation"
-# The vocabulary every crate shares: failures, the wire forms and API envelope, guidance, labels, build identity, the scheduler's request model and this machine's facts.
-modules = ["failure", "api", "wire", "guidance", "run_admission", "labels", "rehearsal::identity", "build_identity", "executable_format", "version_skew", "scheduling::request", "scheduling::settings", "scheduling::timestamp", "scheduling::capacity", "scheduling::gate", "scheduling::run_id", "scheduling::speed", "workload_metadata", "inspection", "idle_load"]
-
-[crates.host]
-band = "core"
-# This machine's local plumbing: starting child processes, the state directory and its private files, SQLite retention, the service log, the client for the local service, and scripted machine observations for tests.
-modules = ["child_start", "command_capture", "paths", "private_files", "local_access", "state_temps", "run_id_file", "sqlite_retention", "service_log", "client", "machine_script"]
-
-[crates.peers]
-band = "core"
-# Talking to the other members: the tailnet, the secure channel between members, membership and its keys, peer transport and its diagnostics.
-modules = ["tailnet", "tailscale_bottle", "secure_channel", "roster", "member_key", "member_code", "membership_store", "peer_auth", "peer_client", "peer_transport", "socket_io", "send_inactivity", "receive_inactivity", "peer_diagnostics"]
-
-[crates.scheduling]
-band = "core"
-# Scheduling work on this member: admitting it, the records and estimates it learns from, the load log, outside pressure, and the operating system's processes it watches.
-modules = ["scheduling", "load_log", "outside_pressure", "outside_pressure_gate", "macos::process_group", "macos::process_usage", "macos::processes"]
-
-[crates.fleet]
-band = "feature"
-# The fleet: its members and their authority, adding a Mac to it, and the paths it may mirror between members.
-modules = ["fleet", "fleet_changes", "fleet_local_api", "fleet_view", "fleet_placement", "add_mac", "nearby_macs", "remote_mac", "askpass", "authorized_keys", "inbound_firewall", "lan_address", "config_sync::synced_path", "config_sync::status"]
-
-[crates.runs]
-band = "feature"
-# Running commands on the fleet: admitting a run, placing it on a member, running it remotely, and the workload configuration that shapes it.
-modules = ["admission_api", "admission_cli", "run_relay", "passthrough", "local_run_client", "remote_run", "sealed_run", "placement_api", "placement_authority", "placement_host", "placement_config_sync", "workload_settings", "workload_configuration", "workload_migration"]
-
-[crates.sync]
-band = "feature"
-# Keeping members alike: syncing configuration between them, and this member's service configuration.
-modules = ["config_sync", "config_sync_api", "config_sync_cli", "config_sync_local_api", "service_configuration", "configuration"]
-
-[crates.workspace]
-band = "feature"
-# Workspace copies on members, and the housekeeping that keeps their storage in check.
-modules = ["workspace", "housekeeping", "fleet_callers", "fleet_copies", "copies_api", "copies_cli", "workspace_check_api"]
-
-[crates.lifecycle]
-band = "feature"
-# Elsecall's own lifecycle: installing it, its window, updating it and the fleet, starting and stopping the service, and the agent skill it installs.
-modules = ["installation", "lifecycle_holder", "window_release", "window_app", "window_startup", "install_window", "release_update", "release_update_api", "release_update_cli", "fleet_upgrade", "fleet_upgrade_api", "fleet_upgrade_local_api", "upgrade_drain", "upgrade_helper_process", "service_handover", "service_relaunch", "agent_skill"]
-
-[crates.reports]
-band = "lab"
-# What the fleet did: the facts runs leave behind, the workload model fitted on them, and the reports built from both.
-modules = ["reporting::facts", "reporting::window", "reporting::leftovers", "report_protocol", "workload", "reporting", "report_api", "report_cli", "own_history", "peer_history"]
-
-[crates.tuning]
-band = "lab"
-# Tuning the scheduler: recording traces, replaying and simulating them, rehearsing on the fleet, and choosing settings from the results.
-modules = ["tuning", "tune_cli", "tuning_drift", "tuning_preflight", "tuning_preflight_cli", "busy_hour_calibration", "trace_api", "trace_cli", "trace_snapshot", "replay_api", "replay_cli", "replay_placement", "simulation", "evaluation_day", "workload_input", "replay_load", "rehearsal", "rehearsal_api", "tuning_trust", "tuning_trust_api", "tuning_objective"]
-
-[crates.macos]
-band = "adapter"
-# macOS adapters: the platform's services, and OpenSSH on a Mac.
-modules = ["macos", "process_service", "openssh_mac"]
