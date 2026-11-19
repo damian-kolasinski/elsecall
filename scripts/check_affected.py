@@ -1,7 +1,8 @@
 """Run the checks a branch's changes can affect, a faster loop than the full check.
 
-Formatting and Clippy cover the whole workspace, as in the full check: both are
-incremental and catch compile errors anywhere. Tests run only where
+Formatting, Clippy and module_shape.py cover the whole workspace, as in the full
+check: the first two are incremental and catch compile errors anywhere, and the
+shape check takes about a second. Tests run only where
 check_selection.py says the changed paths can be observed, or all of them when
 it is unsure. Passing this is not a substitute for `mise run check`, which must
 pass before work is submitted.
@@ -23,11 +24,16 @@ ROOT = Path(__file__).resolve().parent.parent
 FULL_CHECK = "mise run check"
 
 
+# Run on every change, whatever it selects.
+ALWAYS = [
+    ["cargo", "fmt", "--all", "--", "--check"],
+    ["python3", "scripts/module_shape.py"],
+    ["cargo", "clippy", "--workspace", "--locked", "--all-targets", "--", "-D", "warnings"],
+]
+
+
 def plan(selection: check_selection.Selection) -> list[list[str]]:
-    commands = [
-        ["cargo", "fmt", "--all", "--", "--check"],
-        ["cargo", "clippy", "--workspace", "--locked", "--all-targets", "--", "-D", "warnings"],
-    ]
+    commands = [list(command) for command in ALWAYS]
     python = {"distribution", "scripts"} if selection.everything else selection.targets.python
     for suite in sorted(python):
         commands.append(["python3", "-m", "unittest", "discover", "-s", suite, "-p", "test_*.py"])
@@ -65,8 +71,8 @@ def main() -> int:
     commands = plan(selection)
     if selection.everything:
         print(f"Running every test: {selection.everything.reason}.")
-    elif len(commands) == 2:
-        print("No test can observe these changes; formatting and Clippy only.")
+    elif len(commands) == len(ALWAYS):
+        print("No test can observe these changes; formatting, Clippy and module shape only.")
     for command in commands:
         print("+ " + shlex.join(command), flush=True)
         if arguments.dry_run:

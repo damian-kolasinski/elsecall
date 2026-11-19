@@ -23,6 +23,14 @@ Agents using the CLI are the primary consumers. Humans using the web interface a
 - Catch-all modules such as `core`, `utils`, `helpers`, and `design-system` are forbidden. Organize modules by responsibility.
 - Give each module a clear, tightly scoped interface. Modules may depend only on other modules' interfaces, never on their implementation details.
 - Model the domain through types and data structures instead of scattered conditions. Make impossible states unrepresentable to reduce branching.
+- `scripts/module_shape.py` holds the shape mechanically, in `mise run check` and on every pull request:
+  - Rust files stay under 800 lines not counting `#[cfg(test)]` code, and 1,500 is a hard cap.
+  - A folder holds at most 60 source files directly.
+  - Catch-all module names fail.
+  - Older violations are in `scripts/module-shape-exceptions.txt` at the size they stood at, and ceilings only go down. Never add or raise an entry: split the module instead.
+  - After splitting or moving a listed file, run `scripts/module_shape.py --shrink` to lower or move its entry.
+  - A file moved with `git mv` keeps its ceiling, so a move need not also be a split. Keep moves and splits in separate changes so each reviews on its own.
+  - Warnings show only for files the change touched; `--all` lists the whole backlog.
 
 ## Working
 
