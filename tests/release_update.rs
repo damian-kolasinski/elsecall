@@ -16,12 +16,12 @@ use elsecall::{
     scheduling::{
         capacity::Cores,
         clock::SystemClock,
-        placed::Alone,
+        placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},
         pre_run_sync::{PreRunSync, Synced},
         processes::{ProcessIdentity, ProcessInfo, ProcessTable},
         request::{AdmissionRequest, Kind, Placement, Urgency},
-        run_id::RandomRunIds,
-        service::{Adapters, Driving, Runtime, Scheduler},
+        run_id::{RandomRunIds, RunId},
+        service::{Adapters, Driving, HostedEnd, Runtime, Scheduler},
         speed::SpeedMeter,
     },
 };
@@ -297,7 +297,7 @@ async fn api_and_real_cli_check_start_and_follow_the_same_durable_job() {
 }
 
 #[tokio::test]
-async fn install_defers_busy_work_then_closes_new_admission_atomically_and_resumes_after_failure() {
+async fn install_waits_for_placed_runs_but_not_local_work_then_closes_admission_until_it_ends() {
     let (_home, paths, scheduler) = fixture();
     let catalog = Arc::new(Catalog(Mutex::new(Ok(Some(release("0.1.1"))))));
     let launch = Arc::new(Launch {
@@ -310,26 +310,47 @@ async fn install_defers_busy_work_then_closes_new_admission_atomically_and_resum
     let store = Store::new(&paths);
     let _helper = store.helper_lock().unwrap().unwrap();
     store.advance(&mut job, Phase::WaitingForWork).unwrap();
-    let grant = scheduler.request(100, request()).await.unwrap();
-    assert_eq!(
-        service.prepare(&job.id).await.unwrap_err().code,
-        "update_deferred"
-    );
-    assert_eq!(scheduler.in_flight().len(), 1);
-    assert!(!scheduler.hosting_held());
-    scheduler
-        .run_ended(
-            100,
-            &grant.run_id,
-            elsecall::scheduling::messages::RunEnded::Exited {
-                exit_code: 0,
-                cpu_ms: None,
-                run_phases: None,
-                plan_observation: None,
-            },
+    // A local run keeps running through the restart; a run another member placed
+    // here would be cut short by it.
+    let local = scheduler.request(100, request()).await.unwrap();
+    let placed = RunId::parse("r-0000000000ff").unwrap();
+    let offer = PlacementOffer {
+        workload: None,
+        run_id: placed.clone(),
+        size: Cores::from_millis(1000),
+        label: Some("acme test Checkout".into()),
+        workspace: WorkspaceRef {
+            root: "/Users/me/acme".into(),
+            common_dir: "/Users/me/acme/.git".into(),
+        },
+        start_within_ms: 10_000,
+        size_basis: None,
+        expected_run_ms: None,
+    };
+    let reply = scheduler
+        .accept_placed(
+            "mac-mini",
+            &offer,
+            true,
+            "/tmp/copy",
+            "mapped",
+            Warmth::Warm,
         )
         .unwrap();
-    assert!(scheduler.in_flight().is_empty());
+    assert!(matches!(reply, OfferReply::Accepted { .. }));
+    let deferred = service.prepare(&job.id).await.unwrap_err();
+    assert_eq!(deferred.code, "update_deferred");
+    assert_eq!(scheduler.in_flight().len(), 2);
+    assert!(!scheduler.hosting_held());
+    scheduler.hosted_ended(
+        &placed,
+        HostedEnd::Exited {
+            code: 0,
+            cpu_ms: None,
+        },
+        None,
+    );
+    assert_eq!(scheduler.in_flight().len(), 1, "the local run still runs");
     service.prepare(&job.id).await.unwrap();
     assert_eq!(
         scheduler.request(100, request()).await.unwrap_err().code,
@@ -346,8 +367,8 @@ async fn install_defers_busy_work_then_closes_new_admission_atomically_and_resum
         )
         .unwrap();
     service.status().unwrap();
-    assert!(scheduler.request(100, request()).await.is_ok());
-    assert!(!grant.run_id.as_str().is_empty());
+    assert!(scheduler.request(101, request()).await.is_ok());
+    assert!(!local.run_id.as_str().is_empty());
 }
 
 #[tokio::test]

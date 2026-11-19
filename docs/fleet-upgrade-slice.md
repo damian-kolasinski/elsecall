@@ -66,16 +66,18 @@ by hand. README "Upgrading the fleet" is the operator's guide.
 - **In-flight work: wait, then defer; never stop.** Once a build is staged the member
   answers placement quotes with `member_upgrading`, so placement leaves it out as it
   does any member it cannot ask, and refuses placed offers as busy (a run required on
-  that member waits, within its hold limit). It waits until no run or lease runs or
-  queues there (requests it is placing elsewhere count as queued),
-  up to the manifest's bound (`--wait`, default 5 minutes, at most an hour). With
-  work left at the bound the member is `deferred`: the staged build is discarded,
-  placed runs are accepted again, and the report lists what ran. Local requests are
-  never refused while waiting, so the operator's own work is not blocked; one made in
-  the second between idle and restart behaves as at any handover (grants survive,
-  and the CLI asks the new service again for a queued request). Policy chosen over
-  stopping admission for the whole wait (which turns the operator's work away for
-  minutes) and over a forced restart (which kills placed runs).
+  that member waits, within its hold limit). It waits until nothing the restart
+  would cut short is in flight: placed runs, a placement whose offer is on its way,
+  a queued request from a caller that would fail rather than ask again, and
+  Elsecall's own running pass (`scheduling::service::upgrading`). Local runs and
+  leases outlast the restart, and the CLI asks the new service again for a queued
+  request, so neither is waited for. The wait lasts up to the manifest's bound
+  (`--wait`, default 5 minutes, at most an hour). With awaited work left at the
+  bound the member is `deferred`: the staged build is discarded, placed runs are
+  accepted again, and the report lists what it waited for. Local requests are never
+  refused while waiting, so the operator's own work is not blocked. Policy chosen
+  over stopping admission for the whole wait (which turns the operator's work away
+  for minutes) and over a forced restart (which kills placed runs).
 - **The outcome survives the restart.** The member's `upgrade/state.json` (owner-only,
   written durably, frozen format) moves through `draining` and `installing` to a
   terminal state: `upgraded`, `rolled_back`, `rollback_failed`, `deferred` or
@@ -148,11 +150,13 @@ build ID) and `/usr/bin/false` as a build that never becomes ready:
 - **Rollback.** `--executable /usr/bin/false` targeted at one member: `rolled_back`
   with `startup_failed`; the member serves its previous build from the same
   installation and stays reachable, with no skew.
-- **In-flight work.** With a lease held on the member, `--wait 1s` is `deferred`,
-  listing the lease; the service did not restart and the lease kept running. With
-  `--wait 60s` the member reports `draining` with the lease, refuses a second offer
-  with `upgrade_in_progress`, and does not restart until the lease is released, then
-  upgrades.
+- **In-flight work.** A lease held on the member does not hold the upgrade back:
+  `--wait 1s` upgrades it, and the new service holds the lease until it is released.
+  Under memory pressure, with the CLI's lease and housekeeping queued and a request
+  queued by a caller that does not ask again, `--wait 1s` is `deferred` listing only
+  that request. With `--wait 60s` the member reports `draining` with it, refuses a
+  second offer with `upgrade_in_progress`, and upgrades once that caller gives up;
+  the CLI's lease then queues on the new service.
 - **Attempts that cannot finish.** A service restarted while it waits reports
   `interrupted` (`service_restarted`), installs nothing, and the lease survives the
   restart. An install refused before anything stopped (the test holds the
@@ -197,7 +201,8 @@ member `macbook-pro` (account `devbox`, `ssh -o BatchMode=yes devbox`):
 6. **Work in flight.** With a lease held on the devbox
    (`elsecall lease acquire --size 1 --holder $$` in a shell that stays open),
    `elsecall fleet upgrade --member macbook-pro --wait 10s` is `deferred` listing
-   the lease, and the lease keeps running.
+   the lease, and the lease keeps running. (Since local leases outlast the restart,
+   a later build upgrades the member at once and keeps the lease instead.)
 
 ## Limits
 

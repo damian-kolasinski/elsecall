@@ -15,7 +15,7 @@ mod ratio_cache;
 mod running;
 mod running_estimates;
 mod upgrading;
-pub use upgrading::{HostingHold, UpdateHold, WorkInFlight};
+pub use upgrading::{HostingHold, OnHandover, UpdateHold, WorkInFlight};
 
 use crate::{
     configuration::ServiceConfiguration,
@@ -192,6 +192,9 @@ struct Entry {
     hosted: bool,
     /// A placeable request this master places, while it waits.
     auto: Option<Box<Auto>>,
+    /// What its caller does when a service handover ends the request before its
+    /// decision.
+    on_handover: OnHandover,
 }
 enum Phase {
     Waiting(Waiting),
@@ -253,6 +256,14 @@ fn not_found(id: &RunId) -> Failure {
         "not_found",
         format!("No active run or lease {id} on this member."),
         "List recent work with elsecall runs.",
+    )
+}
+
+fn update_in_progress() -> Failure {
+    Failure::new(
+        "update_in_progress",
+        "The local service is installing an update.",
+        "Wait for elsecall update status to complete, then retry.",
     )
 }
 
@@ -545,11 +556,30 @@ impl Scheduler {
 
     /// Admits a request from the process `peer`, waiting until it starts or fails.
     pub async fn request(self: &Arc<Self>, peer: u32, request: AdmissionRequest) -> Result<Grant> {
+        self.request_on_handover(peer, request, OnHandover::Fails)
+            .await
+    }
+
+    /// [`Self::request`] from a caller that does `on_handover` when a service
+    /// handover ends the request before its decision.
+    pub async fn request_on_handover(
+        self: &Arc<Self>,
+        peer: u32,
+        request: AdmissionRequest,
+        on_handover: OnHandover,
+    ) -> Result<Grant> {
         let now = self.clock.now();
         let mut request = request.validate(now)?;
         let size_basis = self.learn_size(&mut request, now);
-        self.request_received(peer, request, now, size_basis, HoldResolution::Fresh)
-            .await
+        self.request_received(
+            peer,
+            request,
+            now,
+            size_basis,
+            HoldResolution::Fresh,
+            on_handover,
+        )
+        .await
     }
 
     /// Restores pending work received before the current clock. It still uses
@@ -575,6 +605,7 @@ impl Scheduler {
             snapshot.received_at,
             snapshot.size_basis,
             hold,
+            OnHandover::Fails,
         )
         .await
     }
@@ -586,6 +617,7 @@ impl Scheduler {
         now: Timestamp,
         size_basis: SizeBasis,
         hold_resolution: HoldResolution,
+        on_handover: OnHandover,
     ) -> Result<Grant> {
         let restoring = !matches!(hold_resolution, HoldResolution::Fresh);
         let lineage = processes::lineage(&*self.processes, peer);
@@ -673,13 +705,9 @@ impl Scheduler {
             if book.stopping {
                 return Err(stopping());
             }
-            if book.update_held > 0 {
-                return Err(Failure::new(
-                    "update_in_progress",
-                    "The local service is installing an update.",
-                    "Wait for elsecall update status to complete, then retry.",
-                ));
-            }
+            // A lease its holder already has, and work nested in running work, take
+            // no new capacity and outlast a restart, so an update's closed admission
+            // lets them through.
             if request.kind == Kind::Lease
                 && let Some(held) = Self::held_by(&book, holder)
             {
@@ -693,6 +721,7 @@ impl Scheduler {
                 },
                 hosted: false,
                 auto: None,
+                on_handover,
             };
             if expired_snapshot {
                 let queued = book.admission.queued();
@@ -730,6 +759,9 @@ impl Scheduler {
                     ));
                 }
                 return Ok(self.nest(&mut book, entry, holder, &outer));
+            }
+            if book.update_held > 0 {
+                return Err(update_in_progress());
             }
             let (responder, receiver) = oneshot::channel();
             match target {
@@ -1738,6 +1770,7 @@ impl Scheduler {
                         },
                         hosted: false,
                         auto: None,
+                        on_handover: OnHandover::Fails,
                     },
                 );
                 for process in survivor.alive {

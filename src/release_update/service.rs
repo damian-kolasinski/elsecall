@@ -141,10 +141,10 @@ impl UpdateService {
         if job.phase.terminal() {
             *hold = None;
         } else if job.phase.installation_started() && hold.is_none() {
-            *hold = self.scheduler.hold_update_if_idle();
+            *hold = self.scheduler.hold_update_when_restartable();
             if hold.is_none() {
                 return Err(invalid(
-                    "An active update cannot close admission because work is still running.",
+                    "An active update cannot close admission because work a restart would cut short is in flight.",
                 ));
             }
         }
@@ -347,7 +347,7 @@ impl UpdateService {
         let _hosting = self.scheduler.hold_hosting();
         let deadline = Instant::now() + Duration::from_secs(job.wait_seconds);
         loop {
-            if let Some(hold) = self.scheduler.hold_update_if_idle() {
+            if let Some(hold) = self.scheduler.hold_update_when_restartable() {
                 *self.hold.lock().expect("update hold") = Some(hold);
                 self.store.advance(&mut job, Phase::Installing)?;
                 return Ok(());
@@ -355,8 +355,8 @@ impl UpdateService {
             if Instant::now() >= deadline {
                 return Err(Failure::new(
                     "update_deferred",
-                    "Work is still running or queued; nothing was installed.",
-                    "Retry the update after the work finishes.",
+                    "Work a restart would cut short (a run placed between members, a placement on its way to a member, a housekeeping pass, or a request queued by an elsecall too old to ask the new service again) was still in flight; nothing was installed.",
+                    "Retry the update after it finishes; elsecall runs lists it.",
                 ));
             }
             tokio::time::sleep(Duration::from_millis(100)).await;

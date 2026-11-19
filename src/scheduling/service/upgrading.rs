@@ -1,8 +1,32 @@
 //! What an upgrade of this member needs from admission: the work running or queued
-//! here, and a hold that turns away runs other members would place here.
-use super::{Phase, Scheduler};
+//! here, which of it a restart of the service would cut short, and holds that turn
+//! away runs other members would place here and close admission for the install.
+//!
+//! **What outlasts a restart.** A local run or lease keeps running: its processes
+//! are the caller's, and the next service adopts them by process identity. A
+//! request still waiting for its decision is ended by the restart, but a caller
+//! that asks again after a handover (the CLI does) is decided by the next service
+//! instead; Elsecall's own queued passes are asked for again on the next service's
+//! timer. A run placed between members is cut short: its connection goes through
+//! this service, which stops the command it ran here, and so is an offer on its way
+//! to a member, which could admit a run nobody attaches to. Elsecall's own running
+//! pass is waited for too, as it may be midway through work a later pass would have
+//! to finish. Processes placed commands left running are not waited for: the
+//! restart stops them, which their cap (10 minutes by default) would have done later,
+//! and the next run in that copy starts without them.
+use super::{Entry, Phase, Scheduler};
 use crate::scheduling::request::Kind;
 use std::sync::Weak;
+
+/// What a caller does when a service handover ends its request before the
+/// decision.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OnHandover {
+    /// It asks the next service again, so the request outlasts the handover.
+    AsksAgain,
+    /// It fails, as callers that predate asking again do.
+    Fails,
+}
 
 /// One request running or queued on this member.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -15,6 +39,24 @@ pub struct WorkInFlight {
     pub hosted: bool,
     /// Service-owned work, such as a housekeeping pass (the record's `internal`).
     pub internal: bool,
+    /// Whether restarting the service now would leave it whole.
+    pub outlasts_restart: bool,
+}
+
+impl Entry {
+    /// Whether restarting the service now would leave this work whole; see the
+    /// module documentation.
+    fn outlasts_restart(&self) -> bool {
+        // The next service asks for Elsecall's own work again itself.
+        let asked_again = self.record.internal || self.on_handover == OnHandover::AsksAgain;
+        match &self.phase {
+            Phase::Active { .. } => {
+                !(self.hosted || self.record.placed.is_some() || self.record.internal)
+            }
+            Phase::Placing(placing) => placing.in_flight.is_none() && asked_again,
+            Phase::Waiting(_) => asked_again,
+        }
+    }
 }
 
 /// Refuses placed runs as busy until dropped.
@@ -64,6 +106,7 @@ impl Scheduler {
                         running,
                         hosted: entry.hosted,
                         internal: entry.record.internal,
+                        outlasts_restart: entry.outlasts_restart(),
                     },
                 )
             })
@@ -85,7 +128,8 @@ impl Scheduler {
     }
 }
 
-/// Closes new admission at an idle boundary until the installer finishes.
+/// Closes new admission, and stops starting queued work, until the installer
+/// finishes.
 pub struct UpdateHold(Weak<Scheduler>);
 impl Drop for UpdateHold {
     fn drop(&mut self) {
@@ -97,14 +141,13 @@ impl Drop for UpdateHold {
     }
 }
 impl Scheduler {
-    pub fn hold_update_if_idle(&self) -> Option<UpdateHold> {
+    /// Closes admission for an update once nothing in flight would be cut short by
+    /// the restart; work that outlasts it may still run or queue.
+    pub fn hold_update_when_restartable(&self) -> Option<UpdateHold> {
         let mut book = self.book();
         if book.stopping
             || book.update_held > 0
-            || !book.lingering.is_empty()
-            || book.entries.values().any(|entry| {
-                !(entry.record.internal && !matches!(entry.phase, Phase::Active { .. }))
-            })
+            || !book.entries.values().all(Entry::outlasts_restart)
         {
             return None;
         }

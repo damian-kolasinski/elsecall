@@ -1050,3 +1050,277 @@ async fn held_internal_work_does_not_start_when_room_frees_and_starts_once_relea
             .unwrap();
     }
 }
+
+#[tokio::test(start_paused = true)]
+async fn an_update_waits_only_for_work_a_restart_would_cut_short() {
+    use crate::scheduling::placed::{OfferReply, PlacementOffer, Warmth, WorkspaceRef};
+    let home = tempfile::tempdir().unwrap();
+    let clock = Arc::new(VirtualClock::new(Timestamp::from_millis(1000)));
+    let (_, exits) = mpsc::unbounded_channel();
+    let (scheduler, _tasks) = Scheduler::start_with_runtime(
+        &home.path().join("records.sqlite"),
+        ServiceConfiguration::default(),
+        Adapters {
+            machine: Arc::new(MachineBoundary),
+            speed: Arc::new(SpeedBoundary),
+            processes: Arc::new(ProcessBoundary),
+            exits,
+        },
+        Arc::new(Alone),
+        Arc::new(SyncBoundary),
+        Arc::new(LoadLog::open(&home.path().join("load.sqlite")).unwrap()),
+        Runtime {
+            clock: clock.clone(),
+            ids: Arc::new(IdBoundary(AtomicU64::new(1))),
+            driving: Driving::Controlled,
+        },
+    )
+    .unwrap();
+    scheduler.tick().unwrap();
+    let ended = || RunEnded::Exited {
+        plan_observation: None,
+        exit_code: 0,
+        cpu_ms: None,
+        run_phases: None,
+    };
+    let queue = |pid: u32, on_handover: OnHandover| {
+        let s = scheduler.clone();
+        tokio::spawn(async move {
+            s.request_on_handover(pid, request(2000, 60_000), on_handover)
+                .await
+        })
+    };
+    let settle = |count: usize| {
+        let s = scheduler.clone();
+        async move {
+            while s.in_flight().len() != count {
+                tokio::task::yield_now().await;
+            }
+        }
+    };
+
+    // A local run the next service adopts, and a request queued behind it by a
+    // caller that asks the next service again, outlast the restart.
+    let local = scheduler.request(100, request(2000, 10_000)).await.unwrap();
+    let asks_again = queue(101, OnHandover::AsksAgain);
+    settle(2).await;
+    assert!(scheduler.in_flight().iter().all(|w| w.outlasts_restart));
+    let hold = scheduler
+        .hold_update_when_restartable()
+        .expect("nothing a restart cuts short");
+    assert_eq!(
+        scheduler
+            .request(102, request(1000, 1000))
+            .await
+            .unwrap_err()
+            .code,
+        "update_in_progress"
+    );
+    assert!(
+        scheduler.hold_update_when_restartable().is_none(),
+        "one hold at a time"
+    );
+    // The hold keeps queued work queued while the update installs.
+    scheduler.run_ended(100, &local.run_id, ended()).unwrap();
+    for _ in 0..10 {
+        tokio::task::yield_now().await;
+    }
+    assert!(!asks_again.is_finished());
+    drop(hold);
+    let started = asks_again.await.unwrap().unwrap();
+
+    // A caller that predates asking again would fail, so its queued request is
+    // waited for until it starts here.
+    let fails = queue(103, OnHandover::Fails);
+    settle(2).await;
+    assert!(
+        !scheduler
+            .in_flight()
+            .iter()
+            .find(|w| !w.running)
+            .unwrap()
+            .outlasts_restart
+    );
+    assert!(scheduler.hold_update_when_restartable().is_none());
+    scheduler.run_ended(101, &started.run_id, ended()).unwrap();
+    let started = fails.await.unwrap().unwrap();
+    drop(
+        scheduler
+            .hold_update_when_restartable()
+            .expect("it runs locally now"),
+    );
+    scheduler.run_ended(103, &started.run_id, ended()).unwrap();
+
+    // A run another member placed here ends with the service that relays it.
+    let offer = PlacementOffer {
+        workload: None,
+        run_id: RunId::parse("r-0000000000ff").unwrap(),
+        size: Cores::ONE,
+        label: None,
+        workspace: WorkspaceRef {
+            root: "/virtual/acme".into(),
+            common_dir: "/virtual/acme/.git".into(),
+        },
+        start_within_ms: 10_000,
+        size_basis: None,
+        expected_run_ms: None,
+    };
+    let reply = scheduler
+        .accept_placed(
+            "mac-mini",
+            &offer,
+            true,
+            "/virtual/copy",
+            "mapped",
+            Warmth::Warm,
+        )
+        .unwrap();
+    assert!(matches!(reply, OfferReply::Accepted { .. }), "{reply:?}");
+    let hosted = scheduler.in_flight();
+    assert!(hosted[0].hosted && !hosted[0].outlasts_restart);
+    assert!(scheduler.hold_update_when_restartable().is_none());
+}
+
+#[tokio::test(start_paused = true)]
+async fn no_offer_leaves_while_an_update_holds_admission() {
+    use crate::scheduling::{
+        messages::MemberState,
+        placed::{Members, OfferReply, PlacementOffer, Standing, WorkspaceRef},
+        quote::{Quote, QuoteRequest},
+    };
+    /// A member that is always busy, answering each offer once let to.
+    struct Busy {
+        offers: Arc<AtomicU64>,
+        answers: Arc<tokio::sync::Semaphore>,
+    }
+    impl Members for Busy {
+        fn standing(&self) -> Standing {
+            Standing {
+                name: Some("caller".into()),
+                master: Some("caller".into()),
+                members: vec!["caller".into(), "peer".into()],
+                awaiting_provisioning: Vec::new(),
+            }
+        }
+        fn offer(&self, _: &str, _: &PlacementOffer) -> BoxFuture<'static, Result<OfferReply>> {
+            self.offers.fetch_add(1, Ordering::SeqCst);
+            let answers = self.answers.clone();
+            Box::pin(async move {
+                answers.acquire().await.unwrap().forget();
+                Ok(OfferReply::Busy {
+                    state: MemberState {
+                        member: "peer".into(),
+                        capacity: Capacity::of(
+                            CoreCounts {
+                                performance: 2,
+                                efficiency: 0,
+                            },
+                            Cores::ZERO,
+                        ),
+                        in_use: Cores::from_millis(2000),
+                        free: Cores::ZERO,
+                        queued: Default::default(),
+                        load: None,
+                        gate: Gate::Open,
+                        speed: None,
+                    },
+                    report: Failure::new("fleet_busy", "No room.", ""),
+                })
+            })
+        }
+        fn quote(&self, _: &str, _: &QuoteRequest) -> BoxFuture<'static, Result<Quote>> {
+            Box::pin(async { panic!("required-member admission does not quote") })
+        }
+    }
+    let home = tempfile::tempdir().unwrap();
+    let offers = Arc::new(AtomicU64::new(0));
+    let answers = Arc::new(tokio::sync::Semaphore::new(0));
+    let (_, exits) = mpsc::unbounded_channel();
+    let (scheduler, _tasks) = Scheduler::start_with_runtime(
+        &home.path().join("records.sqlite"),
+        ServiceConfiguration::default(),
+        Adapters {
+            machine: Arc::new(MachineBoundary),
+            speed: Arc::new(SpeedBoundary),
+            processes: Arc::new(ProcessBoundary),
+            exits,
+        },
+        Arc::new(Busy {
+            offers: offers.clone(),
+            answers: answers.clone(),
+        }),
+        Arc::new(SyncBoundary),
+        Arc::new(LoadLog::open(&home.path().join("load.sqlite")).unwrap()),
+        Runtime {
+            clock: Arc::new(VirtualClock::new(Timestamp::from_millis(1000))),
+            ids: Arc::new(IdBoundary(AtomicU64::new(1))),
+            driving: Driving::Controlled,
+        },
+    )
+    .unwrap();
+    scheduler.tick().unwrap();
+    let mut required = request(1000, 30_000);
+    required.placement = Placement::Member("peer".into());
+    required.workspace = Some(WorkspaceRef {
+        root: "/repo".into(),
+        common_dir: "/repo/.git".into(),
+    });
+    let waiting = tokio::spawn({
+        let s = scheduler.clone();
+        async move {
+            s.request_on_handover(100, required, OnHandover::AsksAgain)
+                .await
+        }
+    });
+    let offered = |count: u64| {
+        let offers = offers.clone();
+        async move {
+            while offers.load(Ordering::SeqCst) != count {
+                tokio::task::yield_now().await;
+            }
+        }
+    };
+
+    // An offer on its way could admit a run the restart leaves unattended.
+    offered(1).await;
+    assert!(!scheduler.in_flight()[0].outlasts_restart);
+    assert!(scheduler.hold_update_when_restartable().is_none());
+
+    // Refused, the request waits here for its caller, who asks again after a
+    // handover; the hold closes admission, and no offer leaves while it lasts.
+    answers.add_permits(1);
+    while !scheduler.in_flight()[0].outlasts_restart {
+        tokio::task::yield_now().await;
+    }
+    let hold = scheduler
+        .hold_update_when_restartable()
+        .expect("nothing on its way");
+    answers.add_permits(100);
+    tokio::time::advance(Duration::from_secs(5)).await;
+    for _ in 0..10 {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(offers.load(Ordering::SeqCst), 1, "no offer under the hold");
+
+    // Released, offers resume.
+    drop(hold);
+    tokio::time::advance(Duration::from_secs(1)).await;
+    offered(2).await;
+    for _ in 0..10 {
+        tokio::task::yield_now().await;
+    }
+
+    // A hold limit that passes under the hold sends the caller to the updated
+    // service, which the member never had a chance to refuse.
+    while !scheduler.in_flight()[0].outlasts_restart {
+        tokio::task::yield_now().await;
+    }
+    let _hold = scheduler
+        .hold_update_when_restartable()
+        .expect("nothing on its way");
+    tokio::time::advance(Duration::from_secs(30)).await;
+    assert_eq!(
+        waiting.await.unwrap().unwrap_err().code,
+        "update_in_progress"
+    );
+}

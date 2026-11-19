@@ -3,7 +3,7 @@
 //! interactive requests wait. Its own deferrable work, which waits behind
 //! interactive work, never keeps placed work out. An admitted run keeps its
 //! capacity until its runner ends it.
-use super::{Entry, Phase, Scheduler};
+use super::{Entry, OnHandover, Phase, Scheduler};
 use crate::{
     failure::{Failure, Result},
     scheduling::{
@@ -200,6 +200,7 @@ impl Scheduler {
             },
             hosted: true,
             auto: None,
+            on_handover: OnHandover::Fails,
         };
         let decision: Decision = self.decision(&book, &entry, Verdict::Started, &reason);
         entry.record.decision = Some(decision);

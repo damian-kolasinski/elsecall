@@ -1,7 +1,7 @@
 //! Hydration of already-admitted state at a system boundary. This follows the
 //! same Admission adoption used for restart recovery, without making another
 //! scheduling decision under a later load gate or candidate configuration.
-use super::{Entry, Phase, Scheduler};
+use super::{Entry, OnHandover, Phase, Scheduler};
 use crate::{
     failure::{Failure, Result},
     scheduling::{
@@ -129,6 +129,7 @@ impl Scheduler {
                 },
                 hosted,
                 auto: None,
+                on_handover: OnHandover::Fails,
             },
         );
         for holder in holders {

@@ -391,10 +391,17 @@ fn record_end(
 
 /// Records how the run ended. The outcome is the command's even if the record
 /// cannot be updated; the service ends the grant when this process and the command
-/// exit.
+/// exit. A run that ends while the service is replaced reports to the new one,
+/// which holds the run, so its record and estimates keep the outcome.
 async fn report(socket: &std::path::Path, grant: &Grant, ended: RunEnded) {
     let route = format!("/v1/runs/{}/end", grant.run_id);
-    let posted = client::post::<(), _>(socket, &route, &ended, Wait::Bounded).await;
+    let data = socket
+        .parent()
+        .expect("socket lives in the state directory");
+    let posted = crate::service_handover::through(data, || {
+        client::post::<(), _>(socket, &route, &ended, Wait::Bounded)
+    })
+    .await;
     if posted.is_err_and(|failure| failure.code == "invalid_request")
         && let Some(legacy) = ended.without_phases()
     {
