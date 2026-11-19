@@ -33,7 +33,7 @@ pub async fn monitor(paths: &Paths, scheduler: &Scheduler) -> Result<()> {
             day.saturating_sub(14 * DAY)
                 .max(Timestamp::now().millis().saturating_sub(30 * DAY)),
         );
-        let trace = crate::trace_cli::collect(paths, context, until).await?;
+        let trace = elsecall_trace::trace_cli::collect(paths, context, until).await?;
         let simulation = tokio::task::spawn_blocking(move || {
             elsecall_simulation::simulation::simulate(
                 trace,

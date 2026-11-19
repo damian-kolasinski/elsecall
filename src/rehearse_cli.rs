@@ -1,6 +1,5 @@
 //! Time-compressed replay orchestration. Trace parsing and model validation
 //! happen before the first fleet mutation; every exit path tears down sessions.
-use crate::trace_api::Members;
 use clap::Args;
 use elsecall_failure::{Failure, Result};
 use elsecall_local_client as client;
@@ -11,6 +10,7 @@ use elsecall_rehearsal::rehearsal::{
     protocol::{Action, Call, Job, Reply},
 };
 use elsecall_scheduling_model::{request::Urgency, timestamp::Timestamp};
+use elsecall_trace::trace_api::Members;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 use tokio::time::Instant;
@@ -510,7 +510,7 @@ pub(crate) async fn single(
         },
     )
     .await;
-    let mut trace = crate::trace_cli::collect(paths, epoch, until).await?;
+    let mut trace = elsecall_trace::trace_cli::collect(paths, epoch, until).await?;
     let mut load_complete = BTreeMap::new();
     for (member, result) in members.iter().zip(recorded_load) {
         let recording = result.ok().and_then(|r| r.recorded_load);

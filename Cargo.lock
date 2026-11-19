@@ -1110,6 +1110,7 @@ dependencies = [
  "elsecall-sqlite-retention",
  "elsecall-tailnet",
  "elsecall-tools",
+ "elsecall-trace",
  "elsecall-window",
  "elsecall-wire",
  "elsecall-workload",
@@ -1918,6 +1919,29 @@ dependencies = [
  "tokio",
  "toml",
  "toml_edit",
+]
+
+[[package]]
+name = "elsecall-trace"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "clap",
+ "elsecall-failure",
+ "elsecall-fleet",
+ "elsecall-load-log",
+ "elsecall-local-client",
+ "elsecall-local-state",
+ "elsecall-rehearsal",
+ "elsecall-report-facts",
+ "elsecall-reporting",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "elsecall-wire",
+ "elsecall-workload",
+ "libc",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

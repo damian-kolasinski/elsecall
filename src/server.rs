@@ -465,7 +465,7 @@ pub async fn serve_with_updates(
                 .merge(elsecall_reporting::report_api::peer_routes(
                     reporter.clone(),
                 ))
-                .merge(crate::trace_api::peer_routes(reporter.clone()))
+                .merge(elsecall_trace::trace_api::peer_routes(reporter.clone()))
                 .merge(elsecall_rehearsal::rehearsal_api::peer_routes(
                     rehearsal.clone(),
                 ))
@@ -531,7 +531,7 @@ pub async fn serve_with_updates(
         .merge(desired_routes)
         .merge(crate::ui_app::routes(paths.clone()))
         .merge(update_routes)
-        .merge(crate::trace_api::routes(reporter.clone()))
+        .merge(elsecall_trace::trace_api::routes(reporter.clone()))
         .merge(elsecall_reporting::report_api::routes(reporter))
         .merge(relay)
         .merge(sync_routes)

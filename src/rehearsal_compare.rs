@@ -214,7 +214,7 @@ pub async fn run(paths: &Paths, mut args: RehearseArgs) -> Result<Value> {
             .map(|(k, v)| format!("{k}={v}"))
             .collect::<Vec<_>>(),
     )?;
-    let roster: crate::trace_api::Members =
+    let roster: elsecall_trace::trace_api::Members =
         client::post_large(&paths.socket(), "/v1/trace/members", &json!({})).await?;
     let original = snapshot(paths, &roster.members).await?;
     let before_fingerprints = fingerprints(&original);
