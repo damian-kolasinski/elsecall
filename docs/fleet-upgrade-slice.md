@@ -72,8 +72,8 @@ by hand. README "Upgrading the fleet" is the operator's guide.
   work left at the bound the member is `deferred`: the staged build is discarded,
   placed runs are accepted again, and the report lists what ran. Local requests are
   never refused while waiting, so the operator's own work is not blocked; one made in
-  the second between idle and restart behaves as at any service restart (grants
-  survive, queued requests end with `service_unavailable`). Policy chosen over
+  the second between idle and restart behaves as at any handover (grants survive,
+  and the CLI asks the new service again for a queued request). Policy chosen over
   stopping admission for the whole wait (which turns the operator's work away for
   minutes) and over a forced restart (which kills placed runs).
 - **The outcome survives the restart.** The member's `upgrade/state.json` (owner-only,

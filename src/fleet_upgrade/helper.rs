@@ -12,7 +12,7 @@ use crate::{
     fleet_upgrade::journal::{Journal, Phase},
     fleet_upgrade::protocol::UpgradeId,
     inspection::Health,
-    installation::{self, ServiceManager},
+    installation::{ServiceManager, Transaction},
     paths::Paths,
 };
 use std::{
@@ -59,14 +59,17 @@ pub async fn run(paths: &Paths, manager: &dyn ServiceManager, id: &UpgradeId) ->
     let fleet_before = fleet_ready(paths).await;
     let incoming = journal.incoming();
     let staged = Digest::of_file(&incoming).ok() == Some(state.digest);
-    let installed = if staged {
-        installation::install(paths, &incoming, manager, None)
-    } else {
-        Err(Failure::new(
+    // Held until the outcome is confirmed, rollback included, so other lifecycle
+    // operations stay out and requests meanwhile wait for the new service.
+    let transaction = Transaction::begin(paths);
+    let installed = match &transaction {
+        Err(error) => Err(error.clone()),
+        Ok(_) if !staged => Err(Failure::new(
             "staged_build_changed",
             "The staged build no longer matches the digest the master signed; nothing was installed.",
             "Run elsecall fleet upgrade again.",
-        ))
+        )),
+        Ok(transaction) => transaction.install(&incoming, manager, None),
     };
     let attempt = match installed {
         // Refused before anything stopped, such as by a concurrent install: the
@@ -96,8 +99,23 @@ pub async fn run(paths: &Paths, manager: &dyn ServiceManager, id: &UpgradeId) ->
                 id,
                 serde_json::json!({"code": error.code}),
             );
-            match install_and_confirm(paths, manager, &journal.previous(), &state.from.build).await
-            {
+            let restoring = match transaction {
+                Ok(transaction) => Ok(transaction),
+                Err(_) => Transaction::begin(paths),
+            };
+            let restored = match &restoring {
+                Ok(transaction) => {
+                    install_and_confirm(
+                        transaction,
+                        manager,
+                        &journal.previous(),
+                        &state.from.build,
+                    )
+                    .await
+                }
+                Err(error) => Err(error.clone()),
+            };
+            match restored {
                 Ok(running) => Phase::RolledBack { running, error },
                 Err(rollback) => Phase::RollbackFailed {
                     error: Failure::new(
@@ -154,14 +172,14 @@ async fn fleet_ready(paths: &Paths) -> bool {
 }
 
 async fn install_and_confirm(
-    paths: &Paths,
+    transaction: &Transaction,
     manager: &dyn ServiceManager,
     executable: &Path,
     expected: &BuildId,
 ) -> Result<Build> {
     // Updates keep the installation's session, as `elsecall install` does.
-    installation::install(paths, executable, manager, None)?;
-    confirm(paths, expected, false).await
+    transaction.install(executable, manager, None)?;
+    confirm(transaction.paths(), expected, false).await
 }
 
 /// Waits until the service answers with `expected`, and its fleet identity if

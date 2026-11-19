@@ -20,6 +20,7 @@ use crate::{
         run_id::RunId,
         timestamp::Timestamp,
     },
+    service_handover,
     workload_settings::{WhenUnavailable, WorkloadSettings},
 };
 use clap::Subcommand;
@@ -162,8 +163,16 @@ const DECISION_GRACE: Duration = Duration::from_secs(30);
 
 /// Asks the local service to admit a request and waits for its decision.
 /// Interactive requests wait at most their hold limit plus a grace period;
-/// deferrable ones until the service decides.
+/// deferrable ones until the service decides. A request a handover to another build
+/// interrupted is asked again of the new service.
 pub async fn admit(socket: &Path, request: &AdmissionRequest) -> Result<Grant> {
+    let data = socket
+        .parent()
+        .expect("socket lives in the state directory");
+    service_handover::through(data, || admit_once(socket, request)).await
+}
+
+async fn admit_once(socket: &Path, request: &AdmissionRequest) -> Result<Grant> {
     let decision = client::post(socket, "/v1/admissions", request, Wait::Unbounded);
     let limit = match request.urgency {
         Urgency::Interactive { hold_limit_ms } => hold_limit_ms
@@ -308,13 +317,12 @@ async fn lease_release(
         return Ok(nothing(ReleaseState::Off));
     }
     let paths = service_paths()?;
-    let released: Result<crate::scheduling::messages::Released> = client::post(
-        &paths.socket(),
-        "/v1/leases/release",
-        &release,
-        Wait::Bounded,
-    )
-    .await;
+    let socket = paths.socket();
+    let released: Result<crate::scheduling::messages::Released> =
+        service_handover::through(&paths.data, || {
+            client::post(&socket, "/v1/leases/release", &release, Wait::Bounded)
+        })
+        .await;
     match released {
         Ok(released) => Ok(ReleaseOutcome {
             state: ReleaseState::Released,

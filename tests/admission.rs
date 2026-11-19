@@ -352,6 +352,17 @@ while [ ! -f "$DIR/go" ]; do sleep 0.02; done"#,
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn without_a_handover_an_unreachable_service_fails_the_request_at_once() {
+    let mut fx = Fixture::start(1).await;
+    fx.stop().await;
+    let started = Instant::now();
+    let (code, json) = fx.cli(&["lease", "acquire", "--label", "alone"]).await;
+    assert_eq!(code, 1, "{json}");
+    assert_eq!(json["error"]["code"], "service_unavailable");
+    assert!(started.elapsed() < Duration::from_secs(5));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_caller_that_disconnects_while_waiting_is_withdrawn() {
     use elsecall::{
         client::{self, Wait},

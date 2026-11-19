@@ -69,6 +69,13 @@ the status file, request records, `runs` and `explain`.
   - On shutdown, queued requests fail with `service_unavailable` at once rather
     than holding connections open, which would block `service restart` and
     `install`.
+  - During a handover (an install, update, upgrade or restart holding the
+    installation lock until it has confirmed the new service, or an update
+    refusing with `update_in_progress`), the CLI waits and asks the
+    new service again instead (`service_handover`, up to five minutes per
+    handover). The lock's holder is recorded by process ID and start time
+    (`lifecycle_holder`) and cleared on release, so a dead holder or a reused ID
+    never looks like a handover.
 - **Records.**
   - Records live in `records.sqlite` (WAL, mode 0600). Each is one JSON document
     per request, with indexed columns for listing, unfinished requests and
@@ -216,6 +223,8 @@ only the other requests waiting.
     Signals the caller ignores stay ignored.
 - If the service restarts while requests wait, those requests fail with
   `service_unavailable`; their callers must request again. Running grants survive.
+  A restart that is a handover to another build is the exception: the CLI asks
+  the new service again itself, with a fresh hold limit.
 - Record writes happen under the admission lock; a stalled disk stalls admission.
 - The member name is the host name up to its first dot until S2 defines member
   names. `--member` compares it case-insensitively.
@@ -250,7 +259,8 @@ The most literal reading was implemented in each case.
    125 with `invalid_request`, before admission. There is no dedicated code.
 9. **Cancellation codes.** A request whose caller or holder exits while waiting
    fails with `cancelled`, which the failure-code table lacks. A request queued
-   when the service stops gets `service_unavailable`.
+   when the service stops gets `service_unavailable`, unless the stop is a
+   handover to another build, which the CLI waits through.
 10. **Error envelope.** `fleet_busy` adds `details`
     (`retry_after_seconds`, `running`) beside `code`, `message`, `hint` and
     `run_id`. `run_id` is always present in `run`'s envelope, null without a

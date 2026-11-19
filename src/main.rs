@@ -587,7 +587,8 @@ async fn run(cli: Cli) -> Result<bool> {
         Command::Service {
             command: ServiceCommand::Restart,
         } => {
-            installation::restart(&paths, manager)?;
+            // Held until the restarted service answers, so requests meanwhile wait for it.
+            let _restarting = installation::restart(&paths, manager)?;
             output(wait_ready(&paths).await?);
         }
         Command::Serve => {

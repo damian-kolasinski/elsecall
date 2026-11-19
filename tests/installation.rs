@@ -276,7 +276,9 @@ fn concurrent_lifecycle_operations_are_refused() {
         .unwrap();
     for error in [
         installation::install(&paths, &source, &manager, None).unwrap_err(),
-        installation::restart(&paths, &manager).unwrap_err(),
+        installation::restart(&paths, &manager)
+            .map(drop)
+            .unwrap_err(),
         installation::uninstall(&paths, &manager, false).unwrap_err(),
     ] {
         assert_eq!(error.code, "operation_in_progress");
