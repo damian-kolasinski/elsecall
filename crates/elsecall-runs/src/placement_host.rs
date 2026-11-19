@@ -1,13 +1,13 @@
 //! A member hosting runs its master places on it: it claims the run's copy, asks
 //! its scheduler to admit the run at once, holds the admission until the caller
 //! attaches, and reports the runner's progress back to its records.
-use elsecall_contract::failure::{Failure, Result};
-use elsecall_contract::scheduling_model::run_id::RunId;
-use elsecall_remote_run::remote_run::{
+use crate::remote_run::{
     leftovers::Cap,
     protocol::Exited,
     runner::{Assignment, Ending, Host, Reached as RunnerReached},
 };
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::run_id::RunId;
 use elsecall_scheduling::{
     leftovers::Leftovers,
     placed::{OfferReply, PlacementOffer, Reached, SyncSummary, Warmth},

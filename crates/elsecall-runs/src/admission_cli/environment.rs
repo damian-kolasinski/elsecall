@@ -6,9 +6,9 @@
 //! - `ELSECALL_WHEN_UNAVAILABLE` is `run` or `fail`, for when the service is down.
 //!
 //! Values are never echoed in failures.
+use crate::workload_settings::WhenUnavailable;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::request::MAXIMUM_HOLD_LIMIT;
-use elsecall_workload_config::workload_settings::WhenUnavailable;
 use std::{ffi::OsString, time::Duration};
 
 pub const MODE: &str = "ELSECALL";

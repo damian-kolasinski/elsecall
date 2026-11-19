@@ -51,7 +51,6 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 # The workspace's own crates.
-elsecall-admission = { path = "crates/elsecall-admission" }
 elsecall-agent-skill = { path = "crates/elsecall-agent-skill" }
 elsecall-api-response = { path = "crates/elsecall-api-response" }
 elsecall-config-sync = { path = "crates/elsecall-config-sync" }
@@ -63,14 +62,13 @@ elsecall-housekeeping = { path = "crates/elsecall-housekeeping" }
 elsecall-installation = { path = "crates/elsecall-installation" }
 elsecall-openssh-mac = { path = "crates/elsecall-openssh-mac" }
 elsecall-peers = { path = "crates/elsecall-peers" }
-elsecall-placement = { path = "crates/elsecall-placement" }
 elsecall-platform-macos = { path = "crates/elsecall-platform-macos" }
 elsecall-rehearsal = { path = "crates/elsecall-rehearsal" }
 elsecall-release-update = { path = "crates/elsecall-release-update" }
-elsecall-remote-run = { path = "crates/elsecall-remote-run" }
 elsecall-replay = { path = "crates/elsecall-replay" }
 elsecall-report-facts = { path = "crates/elsecall-report-facts" }
 elsecall-reporting = { path = "crates/elsecall-reporting" }
+elsecall-runs = { path = "crates/elsecall-runs" }
 elsecall-scheduling = { path = "crates/elsecall-scheduling" }
 elsecall-service-config = { path = "crates/elsecall-service-config" }
 elsecall-service-lifecycle = { path = "crates/elsecall-service-lifecycle" }
@@ -80,7 +78,6 @@ elsecall-trace = { path = "crates/elsecall-trace" }
 elsecall-tuning = { path = "crates/elsecall-tuning" }
 elsecall-window = { path = "crates/elsecall-window" }
 elsecall-workload = { path = "crates/elsecall-workload" }
-elsecall-workload-config = { path = "crates/elsecall-workload-config" }
 elsecall-workspace = { path = "crates/elsecall-workspace" }
 
 # Every crate inherits these with `[lints] workspace = true`.
@@ -121,7 +118,6 @@ base64.workspace = true
 chacha20poly1305.workspace = true
 clap.workspace = true
 ed25519-dalek.workspace = true
-elsecall-admission.workspace = true
 elsecall-agent-skill.workspace = true
 elsecall-api-response.workspace = true
 elsecall-config-sync.workspace = true
@@ -133,14 +129,13 @@ elsecall-housekeeping.workspace = true
 elsecall-installation.workspace = true
 elsecall-openssh-mac.workspace = true
 elsecall-peers.workspace = true
-elsecall-placement.workspace = true
 elsecall-platform-macos.workspace = true
 elsecall-rehearsal.workspace = true
 elsecall-release-update.workspace = true
-elsecall-remote-run.workspace = true
 elsecall-replay.workspace = true
 elsecall-report-facts.workspace = true
 elsecall-reporting.workspace = true
+elsecall-runs.workspace = true
 elsecall-scheduling.workspace = true
 elsecall-service-config.workspace = true
 elsecall-service-lifecycle.workspace = true
@@ -149,7 +144,6 @@ elsecall-tools.workspace = true
 elsecall-trace.workspace = true
 elsecall-tuning.workspace = true
 elsecall-window.workspace = true
-elsecall-workload-config.workspace = true
 elsecall-workload.workspace = true
 elsecall-workspace.workspace = true
 futures-util.workspace = true

@@ -3,8 +3,8 @@
 use clap::Args;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::request::Placement;
+use elsecall_runs::workload_settings::RulePlacement;
 use elsecall_workload::trace::Trace;
-use elsecall_workload_config::workload_settings::RulePlacement;
 use std::{io::Read, path::PathBuf};
 
 pub use elsecall_workload::format::{Mode, Provenance};
@@ -32,19 +32,18 @@ impl ReplayPlacement {
                 let mut bytes = Vec::new();
                 std::fs::File::open(path)
                     .and_then(|f| {
-                        f.take(elsecall_workload_config::workload_configuration::LIMIT + 1)
+                        f.take(elsecall_runs::workload_configuration::LIMIT + 1)
                             .read_to_end(&mut bytes)
                     })
                     .map_err(|e| Failure::io("Read replay rules", e))?;
-                if bytes.len() as u64 > elsecall_workload_config::workload_configuration::LIMIT {
+                if bytes.len() as u64 > elsecall_runs::workload_configuration::LIMIT {
                     return Err(invalid());
                 }
                 // Do not echo parser messages or file contents into artifacts.
                 let configuration = std::str::from_utf8(&bytes)
                     .ok()
                     .and_then(|s| {
-                        elsecall_workload_config::workload_configuration::Configuration::parse(s)
-                            .ok()
+                        elsecall_runs::workload_configuration::Configuration::parse(s).ok()
                     })
                     .ok_or_else(|| {
                         Failure::new(
@@ -182,7 +181,7 @@ mod tests {
         }
         .apply(&mut t)
         .unwrap();
-        let policy = elsecall_workload_config::workload_configuration::Configuration::parse(
+        let policy = elsecall_runs::workload_configuration::Configuration::parse(
             std::str::from_utf8(bytes).unwrap(),
         )
         .unwrap();

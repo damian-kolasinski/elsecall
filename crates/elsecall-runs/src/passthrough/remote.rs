@@ -4,21 +4,21 @@
 use crate::passthrough::executor::{
     CommandLine, Executor, Exit, Finished, ResultReturn, RunContext, RunFailure, RunResult, Running,
 };
-use elsecall_contract::failure::{Failure, Result};
-use elsecall_contract::scheduling_model::{run_id::RunId, timestamp::Timestamp};
-use elsecall_contract::wire::Frame;
-use elsecall_host::client::{self as client, Wait};
-use elsecall_remote_run::remote_run::{
+use crate::remote_run::{
     consistency, environment, fingerprint,
     link::{self, Link, Outbox, SyncOverLink},
     protocol::{Exited, RunMessage, Start, Stream, WINDOW},
     runner::FORWARDED,
 };
+use crate::workload_settings::WorkloadSettings;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::{run_id::RunId, timestamp::Timestamp};
+use elsecall_contract::wire::Frame;
+use elsecall_host::client::{self as client, Wait};
 use elsecall_scheduling::{
     placed::{PlacedReport, Reached, SyncSummary},
     run_phases::RemoteFailurePhase,
 };
-use elsecall_workload_config::workload_settings::WorkloadSettings;
 use elsecall_workspace::{
     confined::Confined,
     not_returned::{self, Cause},
@@ -445,7 +445,7 @@ impl RemoteRun {
                         }
                         Ok(RunMessage::InputClosed) => self.input = None,
                         Ok(RunMessage::Exited { exit, cpu_ms, plan_observation }) => {
-                            let (observation, rejected) = elsecall_remote_run::remote_run::protocol::received_observation(plan_observation, self.workload.as_ref());
+                            let (observation, rejected) = crate::remote_run::protocol::received_observation(plan_observation, self.workload.as_ref());
                             self.plan_observation = observation;
                             if rejected {
                                 self.warnings.push("The member returned invalid workload metadata; plan coverage is unknown.".into());

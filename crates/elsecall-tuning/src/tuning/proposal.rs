@@ -86,7 +86,7 @@ pub(super) fn render(trace: &Trace, settings: &Settings) -> Result<Value> {
     // separate so it cannot silently make deferrable rules interactive.
     let hold = settings.get("hold_limit");
     if !consumer.is_empty() {
-        elsecall_workload_config::workload_settings::WorkloadSettings::parse(&consumer)
+        elsecall_runs::workload_settings::WorkloadSettings::parse(&consumer)
             .map_err(|e| super::invalid(e.detail))?;
     }
     let rollback = changes

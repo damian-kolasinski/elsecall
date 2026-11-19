@@ -4,6 +4,7 @@ pub mod options;
 pub mod resolution;
 
 use crate::admission_api::{self, MAXIMUM_LISTED};
+use crate::workload_settings::{WhenUnavailable, WorkloadSettings};
 use clap::Subcommand;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::guidance::{self as guidance, Unmanaged};
@@ -21,7 +22,6 @@ use elsecall_scheduling::{
     record::Record,
 };
 use elsecall_service_lifecycle::service_handover;
-use elsecall_workload_config::workload_settings::{WhenUnavailable, WorkloadSettings};
 use environment::{CallerEnvironment, Mode};
 use options::{CallerOptions, RequestOptions, UnavailableAction};
 use resolution::{Layers, resolve};
@@ -202,7 +202,7 @@ pub fn proceeds_unmanaged(failure: &Failure, when_unavailable: WhenUnavailable) 
 fn working_configuration() -> Result<WorkloadSettings> {
     let directory =
         std::env::current_dir().map_err(|e| Failure::io("Read the working directory", e))?;
-    elsecall_workload_config::workload_configuration::load(&Paths::current()?, &directory)
+    crate::workload_configuration::load(&Paths::current()?, &directory)
 }
 
 /// The local service's paths, for a caller allowed to use it.

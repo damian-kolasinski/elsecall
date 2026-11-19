@@ -1065,7 +1065,6 @@ dependencies = [
  "chacha20poly1305",
  "clap",
  "ed25519-dalek",
- "elsecall-admission",
  "elsecall-agent-skill",
  "elsecall-api-response",
  "elsecall-config-sync",
@@ -1077,14 +1076,13 @@ dependencies = [
  "elsecall-installation",
  "elsecall-openssh-mac",
  "elsecall-peers",
- "elsecall-placement",
  "elsecall-platform-macos",
  "elsecall-rehearsal",
  "elsecall-release-update",
- "elsecall-remote-run",
  "elsecall-replay",
  "elsecall-report-facts",
  "elsecall-reporting",
+ "elsecall-runs",
  "elsecall-scheduling",
  "elsecall-service-config",
  "elsecall-service-lifecycle",
@@ -1094,7 +1092,6 @@ dependencies = [
  "elsecall-tuning",
  "elsecall-window",
  "elsecall-workload",
- "elsecall-workload-config",
  "elsecall-workspace",
  "futures-util",
  "getrandom 0.3.4",
@@ -1118,35 +1115,6 @@ dependencies = [
  "tower",
  "x25519-dalek",
  "zeroize",
-]
-
-[[package]]
-name = "elsecall-admission"
-version = "0.3.0"
-dependencies = [
- "axum",
- "base64 0.22.1",
- "clap",
- "elsecall-api-response",
- "elsecall-contract",
- "elsecall-fleet",
- "elsecall-host",
- "elsecall-peers",
- "elsecall-remote-run",
- "elsecall-scheduling",
- "elsecall-service-lifecycle",
- "elsecall-workload-config",
- "elsecall-workspace",
- "futures-util",
- "http-body-util",
- "humantime",
- "hyper",
- "hyper-util",
- "libc",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
 ]
 
 [[package]]
@@ -1351,29 +1319,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-placement"
-version = "0.3.0"
-dependencies = [
- "axum",
- "base64 0.22.1",
- "elsecall-api-response",
- "elsecall-config-sync",
- "elsecall-contract",
- "elsecall-fleet",
- "elsecall-host",
- "elsecall-peers",
- "elsecall-remote-run",
- "elsecall-scheduling",
- "elsecall-workspace",
- "futures-util",
- "hyper",
- "hyper-util",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "elsecall-platform-macos"
 version = "0.3.0"
 dependencies = [
@@ -1445,28 +1390,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "elsecall-remote-run"
-version = "0.3.0"
-dependencies = [
- "base64 0.22.1",
- "elsecall-contract",
- "elsecall-host",
- "elsecall-peers",
- "elsecall-scheduling",
- "elsecall-service-config",
- "elsecall-workload-config",
- "elsecall-workspace",
- "futures-util",
- "getrandom 0.3.4",
- "hyper",
- "libc",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
-]
-
-[[package]]
 name = "elsecall-replay"
 version = "0.3.0"
 dependencies = [
@@ -1475,9 +1398,9 @@ dependencies = [
  "elsecall-contract",
  "elsecall-host",
  "elsecall-report-facts",
+ "elsecall-runs",
  "elsecall-scheduling",
  "elsecall-workload",
- "elsecall-workload-config",
  "humantime",
  "serde",
  "serde_json",
@@ -1514,6 +1437,38 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+]
+
+[[package]]
+name = "elsecall-runs"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "clap",
+ "elsecall-api-response",
+ "elsecall-config-sync",
+ "elsecall-contract",
+ "elsecall-fleet",
+ "elsecall-host",
+ "elsecall-peers",
+ "elsecall-scheduling",
+ "elsecall-service-config",
+ "elsecall-service-lifecycle",
+ "elsecall-workspace",
+ "futures-util",
+ "getrandom 0.3.4",
+ "http-body-util",
+ "humantime",
+ "hyper",
+ "hyper-util",
+ "libc",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "toml",
+ "toml_edit",
 ]
 
 [[package]]
@@ -1569,12 +1524,11 @@ version = "0.3.0"
 dependencies = [
  "elsecall-contract",
  "elsecall-peers",
- "elsecall-remote-run",
  "elsecall-replay",
  "elsecall-report-facts",
+ "elsecall-runs",
  "elsecall-scheduling",
  "elsecall-workload",
- "elsecall-workload-config",
  "futures-util",
  "humantime",
  "serde",
@@ -1639,11 +1593,11 @@ dependencies = [
  "elsecall-replay",
  "elsecall-report-facts",
  "elsecall-reporting",
+ "elsecall-runs",
  "elsecall-scheduling",
  "elsecall-simulation",
  "elsecall-trace",
  "elsecall-workload",
- "elsecall-workload-config",
  "humantime",
  "serde",
  "serde_json",
@@ -1660,8 +1614,8 @@ dependencies = [
  "elsecall-host",
  "elsecall-peers",
  "elsecall-release-update",
+ "elsecall-runs",
  "elsecall-window",
- "elsecall-workload-config",
  "libc",
  "png 0.18.1",
  "rune",
@@ -1698,21 +1652,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
-]
-
-[[package]]
-name = "elsecall-workload-config"
-version = "0.3.0"
-dependencies = [
- "elsecall-contract",
- "elsecall-host",
- "elsecall-workspace",
- "humantime",
- "libc",
- "serde",
- "tempfile",
- "toml",
- "toml_edit",
 ]
 
 [[package]]

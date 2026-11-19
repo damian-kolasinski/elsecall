@@ -6,7 +6,6 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
-use elsecall_admission::run_relay;
 use elsecall_contract::api;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::inspection::Inspection;
@@ -23,7 +22,8 @@ use elsecall_housekeeping::{
     },
 };
 use elsecall_peers::{member_key::MemberKey, membership_store::MembershipStore};
-use elsecall_placement::{placement_api, placement_host::PlacementHost};
+use elsecall_runs::run_relay;
+use elsecall_runs::{placement_api, placement_host::PlacementHost};
 use elsecall_scheduling::service::{Adapters, Scheduler};
 use elsecall_workspace::{copies::Copies, location::Locations, object_sources::ObjectSources};
 use std::{
@@ -218,7 +218,7 @@ pub async fn serve_with_updates(
     }
     // Placed runs bring their member's synced configuration up to date first.
     let pre_run = Arc::new(
-        elsecall_placement::placement_config_sync::PlacementConfigSync::new(config_sync.clone()),
+        elsecall_runs::placement_config_sync::PlacementConfigSync::new(config_sync.clone()),
     );
     let (scheduler, _scheduling) = Scheduler::start(
         &paths.records(),
@@ -520,7 +520,7 @@ pub async fn serve_with_updates(
         .with_state(inspection)
         .merge(trust_routes)
         .merge(elsecall_replay::replay_api::routes(scheduler.clone()))
-        .merge(elsecall_admission::admission_api::routes(scheduler))
+        .merge(elsecall_runs::admission_api::routes(scheduler))
         .merge(elsecall_housekeeping::copies_api::routes(housekeeper))
         .merge(tools_routes)
         .merge(desired_routes)

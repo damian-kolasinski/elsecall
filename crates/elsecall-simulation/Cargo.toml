@@ -15,11 +15,10 @@ workspace = true
 [dependencies]
 elsecall-contract.workspace = true
 elsecall-peers.workspace = true
-elsecall-remote-run.workspace = true
 elsecall-replay.workspace = true
 elsecall-report-facts.workspace = true
+elsecall-runs.workspace = true
 elsecall-scheduling.workspace = true
-elsecall-workload-config.workspace = true
 elsecall-workload.workspace = true
 futures-util.workspace = true
 humantime.workspace = true

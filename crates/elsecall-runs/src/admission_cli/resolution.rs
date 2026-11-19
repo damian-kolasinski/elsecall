@@ -6,14 +6,14 @@ use crate::admission_cli::{
     environment::CallerEnvironment,
     options::{Declared, UrgencyChoice},
 };
+use crate::workload_settings::{
+    LabelRule, RulePlacement, RuleUrgency, WhenUnavailable, WorkloadSettings,
+};
 use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::{
     request::{AdmissionRequest, Kind, Placement, Urgency, invalid},
     settings::{AppliedRule, Settings, Source},
     timestamp::Timestamp,
-};
-use elsecall_workload_config::workload_settings::{
-    LabelRule, RulePlacement, RuleUrgency, WhenUnavailable, WorkloadSettings,
 };
 
 /// Everything a request's properties may come from.

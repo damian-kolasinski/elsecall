@@ -34,7 +34,7 @@ pub(crate) fn workload_policy(
     elsecall_host::private_files::directory(&paths.data).unwrap();
     let target = paths
         .data
-        .join(elsecall_workload_config::workload_configuration::FILE_NAME);
+        .join(elsecall_runs::workload_configuration::FILE_NAME);
     let mut table: toml::Table = std::fs::read_to_string(&target)
         .ok()
         .map(|s| toml::from_str(&s).unwrap())
