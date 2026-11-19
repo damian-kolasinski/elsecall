@@ -677,9 +677,9 @@ impl Prepared {
                     "ELSECALL_CALLER_WORKSPACE",
                     assignment.location.caller_root.clone().into(),
                 ),
-                ("ELSECALL_WORKSPACE_COPY", root.clone().into_os_string()),
             ],
             working_directory: directory.as_os_str(),
+            copy: root.as_os_str(),
         }
         .build();
         Ok(Self {
