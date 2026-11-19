@@ -184,10 +184,10 @@ impl MemberHistory for PeerHistory {
     fn peer_io(
         &self,
         window: Window,
-    ) -> BoxFuture<'static, Result<crate::peer_diagnostics::History>> {
+    ) -> BoxFuture<'static, Result<elsecall_peer_diagnostics::History>> {
         let history = self.clone();
         Box::pin(async move {
-            let result: crate::peer_diagnostics::History = history
+            let result: elsecall_peer_diagnostics::History = history
                 .call(
                     "/peer/v1/report/peer-io",
                     &crate::report_protocol::PeerIoRequest {

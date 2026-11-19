@@ -51,6 +51,7 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 elsecall = { path = "." }
+elsecall-peer-diagnostics = { path = "crates/elsecall-peer-diagnostics" }
 elsecall-load-log = { path = "crates/elsecall-load-log" }
 elsecall-config-sync-model = { path = "crates/elsecall-config-sync-model" }
 elsecall-scheduling-model = { path = "crates/elsecall-scheduling-model" }
@@ -116,6 +117,7 @@ elsecall-local-client.workspace = true
 elsecall-local-state.workspace = true
 elsecall-machine.workspace = true
 elsecall-membership.workspace = true
+elsecall-peer-diagnostics.workspace = true
 elsecall-process.workspace = true
 elsecall-rehearsal-identity.workspace = true
 elsecall-run-admission.workspace = true

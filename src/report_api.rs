@@ -268,7 +268,10 @@ async fn peer_outside(Extension(reporter): Extension<Reporter>, body: Bytes) -> 
 async fn peer_io(body: Bytes) -> Response {
     answer(&body, |request: crate::report_protocol::PeerIoRequest| {
         let window = asked_window(request.since_ms, request.until_ms)?;
-        Ok(crate::peer_diagnostics::between(window.since, window.until))
+        Ok(elsecall_peer_diagnostics::between(
+            window.since,
+            window.until,
+        ))
     })
     .await
 }

@@ -25,7 +25,7 @@ pub type MachineState = serde_json::Map<String, serde_json::Value>;
 pub struct PeerStatus {
     /// Recent outgoing peer failures, including attempts recovered by retry.
     #[serde(default)]
-    pub peer_io: crate::peer_diagnostics::History,
+    pub peer_io: elsecall_peer_diagnostics::History,
     pub member: MemberName,
     pub version: String,
     /// The member's build ID; absent from members that predate upgrades.
@@ -527,7 +527,7 @@ impl Fleet {
             },
         };
         Ok(PeerStatus {
-            peer_io: crate::peer_diagnostics::recent(),
+            peer_io: elsecall_peer_diagnostics::recent(),
             member: self.own_name(&roster),
             version: elsecall_build_identity::build_identity::VERSION.into(),
             build: elsecall_build_identity::build_identity::this_build()

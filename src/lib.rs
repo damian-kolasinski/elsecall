@@ -115,8 +115,6 @@ pub mod busy_hour_calibration;
 
 pub mod replay_placement;
 
-pub mod peer_diagnostics;
-
 mod peer_transport;
 
 mod local_run_client;

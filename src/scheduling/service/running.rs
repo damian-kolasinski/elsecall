@@ -210,7 +210,7 @@ impl Scheduler {
                 Outcome::Failed { code }
             }
             RunEnded::PeerFailed { failure, .. } => {
-                use crate::peer_diagnostics::{Kind, Phase};
+                use elsecall_peer_diagnostics::{Kind, Phase};
                 if failure.duration_ms > 86_400_000
                     || !matches!(
                         failure.kind,
@@ -237,7 +237,7 @@ impl Scheduler {
                             "Only a remotely placed caller can report a peer stream failure.",
                         )
                     })?;
-                let attempt = crate::peer_diagnostics::Attempt {
+                let attempt = elsecall_peer_diagnostics::Attempt {
                     at: self.clock.now(),
                     member: placed.member.clone(),
                     operation: "result_stream".into(),
@@ -247,7 +247,7 @@ impl Scheduler {
                     duration_ms: failure.duration_ms,
                     refusal: None,
                 };
-                crate::peer_diagnostics::record(&attempt);
+                elsecall_peer_diagnostics::record(&attempt);
                 Outcome::Failed {
                     code: "connection_lost".into(),
                 }

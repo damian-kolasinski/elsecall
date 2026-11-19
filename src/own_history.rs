@@ -145,8 +145,13 @@ impl MemberHistory for OwnHistory {
     fn peer_io(
         &self,
         window: Window,
-    ) -> BoxFuture<'static, Result<crate::peer_diagnostics::History>> {
-        blocking(move || Ok(crate::peer_diagnostics::between(window.since, window.until)))
+    ) -> BoxFuture<'static, Result<elsecall_peer_diagnostics::History>> {
+        blocking(move || {
+            Ok(elsecall_peer_diagnostics::between(
+                window.since,
+                window.until,
+            ))
+        })
     }
 
     fn trace_page(

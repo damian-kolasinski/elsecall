@@ -138,7 +138,7 @@ pub async fn serve_with_updates(
             "Use elsecall service restart for the installed service, or stop the other foreground serve process.",
         ));
     };
-    crate::peer_diagnostics::initialize(&paths)?;
+    elsecall_peer_diagnostics::initialize(&paths)?;
     if let Err(error) = elsecall_local_state::state_temps::prune(&paths) {
         // Optional sync/upgrade state must not take down local admission.
         elsecall_service_log::service_log!(

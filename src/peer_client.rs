@@ -1,14 +1,12 @@
 //! Signed requests to another member over the tailnet, with verified responses.
-use crate::{
-    peer_diagnostics::{self, Attempt, Kind, Phase},
-    peer_transport::{self, Progress},
-};
+use crate::peer_transport::{self, Progress};
 use elsecall_failure::{Failure, Result};
 use elsecall_membership::{
     member_key::MemberKey,
     peer_auth::{self, SIGNATURE_HEADER},
     roster::Member,
 };
+use elsecall_peer_diagnostics::{self as peer_diagnostics, Attempt, Kind, Phase};
 use elsecall_wire::api::{ErrorResponse, Response, SCHEMA_VERSION};
 use http_body_util::{BodyExt, Full, Limited};
 use hyper::{Method, Request, body::Bytes, client::conn::http1};
@@ -304,15 +302,15 @@ pub fn unavailable(member: &Member) -> Failure {
 
 /// An outer whole-operation bound, rather than a timeout in a known socket phase.
 pub fn operation_timeout(member: &Member, path: &str, started: std::time::Instant) -> Failure {
-    let attempt = crate::peer_diagnostics::Attempt::new(
+    let attempt = elsecall_peer_diagnostics::Attempt::new(
         member.name.as_str(),
         path,
         1,
-        crate::peer_diagnostics::Phase::Request,
-        Some(crate::peer_diagnostics::Kind::Timeout),
+        elsecall_peer_diagnostics::Phase::Request,
+        Some(elsecall_peer_diagnostics::Kind::Timeout),
         started,
     );
-    crate::peer_diagnostics::record(&attempt);
+    elsecall_peer_diagnostics::record(&attempt);
     unavailable(member).with_details(serde_json::json!({"peer_io":attempt}))
 }
 

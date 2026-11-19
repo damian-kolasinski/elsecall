@@ -7,11 +7,9 @@ use axum::{
     response::IntoResponse,
     routing::any,
 };
-use elsecall::{
-    peer_client,
-    peer_diagnostics::{self, Kind, Phase},
-};
+use elsecall::peer_client;
 use elsecall_membership::{member_key::MemberKey, peer_auth, roster::Member};
+use elsecall_peer_diagnostics::{self as peer_diagnostics, Kind, Phase};
 use elsecall_scheduling_model::timestamp::Timestamp;
 use hyper::Method;
 use serde_json::{Value, json};
