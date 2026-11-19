@@ -73,7 +73,7 @@ pub fn render(trace: &Trace, settings: &Settings) -> Result<Value> {
                     r.fact
                         .label
                         .as_ref()
-                        .is_some_and(|l| crate::label_pattern::matches(pattern, l))
+                        .is_some_and(|l| crate::labels::pattern::matches(pattern, l))
                 })
                 .map(|r| r.fact.size.to_string())
                 .collect();

@@ -2,8 +2,8 @@
 use super::{ISSUER, Release, StagedRelease, TOOL, invalid};
 use crate::{
     build_identity::Digest,
-    cli_request::Selection,
     failure::{Failure, Result},
+    installation::cli_request::Selection,
     paths::Paths,
 };
 use serde::{Deserialize, Serialize};
@@ -177,7 +177,7 @@ impl MiseSelection {
         )
     }
 }
-impl crate::cli_request::CliRequest for MiseSelection {
+impl crate::installation::cli_request::CliRequest for MiseSelection {
     fn forget(&self) -> Selection {
         let Some(mise) = super::tools::find_mise(&self.paths) else {
             return Selection::NoMise;

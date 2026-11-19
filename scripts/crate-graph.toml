@@ -40,11 +40,11 @@ modules = ["failure"]
 
 [crates.labels]
 band = "foundation"
-modules = ["label_pattern", "label_rules"]
+modules = ["labels"]
 
 [crates.rehearsal-identity]
 band = "foundation"
-modules = ["rehearsal_identity"]
+modules = ["rehearsal::identity"]
 
 [crates.config-sync-model]
 band = "foundation"
@@ -194,7 +194,7 @@ band = "feature"
 # The installed files, the lock every lifecycle operation holds (and who holds
 # it), the companion window staged beside the executable, and the ports through
 # which other slices take part in an uninstall.
-modules = ["installation", "lifecycle_holder", "window_release", "cli_request"]
+modules = ["installation", "lifecycle_holder", "window_release"]
 
 [crates.window]
 band = "feature"
@@ -211,7 +211,7 @@ modules = ["fleet_upgrade", "fleet_upgrade_api", "fleet_upgrade_local_api", "upg
 [crates.api-response]
 band = "feature"
 # The error envelope slices' HTTP routes answer with.
-modules = ["api_response"]
+modules = ["api::response"]
 
 [crates.agent-skill]
 band = "feature"

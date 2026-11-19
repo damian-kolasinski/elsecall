@@ -2,7 +2,7 @@
 //! sync-authority boundary: only the recorded master may open it. Any enrolled
 //! member may read a member's sync state, or ask the master to push.
 use crate::{
-    api_response::failure,
+    api::response::failure,
     config_sync::{
         protocol,
         service::{ConfigSync, PushRequest},

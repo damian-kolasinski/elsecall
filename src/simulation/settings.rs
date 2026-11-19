@@ -10,7 +10,7 @@
 //! order. Duplicate keys are errors, as with production parameter overrides.
 use crate::{
     failure::{Failure, Result},
-    label_pattern,
+    labels::pattern as label_pattern,
     roster::MemberName,
     scheduling::{
         capacity::{Capacity, Cores},

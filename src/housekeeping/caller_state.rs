@@ -83,7 +83,7 @@ impl CallerState {
             .filter_map(|(file, _)| match file {
                 StateFile::Registry { id }
                     if push_cache::registered_root(&self.directory, id).is_some_and(|root| {
-                        crate::rehearsal_identity::scratch_of(session, &root)
+                        crate::rehearsal::identity::scratch_of(session, &root)
                     }) =>
                 {
                     Some(id.clone())

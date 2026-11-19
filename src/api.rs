@@ -1,4 +1,6 @@
 use crate::failure::Failure;
+
+pub mod response;
 use serde::{Deserialize, Serialize};
 
 pub const SCHEMA_VERSION: u32 = 1;

@@ -91,7 +91,7 @@ impl Recording {
                 self.planned
             ));
         }
-        if !crate::rehearsal_identity::valid_session(&self.session) {
+        if !crate::rehearsal::identity::valid_session(&self.session) {
             missing.push("the session ID is invalid".to_owned());
         }
         if !(self.compress.is_finite() && self.compress >= 1.0) {
@@ -101,7 +101,7 @@ impl Recording {
         for r in &trace.requests {
             let id = &r.fact.run_id;
             if !(r.fact.synthetic
-                && crate::label_rules::belongs(&self.session, r.fact.label.as_deref())
+                && crate::labels::rules::belongs(&self.session, r.fact.label.as_deref())
                 && !r.fact.unfinished
                 && !r.fact.nested)
             {
@@ -180,7 +180,7 @@ pub fn deserialize<'de, D: serde::Deserializer<'de>>(
         None => Ok(None),
         Some(Provenance::Current(recording)) => Ok(Some(*recording)),
         Some(Provenance::Legacy(legacy)) => {
-            if !crate::rehearsal_identity::valid_session(&legacy.session)
+            if !crate::rehearsal::identity::valid_session(&legacy.session)
                 || !(1.0..=1000.0).contains(&legacy.compress)
             {
                 return Err(serde::de::Error::custom(

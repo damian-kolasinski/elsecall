@@ -2,7 +2,7 @@
 //! recorded master may make. Placement itself arrives in later steps; a probe proves
 //! the boundary.
 use crate::{
-    api_response::failure,
+    api::response::failure,
     fleet::{AuthenticatedPeer, Fleet, PlacementAccepted, PlacementAuthority},
 };
 use axum::{

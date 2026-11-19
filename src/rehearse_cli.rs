@@ -203,12 +203,12 @@ pub(crate) async fn single(
     for arrival in &mut plan.arrivals {
         arrival.request.label = format!(
             "{}{}:{}",
-            crate::label_rules::PREFIX,
+            crate::labels::rules::PREFIX,
             session,
             arrival
                 .request
                 .label
-                .strip_prefix(crate::label_rules::PREFIX)
+                .strip_prefix(crate::labels::rules::PREFIX)
                 .expect("planned namespace")
         );
     }
@@ -524,7 +524,7 @@ pub(crate) async fn single(
     }
     trace
         .requests
-        .retain(|r| crate::label_rules::belongs(&session, r.fact.label.as_deref()));
+        .retain(|r| crate::labels::rules::belongs(&session, r.fact.label.as_deref()));
     let ids: std::collections::BTreeSet<_> = trace
         .requests
         .iter()
@@ -533,10 +533,10 @@ pub(crate) async fn single(
     trace.leftovers.retain(|r| ids.contains(r.run_id.as_str()));
     trace
         .demand
-        .retain(|d| crate::label_rules::synthetic(Some(&d.family)));
+        .retain(|d| crate::labels::rules::synthetic(Some(&d.family)));
     trace
         .contention
-        .retain(|d| crate::label_rules::synthetic(Some(&d.family)));
+        .retain(|d| crate::labels::rules::synthetic(Some(&d.family)));
     if inspections.iter().any(|r| r.production_active > 0) {
         trace.incomplete = true;
         trace.limits.push("Forced overlap: pre-existing production grants are outside this rehearsal's request population".into());

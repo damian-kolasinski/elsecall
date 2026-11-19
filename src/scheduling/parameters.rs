@@ -610,6 +610,15 @@ mod text {
     }
 }
 
+/// What the scheduler takes from the service configuration: the capacity kept
+/// free of Elsecall work, and what placement, the load gate and learned
+/// estimates decide with.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct SchedulerConfiguration {
+    pub reserved: crate::scheduling::capacity::Cores,
+    pub parameters: Parameters,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

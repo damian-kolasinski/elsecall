@@ -6,6 +6,7 @@ use crate::{
     private_files,
 };
 
+pub mod cli_request;
 pub mod ready;
 
 /// The file a service started as a plain process records its PID in, under the

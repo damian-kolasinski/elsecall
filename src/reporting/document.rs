@@ -2,7 +2,7 @@
 //! metrics, estimate accuracy and findings, from what was gathered.
 use crate::{
     failure::Failure,
-    label_pattern,
+    labels::pattern as label_pattern,
     load_log::buckets::Bucket,
     reporting::{
         accuracy::{self, Accuracy},
@@ -204,10 +204,10 @@ pub fn document(query: &Query, gathered: &Gathered) -> Document {
     // backtests exclude synthetic labels, including when --label is supplied.
     gathered
         .facts
-        .retain(|f| !f.synthetic && !crate::label_rules::synthetic(f.label.as_deref()));
+        .retain(|f| !f.synthetic && !crate::labels::rules::synthetic(f.label.as_deref()));
     gathered
         .leftovers
-        .retain(|f| !crate::label_rules::synthetic(f.label.as_deref()));
+        .retain(|f| !crate::labels::rules::synthetic(f.label.as_deref()));
     // Requests of the period and label; a member's work and waits are the
     // requests that ran there, which the member filter always keeps.
     let labelled: Vec<Fact> = gathered

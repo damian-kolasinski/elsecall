@@ -407,9 +407,9 @@ async fn run(cli: Cli) -> Result<bool> {
                 &elsecall::release_update::helper::production_selection(&paths),
                 force,
                 if keep_mise {
-                    elsecall::cli_request::Request::Keep
+                    elsecall::installation::cli_request::Request::Keep
                 } else {
-                    elsecall::cli_request::Request::Remove
+                    elsecall::installation::cli_request::Request::Remove
                 },
             )?;
             let mut complete = uninstalled.complete();

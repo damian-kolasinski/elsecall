@@ -193,7 +193,7 @@ pub fn select(source: &Trace, policy: Busiest) -> Result<(Trace, Selection)> {
             terminal.saturating_sub(1),
             format!("active_carry_in: {}", f.run_id),
         );
-        let reason = if f.synthetic || crate::label_rules::synthetic(f.label.as_deref()) {
+        let reason = if f.synthetic || crate::labels::rules::synthetic(f.label.as_deref()) {
             Some(format!("synthetic_work: {}", f.run_id))
         } else if f.unfinished || request.outcome.is_none() {
             Some(format!("missing_terminal_outcome: {}", f.run_id))
@@ -211,7 +211,7 @@ pub fn select(source: &Trace, policy: Busiest) -> Result<(Trace, Selection)> {
         if !f.nested
             && !f.deferrable
             && !f.synthetic
-            && !crate::label_rules::synthetic(f.label.as_deref())
+            && !crate::labels::rules::synthetic(f.label.as_deref())
         {
             interactive.push(at);
         }

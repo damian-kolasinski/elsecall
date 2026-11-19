@@ -7,6 +7,7 @@ mod expiry;
 mod hosting;
 mod initial;
 mod internal;
+pub use crate::scheduling::parameters::SchedulerConfiguration;
 pub use internal::{InternalHold, InternalPause, invalid_rehearsal};
 #[cfg(test)]
 mod runtime_tests;
@@ -282,15 +283,6 @@ enum Route {
     There(String),
     /// On the member with the earliest expected completion, chosen by this master.
     Auto,
-}
-
-/// What the scheduler takes from the service configuration: the capacity kept
-/// free of Elsecall work, and what placement, the load gate and learned
-/// estimates decide with.
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct SchedulerConfiguration {
-    pub reserved: Cores,
-    pub parameters: crate::scheduling::parameters::Parameters,
 }
 
 impl Scheduler {
@@ -945,7 +937,7 @@ impl Scheduler {
         let record = Record {
             run_id: id.clone(),
             kind: request.kind,
-            synthetic: crate::label_rules::synthetic(request.label.as_deref()),
+            synthetic: crate::labels::rules::synthetic(request.label.as_deref()),
             internal: requester.pid == std::process::id()
                 && request
                     .label

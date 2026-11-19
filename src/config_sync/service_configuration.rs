@@ -189,7 +189,7 @@ impl ConfigSync {
         let (roster, manifest) = {
             let _issuing = self.issuing.lock().await;
             let (roster, own) = self.require_master()?;
-            if self.held() || !crate::rehearsal_identity::valid_session(&request.session) {
+            if self.held() || !crate::rehearsal::identity::valid_session(&request.session) {
                 return Err(crate::scheduling::service::invalid_rehearsal(
                     "Invalid rehearsal or master handover in progress.",
                 ));

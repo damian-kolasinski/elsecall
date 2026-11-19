@@ -1,7 +1,7 @@
 //! The member API routes of placement, behind the placement-authority boundary:
 //! only the recorded master may offer runs or attach to them.
 use crate::{
-    api_response::failure,
+    api::response::failure,
     failure::Failure,
     fleet::{AuthenticatedPeer, Fleet, PlacementAuthority},
     placement_host::PlacementHost,

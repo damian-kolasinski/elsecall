@@ -246,7 +246,7 @@ impl Member {
                     return Err(invalid("The rehearsal has stopped or reached its limit."));
                 }
                 validate(&request)?;
-                if !crate::label_rules::belongs(&session.id, Some(&request.label)) {
+                if !crate::labels::rules::belongs(&session.id, Some(&request.label)) {
                     return Err(invalid("Synthetic label does not belong to this session."));
                 }
                 if session.jobs.len() >= 10_000
@@ -302,7 +302,7 @@ impl Member {
             records
                 .iter()
                 .filter(|r| {
-                    crate::label_rules::belongs(id, r.label.as_deref())
+                    crate::labels::rules::belongs(id, r.label.as_deref())
                         && r.calling_member == self.scheduler.name()
                         && r.placed
                             .as_ref()
@@ -321,7 +321,7 @@ impl Member {
                         .iter()
                         .filter(|r| {
                             r.requested_by == *caller
-                                && crate::label_rules::belongs(id, r.label.as_deref())
+                                && crate::labels::rules::belongs(id, r.label.as_deref())
                         })
                         .flat_map(|r| r.processes.iter().copied()),
                 )
@@ -419,8 +419,8 @@ async fn stop(session: &mut Session) -> Result<()> {
 }
 fn validate(r: &Launch) -> Result<()> {
     if !valid_workspace(&r.workspace)
-        || !crate::label_rules::synthetic(Some(&r.label))
-        || r.label.chars().count() > crate::label_rules::label_limit(&r.label)
+        || !crate::labels::rules::synthetic(Some(&r.label))
+        || r.label.chars().count() > crate::labels::rules::label_limit(&r.label)
         || r.label.chars().any(char::is_control)
         || r.size.millis() == 0
         || r.duration_ms == 0

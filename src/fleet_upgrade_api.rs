@@ -3,7 +3,7 @@
 //! carries is code this member will run. Any enrolled member may read how this
 //! member's latest upgrade went.
 use crate::{
-    api_response::failure,
+    api::response::failure,
     failure::Failure,
     fleet::{AuthenticatedPeer, Fleet, UpgradeAuthority},
     fleet_upgrade::{member::Upgrades, protocol},

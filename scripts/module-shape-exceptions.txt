@@ -2,4 +2,4 @@
 # they stood at. `lines`: non-test lines of a Rust file; `files`: source files directly
 # in a folder. Ceilings only go down: scripts/module_shape.py --shrink lowers them.
 files src 146
-lines src/scheduling/service.rs 1835
+lines src/scheduling/service.rs 1830

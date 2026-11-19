@@ -105,12 +105,12 @@ impl AdmissionRequest {
         }
         if let Some(label) = &self.label
             && (label.is_empty()
-                || label.chars().count() > crate::label_rules::label_limit(label)
+                || label.chars().count() > crate::labels::rules::label_limit(label)
                 || label.chars().any(char::is_control))
         {
             return Err(invalid(format!(
                 "A label must be 1 to {} characters without control characters.",
-                crate::label_rules::MAXIMUM_LABEL
+                crate::labels::rules::MAXIMUM_LABEL
             )));
         }
         match (self.kind, &self.placement, self.holder_pid) {

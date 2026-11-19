@@ -3,7 +3,7 @@
 //! Authentication names the asking member; the owner answers only about
 //! workspaces it pushed to that member.
 use crate::{
-    api_response::failure,
+    api::response::failure,
     failure::Failure,
     fleet::{AuthenticatedPeer, Fleet},
     housekeeping::{

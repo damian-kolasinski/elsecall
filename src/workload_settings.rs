@@ -31,7 +31,7 @@
 //! at_deadline = "start"
 //! ```
 use crate::{
-    label_pattern,
+    labels::pattern as label_pattern,
     scheduling::{
         capacity::Cores,
         request::{AtDeadline, MAXIMUM_DEADLINE, MAXIMUM_HOLD_LIMIT},

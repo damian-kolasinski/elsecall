@@ -2,8 +2,8 @@
 //! that makes the user's tool manager resolve the CLI, which the one-command
 //! installer added and which would otherwise keep `elsecall` on the PATH.
 use crate::{
-    cli_request::{CliRequest, Request, Selection},
     failure::{Failure, Result},
+    installation::cli_request::{CliRequest, Request, Selection},
     installation::{self, InstalledParts, Kept, ServiceManager},
     paths::Paths,
 };
