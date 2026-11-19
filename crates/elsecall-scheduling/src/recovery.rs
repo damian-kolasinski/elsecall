@@ -8,18 +8,18 @@ use elsecall_contract::scheduling_model::{capacity::Cores, run_id::RunId, timest
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A surviving grant and the nested grants that share its capacity.
-pub struct Family {
+pub(crate) struct Family {
     pub root: RunId,
     pub size: Cores,
     /// Whether the root itself survived, or only work nested in it.
     pub root_alive: bool,
     pub members: Vec<Survivor>,
 }
-pub struct Survivor {
+pub(crate) struct Survivor {
     pub record: Record,
     pub alive: BTreeSet<ProcessIdentity>,
 }
-pub struct Recovery {
+pub(crate) struct Recovery {
     /// Records closed now, to be saved.
     pub closed: Vec<Record>,
     pub families: Vec<Family>,
@@ -27,7 +27,7 @@ pub struct Recovery {
 
 /// Plans recovery of the requests that had not ended when the service stopped.
 /// `size_of` reads the size of an ended root whose nested work survived.
-pub fn plan(
+pub(crate) fn plan(
     unfinished: Vec<Record>,
     now: Timestamp,
     alive: impl Fn(ProcessIdentity) -> bool,

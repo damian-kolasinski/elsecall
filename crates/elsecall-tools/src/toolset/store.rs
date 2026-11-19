@@ -11,14 +11,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub const SOURCE: &str = "fleet-tools.toml";
+pub(crate) const SOURCE: &str = "fleet-tools.toml";
 
-pub fn path(data: &Path) -> PathBuf {
+pub(crate) fn path(data: &Path) -> PathBuf {
     data.join(SOURCE)
 }
 
 /// Reads at most one byte past the document limit. `NotFound` is an empty document.
-pub fn read(path: &Path) -> Result<Vec<u8>> {
+pub(crate) fn read(path: &Path) -> Result<Vec<u8>> {
     let file = match File::open(path) {
         Ok(file) => file,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -31,6 +31,6 @@ pub fn read(path: &Path) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
-pub fn write(path: &Path, bytes: &[u8]) -> Result<()> {
+pub(crate) fn write(path: &Path, bytes: &[u8]) -> Result<()> {
     private_files::replace(path, bytes).map_err(|error| Failure::io("Write fleet tools", error))
 }

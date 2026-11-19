@@ -16,7 +16,7 @@ use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
-pub enum DeliveryOutcome {
+pub(crate) enum DeliveryOutcome {
     Updated,
     AlreadyCurrent,
     /// The member being enrolled has not run `fleet join` yet; it will pull the
@@ -28,7 +28,7 @@ pub enum DeliveryOutcome {
 }
 
 #[derive(Debug, Serialize)]
-pub struct Delivery {
+pub(crate) struct Delivery {
     pub member: MemberName,
     #[serde(flatten)]
     pub outcome: DeliveryOutcome,
@@ -37,7 +37,7 @@ pub struct Delivery {
 /// The result of an operator change: the roster this member now records, and which
 /// other members received it.
 #[derive(Debug, Serialize)]
-pub struct ChangeReport {
+pub(crate) struct ChangeReport {
     pub epoch: u64,
     pub master: MemberName,
     pub members: Vec<MemberName>,
@@ -51,12 +51,12 @@ pub struct ChangeReport {
 }
 
 #[derive(Debug, Serialize)]
-pub struct LeaveReport {
+pub(crate) struct LeaveReport {
     pub status: &'static str,
     pub next_step: String,
 }
 
-pub async fn enroll(
+pub(crate) async fn enroll(
     fleet: &Fleet,
     code: &str,
     readiness: Readiness,
@@ -108,7 +108,7 @@ pub async fn enroll(
     ))
 }
 
-pub async fn join(fleet: &Fleet, code: &str) -> Result<ChangeReport> {
+pub(crate) async fn join(fleet: &Fleet, code: &str) -> Result<ChangeReport> {
     let sponsor = member_code::decode(code)?;
     let own = fleet.public_key();
     if sponsor.key == own {
@@ -177,7 +177,7 @@ pub async fn join(fleet: &Fleet, code: &str) -> Result<ChangeReport> {
     ))
 }
 
-pub async fn remove(fleet: &Fleet, name: &MemberName, force: bool) -> Result<ChangeReport> {
+pub(crate) async fn remove(fleet: &Fleet, name: &MemberName, force: bool) -> Result<ChangeReport> {
     let _change = fleet.lock_changes().await;
     let roster = enrolled_roster(fleet, name)?;
     let next = roster.remove(name, &fleet.public_key())?;
@@ -193,7 +193,7 @@ pub async fn remove(fleet: &Fleet, name: &MemberName, force: bool) -> Result<Cha
     ))
 }
 
-pub async fn leave(fleet: &Fleet, force: bool) -> Result<LeaveReport> {
+pub(crate) async fn leave(fleet: &Fleet, force: bool) -> Result<LeaveReport> {
     let _change = fleet.lock_changes().await;
     let current = fleet.membership();
     let Membership::Enrolled(roster) = &current else {
@@ -220,7 +220,11 @@ pub async fn leave(fleet: &Fleet, force: bool) -> Result<LeaveReport> {
 }
 
 /// Moves the master role to `name` on every member.
-pub async fn move_master(fleet: &Fleet, name: &MemberName, force: bool) -> Result<ChangeReport> {
+pub(crate) async fn move_master(
+    fleet: &Fleet,
+    name: &MemberName,
+    force: bool,
+) -> Result<ChangeReport> {
     let _change = fleet.lock_changes().await;
     let roster = enrolled_roster(fleet, name)?;
     let change = roster.with_master(name)?;
@@ -245,7 +249,11 @@ pub async fn move_master(fleet: &Fleet, name: &MemberName, force: bool) -> Resul
 }
 
 /// Marks `name` ready on every member, so placement may give it work.
-pub async fn mark_ready(fleet: &Fleet, name: &MemberName, force: bool) -> Result<ChangeReport> {
+pub(crate) async fn mark_ready(
+    fleet: &Fleet,
+    name: &MemberName,
+    force: bool,
+) -> Result<ChangeReport> {
     let _change = fleet.lock_changes().await;
     let roster = enrolled_roster(fleet, name)?;
     let change = roster.mark_ready(name)?;
@@ -263,7 +271,7 @@ pub async fn mark_ready(fleet: &Fleet, name: &MemberName, force: bool) -> Result
 }
 
 /// Asks `name` whether it accepts placement authority from this member.
-pub async fn probe_placement(fleet: &Fleet, name: &MemberName) -> Result<PlacementAccepted> {
+pub(crate) async fn probe_placement(fleet: &Fleet, name: &MemberName) -> Result<PlacementAccepted> {
     let roster = fleet.roster()?;
     let member = roster.member(name).ok_or_else(|| not_a_member(name))?;
     peer_client::call(
@@ -281,7 +289,7 @@ pub async fn probe_placement(fleet: &Fleet, name: &MemberName) -> Result<Placeme
 /// that changed the fleet independently at the same epoch, are brought to it: this
 /// roster is re-issued above every epoch seen. A member that records a newer roster
 /// means this one is stale; sync then refuses unless told to override it.
-pub async fn sync(fleet: &Fleet, force: bool, override_newer: bool) -> Result<ChangeReport> {
+pub(crate) async fn sync(fleet: &Fleet, force: bool, override_newer: bool) -> Result<ChangeReport> {
     let _change = fleet.lock_changes().await;
     let roster = match fleet.membership() {
         Membership::Enrolled(roster) => roster,
@@ -345,14 +353,14 @@ pub async fn sync(fleet: &Fleet, force: bool, override_newer: bool) -> Result<Ch
 
 // Shared steps.
 
-pub fn enrolled_roster(fleet: &Fleet, name: &MemberName) -> Result<Roster> {
+pub(crate) fn enrolled_roster(fleet: &Fleet, name: &MemberName) -> Result<Roster> {
     match fleet.membership() {
         Membership::Enrolled(roster) => Ok(roster),
         Membership::Solo => Err(not_a_member(name)),
     }
 }
 
-pub fn others(fleet: &Fleet, roster: &Roster) -> Vec<Member> {
+pub(crate) fn others(fleet: &Fleet, roster: &Roster) -> Vec<Member> {
     roster
         .members()
         .iter()
@@ -362,7 +370,7 @@ pub fn others(fleet: &Fleet, roster: &Roster) -> Vec<Member> {
 }
 
 /// Records a change locally; an unchanged roster is delivered again as it is.
-pub fn apply(fleet: &Fleet, roster: &Roster, change: Change) -> Result<Roster> {
+pub(crate) fn apply(fleet: &Fleet, roster: &Roster, change: Change) -> Result<Roster> {
     match change {
         Change::Changed(next) => {
             fleet.commit(roster, &next)?;
@@ -374,7 +382,7 @@ pub fn apply(fleet: &Fleet, roster: &Roster, change: Change) -> Result<Roster> {
 
 /// Reads every member's status, refusing while any is unreachable unless forced.
 /// Unreachable members are `None` in a forced change.
-pub async fn require_reachable(
+pub(crate) async fn require_reachable(
     fleet: &Fleet,
     members: &[Member],
     force: bool,
@@ -406,7 +414,7 @@ pub async fn require_reachable(
     Ok(results.into_iter().map(Result::ok).collect())
 }
 
-pub async fn deliver(fleet: &Fleet, roster: &Roster, to: &[Member]) -> Vec<Delivery> {
+pub(crate) async fn deliver(fleet: &Fleet, roster: &Roster, to: &[Member]) -> Vec<Delivery> {
     let results = peer_client::call_each::<OfferOutcome>(
         fleet.key(),
         to,
@@ -428,7 +436,7 @@ pub async fn deliver(fleet: &Fleet, roster: &Roster, to: &[Member]) -> Vec<Deliv
         .collect()
 }
 
-pub fn report(
+pub(crate) fn report(
     fleet: &Fleet,
     roster: &Roster,
     deliveries: Vec<Delivery>,

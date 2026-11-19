@@ -9,10 +9,10 @@ use elsecall_peers::roster::MemberName;
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 
-pub const LIMIT: usize = 64 * 1024;
+pub(crate) const LIMIT: usize = 64 * 1024;
 const MAX_MEMBERS: usize = 64;
 
-pub fn invalid(path: &str, rule: &str) -> Failure {
+pub(crate) fn invalid(path: &str, rule: &str) -> Failure {
     Failure::new(
         "invalid_fleet_tools",
         format!("{path}: {rule}"),
@@ -20,12 +20,12 @@ pub fn invalid(path: &str, rule: &str) -> Failure {
     )
 }
 
-pub fn version_rule(tool: &str) -> String {
+pub(crate) fn version_rule(tool: &str) -> String {
     format!("versions must be exact, e.g. 22.19.0; run `mise ls-remote {tool}` to pick one")
 }
 
 /// An exact version. Symbolic requests and mise selectors are rejected.
-pub fn exact_version(path: &str, tool: &str, value: &str) -> Result<ToolVersion> {
+pub(crate) fn exact_version(path: &str, tool: &str, value: &str) -> Result<ToolVersion> {
     let symbolic = matches!(value, "latest" | "lts" | "system")
         || value.starts_with("ref:")
         || value.starts_with("path:")
@@ -37,7 +37,7 @@ pub fn exact_version(path: &str, tool: &str, value: &str) -> Result<ToolVersion>
     }
 }
 
-pub fn require_tool(path: &str, manager: Manager, name: &str) -> Result<ToolName> {
+pub(crate) fn require_tool(path: &str, manager: Manager, name: &str) -> Result<ToolName> {
     if manager == Manager::Xcodes && name != "xcode" {
         return Err(invalid(path, "xcodes manages only the tool xcode"));
     }
@@ -54,7 +54,7 @@ pub fn require_tool(path: &str, manager: Manager, name: &str) -> Result<ToolName
 /// An entry that names neither is not a [`Want`]: it means nothing is wanted, and
 /// [`Toolset::resolve`] drops that tool instead of keeping an empty value.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct Want {
+pub(crate) struct Want {
     default: Option<ToolVersion>,
     install: BTreeSet<ToolVersion>,
 }
@@ -78,7 +78,7 @@ impl Want {
 
 /// What one manager should provide on one member.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct ManagerWants {
+pub(crate) struct ManagerWants {
     #[serde(rename = "version")]
     pub executable: Option<ToolVersion>,
     pub tools: BTreeMap<ToolName, Want>,
@@ -86,7 +86,7 @@ pub struct ManagerWants {
 
 /// Resolved desired state for one member. Both managers are always present.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct MemberWants {
+pub(crate) struct MemberWants {
     pub mise: ManagerWants,
     pub xcodes: ManagerWants,
 }
@@ -130,20 +130,20 @@ impl Managers {
 
 /// Validated desired state. Serde shapes stay inside this module.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Toolset {
+pub(crate) struct Toolset {
     defaults: Managers,
     members: BTreeMap<MemberName, Managers>,
 }
 
 impl Toolset {
-    pub fn empty() -> Self {
+    pub(crate) fn empty() -> Self {
         Self {
             defaults: Managers::empty(),
             members: BTreeMap::new(),
         }
     }
 
-    pub fn parse(bytes: &[u8]) -> Result<Self> {
+    pub(crate) fn parse(bytes: &[u8]) -> Result<Self> {
         if bytes.len() > LIMIT {
             return Err(invalid("fleet-tools.toml", "the document exceeds 64 KiB"));
         }
@@ -170,12 +170,12 @@ impl Toolset {
         Ok(Self { defaults, members })
     }
 
-    pub fn member_names(&self) -> impl Iterator<Item = &MemberName> {
+    pub(crate) fn member_names(&self) -> impl Iterator<Item = &MemberName> {
         self.members.keys()
     }
 
     /// Defaults, with this member's entries replacing a manager version or a whole tool.
-    pub fn resolve(&self, member: &MemberName) -> MemberWants {
+    pub(crate) fn resolve(&self, member: &MemberName) -> MemberWants {
         let overlay = self.members.get(member);
         MemberWants {
             mise: resolve_manager(&self.defaults.mise, overlay.map(|item| &item.mise)),

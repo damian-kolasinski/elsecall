@@ -12,14 +12,14 @@ use toml_edit::{DocumentMut, Entry, Item, Table, Value, value};
 
 /// Where an edit is written. A member scope replaces defaults for that member only.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Scope {
+pub(crate) enum Scope {
     Defaults,
     Member(MemberName),
 }
 
 /// One change to the desired state.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Edit {
+pub(crate) enum Edit {
     SetDefault {
         manager: Manager,
         tool: ToolName,
@@ -49,7 +49,7 @@ struct ToolState {
     install: Vec<String>,
 }
 
-pub fn apply(text: &str, scope: &Scope, edit: &Edit) -> Result<String> {
+pub(crate) fn apply(text: &str, scope: &Scope, edit: &Edit) -> Result<String> {
     let mut doc: DocumentMut = text
         .parse()
         .map_err(|_| invalid("fleet-tools.toml", "the document must be TOML"))?;

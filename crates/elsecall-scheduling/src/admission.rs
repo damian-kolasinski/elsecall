@@ -4,7 +4,7 @@ use elsecall_contract::scheduling_model::{capacity::Cores, run_id::RunId};
 use std::collections::{BTreeSet, HashMap, VecDeque};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Class {
+pub(crate) enum Class {
     Interactive,
     Deferrable,
 }
@@ -30,7 +30,7 @@ pub struct QueueCounts {
 }
 
 #[derive(Debug)]
-pub struct Admission {
+pub(crate) struct Admission {
     capacity: Cores,
     in_use: Cores,
     families: HashMap<RunId, Family>,
@@ -42,7 +42,7 @@ pub struct Admission {
 }
 
 impl Admission {
-    pub fn new(capacity: Cores) -> Self {
+    pub(crate) fn new(capacity: Cores) -> Self {
         Self {
             capacity,
             in_use: Cores::ZERO,
@@ -53,53 +53,43 @@ impl Admission {
             deferrable: VecDeque::new(),
         }
     }
-    pub fn capacity(&self) -> Cores {
-        self.capacity
-    }
-    pub fn in_use(&self) -> Cores {
+    pub(crate) fn in_use(&self) -> Cores {
         self.in_use
     }
-    pub fn free(&self) -> Cores {
+    pub(crate) fn free(&self) -> Cores {
         self.capacity.saturating_sub(self.in_use)
     }
     /// Whether the request could ever start here.
-    pub fn fits(&self, size: Cores) -> bool {
+    pub(crate) fn fits(&self, size: Cores) -> bool {
         size <= self.capacity
     }
-    pub fn queued(&self) -> QueueCounts {
+    pub(crate) fn queued(&self) -> QueueCounts {
         QueueCounts {
             interactive: self.promoted.len() + self.interactive.len(),
             deferrable: self.deferrable.len(),
         }
     }
     /// Waiting requests with their sizes, in the order they would start.
-    pub fn waiting(&self) -> impl Iterator<Item = (&RunId, Cores)> {
+    pub(crate) fn waiting(&self) -> impl Iterator<Item = (&RunId, Cores)> {
         self.queues().map(|w| (&w.id, w.size))
     }
     /// Waiting requests that start before new interactive work, in order:
     /// deferrable work waits behind it.
-    pub fn waiting_interactive(&self) -> impl Iterator<Item = (&RunId, Cores)> {
+    pub(crate) fn waiting_interactive(&self) -> impl Iterator<Item = (&RunId, Cores)> {
         self.promoted
             .iter()
             .chain(&self.interactive)
             .map(|w| (&w.id, w.size))
     }
-    pub fn is_waiting(&self, id: &RunId) -> bool {
-        self.queues().any(|w| &w.id == id)
-    }
-    pub fn is_live(&self, id: &RunId) -> bool {
+    pub(crate) fn is_live(&self, id: &RunId) -> bool {
         self.root_of.contains_key(id)
     }
-    /// The grant whose capacity `id` uses: its own, or its outermost parent's.
-    pub fn root(&self, id: &RunId) -> Option<&RunId> {
-        self.root_of.get(id)
-    }
     /// The capacity a live root grant holds for its family.
-    pub fn size_of(&self, root: &RunId) -> Option<Cores> {
+    pub(crate) fn size_of(&self, root: &RunId) -> Option<Cores> {
         self.families.get(root).map(|family| family.size)
     }
     /// Live grants whose capacity is in use, with their sizes.
-    pub fn holding(&self) -> impl Iterator<Item = (&RunId, Cores)> {
+    pub(crate) fn holding(&self) -> impl Iterator<Item = (&RunId, Cores)> {
         self.families.iter().map(|(id, family)| (id, family.size))
     }
 
@@ -111,7 +101,7 @@ impl Admission {
     }
 
     /// Queues a request that fits. Within a class, requests start in arrival order.
-    pub fn enqueue(&mut self, id: RunId, size: Cores, class: Class) {
+    pub(crate) fn enqueue(&mut self, id: RunId, size: Cores, class: Class) {
         debug_assert!(self.fits(size));
         let waiting = Waiting { id, size };
         match class {
@@ -121,7 +111,7 @@ impl Admission {
     }
 
     /// Removes a waiting request. False if it was not waiting.
-    pub fn withdraw(&mut self, id: &RunId) -> bool {
+    pub(crate) fn withdraw(&mut self, id: &RunId) -> bool {
         [
             &mut self.promoted,
             &mut self.interactive,
@@ -139,7 +129,7 @@ impl Admission {
 
     /// Moves waiting deferrable work ahead of all interactive work that was not
     /// promoted before it.
-    pub fn promote(&mut self, id: &RunId) -> bool {
+    pub(crate) fn promote(&mut self, id: &RunId) -> bool {
         match self.deferrable.iter().position(|w| &w.id == id) {
             Some(index) => {
                 let waiting = self.deferrable.remove(index).expect("index is in range");
@@ -154,7 +144,7 @@ impl Admission {
     /// first; within a class the oldest request goes first, and a head that does
     /// not fit blocks everything behind it so large requests are never starved.
     /// Deferrable work starts only while no interactive work waits.
-    pub fn ready(&self, load_admits: bool) -> Option<&RunId> {
+    pub(crate) fn ready(&self, load_admits: bool) -> Option<&RunId> {
         if !load_admits {
             return None;
         }
@@ -167,7 +157,7 @@ impl Admission {
     }
 
     /// Starts the request `ready` returned, charging its size.
-    pub fn start(&mut self, id: &RunId) {
+    pub(crate) fn start(&mut self, id: &RunId) {
         let queue = [
             &mut self.promoted,
             &mut self.interactive,
@@ -181,7 +171,7 @@ impl Admission {
     }
 
     /// Records a grant that already holds capacity, as after a service restart.
-    pub fn adopt(&mut self, id: RunId, size: Cores) {
+    pub(crate) fn adopt(&mut self, id: RunId, size: Cores) {
         self.in_use = self.in_use.saturating_add(size);
         self.root_of.insert(id.clone(), id.clone());
         self.families.insert(
@@ -195,7 +185,7 @@ impl Admission {
 
     /// Admits `id` within the live grant `outer`, using no further capacity.
     /// Returns the grant whose capacity it shares.
-    pub fn nest(&mut self, id: RunId, outer: &RunId) -> RunId {
+    pub(crate) fn nest(&mut self, id: RunId, outer: &RunId) -> RunId {
         let root = self.root_of[outer].clone();
         self.families
             .get_mut(&root)
@@ -207,7 +197,7 @@ impl Admission {
     }
 
     /// Ends a live grant. Its family's capacity frees once all members ended.
-    pub fn end(&mut self, id: &RunId) {
+    pub(crate) fn end(&mut self, id: &RunId) {
         let Some(root) = self.root_of.remove(id) else {
             return;
         };

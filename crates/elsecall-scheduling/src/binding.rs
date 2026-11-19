@@ -5,7 +5,7 @@ use elsecall_contract::scheduling_model::run_id::RunId;
 use std::collections::{BTreeSet, HashMap};
 
 #[derive(Default)]
-pub struct Bindings {
+pub(crate) struct Bindings {
     by_pid: HashMap<u32, Binding>,
 }
 struct Binding {
@@ -14,13 +14,13 @@ struct Binding {
 }
 
 /// Requests whose bound process is gone.
-pub type Lost = Vec<(RunId, ProcessIdentity)>;
+pub(crate) type Lost = Vec<(RunId, ProcessIdentity)>;
 
 impl Bindings {
     /// Binds `id` to `process` and watches it. `None` if the process already
     /// exited. Otherwise returns requests bound to an earlier process with the
     /// same PID, which must have exited unnoticed.
-    pub fn bind(
+    pub(crate) fn bind(
         &mut self,
         table: &dyn ProcessTable,
         id: &RunId,
@@ -48,7 +48,7 @@ impl Bindings {
         Some(lost)
     }
 
-    pub fn unbind(&mut self, id: &RunId, process: ProcessIdentity) {
+    pub(crate) fn unbind(&mut self, id: &RunId, process: ProcessIdentity) {
         if let Some(binding) = self.by_pid.get_mut(&process.pid)
             && binding.process == process
         {
@@ -61,7 +61,7 @@ impl Bindings {
 
     /// The process with `pid` was reported to have exited. A report that arrives
     /// after the PID was reused by a live process that is bound now is stale.
-    pub fn exited(&mut self, table: &dyn ProcessTable, pid: u32) -> Lost {
+    pub(crate) fn exited(&mut self, table: &dyn ProcessTable, pid: u32) -> Lost {
         match self.by_pid.get(&pid) {
             Some(binding) if !processes::alive(table, binding.process) => {
                 let binding = self.by_pid.remove(&pid).expect("checked above");
@@ -76,7 +76,7 @@ impl Bindings {
     }
 
     /// Requests bound to this exact process.
-    pub fn runs_of(&self, process: ProcessIdentity) -> impl Iterator<Item = &RunId> {
+    pub(crate) fn runs_of(&self, process: ProcessIdentity) -> impl Iterator<Item = &RunId> {
         self.by_pid
             .get(&process.pid)
             .filter(|binding| binding.process == process)
@@ -86,15 +86,15 @@ impl Bindings {
 }
 
 #[cfg(test)]
-pub mod fake {
+pub(crate) mod fake {
     //! A process table whose processes the test starts and ends.
     use crate::processes::{ProcessIdentity, ProcessInfo, ProcessTable};
     use std::{collections::HashMap, sync::Mutex};
 
     #[derive(Default)]
-    pub struct FakeProcesses(pub Mutex<HashMap<u32, ProcessInfo>>);
+    pub(crate) struct FakeProcesses(pub Mutex<HashMap<u32, ProcessInfo>>);
     impl FakeProcesses {
-        pub fn start(&self, pid: u32, started_us: u64, parent: u32) -> ProcessIdentity {
+        pub(crate) fn start(&self, pid: u32, started_us: u64, parent: u32) -> ProcessIdentity {
             let identity = ProcessIdentity { pid, started_us };
             self.0
                 .lock()
@@ -102,7 +102,7 @@ pub mod fake {
                 .insert(pid, ProcessInfo { identity, parent });
             identity
         }
-        pub fn end(&self, pid: u32) {
+        pub(crate) fn end(&self, pid: u32) {
             self.0.lock().unwrap().remove(&pid);
         }
     }

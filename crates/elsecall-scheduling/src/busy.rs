@@ -12,7 +12,7 @@ use serde::Serialize;
 use std::time::Duration;
 
 /// Work holding capacity when the request gave up.
-pub struct Work {
+pub(crate) struct Work {
     pub run_id: RunId,
     pub kind: Kind,
     pub label: Option<String>,
@@ -22,7 +22,7 @@ pub struct Work {
 }
 
 /// What the member looked like when the hold limit passed.
-pub struct Situation {
+pub(crate) struct Situation {
     pub now: Timestamp,
     pub hold_limit: Duration,
     pub size: Cores,
@@ -50,7 +50,7 @@ struct Details {
 
 /// Work running on some member, as a fleet-wide `fleet_busy` lists it.
 #[derive(Serialize)]
-pub struct RunningOn {
+pub(crate) struct RunningOn {
     pub member: String,
     pub run_id: RunId,
     pub kind: Kind,
@@ -60,7 +60,7 @@ pub struct RunningOn {
     pub expected_remaining_seconds: Option<u64>,
 }
 impl RunningOn {
-    pub fn of(member: &str, work: Work, now: Timestamp) -> Self {
+    pub(crate) fn of(member: &str, work: Work, now: Timestamp) -> Self {
         let elapsed = now.since(work.started_at.unwrap_or(now));
         Self {
             member: member.to_owned(),
@@ -78,7 +78,7 @@ impl RunningOn {
 
 /// Why one member could not start a placeable request, and when it might.
 #[derive(Serialize)]
-pub struct MemberSituation {
+pub(crate) struct MemberSituation {
     pub member: String,
     pub why: String,
     /// When the member is estimated to be able to start it; `None` if never.
@@ -96,7 +96,7 @@ struct FleetDetails {
 /// `fleet_busy` for a placeable request no member could start within its hold
 /// limit: why each member could not, what runs where, and the earliest any
 /// member is estimated to be able to start it.
-pub fn fleet_busy_across(
+pub(crate) fn fleet_busy_across(
     hold_limit: Duration,
     members: Vec<MemberSituation>,
     running: Vec<RunningOn>,
@@ -130,7 +130,7 @@ pub fn fleet_busy_across(
     })
 }
 
-pub fn fleet_busy(situation: Situation) -> Failure {
+pub(crate) fn fleet_busy(situation: Situation) -> Failure {
     let mut running = Vec::new();
     let mut holding = Vec::new();
     for work in situation.holding {

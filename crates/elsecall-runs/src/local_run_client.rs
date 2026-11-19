@@ -13,7 +13,7 @@ use hyper_util::rt::TokioIo;
 use std::path::Path;
 use tokio::net::UnixStream;
 
-pub async fn attach(socket: &Path, run: &RunId) -> Result<Link> {
+pub(crate) async fn attach(socket: &Path, run: &RunId) -> Result<Link> {
     let ephemeral = Ephemeral::generate().ok_or_else(|| {
         Failure::new(
             "random_unavailable",

@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::watch;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ReadFailed;
+pub(crate) struct ReadFailed;
 
 struct Flight<T> {
     id: u64,
@@ -84,7 +84,7 @@ where
     }
 }
 
-pub async fn installed() -> Result<Inventory, ReadFailed> {
+pub(crate) async fn installed() -> Result<Inventory, ReadFailed> {
     reader()
         .run(crate::fleet_tool_inventory::read_installed)
         .await

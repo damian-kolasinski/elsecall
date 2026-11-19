@@ -18,7 +18,7 @@ use std::{
 
 /// Records this process as the holder of `lock`, which it has just locked. The
 /// record is advisory: a failed write only means a handover is not recognized.
-pub fn record(lock: &mut File) {
+pub(crate) fn record(lock: &mut File) {
     let Some(this) = processes::describe(std::process::id()) else {
         return;
     };
@@ -29,13 +29,13 @@ pub fn record(lock: &mut File) {
 }
 
 /// Clears the record before `lock` is released.
-pub fn clear(lock: &File) {
+pub(crate) fn clear(lock: &File) {
     let _ = lock.set_len(0);
 }
 
 /// Whether the holder recorded in the lock file at `path` still runs, other than
 /// this process.
-pub fn running(path: &Path) -> bool {
+pub(crate) fn running(path: &Path) -> bool {
     let Ok(text) = std::fs::read_to_string(path) else {
         return false;
     };

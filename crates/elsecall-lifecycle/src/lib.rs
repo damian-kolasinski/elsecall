@@ -6,7 +6,7 @@ pub mod fleet_upgrade_api;
 pub mod fleet_upgrade_local_api;
 pub mod install_window;
 pub mod installation;
-pub mod lifecycle_holder;
+mod lifecycle_holder;
 pub mod release_update;
 pub mod release_update_api;
 pub mod release_update_cli;

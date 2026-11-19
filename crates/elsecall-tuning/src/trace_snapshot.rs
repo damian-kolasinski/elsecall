@@ -7,7 +7,12 @@ use elsecall_scheduling::load_log::{buckets, store::LoadStore};
 use elsecall_scheduling::records::Records;
 use std::time::Duration;
 
-pub fn local(paths: &Paths, member: String, since: Timestamp, until: Timestamp) -> Result<Trace> {
+pub(crate) fn local(
+    paths: &Paths,
+    member: String,
+    since: Timestamp,
+    until: Timestamp,
+) -> Result<Trace> {
     let records = Records::open_read_only(&paths.records())?;
     let load = LoadStore::open_read_only(&paths.load_history())?;
     let minutes = load.between(

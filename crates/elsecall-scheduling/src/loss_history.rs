@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, time::Duration};
 
 /// The failure code of a placed run whose connection was lost.
-pub const CONNECTION_LOST: &str = "connection_lost";
+pub(crate) const CONNECTION_LOST: &str = "connection_lost";
 
 /// Lost runs on one member, and the time placed runs spent there.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -59,7 +59,7 @@ impl Losses {
 }
 
 /// The most expected time a run is given, for a member that loses nearly all.
-pub const MAXIMUM_EXPOSED: Duration = Duration::from_secs(30 * 24 * 60 * 60);
+pub(crate) const MAXIMUM_EXPOSED: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 
 /// Every member's losses over the window.
 #[derive(Clone, Debug, Default, PartialEq)]

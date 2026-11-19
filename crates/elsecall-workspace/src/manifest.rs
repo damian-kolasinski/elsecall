@@ -5,7 +5,7 @@ use crate::{digest::Digest, path::WorkspacePath};
 use std::collections::BTreeMap;
 
 /// Permission bits a copy reproduces; set-id and sticky bits are never copied.
-pub const PERMISSIONS: u32 = 0o777;
+pub(crate) const PERMISSIONS: u32 = 0o777;
 const MAXIMUM_ENTRIES: u32 = 4_000_000;
 const MAXIMUM_TARGET: usize = 4096;
 const VERSION: u8 = 1;

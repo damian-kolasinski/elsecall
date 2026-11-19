@@ -42,7 +42,7 @@ const STAGING: &str = "elsecall-staging";
 const OUTPUT_STAGING: &str = "elsecall-outputs";
 const EXCLUDES: &str = "elsecall-excludes";
 /// The largest pack the member accepts in one sync.
-pub const MAXIMUM_PACK: u64 = 16 << 30;
+pub(crate) const MAXIMUM_PACK: u64 = 16 << 30;
 
 pub struct Copy {
     location: CopyLocation,
@@ -825,14 +825,14 @@ impl Copy {
 }
 
 /// The name a copy's references carry in its object store.
-pub fn copy_id(root: &Path) -> String {
+pub(crate) fn copy_id(root: &Path) -> String {
     Digest::of(root.as_os_str().as_encoded_bytes()).hex()[..16].to_owned()
 }
 
 /// Whose copy the directory at `root` is, from the mark written before anything
 /// else: the calling member and the caller's path. `None` for anything that is not
 /// a directory marked as a copy, including a link.
-pub fn owner(root: &Path) -> Option<(String, String)> {
+pub(crate) fn owner(root: &Path) -> Option<(String, String)> {
     let marker = read_in_git(&Confined::open(root).ok()?, MARKER)?;
     let text = String::from_utf8(marker).ok()?;
     let mut lines = text.strip_suffix('\n')?.split('\n');
@@ -844,14 +844,14 @@ pub fn owner(root: &Path) -> Option<(String, String)> {
 }
 
 /// Whether the directory at `root` is the copy `location` names.
-pub fn is_copy(root: &Path, location: &CopyLocation) -> bool {
+pub(crate) fn is_copy(root: &Path, location: &CopyLocation) -> bool {
     owner(root).is_some_and(|(member, caller_root)| {
         member == location.calling_member && caller_root == location.caller_root
     })
 }
 
 /// The object store the copy at `root` reads its history from.
-pub fn store_of(root: &Path) -> Option<std::path::PathBuf> {
+pub(crate) fn store_of(root: &Path) -> Option<std::path::PathBuf> {
     let alternates = read_in_git(&Confined::open(root).ok()?, "objects/info/alternates")?;
     let text = String::from_utf8(alternates).ok()?;
     let objects = Path::new(text.lines().next()?);
@@ -862,7 +862,7 @@ pub fn store_of(root: &Path) -> Option<std::path::PathBuf> {
 }
 
 /// Copies the store at `store` keeps references for, by the name `copy_id` gives.
-pub fn referencing_copies(store: &Path) -> Result<std::collections::BTreeSet<String>> {
+pub(crate) fn referencing_copies(store: &Path) -> Result<std::collections::BTreeSet<String>> {
     let output =
         Git::member(store).output(&["for-each-ref", "--format=%(refname)", "refs/elsecall/"])?;
     Ok(String::from_utf8_lossy(&output)
@@ -874,7 +874,7 @@ pub fn referencing_copies(store: &Path) -> Result<std::collections::BTreeSet<Str
 
 /// Drops the store's references for the copy that lived at `root`, so the store
 /// no longer counts it.
-pub fn release_store(store: &Path, root: &Path) -> Result<()> {
+pub(crate) fn release_store(store: &Path, root: &Path) -> Result<()> {
     let git = Git::member(store);
     let prefix = format!("refs/elsecall/{}/", copy_id(root));
     let output = git.output(&["for-each-ref", "--format=%(refname)", &prefix])?;

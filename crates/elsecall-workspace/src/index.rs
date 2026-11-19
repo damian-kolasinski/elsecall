@@ -8,7 +8,7 @@ use crate::{
 };
 use std::collections::BTreeMap;
 
-pub const GITLINK: u32 = 0o160000;
+pub(crate) const GITLINK: u32 = 0o160000;
 const MODES: [u32; 4] = [0o100644, 0o100755, 0o120000, GITLINK];
 const VERSION: u8 = 1;
 

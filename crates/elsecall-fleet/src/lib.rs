@@ -2,11 +2,11 @@
 //! may mirror between members.
 pub mod add_mac;
 pub mod askpass;
-pub mod authority;
+mod authority;
 pub mod authorized_keys;
 pub mod config_sync_model;
 pub mod fleet;
-pub mod fleet_changes;
+mod fleet_changes;
 pub mod fleet_local_api;
 pub mod fleet_placement;
 pub mod fleet_view;

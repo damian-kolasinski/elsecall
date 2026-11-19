@@ -11,7 +11,7 @@ pub mod replay_placement;
 pub mod simulation;
 pub mod trace_api;
 pub mod trace_cli;
-pub mod trace_snapshot;
+mod trace_snapshot;
 pub mod tune_cli;
 pub mod tuning;
 pub mod tuning_drift;

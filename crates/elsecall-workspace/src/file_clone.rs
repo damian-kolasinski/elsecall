@@ -14,7 +14,12 @@ const CLONE_NOOWNERCOPY: u32 = 0x0002;
 
 /// Puts a copy of `source` at the new name `name` in `directory`, with the
 /// permission bits `mode`.
-pub fn clone_file(source: &File, directory: &OwnedFd, name: &CStr, mode: u32) -> io::Result<()> {
+pub(crate) fn clone_file(
+    source: &File,
+    directory: &OwnedFd,
+    name: &CStr,
+    mode: u32,
+) -> io::Result<()> {
     // SAFETY: valid descriptors and C string.
     let cloned = unsafe {
         libc::fclonefileat(
@@ -54,7 +59,12 @@ fn clear_flags(source: &File, directory: &OwnedFd, name: &CStr) -> io::Result<()
 }
 
 /// The fallback where cloning is not possible.
-pub fn copy_file(source: &File, directory: &OwnedFd, name: &CStr, mode: u32) -> io::Result<()> {
+pub(crate) fn copy_file(
+    source: &File,
+    directory: &OwnedFd,
+    name: &CStr,
+    mode: u32,
+) -> io::Result<()> {
     use std::{io::Write, os::unix::fs::FileExt};
     let mut target = Confined::create_at(directory, name)?;
     let copied = (|| {

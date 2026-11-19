@@ -51,7 +51,7 @@ pub struct SyncEstimate {
 
 /// The syncs in `records`, newest first: the calling side of placed runs requested
 /// within `recency` before `now` whose sync time and warmth are known.
-pub fn samples(records: &[Record], now: Timestamp, recency: Duration) -> Vec<SyncSample> {
+pub(crate) fn samples(records: &[Record], now: Timestamp, recency: Duration) -> Vec<SyncSample> {
     let since = Timestamp::from_millis(now.millis().saturating_sub(recency.as_millis() as u64));
     let mut found: Vec<(Timestamp, SyncSample)> = records
         .iter()

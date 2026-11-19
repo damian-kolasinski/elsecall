@@ -14,7 +14,7 @@ const VERSION: u8 = 3;
 /// program can set it back, so an edit that restores the size and modification
 /// time is still noticed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Written {
+pub(crate) struct Written {
     inode: u64,
     size: u64,
     modified_ns: i64,
@@ -47,7 +47,7 @@ impl Written {
 }
 
 #[derive(Default)]
-pub struct CopyRecord {
+pub(crate) struct CopyRecord {
     /// The copy directory's device and inode, so a replaced directory starts afresh.
     pub identity: (u64, u64),
     pub manifest: Manifest,
@@ -88,7 +88,7 @@ impl<'a> Reader<'a> {
 }
 
 impl CopyRecord {
-    pub fn load(path: &Path, format: ObjectFormat) -> Option<Self> {
+    pub(crate) fn load(path: &Path, format: ObjectFormat) -> Option<Self> {
         let bytes = std::fs::read(path).ok()?;
         let mut reader = Reader(&bytes);
         if reader.take(1)?[0] != VERSION {
@@ -124,7 +124,7 @@ impl CopyRecord {
         })
     }
 
-    pub fn save(&self, path: &Path) -> io::Result<()> {
+    pub(crate) fn save(&self, path: &Path) -> io::Result<()> {
         let mut out = vec![VERSION];
         out.extend_from_slice(&self.identity.0.to_be_bytes());
         out.extend_from_slice(&self.identity.1.to_be_bytes());

@@ -3,27 +3,27 @@
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use elsecall_peers::peer_auth::ChannelProof;
 use hyper::HeaderMap;
-pub const PROTOCOL: &str = "elsecall-run-sealed/1";
-pub const EPHEMERAL: &str = "x-elsecall-run-ephemeral";
-pub const ACCEPTANCE: &str = "x-elsecall-run-acceptance";
+pub(crate) const PROTOCOL: &str = "elsecall-run-sealed/1";
+pub(crate) const EPHEMERAL: &str = "x-elsecall-run-ephemeral";
+pub(crate) const ACCEPTANCE: &str = "x-elsecall-run-acceptance";
 const LIMIT: usize = 2048;
 
-pub fn encode(proof: &ChannelProof) -> String {
+pub(crate) fn encode(proof: &ChannelProof) -> String {
     URL_SAFE_NO_PAD.encode(serde_json::to_vec(proof).expect("public proof serializes"))
 }
-pub fn decode(headers: &HeaderMap) -> Option<ChannelProof> {
+pub(crate) fn decode(headers: &HeaderMap) -> Option<ChannelProof> {
     let value = one_header(headers, ACCEPTANCE)?;
     if value.len() > LIMIT {
         return None;
     }
     serde_json::from_slice(&URL_SAFE_NO_PAD.decode(value).ok()?).ok()
 }
-pub fn one_header<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
+pub(crate) fn one_header<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
     let mut values = headers.get_all(name).iter();
     let value = values.next()?.to_str().ok()?;
     values.next().is_none().then_some(value)
 }
-pub fn public_header(headers: &HeaderMap) -> Option<[u8; 32]> {
+pub(crate) fn public_header(headers: &HeaderMap) -> Option<[u8; 32]> {
     let value = one_header(headers, EPHEMERAL)?;
     if value.len() != 43 {
         return None;

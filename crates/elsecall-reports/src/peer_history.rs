@@ -24,7 +24,7 @@ const CALL_TIMEOUT: Duration = Duration::from_secs(10);
 const FACTS_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Clone)]
-pub struct PeerHistory {
+pub(crate) struct PeerHistory {
     pub fleet: Arc<Fleet>,
     pub member: Member,
 }
@@ -96,7 +96,7 @@ impl PeerHistory {
 
 /// Why `member`'s history could not be read, in this member's words: another
 /// member's message is never quoted, only a code of the form Elsecall writes.
-pub fn unreadable(member: &str, what: &str, failure: &Failure) -> Failure {
+pub(crate) fn unreadable(member: &str, what: &str, failure: &Failure) -> Failure {
     let code = failure.code.as_str();
     Failure::new(
         if is_code(code) {
@@ -121,7 +121,7 @@ fn invalid_answer(member: &Member) -> Failure {
 /// many as the period holds, shares within 0..1, cores within the machine and
 /// plausible speeds, and no more seconds than a bucket of `width` has. Order
 /// and the period are the report's to check.
-pub fn believed(mut buckets: Vec<Bucket>, width: Duration) -> Vec<Bucket> {
+pub(crate) fn believed(mut buckets: Vec<Bucket>, width: Duration) -> Vec<Bucket> {
     buckets.truncate(FINE_BUCKETS as usize + 1);
     let share = |v: Option<f64>| v.filter(|v| v.is_finite()).map(|v| v.clamp(0.0, 1.0));
     let speed = |s: Option<f64>| s.filter(|s| PLAUSIBLE.contains(s));
