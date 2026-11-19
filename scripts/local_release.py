@@ -68,13 +68,16 @@ def channel_url(value, home=None):
 
 
 def with_version(manifest, lock, version):
-    """Cargo.toml and Cargo.lock text with the elsecall package set to `version`."""
+    """Cargo.toml and Cargo.lock text with the workspace's packages set to
+    `version`. They share the workspace version, so the manifest names it once
+    and the lock once per package: every `elsecall` and `elsecall-*` package,
+    which are the workspace's own (no published crate uses the prefix)."""
     manifest, count = re.subn(
-        r'(\[package\]\nname = "elsecall"\nversion = )"[^"]+"', rf'\1"{version}"', manifest, count=1
+        r'(\[workspace\.package\]\nversion = )"[^"]+"', rf'\1"{version}"', manifest, count=1
     )
-    lock, locked = re.subn(r'(\nname = "elsecall"\nversion = )"[^"]+"', rf'\1"{version}"', lock, count=1)
-    if count != 1 or locked != 1:
-        raise ValueError("could not find the elsecall package version to set")
+    lock, locked = re.subn(r'(\nname = "elsecall(?:-[a-z0-9-]+)?"\nversion = )"[^"]+"', rf'\1"{version}"', lock)
+    if count != 1 or locked < 1:
+        raise ValueError("could not find the workspace version to set")
     return manifest, lock
 
 

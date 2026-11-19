@@ -13,6 +13,9 @@ use std::{
     },
 };
 
+/// The release every crate of this build belongs to; they share one version.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 /// The SHA-256 digest of an executable's content.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Digest([u8; 32]);
@@ -137,7 +140,7 @@ pub fn this_build() -> Result<Build> {
         let path = std::env::current_exe().map_err(unreadable)?;
         let digest = Digest::of_file(&path).map_err(unreadable)?;
         Ok(Build {
-            version: env!("CARGO_PKG_VERSION").into(),
+            version: VERSION.into(),
             build: digest.build_id(),
         })
     })

@@ -712,7 +712,7 @@ async fn wait_ready(paths: &Paths) -> Result<Health> {
     let ready = async {
         loop {
             if let Ok(health) = client::get::<Health>(&paths.socket(), "/v1/health").await
-                && health.version == env!("CARGO_PKG_VERSION")
+                && health.version == elsecall::build_identity::VERSION
             {
                 return health;
             }

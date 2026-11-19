@@ -160,24 +160,53 @@ def tracked_files(root: Path) -> list[str]:
     return [name for name in output.decode().split("\0") if name]
 
 
+def member_directories(root: Path, patterns: list[str]) -> list[str]:
+    """Workspace members as directories relative to the root ('' for the root),
+    with globs such as `crates/*` expanded to the directories holding a manifest."""
+    found = []
+    for pattern in patterns:
+        pattern = pattern.rstrip("/")
+        if pattern == ".":
+            found.append("")
+        elif any(c in pattern for c in "*?["):
+            found += sorted(
+                p.parent.relative_to(root).as_posix()
+                for p in root.glob(pattern + "/Cargo.toml")
+            )
+        else:
+            found.append(pattern)
+    return found
+
+
 def read_packages(root: Path) -> list[Package]:
     workspace = tomllib.loads((root / "Cargo.toml").read_text())
-    directories = workspace.get("workspace", {}).get("members", ["."])
+    directories = member_directories(root, workspace.get("workspace", {}).get("members", ["."]))
+    # `name.workspace = true` dependencies take their path from here.
+    inherited = {
+        name: spec["path"]
+        for name, spec in workspace.get("workspace", {}).get("dependencies", {}).items()
+        if isinstance(spec, dict) and "path" in spec
+    }
     manifests = {}
     for directory in directories:
-        directory = "" if directory == "." else directory.rstrip("/")
         manifests[directory] = tomllib.loads((root / directory / "Cargo.toml").read_text())
     names = {directory: manifest["package"]["name"] for directory, manifest in manifests.items()}
     dependents: dict[str, set[str]] = {directory: set() for directory in manifests}
     for directory, manifest in manifests.items():
         tables = [manifest.get(key, {}) for key in ("dependencies", "dev-dependencies", "build-dependencies")]
         for table in tables:
-            for spec in table.values():
-                if isinstance(spec, dict) and "path" in spec:
+            for name, spec in table.items():
+                if not isinstance(spec, dict):
+                    continue
+                if "path" in spec:
                     target = (PurePosixPath(directory) / spec["path"]).as_posix()
-                    target = normalize(target)
-                    if target in dependents:
-                        dependents[target].add(names[directory])
+                elif spec.get("workspace") and name in inherited:
+                    target = inherited[name]
+                else:
+                    continue
+                target = normalize(target)
+                if target in dependents and target != directory:
+                    dependents[target].add(names[directory])
     return [
         Package(names[directory], directory, frozenset(dependents[directory]))
         for directory in manifests

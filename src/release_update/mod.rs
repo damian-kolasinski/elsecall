@@ -28,7 +28,7 @@ pub const ISSUER: &str = "https://token.actions.githubusercontent.com";
 pub struct ReleaseVersion(semver::Version);
 impl ReleaseVersion {
     pub fn running() -> Self {
-        Self(semver::Version::parse(env!("CARGO_PKG_VERSION")).expect("Cargo version"))
+        Self(semver::Version::parse(crate::build_identity::VERSION).expect("Cargo version"))
     }
     pub fn as_version(&self) -> &semver::Version {
         &self.0

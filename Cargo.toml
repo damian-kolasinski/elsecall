@@ -1,17 +1,64 @@
 [workspace]
 resolver = "3"
-members = [".", "crates/elsecall-ui"]
+members = [".", "crates/*"]
 # `mise run build` stays the service binary. The desktop crate is built by
 # `--workspace` checks and `cargo run -p elsecall-ui`.
 default-members = ["."]
 
-[package]
-name = "elsecall"
+# Every crate is one release: they share its version, which the binaries report.
+[workspace.package]
 version = "0.3.0"
 edition = "2024"
 rust-version = "1.99"
-description = "Inspect and maintain your development machines"
 license = "MIT"
+
+# One version and one feature set per dependency, for every crate, so building
+# one crate never compiles a dependency differently from the whole workspace.
+[workspace.dependencies]
+axum = "0.8.9"
+base64 = "0.22"
+chacha20poly1305 = "0.10"
+clap = { version = "4.6", features = ["derive"] }
+ed25519-dalek = "2"
+futures-util = { version = "0.3", default-features = false, features = ["alloc"] }
+getrandom = "0.3"
+hkdf = "0.12"
+http-body-util = "0.1"
+humantime = "2.1"
+hyper = { version = "1", features = ["client", "http1", "server"] }
+hyper-util = { version = "0.1", features = ["tokio", "server", "service"] }
+libc = "0.2"
+plist = "1.10"
+png = "0.18"
+# rune dev ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c (2026-11-12).
+# Bump: change these revs and the four patch revs below together.
+rune = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }
+rune-kit = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }
+rusqlite = { version = "0.40", features = ["bundled"] }
+semver = "1"
+serde = { version = "1", features = ["derive"] }
+# Replay re-scores recorded decisions, so floats must read back exactly.
+serde_json = { version = "1", features = ["float_roundtrip", "raw_value"] }
+sha2 = "0.10"
+sysinfo = { version = "0.37", default-features = false, features = ["system"] }
+# test-util is not only for tests: the simulator runs the real scheduler on a
+# paused clock (`elsecall simulate`, `elsecall tune`).
+tokio = { version = "1", features = ["io-util", "macros", "process", "rt-multi-thread", "net", "signal", "sync", "time", "test-util"] }
+tempfile = "3"
+toml = "1.1"
+toml_edit = "0.25.19"
+tower = { version = "0.5", features = ["util"] }
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+zeroize = "1"
+elsecall = { path = "." }
+
+[package]
+name = "elsecall"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Inspect and maintain your development machines"
+license.workspace = true
 
 [lib]
 # The library has no Rust doctests; skip rustdoc's pass over it.
@@ -30,37 +77,33 @@ test = false
 local-release-channel = []
 
 [dependencies]
-axum = "0.8.9"
-base64 = "0.22"
-chacha20poly1305 = "0.10"
-clap = { version = "4.6", features = ["derive"] }
-ed25519-dalek = "2"
-futures-util = { version = "0.3", default-features = false, features = ["alloc"] }
-getrandom = "0.3"
-hkdf = "0.12"
-http-body-util = "0.1"
-humantime = "2.1"
-hyper = { version = "1", features = ["client", "http1", "server"] }
-hyper-util = { version = "0.1", features = ["tokio", "server", "service"] }
-libc = "0.2"
-plist = "1.10"
-rusqlite = { version = "0.40", features = ["bundled"] }
-semver = "1"
-serde = { version = "1", features = ["derive"] }
-# Replay re-scores recorded decisions, so floats must read back exactly.
-serde_json = { version = "1", features = ["float_roundtrip", "raw_value"] }
-sha2 = "0.10"
-sysinfo = { version = "0.37", default-features = false, features = ["system"] }
-tokio = { version = "1", features = ["io-util", "macros", "process", "rt-multi-thread", "net", "signal", "sync", "time", "test-util"] }
-tempfile = "3"
-toml = "1.1"
-toml_edit = "0.25.19"
-tower = { version = "0.5", features = ["util"] }
-x25519-dalek = { version = "2", features = ["static_secrets"] }
-zeroize = "1"
-
-[dev-dependencies]
-tokio = { version = "1", features = ["process", "test-util"] }
+axum.workspace = true
+base64.workspace = true
+chacha20poly1305.workspace = true
+clap.workspace = true
+ed25519-dalek.workspace = true
+futures-util.workspace = true
+getrandom.workspace = true
+hkdf.workspace = true
+http-body-util.workspace = true
+humantime.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+libc.workspace = true
+plist.workspace = true
+rusqlite.workspace = true
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+sysinfo.workspace = true
+tokio.workspace = true
+tempfile.workspace = true
+toml.workspace = true
+toml_edit.workspace = true
+tower.workspace = true
+x25519-dalek.workspace = true
+zeroize.workspace = true
 
 [profile.release]
 lto = "thin"
@@ -82,7 +125,7 @@ debug = true
 opt-level = 3
 
 # rune ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c (2026-11-12).
-# Bump this rev together with the rune and rune-kit revs in crates/elsecall-ui.
+# Bump this rev together with the rune and rune-kit revs in [workspace.dependencies].
 [patch.crates-io]
 winit = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }
 wgpu-hal = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }

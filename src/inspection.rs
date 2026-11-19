@@ -120,7 +120,7 @@ impl Inspection {
     pub fn health(&self) -> Health {
         Health {
             status: "ready".into(),
-            version: env!("CARGO_PKG_VERSION").into(),
+            version: crate::build_identity::VERSION.into(),
             build: crate::build_identity::this_build().ok().map(|b| b.build),
             pid: std::process::id(),
             uptime_seconds: self.started.elapsed().as_secs(),

@@ -229,7 +229,7 @@ fn write_bundle(app: &Path, binary: &[u8]) -> Result<()> {
         .map_err(|error| Failure::io("Set Elsecall app permissions", error))?;
     fs::write(
         app.join("Contents/Info.plist"),
-        INFO_PLIST.replace("0.1.0", env!("CARGO_PKG_VERSION")),
+        INFO_PLIST.replace("0.1.0", crate::build_identity::VERSION),
     )
     .map_err(|error| Failure::io("Write the Elsecall app identity", error))?;
     let resources = app.join("Contents/Resources");

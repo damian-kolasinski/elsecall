@@ -529,7 +529,7 @@ impl Fleet {
         Ok(PeerStatus {
             peer_io: crate::peer_diagnostics::recent(),
             member: self.own_name(&roster),
-            version: env!("CARGO_PKG_VERSION").into(),
+            version: crate::build_identity::VERSION.into(),
             build: crate::build_identity::this_build().ok().map(|b| b.build),
             roster,
             machine,
