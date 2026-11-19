@@ -32,8 +32,11 @@ class LocalRelease(unittest.TestCase):
     def test_version_is_set_in_the_manifest_and_lock_only_for_the_workspace(self):
         manifest = (local_release.ROOT / "Cargo.toml").read_text()
         lock = (local_release.ROOT / "Cargo.lock").read_text()
-        new_manifest, new_lock = local_release.with_version(manifest, lock, "9.8.7")
+        packages = 1 + len(list((local_release.ROOT / "crates").glob("*/Cargo.toml")))
+        new_manifest, new_lock = local_release.with_version(manifest, lock, "9.8.7", packages)
         self.assertEqual(tomllib.loads(new_manifest)["workspace"]["package"]["version"], "9.8.7")
+        with self.assertRaises(ValueError):
+            local_release.with_version(manifest, lock, "9.8.7", packages + 1)
         members = {"elsecall", "elsecall-ui"} | {
             tomllib.loads(path.read_text())["package"]["name"]
             for path in (local_release.ROOT / "crates").glob("*/Cargo.toml")

@@ -359,10 +359,9 @@ async fn run(cli: Cli) -> Result<bool> {
         &cli.command,
         Command::Serve | Command::UpgradeHelper { .. } | Command::UpdateHelper { .. }
     ) {
-        elsecall_service_log::initialize(
-            &paths,
-            elsecall_config_sync::service_configuration::load(&paths, None).map(|c| c.logs),
-        )?;
+        elsecall_service_log::initialize(&paths, || {
+            elsecall_config_sync::service_configuration::load(&paths, None).map(|c| c.logs)
+        })?;
     }
     let manager: Box<dyn ServiceManager> = if elsecall_platform_macos::process_service::requested()?
     {

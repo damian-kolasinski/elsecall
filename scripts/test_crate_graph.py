@@ -210,6 +210,16 @@ class Manifests(unittest.TestCase):
         messages = self.check({"crates/elsecall-failure": manifest})
         self.assertTrue(any("higher feature band" in m for m in messages), messages)
 
+    def test_target_tables_and_the_binary_package_are_checked_too(self):
+        manifest = self.GOOD + "\n[target.'cfg(unix)'.dependencies]\nlibc = \"0.2\"\nelsecall.workspace = true\n"
+        messages = self.check({"crates/elsecall-failure": manifest})
+        self.assertTrue(any("libc.workspace = true" in m for m in messages), messages)
+        self.assertTrue(any("no crate depends on it" in m for m in messages), messages)
+
+    def test_a_framework_the_band_forbids_fails_in_the_manifest(self):
+        messages = self.check({"crates/elsecall-failure": self.GOOD + "axum.workspace = true\n"})
+        self.assertTrue(any("forbids `axum`" in m for m in messages), messages)
+
     def test_build_environment_variables_stay_where_they_hold(self):
         files = {
             "crates/elsecall-failure/src/lib.rs": 'const A: &str = env!("CARGO_MANIFEST_DIR");\nconst B: &str = env!("CARGO_BIN_EXE_x");\n',

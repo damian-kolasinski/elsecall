@@ -122,14 +122,15 @@ impl Log {
 
 static LOG: OnceLock<Mutex<Log>> = OnceLock::new();
 /// Called by the service and upgrade-helper entry points only, never CLI callers.
-/// `configured` is the log settings of the service configuration, or why it
-/// could not be read.
+/// `configured` reads the log settings of the service configuration, or why
+/// they could not be read; it runs once the state directory is checked.
 pub fn initialize(
     paths: &elsecall_local_state::paths::Paths,
-    configured: Result<Settings>,
+    configured: impl FnOnce() -> Result<Settings>,
 ) -> Result<()> {
     private_files::owned_tree(&paths.home, &paths.data)?;
     private_files::directory(&paths.data)?;
+    let configured = configured();
     // Defaults let invalid configuration itself leave a safe diagnostic.
     let settings = configured.as_ref().cloned().unwrap_or_default();
     let log = Log::new(paths.log(), settings);

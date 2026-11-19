@@ -67,16 +67,17 @@ def channel_url(value, home=None):
     return value.rstrip("/")
 
 
-def with_version(manifest, lock, version):
+def with_version(manifest, lock, version, packages=None):
     """Cargo.toml and Cargo.lock text with the workspace's packages set to
     `version`. They share the workspace version, so the manifest names it once
     and the lock once per package: every `elsecall` and `elsecall-*` package,
-    which are the workspace's own (no published crate uses the prefix)."""
+    which are the workspace's own (no published crate uses the prefix). With
+    `packages`, the lock must hold exactly that many."""
     manifest, count = re.subn(
         r'(\[workspace\.package\]\nversion = )"[^"]+"', rf'\1"{version}"', manifest, count=1
     )
     lock, locked = re.subn(r'(\nname = "elsecall(?:-[a-z0-9-]+)?"\nversion = )"[^"]+"', rf'\1"{version}"', lock)
-    if count != 1 or locked < 1:
+    if count != 1 or locked < 1 or packages is not None and locked != packages:
         raise ValueError("could not find the workspace version to set")
     return manifest, lock
 
@@ -218,7 +219,8 @@ def build(args):
     for version in versions:
         broken = ", failing at startup" if version in args.fail_to_start else ""
         print(f"Building {version} for {args.url}{broken}", file=sys.stderr)
-        versioned_manifest, versioned_lock = with_version(manifest, lock, version)
+        packages = 1 + len(list((source / "crates").glob("*/Cargo.toml")))
+        versioned_manifest, versioned_lock = with_version(manifest, lock, version, packages)
         (source / "Cargo.toml").write_text(versioned_manifest)
         (source / "Cargo.lock").write_text(versioned_lock)
         fault = {"ELSECALL_LOCAL_RELEASE_FAULT": "serve"} if version in args.fail_to_start else {}

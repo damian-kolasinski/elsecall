@@ -50,6 +50,8 @@ LIBRARY = "elsecall"
 # Crate names that say where code sits rather than what it owns.
 CATCH_ALL = shape.CATCH_ALL | {"types", "base", "prelude", "lib", "stuff", "general"}
 INHERITED = ("version", "edition", "rust-version", "license")
+# A module other crates' tests may use, behind the crate's test-support feature.
+GATED = re.compile(r'#\[cfg\(any\(test,\s*feature\s*=\s*"test-support"\)\)\]\s*pub\s+mod\s+(\w+)')
 
 
 # --- The plan -----------------------------------------------------------------
@@ -608,6 +610,19 @@ def manifest_findings(root: Path, plan: Plan, packages: dict[str, str], files: d
     """Rules on the manifests of the crates under crates/, and on the build
     environment variables their code reads."""
     found = []
+    # [workspace.dependencies] keys that name a package by another name.
+    workspace_names = {}
+    root_manifest = root / "Cargo.toml"
+    if root_manifest.is_file():
+        declared = tomllib.loads(root_manifest.read_text(encoding="utf-8")).get("workspace", {}).get("dependencies", {})
+        for key, spec in declared.items():
+            if isinstance(spec, dict):
+                if "package" in spec:
+                    workspace_names[key] = spec["package"]
+                elif "path" in spec:
+                    target = root / spec["path"] / "Cargo.toml"
+                    if target.is_file():
+                        workspace_names[key] = tomllib.loads(target.read_text(encoding="utf-8"))["package"]["name"]
     for directory, package in sorted(packages.items()):
         if not directory:
             continue
@@ -626,11 +641,21 @@ def manifest_findings(root: Path, plan: Plan, packages: dict[str, str], files: d
             found.append(Finding(True, manifest_path, "`publish = false`: crates are parts of one application, not libraries"))
         if manifest.get("lints") != {"workspace": True}:
             found.append(Finding(True, manifest_path, "`[lints] workspace = true`: every crate keeps the workspace's lints"))
-        for table in ("dependencies", "dev-dependencies", "build-dependencies"):
-            for name, spec in manifest.get(table, {}).items():
+        tables = [(t, manifest.get(t, {})) for t in ("dependencies", "dev-dependencies", "build-dependencies")]
+        for platform, specific in manifest.get("target", {}).items():
+            tables += [(f"target.{platform}.{t}", specific.get(t, {})) for t in ("dependencies", "dev-dependencies", "build-dependencies")]
+        for table, entries in tables:
+            for name, spec in entries.items():
                 if not (isinstance(spec, dict) and spec.get("workspace") is True):
                     found.append(Finding(True, manifest_path, f"`{table}.{name}`: declare it in [workspace.dependencies] and write `{name}.workspace = true`, so every crate builds it alike"))
-                target = extracted(plan, name)
+                actual = workspace_names.get(name, name)
+                if actual == LIBRARY:
+                    found.append(Finding(True, manifest_path, f"`{table}.{name}`: the {LIBRARY} package is the binary and its composition; no crate depends on it"))
+                    continue
+                forbidden = plan.crates[crate].band.forbid
+                if not table.endswith("dev-dependencies") and actual.replace("-", "_") in forbidden:
+                    found.append(Finding(True, manifest_path, f"`{table}.{name}`: the {plan.crates[crate].band.name} band forbids `{actual}`"))
+                target = extracted(plan, actual)
                 if target is None or target == crate:
                     continue
                 source, destination = plan.crates[crate], plan.crates[target]
@@ -639,13 +664,32 @@ def manifest_findings(root: Path, plan: Plan, packages: dict[str, str], files: d
                 if table != "dev-dependencies" and source.may_depend_on is not None and target not in source.may_depend_on:
                     found.append(Finding(True, manifest_path, f"`{table}.{name}` is not in `{crate}`'s may_depend_on"))
     directories = sorted(packages, key=len, reverse=True)
+    # Test-support modules, and the packages whose code names them.
+    gated: dict[str, set[str]] = defaultdict(set)
+    for path, text in files.items():
+        if path.startswith("crates/"):
+            for match in GATED.finditer(text):
+                gated[path.split("/")[1]].add(match.group(1))
     for path, text in sorted(files.items()):
         directory = next((d for d in directories if d == "" or path.startswith(d + "/")), None)
         if directory is None:
             continue
         package = packages[directory]
+        manifest = tomllib.loads((root / directory / "Cargo.toml").read_text(encoding="utf-8")) if (root / directory / "Cargo.toml").is_file() else {}
+        for provider, modules in gated.items():
+            if provider == package:
+                continue
+            ident = provider.replace("-", "_")
+            for module in modules:
+                if not re.search(rf"\b{ident}::(?:\w+::)*(?:\{{[^}}]*\b{module}\b|{module}\b)", text):
+                    continue
+                specs = [manifest.get(t, {}).get(provider) for t in ("dependencies", "dev-dependencies")]
+                if not any(isinstance(s, dict) and "test-support" in s.get("features", []) for s in specs):
+                    found.append(Finding(True, path, f"uses {provider}'s test-support module `{module}`: give {package} `{provider} = {{ workspace = true, features = [\"test-support\"] }}` under [dev-dependencies] (scripts/test_support.py does)"))
         inside = path[len(directory) + 1 :] if directory else path
         own_tests = inside.startswith("tests/")
+        if directory and re.search(rf"(?<![\w:]){LIBRARY}::", "\n".join(l for _, l in [(0, x) for x in blank(list(enumerate(text.splitlines(), 1))).splitlines()])):
+            found.append(Finding(True, path, f"names `{LIBRARY}::`, the binary's package; depend on the crate that owns the item"))
         for match in re.finditer(r"CARGO_BIN_EXE_([\w-]+)", text):
             if not own_tests:
                 found.append(Finding(True, path, f"`CARGO_BIN_EXE_{match.group(1)}` exists only for {package}'s own integration tests"))

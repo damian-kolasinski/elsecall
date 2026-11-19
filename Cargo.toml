@@ -50,60 +50,60 @@ toml_edit = "0.25.19"
 tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
-elsecall = { path = "." }
-elsecall-tuning = { path = "crates/elsecall-tuning" }
-elsecall-admission = { path = "crates/elsecall-admission" }
-elsecall-trace = { path = "crates/elsecall-trace" }
-elsecall-service-lifecycle = { path = "crates/elsecall-service-lifecycle" }
-elsecall-placement = { path = "crates/elsecall-placement" }
-elsecall-rehearsal = { path = "crates/elsecall-rehearsal" }
-elsecall-openssh-mac = { path = "crates/elsecall-openssh-mac" }
-elsecall-fleet-upgrade = { path = "crates/elsecall-fleet-upgrade" }
-elsecall-config-sync = { path = "crates/elsecall-config-sync" }
-elsecall-simulation = { path = "crates/elsecall-simulation" }
-elsecall-service-config = { path = "crates/elsecall-service-config" }
-elsecall-release-update = { path = "crates/elsecall-release-update" }
-elsecall-platform-macos = { path = "crates/elsecall-platform-macos" }
-elsecall-window = { path = "crates/elsecall-window" }
-elsecall-tools = { path = "crates/elsecall-tools" }
-elsecall-reporting = { path = "crates/elsecall-reporting" }
-elsecall-replay = { path = "crates/elsecall-replay" }
-elsecall-housekeeping = { path = "crates/elsecall-housekeeping" }
+# The workspace's own crates.
 elsecall-add-mac = { path = "crates/elsecall-add-mac" }
-elsecall-workload = { path = "crates/elsecall-workload" }
-elsecall-remote-run = { path = "crates/elsecall-remote-run" }
-elsecall-installation = { path = "crates/elsecall-installation" }
-elsecall-fleet = { path = "crates/elsecall-fleet" }
-elsecall-report-facts = { path = "crates/elsecall-report-facts" }
-elsecall-outside-pressure = { path = "crates/elsecall-outside-pressure" }
-elsecall-os-processes = { path = "crates/elsecall-os-processes" }
-elsecall-scheduling = { path = "crates/elsecall-scheduling" }
-elsecall-peer-transport = { path = "crates/elsecall-peer-transport" }
-elsecall-workload-config = { path = "crates/elsecall-workload-config" }
-elsecall-scripted-machine = { path = "crates/elsecall-scripted-machine" }
-elsecall-peer-diagnostics = { path = "crates/elsecall-peer-diagnostics" }
-elsecall-load-log = { path = "crates/elsecall-load-log" }
-elsecall-config-sync-model = { path = "crates/elsecall-config-sync-model" }
-elsecall-scheduling-model = { path = "crates/elsecall-scheduling-model" }
-elsecall-workspace = { path = "crates/elsecall-workspace" }
-elsecall-service-log = { path = "crates/elsecall-service-log" }
-elsecall-membership = { path = "crates/elsecall-membership" }
-elsecall-machine = { path = "crates/elsecall-machine" }
-elsecall-local-client = { path = "crates/elsecall-local-client" }
-elsecall-api-response = { path = "crates/elsecall-api-response" }
+elsecall-admission = { path = "crates/elsecall-admission" }
 elsecall-agent-skill = { path = "crates/elsecall-agent-skill" }
-elsecall-wire = { path = "crates/elsecall-wire" }
-elsecall-tailnet = { path = "crates/elsecall-tailnet" }
-elsecall-local-state = { path = "crates/elsecall-local-state" }
-elsecall-guidance = { path = "crates/elsecall-guidance" }
+elsecall-api-response = { path = "crates/elsecall-api-response" }
 elsecall-build-identity = { path = "crates/elsecall-build-identity" }
-elsecall-sqlite-retention = { path = "crates/elsecall-sqlite-retention" }
-elsecall-secure-channel = { path = "crates/elsecall-secure-channel" }
-elsecall-run-admission = { path = "crates/elsecall-run-admission" }
-elsecall-rehearsal-identity = { path = "crates/elsecall-rehearsal-identity" }
-elsecall-process = { path = "crates/elsecall-process" }
-elsecall-labels = { path = "crates/elsecall-labels" }
+elsecall-config-sync = { path = "crates/elsecall-config-sync" }
+elsecall-config-sync-model = { path = "crates/elsecall-config-sync-model" }
 elsecall-failure = { path = "crates/elsecall-failure" }
+elsecall-fleet = { path = "crates/elsecall-fleet" }
+elsecall-fleet-upgrade = { path = "crates/elsecall-fleet-upgrade" }
+elsecall-guidance = { path = "crates/elsecall-guidance" }
+elsecall-housekeeping = { path = "crates/elsecall-housekeeping" }
+elsecall-installation = { path = "crates/elsecall-installation" }
+elsecall-labels = { path = "crates/elsecall-labels" }
+elsecall-load-log = { path = "crates/elsecall-load-log" }
+elsecall-local-client = { path = "crates/elsecall-local-client" }
+elsecall-local-state = { path = "crates/elsecall-local-state" }
+elsecall-machine = { path = "crates/elsecall-machine" }
+elsecall-membership = { path = "crates/elsecall-membership" }
+elsecall-openssh-mac = { path = "crates/elsecall-openssh-mac" }
+elsecall-os-processes = { path = "crates/elsecall-os-processes" }
+elsecall-outside-pressure = { path = "crates/elsecall-outside-pressure" }
+elsecall-peer-diagnostics = { path = "crates/elsecall-peer-diagnostics" }
+elsecall-peer-transport = { path = "crates/elsecall-peer-transport" }
+elsecall-placement = { path = "crates/elsecall-placement" }
+elsecall-platform-macos = { path = "crates/elsecall-platform-macos" }
+elsecall-process = { path = "crates/elsecall-process" }
+elsecall-rehearsal = { path = "crates/elsecall-rehearsal" }
+elsecall-rehearsal-identity = { path = "crates/elsecall-rehearsal-identity" }
+elsecall-release-update = { path = "crates/elsecall-release-update" }
+elsecall-remote-run = { path = "crates/elsecall-remote-run" }
+elsecall-replay = { path = "crates/elsecall-replay" }
+elsecall-report-facts = { path = "crates/elsecall-report-facts" }
+elsecall-reporting = { path = "crates/elsecall-reporting" }
+elsecall-run-admission = { path = "crates/elsecall-run-admission" }
+elsecall-scheduling = { path = "crates/elsecall-scheduling" }
+elsecall-scheduling-model = { path = "crates/elsecall-scheduling-model" }
+elsecall-scripted-machine = { path = "crates/elsecall-scripted-machine" }
+elsecall-secure-channel = { path = "crates/elsecall-secure-channel" }
+elsecall-service-config = { path = "crates/elsecall-service-config" }
+elsecall-service-lifecycle = { path = "crates/elsecall-service-lifecycle" }
+elsecall-service-log = { path = "crates/elsecall-service-log" }
+elsecall-simulation = { path = "crates/elsecall-simulation" }
+elsecall-sqlite-retention = { path = "crates/elsecall-sqlite-retention" }
+elsecall-tailnet = { path = "crates/elsecall-tailnet" }
+elsecall-tools = { path = "crates/elsecall-tools" }
+elsecall-trace = { path = "crates/elsecall-trace" }
+elsecall-tuning = { path = "crates/elsecall-tuning" }
+elsecall-window = { path = "crates/elsecall-window" }
+elsecall-wire = { path = "crates/elsecall-wire" }
+elsecall-workload = { path = "crates/elsecall-workload" }
+elsecall-workload-config = { path = "crates/elsecall-workload-config" }
+elsecall-workspace = { path = "crates/elsecall-workspace" }
 
 # Every crate inherits these with `[lints] workspace = true`.
 [workspace.lints.rust]
@@ -220,9 +220,6 @@ x25519-dalek.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
-elsecall-workload = { workspace = true, features = ["test-support"] }
-elsecall-outside-pressure = { workspace = true, features = ["test-support"] }
-elsecall-scheduling = { workspace = true, features = ["test-support"] }
 elsecall-machine = { workspace = true, features = ["test-support"] }
 
 [profile.release]

@@ -510,7 +510,7 @@ def register(root: Path, move: Move) -> None:
     entry = f'{move.package} = {{ path = "{move.directory}" }}\n'
     if entry in text:
         return
-    anchor = 'elsecall = { path = "." }\n'
+    anchor = "# The workspace's own crates.\n"
     assert anchor in text
     text = text.replace(anchor, anchor + entry, 1)
     manifest.write_text(text)
