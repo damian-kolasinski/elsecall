@@ -217,11 +217,11 @@ def main(argv: list[str]) -> int:
         for path in sorted(source.rglob("*.rs")):
             relative = path.relative_to(source)
             if module:
-                target = staging / (f"{module}.rs" if relative.as_posix() == "lib.rs" else f"{module}/{relative.as_posix()}")
+                target = staging / "src" / (f"{module}.rs" if relative.as_posix() == "lib.rs" else f"{module}/{relative.as_posix()}")
             else:
                 if relative.as_posix() == "lib.rs":
                     continue
-                target = staging / relative
+                target = staging / "src" / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             git("mv", str(path.relative_to(ROOT)), str(target.relative_to(ROOT)))
         if module:
