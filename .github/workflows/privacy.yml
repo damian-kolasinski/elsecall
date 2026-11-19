@@ -59,10 +59,13 @@ jobs:
           TITLE: ${{ github.event.pull_request.title }}
           BODY: ${{ github.event.pull_request.body }}
         run: printf '%s\n\n%s\n' "$TITLE" "$BODY" | python3 "$RUNNER_TEMP/privacy_scan.py" $REQUIRE_TERMS files --name "pull request" -
+  # The privacy guards' own tests: the scanner and the mg wrapper that runs it.
+  # The rest of scripts/ is tested in Check, with the tools mise installs.
   tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - run: python3 -m unittest discover -s scripts -p "test_*.py"
+      - run: python3 -m unittest test_privacy_scan test_mg_guard
+        working-directory: scripts

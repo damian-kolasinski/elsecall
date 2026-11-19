@@ -2481,11 +2481,15 @@ Documentation and CI files nothing names select no tests. A path no rule covers
 runs everything. It is a fast loop, not a replacement: `mise run check` must pass
 before work is submitted.
 
-That local run is the gate for a change: pull requests get no full CI run. CI runs
-Check (`.github/workflows/check.yml`: formatting, Clippy and the Rust tests, doctests
-included, but not the Python suites) on each change that lands on `main`,
-testing the newest commit when several land during one run, and on a release's tag,
-which publishes nothing until that run passed. While Check fails on `main`, one
+That local run is the gate for a change: pull requests get no full CI run, only the
+privacy scan, the privacy guards' own tests and the module shape check, in seconds. CI runs the same `mise run check`
+(`.github/workflows/check.yml`, with compiled dependencies cached from `main`) on
+each change that lands on `main`, testing the newest commit when several land during
+one run, and on a release's tag, which publishes nothing until that run passed.
+`gh workflow run check.yml --ref BRANCH` runs it on a branch, to try a change to the
+check itself before it lands. A packaging change that lands on `main` also builds,
+smoke-tests and installs the archive (`.github/workflows/release.yml`), so a
+packaging mistake shows before the next release. While Check fails on `main`, one
 issue labelled `main-red` stays open (`.github/workflows/main-status.yml`): each
 failed run comments on it, and the next passing run closes it.
 

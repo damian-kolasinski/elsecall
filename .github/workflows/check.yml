@@ -1,42 +1,54 @@
 name: Check
-# fmt, Clippy and the Rust tests (cargo test, doctests included), after a change
-# lands on main and on a release's tag. Pull
-# requests don't run it: whoever submits a change runs `mise run check` first
-# (AGENTS.md), and a mistake that lands on main is cheap to fix forward. A
+# `mise run check`, the same check whoever submits a change runs first
+# (AGENTS.md), after a change lands on main and on a release's tag. Pull
+# requests don't run it: a mistake that lands on main is cheap to fix forward. A
 # release is not, so it calls this workflow on its tag and publishes only after
 # it passed there. main-status.yml turns main's results into the main-red issue.
+# Run it by hand on a branch (`gh workflow run check.yml --ref BRANCH`) to try a
+# change to the check itself before it lands.
 on:
   push:
     branches: [main]
   workflow_call:
+  workflow_dispatch:
 concurrency:
   # main tests its newest commit: a run in progress finishes, and of the commits
   # that land meanwhile only the newest waits for it, so a busy day can't keep
   # cancelling runs before any finishes. A release's call is grouped under the
   # calling workflow and its tag, apart from main's runs and from the caller's
-  # own group (group names ignore case, hence the `check-` prefix).
-  group: check-${{ github.workflow }}-${{ github.ref }}
+  # own group (group names ignore case, hence the `check-` prefix). A run by hand
+  # queues apart, so it never takes the place of a push run on main, whose
+  # result main-status.yml reports.
+  group: check-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
 permissions:
   contents: read
 env:
-  # Plain Cargo, not mbx's build cache: a runner starts with an empty one.
+  # Plain Cargo, not mbx's build cache: the Rust cache below keeps a runner's
+  # dependencies between runs instead.
   MBX_DISABLE: "1"
 jobs:
   macos:
     runs-on: macos-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # mise.toml's tools: the toolchain, and the packslip CLI the release tests sign with.
+      # mise.toml's tools: the toolchain, cargo-nextest, and the packslip CLI
+      # the release and local-release tests sign with.
       - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
         with:
           version: 2026.10.11
           cache: false
           github_token: ${{ github.token }}
-      - run: cargo fmt --all -- --check
-      - run: cargo clippy --workspace --locked --all-targets -- -D warnings
-      - name: Lint and unit-test builds that follow a local release channel
-        run: scripts/check-local-channel.sh
-      - run: cargo test --workspace --locked
+      # Compiled dependencies, keyed by the toolchain and Cargo.lock. Only main
+      # saves: a release tag or a run by hand reads main's cache and never
+      # replaces it with its own. A failed run saves too, so a red main doesn't
+      # build from scratch on every commit until it is green again.
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-on-failure: true
+      # Admission is skipped on the runner, which has no Elsecall installed.
+      - run: mise run check

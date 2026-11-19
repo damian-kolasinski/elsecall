@@ -1,21 +1,29 @@
 name: Release
 
+# A tag releases. A change to packaging that lands on main builds, smoke-tests
+# and installs the archive without signing or publishing, so a packaging
+# mistake shows before the next release instead of during it. Pull requests
+# don't run it, for the same reason they don't run Check.
 on:
   push:
     tags: ["v*.*.*"]
-  pull_request:
+    branches: [main]
+    # Tag pushes ignore path filters, so every tag releases.
     paths:
       - .github/workflows/release.yml
       # A release calls Check as its gate.
       - .github/workflows/check.yml
       - distribution/**
       - mise.toml
+      - rust-toolchain.toml
       - Cargo.toml
       - Cargo.lock
 
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # A newer packaging change on main supersedes an older one's build; a release
+  # always finishes.
+  cancel-in-progress: ${{ github.ref_type == 'branch' }}
 
 permissions:
   contents: read
@@ -57,8 +65,8 @@ jobs:
       contents: read
     uses: ./.github/workflows/check.yml
 
-  # Packages, smoke-tests and installs the archive. On a pull request that
-  # touches packaging it runs alone; on a tag, beside the suite in tested.
+  # Packages, smoke-tests and installs the archive. After a packaging change
+  # lands on main it runs alone; on a tag, beside the suite in tested.
   build:
     needs: version
     # Ship only the native target this job runs. Elsecall supports macOS.
