@@ -67,7 +67,7 @@ fn finite_json(value: &serde_json::Value, depth: usize) -> bool {
     }
 }
 
-pub fn trace(t: &Trace) -> Result<()> {
+pub(super) fn trace(t: &Trace) -> Result<()> {
     // Check the major before considering any optional model or historical data.
     if t.trace_version != VERSION {
         return Err(Failure::new(

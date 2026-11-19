@@ -8,7 +8,7 @@ use std::num::NonZeroU32;
 
 /// A point-in-time fleet, as the window lists it.
 #[derive(Clone, Debug, PartialEq)]
-pub struct FleetSnapshot {
+pub(crate) struct FleetSnapshot {
     /// False when this machine has not enrolled in a fleet.
     pub enrolled: bool,
     pub members: Vec<MemberRow>,
@@ -17,7 +17,7 @@ pub struct FleetSnapshot {
 
 impl FleetSnapshot {
     /// Whether this Mac is the master, the one that adds Macs.
-    pub fn this_is_master(&self) -> bool {
+    pub(crate) fn this_is_master(&self) -> bool {
         self.standing == Standing::Rostered
             && self
                 .members
@@ -29,7 +29,7 @@ impl FleetSnapshot {
 /// Whether this machine has a roster. Without one it is not even the master of its
 /// own fleet of one, and an empty member list says nothing.
 #[derive(Clone, Debug, PartialEq)]
-pub enum Standing {
+pub(crate) enum Standing {
     Rostered,
     /// Tailscale, where Elsecall finds and reaches members, is not running here.
     OffTailnet {
@@ -44,7 +44,7 @@ pub enum Standing {
 
 /// One member row.
 #[derive(Clone, Debug, PartialEq)]
-pub struct MemberRow {
+pub(crate) struct MemberRow {
     pub name: String,
     /// This Mac's own row.
     pub this_member: bool,
@@ -63,7 +63,7 @@ pub struct MemberRow {
 /// only when they run the same build, so any other answer leaves the member out of
 /// placement until `elsecall fleet upgrade` brings it to the master's build.
 #[derive(Clone, Debug, PartialEq)]
-pub enum Release {
+pub(crate) enum Release {
     /// The master's build.
     Matching { version: String },
     /// An older release than the master's.
@@ -78,7 +78,7 @@ pub enum Release {
 }
 impl Release {
     /// Whether the member runs another build than the master.
-    pub fn differs(&self) -> bool {
+    pub(crate) fn differs(&self) -> bool {
         matches!(
             self,
             Release::Behind { .. } | Release::Ahead { .. } | Release::OtherBuild { .. }
@@ -86,7 +86,11 @@ impl Release {
     }
 
     /// How a member reporting `version` with this skew flag compares with `master`.
-    pub fn compare(version: Option<String>, skew: Option<bool>, master: Option<&str>) -> Self {
+    pub(crate) fn compare(
+        version: Option<String>,
+        skew: Option<bool>,
+        master: Option<&str>,
+    ) -> Self {
         let Some(version) = version else {
             return Release::Unknown { version: None };
         };
@@ -108,7 +112,7 @@ impl Release {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Role {
+pub(crate) enum Role {
     Master,
     Member,
 }
@@ -118,27 +122,27 @@ pub enum Role {
 /// `GET /v1/fleet` sends an error object and no timestamp for an unreachable
 /// member, so this stays a unit variant until the payload names a time.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Reachability {
+pub(crate) enum Reachability {
     Reachable,
     Unreachable,
 }
 
 /// Whether outside pressure holds the member's admission gate closed.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Gate {
+pub(crate) enum Gate {
     Open,
     Blocked { leading_process: Option<String> },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct MemoryUse {
+pub(crate) struct MemoryUse {
     pub used_bytes: u64,
     pub total_bytes: u64,
 }
 
 /// Load averages over the last 1, 5 and 15 minutes. Always finite and nonnegative.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct LoadAverages {
+pub(crate) struct LoadAverages {
     pub one: f64,
     pub five: f64,
     pub fifteen: f64,
@@ -146,14 +150,14 @@ pub struct LoadAverages {
 
 impl LoadAverages {
     /// Recent runnable work per logical CPU.
-    pub fn demand(self, logical_cpus: NonZeroU32) -> f64 {
+    pub(crate) fn demand(self, logical_cpus: NonZeroU32) -> f64 {
         self.one / f64::from(logical_cpus.get())
     }
 }
 
 /// Why a fleet read failed. The window shows `message` and `hint` either way.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum SourceFailure {
+pub(crate) enum SourceFailure {
     /// The local service socket could not be reached.
     ServiceUnavailable { message: String, hint: String },
     /// The service answered with an error, or the body could not be read.
@@ -161,13 +165,13 @@ pub enum SourceFailure {
 }
 
 impl SourceFailure {
-    pub fn message(&self) -> &str {
+    pub(crate) fn message(&self) -> &str {
         match self {
             Self::ServiceUnavailable { message, .. } | Self::Rejected { message, .. } => message,
         }
     }
 
-    pub fn hint(&self) -> &str {
+    pub(crate) fn hint(&self) -> &str {
         match self {
             Self::ServiceUnavailable { hint, .. } | Self::Rejected { hint, .. } => hint,
         }
@@ -181,7 +185,7 @@ impl fmt::Display for SourceFailure {
 }
 
 /// Where the window reads the fleet. The UI thread never calls this.
-pub trait FleetSource: Send + Sync {
+pub(crate) trait FleetSource: Send + Sync {
     fn fleet(&self) -> Result<FleetSnapshot, SourceFailure>;
 }
 

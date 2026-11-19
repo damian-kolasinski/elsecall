@@ -10,15 +10,15 @@ use rune::Latest;
 use crate::fleet_source::{FleetSnapshot, FleetSource, SourceFailure};
 
 /// Gap after each answer before the next read. A slow fleet read is not followed immediately by another.
-pub const INTERVAL: Duration = Duration::from_secs(2);
+pub(crate) const INTERVAL: Duration = Duration::from_secs(2);
 
-pub struct Update {
+pub(crate) struct Update {
     pub result: Result<FleetSnapshot, SourceFailure>,
     /// Local time of day, `HH:MM:SS`, when this read finished.
     pub refreshed_at: String,
 }
 
-pub fn start(feed: Arc<Latest<Update>>, source: Arc<dyn FleetSource>) {
+pub(crate) fn start(feed: Arc<Latest<Update>>, source: Arc<dyn FleetSource>) {
     let _detached = thread::Builder::new()
         .name("elsecall-ui-fleet".into())
         .spawn(move || poll_loop(feed, source))

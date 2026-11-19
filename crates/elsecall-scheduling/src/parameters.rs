@@ -601,10 +601,15 @@ mod text {
     use serde::{Deserialize, Deserializer, Serializer};
     use std::time::Duration;
 
-    pub fn serialize<S: Serializer>(value: &Duration, serializer: S) -> Result<S::Ok, S::Error> {
+    pub(super) fn serialize<S: Serializer>(
+        value: &Duration,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&humantime::format_duration(*value).to_string())
     }
-    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Duration, D::Error> {
+    pub(super) fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Duration, D::Error> {
         let text = String::deserialize(deserializer)?;
         super::duration(&text).ok_or_else(|| serde::de::Error::custom("expected a duration"))
     }

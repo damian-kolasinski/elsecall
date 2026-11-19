@@ -26,18 +26,18 @@ pub(super) struct Window {
     drained: AtomicBool,
 }
 impl Window {
-    pub fn acknowledge(&self, bytes: u64) {
+    pub(super) fn acknowledge(&self, bytes: u64) {
         self.unacknowledged.fetch_sub(
             bytes.min(self.unacknowledged.load(Ordering::SeqCst)),
             Ordering::SeqCst,
         );
         self.acknowledged.notify_one();
     }
-    pub fn exited(&self) {
+    pub(super) fn exited(&self) {
         self.exited.store(true, Ordering::SeqCst);
         self.exit.notify_one();
     }
-    pub fn drained(&self) -> bool {
+    pub(super) fn drained(&self) -> bool {
         self.drained.load(Ordering::SeqCst)
     }
 }

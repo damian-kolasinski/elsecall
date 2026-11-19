@@ -7,16 +7,16 @@ use std::{sync::Mutex, time::Duration};
 use tokio::time::Instant;
 
 /// How long learned ratios are used before they are learned again.
-pub const KEEP_FOR: Duration = Duration::from_secs(60);
+pub(super) const KEEP_FOR: Duration = Duration::from_secs(60);
 
 #[derive(Default)]
-pub struct RatioCache {
+pub(super) struct RatioCache {
     kept: Mutex<Option<(Instant, SpeedRatios)>>,
 }
 
 impl RatioCache {
     /// The ratios learned within [`KEEP_FOR`] before `now`, else `learn`'s.
-    pub fn get(&self, now: Instant, learn: impl FnOnce() -> SpeedRatios) -> SpeedRatios {
+    pub(super) fn get(&self, now: Instant, learn: impl FnOnce() -> SpeedRatios) -> SpeedRatios {
         let mut kept = self.kept.lock().unwrap_or_else(|e| e.into_inner());
         match &*kept {
             Some((at, ratios)) if now.saturating_duration_since(*at) < KEEP_FOR => ratios.clone(),

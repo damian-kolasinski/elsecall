@@ -10,7 +10,7 @@ fn literal<T: serde::Serialize>(v: &T) -> String {
         .expect("setting serializes")
         .to_string()
 }
-pub fn render(trace: &Trace, settings: &Settings) -> Result<Value> {
+pub(super) fn render(trace: &Trace, settings: &Settings) -> Result<Value> {
     let mut effective = Settings::new();
     for (key, value) in settings {
         let single = Settings::from([(key.clone(), value.clone())]);

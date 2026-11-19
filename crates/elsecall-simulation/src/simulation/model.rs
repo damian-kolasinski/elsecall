@@ -10,14 +10,14 @@ use std::collections::BTreeSet;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum Envelope {
+pub(super) enum Envelope {
     Lower,
     Point,
     Upper,
 }
 
 /// An unsupported curve is usable for exploration, never certification.
-pub fn contention(
+pub(super) fn contention(
     trace: &Trace,
     member: &str,
     name: Option<&str>,
@@ -54,7 +54,12 @@ pub fn contention(
     )
 }
 
-pub fn demand(trace: &Trace, request: &Request, member: &str, envelope: Envelope) -> (f64, bool) {
+pub(super) fn demand(
+    trace: &Trace,
+    request: &Request,
+    member: &str,
+    envelope: Envelope,
+) -> (f64, bool) {
     if let Some(cores) = trace
         .rehearsal
         .as_ref()
@@ -79,10 +84,10 @@ pub fn demand(trace: &Trace, request: &Request, member: &str, envelope: Envelope
     }
 }
 
-pub fn speed(trace: &Trace, member: &str, now: u64) -> Option<f64> {
+pub(super) fn speed(trace: &Trace, member: &str, now: u64) -> Option<f64> {
     bucket(trace, member, now).and_then(|b| b.speed_max.or(b.speed_min))
 }
-pub fn bucket<'a>(
+pub(super) fn bucket<'a>(
     trace: &'a Trace,
     member: &str,
     now: u64,
@@ -96,7 +101,7 @@ pub fn bucket<'a>(
 
 /// Fixed exogenous residual, computed once from the observed execution timeline.
 /// It is an inferred background, not independent CPU attribution.
-pub fn outside(trace: &Trace, member: &str, now: u64, envelope: Envelope) -> Option<f64> {
+pub(super) fn outside(trace: &Trace, member: &str, now: u64, envelope: Envelope) -> Option<f64> {
     let b = bucket(trace, member, now)?;
     let at = b.at.millis();
     // Rehearsal buckets contain only their clipped window exposure. Ordinary
@@ -301,7 +306,7 @@ fn completed_reference(trace: &Trace, request: &Request) -> Option<(f64, bool)> 
     Some((work * ms as f64 / (end - start) as f64, known))
 }
 
-pub fn reference(trace: &Trace, request: &Request) -> Option<(f64, bool)> {
+pub(super) fn reference(trace: &Trace, request: &Request) -> Option<(f64, bool)> {
     if let Some(ms) = trace
         .rehearsal
         .as_ref()
@@ -368,7 +373,7 @@ pub fn freeze_reference(
         None => elsecall_workload::trace::ExecutionReference::Unknown,
     }
 }
-pub fn reference_speed(trace: &Trace, request: &Request) -> Option<f64> {
+pub(super) fn reference_speed(trace: &Trace, request: &Request) -> Option<f64> {
     if let Some(reference) = &request.execution_reference {
         return match reference {
             elsecall_workload::trace::ExecutionReference::Known { member_speed, .. } => {
@@ -399,7 +404,7 @@ pub use elsecall_workload::trace::structural_members;
 
 /// Frozen admission capability and explicit transport/workspace availability.
 /// Occupancy, saturation and hold/sync estimates do not constrain a free ideal.
-pub fn eligible_members(trace: &Trace, request: &Request) -> Vec<String> {
+pub(super) fn eligible_members(trace: &Trace, request: &Request) -> Vec<String> {
     structural_members(trace, request)
         .into_iter()
         .filter(|name| {
@@ -433,10 +438,10 @@ pub fn eligible_members(trace: &Trace, request: &Request) -> Vec<String> {
 
 /// Uncontended runtime on the fastest structurally eligible member, frozen
 /// from input evidence. Occupancy/wait and candidate settings never change it.
-pub fn ideal(trace: &Trace, request: &Request) -> Option<f64> {
+pub(super) fn ideal(trace: &Trace, request: &Request) -> Option<f64> {
     ideal_from_reference(trace, request, reference(trace, request))
 }
-pub fn ideal_from_reference(
+pub(super) fn ideal_from_reference(
     trace: &Trace,
     request: &Request,
     reference: Option<(f64, bool)>,
@@ -508,17 +513,20 @@ pub fn ideal_from_reference(
     best.filter(|v| v.is_finite() && *v > 0.0)
 }
 
-pub fn original_kind(trace: &Trace, request: &Request) -> elsecall_scheduling_model::request::Kind {
+pub(super) fn original_kind(
+    trace: &Trace,
+    request: &Request,
+) -> elsecall_scheduling_model::request::Kind {
     trace
         .rehearsal
         .as_ref()
         .map_or(request.fact.kind, |r| r.original_kind(request))
 }
 
-pub fn cold(warmth: Option<Warmth>) -> bool {
+pub(super) fn cold(warmth: Option<Warmth>) -> bool {
     matches!(warmth, Some(Warmth::Cold | Warmth::ColdWithHistory))
 }
-pub fn terminal(r: &Request) -> Option<u64> {
+pub(super) fn terminal(r: &Request) -> Option<u64> {
     r.terminal_at().map(Timestamp::millis)
 }
 

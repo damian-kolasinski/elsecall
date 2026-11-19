@@ -29,7 +29,7 @@ fn missing(id: &str, field: &str) -> Failure {
 }
 
 /// Recorded admission precedes sync; ResourceUse.started_at is command start.
-pub fn admitted_at(request: &Request) -> Option<Timestamp> {
+pub(super) fn admitted_at(request: &Request) -> Option<Timestamp> {
     request
         .fact
         .waited_ms
@@ -45,7 +45,7 @@ pub fn admitted_at(request: &Request) -> Option<Timestamp> {
         })
 }
 
-pub fn ended_at(request: &Request) -> Option<Timestamp> {
+pub(super) fn ended_at(request: &Request) -> Option<Timestamp> {
     request
         .fact
         .resources
@@ -64,14 +64,14 @@ pub fn ended_at(request: &Request) -> Option<Timestamp> {
         })
 }
 
-pub fn is_active(request: &Request, at: Timestamp) -> bool {
+pub(super) fn is_active(request: &Request, at: Timestamp) -> bool {
     request.fact.requested_at < at
         && request.fact.member.is_some()
         && admitted_at(request).is_some_and(|started| started <= at)
         && ended_at(request).is_none_or(|ended| ended > at)
 }
 
-pub fn restore(
+pub(super) fn restore(
     trace: &Trace,
     at: Timestamp,
     schedulers: &BTreeMap<String, Arc<Scheduler>>,

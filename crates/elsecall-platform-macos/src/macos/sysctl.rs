@@ -3,7 +3,7 @@ use std::ffi::CStr;
 
 /// Reads a 32- or 64-bit integer sysctl. `None` when the name does not exist on
 /// this machine or has another type.
-pub fn integer(name: &CStr) -> Option<i64> {
+pub(super) fn integer(name: &CStr) -> Option<i64> {
     let mut value = [0u8; 8];
     let mut size = value.len();
     // SAFETY: the name is NUL-terminated, the buffer and its size are valid and

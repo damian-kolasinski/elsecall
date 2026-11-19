@@ -35,7 +35,7 @@ pub(super) struct Fit {
 }
 
 impl Fit {
-    pub fn between(target: &Shape, observed: &Shape) -> Self {
+    pub(super) fn between(target: &Shape, observed: &Shape) -> Self {
         let deviations = BTreeMap::from([
             (
                 "admitted_capacity_share",
@@ -77,7 +77,7 @@ impl Fit {
         }
     }
 
-    pub fn matched(&self) -> bool {
+    pub(super) fn matched(&self) -> bool {
         self.distance == 0.0
     }
 }

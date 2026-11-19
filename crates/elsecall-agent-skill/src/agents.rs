@@ -10,7 +10,7 @@ pub enum Agent {
     Opencode,
 }
 
-pub const ALL: [Agent; 3] = [Agent::Claude, Agent::Codex, Agent::Opencode];
+pub(crate) const ALL: [Agent; 3] = [Agent::Claude, Agent::Codex, Agent::Opencode];
 
 impl Agent {
     pub fn label(self) -> &'static str {

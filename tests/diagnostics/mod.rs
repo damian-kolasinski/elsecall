@@ -54,7 +54,7 @@ thread_local! {
 }
 
 /// Removes its log from the report when dropped.
-pub struct Log(u64);
+pub(crate) struct Log(u64);
 impl Drop for Log {
     fn drop(&mut self) {
         let id = self.0;
@@ -64,7 +64,7 @@ impl Drop for Log {
 
 /// Prints `paths`, in order, under `label` if this thread's test fails while
 /// the returned guard lives.
-pub fn register(label: impl Into<String>, paths: Vec<PathBuf>) -> Log {
+pub(crate) fn register(label: impl Into<String>, paths: Vec<PathBuf>) -> Log {
     // Process-wide, so a guard dropped on another thread removes nothing else.
     static NEXT: AtomicU64 = AtomicU64::new(0);
     install();
@@ -81,13 +81,13 @@ pub fn register(label: impl Into<String>, paths: Vec<PathBuf>) -> Log {
 
 /// Records something the test did, with the time since the thread's first
 /// note or registration. An identical consecutive note only counts a repeat.
-pub fn note(text: String) {
+pub(crate) fn note(text: String) {
     record(text, None);
 }
 
 /// Records a command that took `took`. Consecutive notes with the same text,
 /// such as a polling loop's, collapse into one line with their duration range.
-pub fn note_timed(text: String, took: Duration) {
+pub(crate) fn note_timed(text: String, took: Duration) {
     record(text, Some(took));
 }
 

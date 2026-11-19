@@ -7,6 +7,9 @@ description = "Native window listing Elsecall fleet members"
 license.workspace = true
 publish = false
 
+[lints]
+workspace = true
+
 [dependencies]
 elsecall-add-mac.workspace = true
 elsecall-build-identity.workspace = true

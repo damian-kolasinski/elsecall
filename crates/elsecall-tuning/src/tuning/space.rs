@@ -6,15 +6,15 @@ use elsecall_scheduling_model::capacity::Cores;
 use elsecall_simulation::simulation::CandidateSettings;
 use elsecall_workload::trace::Trace;
 use std::collections::{BTreeMap, BTreeSet};
-pub type Settings = BTreeMap<String, String>;
+pub(super) type Settings = BTreeMap<String, String>;
 pub type Space = BTreeMap<String, Vec<String>>;
-pub fn arguments(settings: &Settings) -> Vec<String> {
+pub(super) fn arguments(settings: &Settings) -> Vec<String> {
     settings.iter().map(|(k, v)| format!("{k}={v}")).collect()
 }
-pub fn validate(trace: &Trace, settings: &Settings) -> Result<()> {
+pub(super) fn validate(trace: &Trace, settings: &Settings) -> Result<()> {
     CandidateSettings::parse(trace, &arguments(settings)).map(|_| ())
 }
-pub fn check(trace: &Trace, space: &Space) -> Result<()> {
+pub(super) fn check(trace: &Trace, space: &Space) -> Result<()> {
     if space.is_empty() || space.len() > 128 || space.values().any(|v| v.is_empty() || v.len() > 32)
     {
         return Err(super::invalid(
@@ -40,7 +40,7 @@ pub fn check(trace: &Trace, space: &Space) -> Result<()> {
     }
     Ok(())
 }
-pub fn defaults(trace: &Trace) -> Space {
+pub(super) fn defaults(trace: &Trace) -> Space {
     let mut space = Space::new();
     for (key, values) in [
         ("placement.keep_local_margin", vec!["0", "0.1", "0.25"]),
@@ -123,7 +123,7 @@ pub fn defaults(trace: &Trace) -> Space {
 
 /// Count effective changes, rather than spelling-equivalent explicit overrides.
 /// Historical heterogeneity is retained: an override changing any snapshot counts.
-pub fn change_count(trace: &Trace, settings: &Settings) -> Result<usize> {
+pub(super) fn change_count(trace: &Trace, settings: &Settings) -> Result<usize> {
     let mut count = 0;
     let combined = CandidateSettings::parse(trace, &arguments(settings))?;
     for (key, value) in settings {

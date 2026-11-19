@@ -4,7 +4,7 @@ use std::{ffi::OsStr, process::Command};
 
 /// Preserve the toolchain and OS environment, but remove every inherited Elsecall
 /// control before a fixture adds its own. Unknown future controls are covered too.
-pub fn command(program: impl AsRef<OsStr>) -> Command {
+pub(crate) fn command(program: impl AsRef<OsStr>) -> Command {
     let mut command = Command::new(program);
     command.env("TOKIO_WORKER_THREADS", "2");
     for (name, _) in std::env::vars_os() {
@@ -15,17 +15,17 @@ pub fn command(program: impl AsRef<OsStr>) -> Command {
     command
 }
 
-pub fn async_command(program: impl AsRef<OsStr>) -> tokio::process::Command {
+pub(crate) fn async_command(program: impl AsRef<OsStr>) -> tokio::process::Command {
     command(program).into()
 }
 
 /// A scheduling allowance, not an expectation about how long an operation takes.
 /// Poll the observable condition and fail with diagnostics when it never happens.
-pub const WAIT: std::time::Duration = std::time::Duration::from_secs(120);
+pub(crate) const WAIT: std::time::Duration = std::time::Duration::from_secs(120);
 
 /// Install fixture policy at the same personal boundary real CLI calls read.
 /// `directory` scopes a complete policy; `None` supplies global defaults.
-pub fn workload_policy(
+pub(crate) fn workload_policy(
     home: &std::path::Path,
     directory: Option<&std::path::Path>,
     settings: &str,

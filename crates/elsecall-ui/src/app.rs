@@ -80,7 +80,7 @@ pub(crate) enum Phase {
     Ready(FleetSnapshot),
 }
 
-pub struct AppState {
+pub(crate) struct AppState {
     pub(crate) configuration: ConfigurationView,
     phase: Phase,
     refreshed: Option<String>,
@@ -402,7 +402,7 @@ impl AppState {
     }
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let mut args = std::env::args().skip(1).collect::<Vec<_>>();
     let mut ready = if args
         .first()

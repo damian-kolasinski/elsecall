@@ -5,7 +5,7 @@
 use std::path::{Path, PathBuf};
 
 /// The installation this window belongs to.
-pub trait Bundle: Send + Sync {
+pub(crate) trait Bundle: Send + Sync {
     /// Whether both the app this window runs from and the CLI link are gone. An
     /// app moved elsewhere by the user leaves the CLI link in place.
     fn uninstalled(&self) -> bool;
@@ -14,13 +14,13 @@ pub trait Bundle: Send + Sync {
 
 /// The running executable's app and the installation's CLI link, captured at
 /// startup while both still exist.
-pub struct RunningBundle {
+pub(crate) struct RunningBundle {
     app: Option<PathBuf>,
     cli: Option<PathBuf>,
 }
 
 impl RunningBundle {
-    pub fn current() -> Self {
+    pub(crate) fn current() -> Self {
         Self {
             app: std::env::current_exe().ok().as_deref().and_then(app_of),
             cli: elsecall_local_state::paths::Paths::current()

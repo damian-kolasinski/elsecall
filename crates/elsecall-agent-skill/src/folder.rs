@@ -9,12 +9,12 @@ use serde::Serialize;
 use std::{io, path::Path};
 
 /// The skill's name, and its folder's name in an agent's skills folder.
-pub const NAME: &str = "elsecall";
+pub(crate) const NAME: &str = "elsecall";
 const FILE: &str = "SKILL.md";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum State {
+pub(crate) enum State {
     /// No skill: no folder, or one holding only hidden files such as `.DS_Store`.
     Missing,
     /// This build's stub, or a newer build's.
@@ -30,7 +30,7 @@ pub enum State {
 }
 
 impl State {
-    pub fn ours(self) -> bool {
+    pub(crate) fn ours(self) -> bool {
         matches!(self, State::Current | State::Outdated | State::Exported)
     }
 }
@@ -47,7 +47,7 @@ fn hidden(name: &std::ffi::OsStr) -> bool {
     name.as_encoded_bytes().starts_with(b".")
 }
 
-pub fn state(folder: &Path) -> io::Result<State> {
+pub(crate) fn state(folder: &Path) -> io::Result<State> {
     if is_link(folder)? || is_link(&folder.join(FILE))? {
         return Ok(State::Linked);
     }
@@ -105,7 +105,7 @@ fn junk(name: &std::ffi::OsStr) -> bool {
 
 /// Writes the stub as the folder's `SKILL.md`, replacing that file whole and
 /// leaving any other file in the folder.
-pub fn write_stub(folder: &Path) -> io::Result<()> {
+pub(crate) fn write_stub(folder: &Path) -> io::Result<()> {
     std::fs::create_dir_all(folder)?;
     let staged = folder.join(format!("{STAGED}-{}", std::process::id()));
     let written =
@@ -120,7 +120,7 @@ pub fn write_stub(folder: &Path) -> io::Result<()> {
 /// over it, so an agent never reads half a folder. What Elsecall wrote in the
 /// old folder goes; anything else in it moves into the new one. Only for a
 /// folder that is missing or Elsecall's own.
-pub fn replace(folder: &Path, files: &[(String, String)]) -> io::Result<()> {
+pub(crate) fn replace(folder: &Path, files: &[(String, String)]) -> io::Result<()> {
     let parent = folder.parent().expect("a skill folder has a parent");
     std::fs::create_dir_all(parent)?;
     let staging = |what: &str| parent.join(format!(".{NAME}.{what}-{}", std::process::id()));
@@ -162,7 +162,7 @@ pub fn replace(folder: &Path, files: &[(String, String)]) -> io::Result<()> {
 }
 
 /// The whole skill, as `elsecall skill install` exports it.
-pub fn exported() -> Vec<(String, String)> {
+pub(crate) fn exported() -> Vec<(String, String)> {
     guide::files()
         .into_iter()
         .map(|(path, text)| (path, text.to_owned()))
@@ -198,7 +198,7 @@ fn remove_ours(folder: &Path, state: State) -> io::Result<()> {
 
 /// Removes what Elsecall wrote, then the folder if nothing else is left in it. A
 /// file already gone counts as removed.
-pub fn remove(folder: &Path) -> io::Result<()> {
+pub(crate) fn remove(folder: &Path) -> io::Result<()> {
     let state = state(folder)?;
     if !state.ours() {
         return Ok(());

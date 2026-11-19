@@ -9,6 +9,9 @@ publish = false
 [lib]
 doctest = false
 
+[lints]
+workspace = true
+
 [features]
 local-release-channel = []
 

@@ -1,16 +1,16 @@
 //! A process gate whose release remains observable even after fixture teardown.
 use std::path::{Path, PathBuf};
 
-pub struct FileGate(PathBuf);
+pub(crate) struct FileGate(PathBuf);
 impl FileGate {
     /// The child waits while this marker exists. Absence is a permanent release,
     /// so deleting a temporary home cannot strand a process during unwinding.
-    pub fn new(home: &Path, name: &str) -> Self {
+    pub(crate) fn new(home: &Path, name: &str) -> Self {
         let path = home.join(name);
         std::fs::File::create_new(&path).unwrap();
         Self(path)
     }
-    pub fn open(&self) {
+    pub(crate) fn open(&self) {
         match std::fs::remove_file(&self.0) {
             Ok(()) => (),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),

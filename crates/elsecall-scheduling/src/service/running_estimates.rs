@@ -42,7 +42,7 @@ pub(super) struct RunningEstimates {
 
 impl RunningEstimates {
     /// What history expects of the whole run of `id` on `member`, once learned.
-    pub fn of(&self, member: &str, id: &RunId) -> Option<&LearnedRun> {
+    pub(super) fn of(&self, member: &str, id: &RunId) -> Option<&LearnedRun> {
         self.learned
             .get(&(member.to_owned(), id.clone()))
             .and_then(|(_, learned)| learned.as_ref())

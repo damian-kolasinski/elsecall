@@ -9,6 +9,9 @@ publish = false
 [lib]
 doctest = false
 
+[lints]
+workspace = true
+
 [dependencies]
 base64.workspace = true
 elsecall-add-mac.workspace = true

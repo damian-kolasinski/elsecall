@@ -4,12 +4,12 @@
 
 const SKILL: &str = include_str!("../../../skill/elsecall/SKILL.md");
 
-pub struct Topic {
+pub(crate) struct Topic {
     pub name: &'static str,
     pub text: &'static str,
 }
 
-pub const TOPICS: [Topic; 1] = [Topic {
+pub(crate) const TOPICS: [Topic; 1] = [Topic {
     name: "integrate",
     text: include_str!("../../../skill/elsecall/references/integrate.md"),
 }];
@@ -24,12 +24,12 @@ fn split() -> (&'static str, &'static str) {
 }
 
 /// The guide `elsecall skill show` prints: `SKILL.md` without its frontmatter.
-pub fn guide() -> &'static str {
+pub(crate) fn guide() -> &'static str {
     split().1
 }
 
 /// The skill's description, which the stub repeats verbatim.
-pub fn description() -> &'static str {
+pub(crate) fn description() -> &'static str {
     split()
         .0
         .lines()
@@ -37,16 +37,16 @@ pub fn description() -> &'static str {
         .expect("SKILL.md has a description")
 }
 
-pub fn topic(name: &str) -> Option<&'static Topic> {
+pub(crate) fn topic(name: &str) -> Option<&'static Topic> {
     TOPICS.iter().find(|topic| topic.name == name)
 }
 
-pub fn names() -> Vec<&'static str> {
+pub(crate) fn names() -> Vec<&'static str> {
     TOPICS.iter().map(|topic| topic.name).collect()
 }
 
 /// The whole skill folder, as relative paths and contents.
-pub fn files() -> Vec<(String, &'static str)> {
+pub(crate) fn files() -> Vec<(String, &'static str)> {
     let mut files = vec![("SKILL.md".to_owned(), SKILL)];
     files.extend(
         TOPICS

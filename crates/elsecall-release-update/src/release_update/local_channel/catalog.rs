@@ -17,7 +17,7 @@ impl ReleaseCatalog for LocalChannel {
 
 /// The highest listed version. Only an exact stable version is a release the
 /// updater installs, so other entries are passed over.
-pub fn newest(list: &[u8]) -> Result<Option<Release>> {
+pub(super) fn newest(list: &[u8]) -> Result<Option<Release>> {
     let versions: Vec<String> = serde_json::from_slice(list)
         .map_err(|_| invalid("The local release list is not a JSON array of versions."))?;
     Ok(versions

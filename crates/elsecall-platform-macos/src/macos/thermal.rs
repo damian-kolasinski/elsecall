@@ -25,7 +25,7 @@ fn token() -> Option<c_int> {
 }
 
 /// `None` when the state cannot be read.
-pub fn state() -> Option<ThermalState> {
+pub(super) fn state() -> Option<ThermalState> {
     let mut level = 0;
     // SAFETY: the token came from notify_register_check and the pointer is valid.
     let status = unsafe { notify_get_state(token()?, &mut level) };

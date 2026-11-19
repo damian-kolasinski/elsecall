@@ -49,7 +49,7 @@ pub struct Options {
     pub day: Option<Timestamp>,
 }
 #[derive(Debug, Serialize)]
-pub struct Trial {
+pub(super) struct Trial {
     pub envelope: Envelope,
     pub outcomes: Vec<Outcome>,
     pub timelines: Vec<Minute>,
@@ -1141,7 +1141,7 @@ fn seed_copies(trace: &Trace, world: &Arc<Mutex<World>>) {
 pub(super) mod tests {
     use super::*;
     use elsecall_workload::trace::TraceOutcome;
-    pub fn trace() -> Trace {
+    pub(crate) fn trace() -> Trace {
         use elsecall_load_log::buckets::Bucket;
         use elsecall_scheduling::{
             fixtures,

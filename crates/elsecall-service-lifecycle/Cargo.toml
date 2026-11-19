@@ -9,6 +9,9 @@ publish = false
 [lib]
 doctest = false
 
+[lints]
+workspace = true
+
 [dependencies]
 elsecall-config-sync.workspace = true
 elsecall-failure.workspace = true

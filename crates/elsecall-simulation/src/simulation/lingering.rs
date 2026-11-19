@@ -6,7 +6,7 @@ use elsecall_scheduling::leftovers::Ending;
 use elsecall_workload::trace::{Request, Trace};
 use std::time::Duration;
 
-pub fn observed_wait(trace: &Trace, request: &Request) -> u64 {
+pub(super) fn observed_wait(trace: &Trace, request: &Request) -> u64 {
     let Some(admitted) = initial::admitted_at(request) else {
         return 0;
     };
@@ -29,7 +29,7 @@ pub fn observed_wait(trace: &Trace, request: &Request) -> u64 {
         .unwrap_or(0)
 }
 
-pub fn settle(
+pub(super) fn settle(
     world: &mut World,
     member: &str,
     workspace: &str,

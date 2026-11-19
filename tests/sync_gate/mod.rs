@@ -15,7 +15,7 @@ use tokio::{
     sync::Notify,
 };
 
-pub struct SyncGate {
+pub(crate) struct SyncGate {
     _runtime: tokio::runtime::Runtime,
     address: SocketAddr,
     armed: Arc<AtomicBool>,
@@ -25,11 +25,11 @@ pub struct SyncGate {
     fail_sync_after: Arc<AtomicUsize>,
 }
 impl SyncGate {
-    pub fn start(member: &crate::members::TestMember) -> Self {
+    pub(crate) fn start(member: &crate::members::TestMember) -> Self {
         Self::start_for(member, b"POST /peer/v1/config-sync/attach ")
     }
 
-    pub fn start_run(member: &crate::members::TestMember) -> Self {
+    pub(crate) fn start_run(member: &crate::members::TestMember) -> Self {
         Self::start_for(member, b"POST /peer/v1/placements/r-")
     }
 
@@ -71,7 +71,11 @@ impl SyncGate {
         }
     }
     /// Update the enrolled endpoint, through the normal operator API.
-    pub fn enroll(&self, master: &crate::members::TestMember, member: &crate::members::TestMember) {
+    pub(crate) fn enroll(
+        &self,
+        master: &crate::members::TestMember,
+        member: &crate::members::TestMember,
+    ) {
         let mut advertised = member.as_member();
         advertised.endpoints = vec![self.address];
         master.ok(&[
@@ -80,19 +84,19 @@ impl SyncGate {
             &elsecall_membership::member_code::encode(&advertised),
         ]);
     }
-    pub fn exchanges(&self) -> usize {
+    pub(crate) fn exchanges(&self) -> usize {
         self.exchanges.load(Ordering::SeqCst)
     }
     /// Drop the nth upcoming sync connection at the TCP boundary. This can
     /// allow service validation through, then interrupt its delivery.
-    pub fn fail_sync_after(&self, connections: usize) {
+    pub(crate) fn fail_sync_after(&self, connections: usize) {
         assert!(connections > 0);
         self.fail_sync_after.store(connections, Ordering::SeqCst);
     }
-    pub fn arm(&self) {
+    pub(crate) fn arm(&self) {
         self.armed.store(true, Ordering::SeqCst);
     }
-    pub fn wait(&self) {
+    pub(crate) fn wait(&self) {
         let deadline = Instant::now() + crate::processes::WAIT;
         while !self.blocked.load(Ordering::SeqCst) {
             assert!(
@@ -102,7 +106,7 @@ impl SyncGate {
             std::thread::sleep(std::time::Duration::from_millis(20));
         }
     }
-    pub fn release(&self) {
+    pub(crate) fn release(&self) {
         self.released.notify_one();
     }
 }

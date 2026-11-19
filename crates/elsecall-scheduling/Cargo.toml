@@ -9,6 +9,9 @@ publish = false
 [lib]
 doctest = false
 
+[lints]
+workspace = true
+
 [features]
 # Fixtures other crates' tests build with.
 test-support = []

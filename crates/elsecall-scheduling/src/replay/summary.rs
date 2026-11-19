@@ -16,7 +16,7 @@ use serde::Serialize;
 use std::{collections::BTreeMap, time::Duration};
 
 /// One decision scored under its recorded parameters and under the change.
-pub struct Replayed {
+pub(super) struct Replayed {
     pub origin: Origin,
     pub scored_at: Timestamp,
     pub recorded: Rescored,
@@ -68,7 +68,7 @@ pub struct NotReplayable {
 
 /// The most flips, and run IDs of each reason, one replay lists, so that its
 /// answer stays well within what the CLI reads.
-pub const MAXIMUM_LISTED: usize = 1000;
+pub(super) const MAXIMUM_LISTED: usize = 1000;
 
 /// Aggregates over the replayed decisions.
 #[derive(Debug, Default, Serialize)]
@@ -184,7 +184,7 @@ fn seconds_between(later: Duration, earlier: Duration) -> f64 {
     ((later.as_secs_f64() - earlier.as_secs_f64()) * 1000.0).round() / 1000.0
 }
 
-pub struct Summary {
+pub(super) struct Summary {
     set: serde_json::Value,
     gates: bool,
     decisions: Decisions,
@@ -195,7 +195,7 @@ pub struct Summary {
 }
 
 impl Summary {
-    pub fn new(change: &Change) -> Self {
+    pub(super) fn new(change: &Change) -> Self {
         Self {
             set: serde_json::to_value(change).expect("settings serialize"),
             gates: change.changes_admission(),
@@ -207,7 +207,7 @@ impl Summary {
         }
     }
 
-    pub fn add(&mut self, record: &Record, result: Result<Replayed, Unreplayable>) {
+    pub(super) fn add(&mut self, record: &Record, result: Result<Replayed, Unreplayable>) {
         self.decisions.placement += 1;
         let replayed = match result {
             Ok(replayed) => replayed,
@@ -315,7 +315,7 @@ impl Summary {
         });
     }
 
-    pub fn finish(mut self) -> Replay {
+    pub(super) fn finish(mut self) -> Replay {
         self.effect.winners = self
             .winners
             .into_iter()

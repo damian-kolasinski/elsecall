@@ -118,7 +118,7 @@ fn run(
     crate::release_update::tools::run(program, arguments, directory, timeout, environment)
 }
 
-pub fn unverified() -> Failure {
+pub(super) fn unverified() -> Failure {
     Failure::new(
         "local_release_unverified",
         "The local release did not verify against the key this build trusts.",

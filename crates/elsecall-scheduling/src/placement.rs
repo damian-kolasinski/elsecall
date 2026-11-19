@@ -502,7 +502,10 @@ mod with_level {
     use super::{Level, Source};
     use serde::{Serialize, Serializer};
 
-    pub fn serialize<S: Serializer>(source: &Source, serializer: S) -> Result<S::Ok, S::Error> {
+    pub(super) fn serialize<S: Serializer>(
+        source: &Source,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
         #[derive(Serialize)]
         struct WithLevel<'a> {
             #[serde(flatten)]

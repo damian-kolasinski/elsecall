@@ -13,13 +13,13 @@ use tokio::{
     net::{TcpListener, TcpStream},
 };
 
-pub struct RunFragmentation {
+pub(crate) struct RunFragmentation {
     _runtime: tokio::runtime::Runtime,
     address: SocketAddr,
     records: Arc<AtomicUsize>,
 }
 impl RunFragmentation {
-    pub fn start(member: &crate::members::TestMember) -> Self {
+    pub(crate) fn start(member: &crate::members::TestMember) -> Self {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .enable_all()
@@ -44,7 +44,11 @@ impl RunFragmentation {
             records,
         }
     }
-    pub fn enroll(&self, master: &crate::members::TestMember, member: &crate::members::TestMember) {
+    pub(crate) fn enroll(
+        &self,
+        master: &crate::members::TestMember,
+        member: &crate::members::TestMember,
+    ) {
         let mut advertised = member.as_member();
         advertised.endpoints = vec![self.address];
         master.ok(&[
@@ -53,7 +57,7 @@ impl RunFragmentation {
             &elsecall_membership::member_code::encode(&advertised),
         ]);
     }
-    pub fn records(&self) -> usize {
+    pub(crate) fn records(&self) -> usize {
         self.records.load(Ordering::SeqCst)
     }
 }

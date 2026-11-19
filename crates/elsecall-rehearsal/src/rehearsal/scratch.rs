@@ -4,13 +4,13 @@ use elsecall_failure::{Failure, Result};
 use elsecall_workspace::git::Git;
 use std::{fs, path::Path, process::Stdio};
 use tokio::time::Instant;
-pub fn create(session: &str, member: &str) -> Result<tempfile::TempDir> {
+pub(super) fn create(session: &str, member: &str) -> Result<tempfile::TempDir> {
     tempfile::Builder::new()
         .prefix(&format!("elsecall-rehearsal-{session}-{member}-"))
         .tempdir_in("/private/tmp")
         .map_err(|e| Failure::io("Create rehearsal scratch", e))
 }
-pub async fn populate(root: &Path, workspaces: Vec<String>, expires: Instant) -> Result<()> {
+pub(super) async fn populate(root: &Path, workspaces: Vec<String>, expires: Instant) -> Result<()> {
     for workspace in workspaces {
         let directory = root.join(workspace);
         fs::create_dir(&directory).map_err(|e| Failure::io("Create synthetic workspace", e))?;

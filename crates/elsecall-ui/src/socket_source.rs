@@ -21,13 +21,13 @@ use crate::fleet_source::{
 /// How long `elsecall fleet` waits for `GET /v1/fleet`.
 const FLEET_WAIT: Duration = Duration::from_secs(15);
 
-pub struct SocketSource {
+pub(crate) struct SocketSource {
     socket: Result<PathBuf, SourceFailure>,
     runtime: tokio::runtime::Runtime,
 }
 
 impl SocketSource {
-    pub fn open() -> Self {
+    pub(crate) fn open() -> Self {
         let socket = elsecall_local_state::paths::Paths::current()
             .map(|paths| paths.socket())
             .map_err(classify);
@@ -61,7 +61,7 @@ impl FleetSource for SocketSource {
     }
 }
 
-pub struct SocketWindowUpgrade;
+pub(crate) struct SocketWindowUpgrade;
 
 impl crate::window_upgrade::WindowUpgrade for SocketWindowUpgrade {
     fn replace_and_reopen(&self) -> Result<(), String> {
@@ -121,7 +121,7 @@ fn replace_window_at(socket: &std::path::Path) -> Result<(), String> {
 }
 
 /// Opens the socket on the first read, which the refresh thread performs.
-pub fn shared() -> Arc<dyn FleetSource> {
+pub(crate) fn shared() -> Arc<dyn FleetSource> {
     Arc::new(LazySocket {
         source: OnceLock::new(),
     })

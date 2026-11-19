@@ -25,7 +25,7 @@ use std::{
 use tokio::task::JoinHandle;
 
 #[derive(Clone, Debug, Serialize)]
-pub struct Outcome {
+pub(super) struct Outcome {
     pub run_id: String,
     pub member: Option<String>,
     pub failure: Option<String>,

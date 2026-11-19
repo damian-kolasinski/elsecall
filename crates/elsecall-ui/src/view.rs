@@ -43,7 +43,7 @@ struct Paints {
     label: TextStyle,
 }
 
-pub fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
+pub(crate) fn fleet(state: &AppState, cx: &mut rune::Cx<AppState>) -> El {
     let dark = cx.system_dark();
     let kit = theme::kit(dark);
     let paints = Paints {

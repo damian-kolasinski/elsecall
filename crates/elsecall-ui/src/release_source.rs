@@ -3,14 +3,17 @@ use elsecall_release_update::release_update::Status;
 use rune::Latest;
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-pub struct ReleaseSnapshot {
+pub(crate) struct ReleaseSnapshot {
     pub installed_window: Option<String>,
     pub release: Option<Status>,
 }
-pub trait ReleaseSource: Send + Sync {
+pub(crate) trait ReleaseSource: Send + Sync {
     fn snapshot(&self) -> Result<ReleaseSnapshot, String>;
 }
-pub fn start(feed: Arc<Latest<Result<ReleaseSnapshot, String>>>, source: Arc<dyn ReleaseSource>) {
+pub(crate) fn start(
+    feed: Arc<Latest<Result<ReleaseSnapshot, String>>>,
+    source: Arc<dyn ReleaseSource>,
+) {
     std::thread::Builder::new()
         .name("elsecall-ui-updates".into())
         .spawn(move || {
@@ -22,12 +25,12 @@ pub fn start(feed: Arc<Latest<Result<ReleaseSnapshot, String>>>, source: Arc<dyn
         })
         .expect("start update polling");
 }
-pub struct SocketReleases {
+pub(crate) struct SocketReleases {
     socket: PathBuf,
     runtime: tokio::runtime::Runtime,
 }
 impl SocketReleases {
-    pub fn open(socket: PathBuf) -> Self {
+    pub(crate) fn open(socket: PathBuf) -> Self {
         Self {
             socket,
             runtime: tokio::runtime::Builder::new_current_thread()
@@ -65,7 +68,7 @@ impl ReleaseSource for SocketReleases {
         })
     }
 }
-pub fn production() -> Arc<dyn ReleaseSource> {
+pub(crate) fn production() -> Arc<dyn ReleaseSource> {
     struct Lazy {
         source: std::sync::OnceLock<Result<SocketReleases, String>>,
     }

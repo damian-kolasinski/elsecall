@@ -7,10 +7,10 @@ struct State {
     closed: bool,
 }
 #[derive(Clone, Default)]
-pub struct Activity(Arc<Mutex<State>>);
-pub struct Guard(Activity);
+pub(super) struct Activity(Arc<Mutex<State>>);
+pub(super) struct Guard(Activity);
 impl Activity {
-    pub fn enter(&self) -> elsecall_failure::Result<Guard> {
+    pub(super) fn enter(&self) -> elsecall_failure::Result<Guard> {
         let mut state = self.0.lock().expect("sync activity lock");
         if state.closed {
             return Err(crate::service_configuration::pending());
@@ -18,7 +18,7 @@ impl Activity {
         state.active += 1;
         Ok(Guard(self.clone()))
     }
-    pub fn close_if_idle(&self) -> bool {
+    pub(super) fn close_if_idle(&self) -> bool {
         let mut state = self.0.lock().expect("sync activity lock");
         if state.active != 0 || state.closed {
             return false;
@@ -26,7 +26,7 @@ impl Activity {
         state.closed = true;
         true
     }
-    pub fn reopen(&self) {
+    pub(super) fn reopen(&self) {
         self.0.lock().expect("sync activity lock").closed = false;
     }
 }

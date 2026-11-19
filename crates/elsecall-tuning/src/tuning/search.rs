@@ -2,12 +2,12 @@
 //! belong to the caller. All generated points remain inside the declared grid.
 use super::space::{Settings, Space};
 use serde_json::Value;
-pub struct Random(u64);
+pub(super) struct Random(u64);
 impl Random {
-    pub fn new(seed: u64) -> Self {
+    pub(super) fn new(seed: u64) -> Self {
         Self(seed)
     }
-    pub fn next(&mut self) -> u64 {
+    pub(super) fn next(&mut self) -> u64 {
         self.0 = self.0.wrapping_add(0x9e3779b97f4a7c15);
         let mut z = self.0;
         z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
@@ -21,7 +21,7 @@ impl Random {
         }
     }
 }
-pub fn neighbors(space: &Space, center: &Settings, random: &mut Random) -> Vec<Settings> {
+pub(super) fn neighbors(space: &Space, center: &Settings, random: &mut Random) -> Vec<Settings> {
     let mut points = Vec::new();
     for (key, values) in space {
         for value in std::iter::once(None).chain(values.iter().map(Some)) {
@@ -39,7 +39,7 @@ pub fn neighbors(space: &Space, center: &Settings, random: &mut Random) -> Vec<S
     random.shuffle(&mut points);
     points
 }
-pub fn restart(space: &Space, random: &mut Random) -> Settings {
+pub(super) fn restart(space: &Space, random: &mut Random) -> Settings {
     space
         .iter()
         .filter_map(|(key, values)| {
@@ -49,14 +49,14 @@ pub fn restart(space: &Space, random: &mut Random) -> Settings {
         .collect()
 }
 #[derive(Debug, Clone)]
-pub struct Quality {
+pub(super) struct Quality {
     pub tier: u8,
     pub changes: usize,
     pub mean: f64,
     pub strongest: f64,
     pub violations: Vec<f64>,
 }
-pub fn quality(report: &Value) -> Quality {
+pub(super) fn quality(report: &Value) -> Quality {
     // Sensitivity envelopes describe risk; only the realistic point trial gates
     // and ranks a proposal. Acceptance still requires observed A/B evidence.
     let metrics = [&report["metrics"]];
@@ -104,7 +104,7 @@ pub fn quality(report: &Value) -> Quality {
 }
 /// Constraints precede the primary overhead objective; strongest placement is
 /// only a tie break. Absolute overhead may be zero or negative.
-pub fn order(points: &[(Settings, Quality)]) -> Vec<usize> {
+pub(super) fn order(points: &[(Settings, Quality)]) -> Vec<usize> {
     let mut result: Vec<_> = (0..points.len()).collect();
     result.sort_by(|a, b| {
         let (sa, qa) = &points[*a];

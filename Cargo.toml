@@ -105,6 +105,11 @@ elsecall-process = { path = "crates/elsecall-process" }
 elsecall-labels = { path = "crates/elsecall-labels" }
 elsecall-failure = { path = "crates/elsecall-failure" }
 
+# Every crate inherits these with `[lints] workspace = true`.
+[workspace.lints.rust]
+# `pub` claims another crate uses the item; inside a crate, say `pub(crate)`.
+unreachable_pub = "warn"
+
 [package]
 name = "elsecall"
 version.workspace = true
@@ -112,6 +117,9 @@ edition.workspace = true
 rust-version.workspace = true
 description = "Inspect and maintain your development machines"
 license.workspace = true
+
+[lints]
+workspace = true
 
 [lib]
 # The library has no Rust doctests; skip rustdoc's pass over it.

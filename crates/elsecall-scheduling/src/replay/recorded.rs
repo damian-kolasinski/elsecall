@@ -32,7 +32,7 @@ pub enum Origin {
 
 /// Why a decision could not be replayed.
 #[derive(Clone, Debug, PartialEq)]
-pub enum Unreplayable {
+pub(super) enum Unreplayable {
     /// The change needs inputs the record does not hold.
     RecordedBeforeInputs,
     /// Recorded before the scoring's own winner was: the request started on
@@ -48,7 +48,7 @@ pub enum Unreplayable {
 }
 
 /// One recorded scoring of a placement decision.
-pub struct RecordedScoring {
+pub(super) struct RecordedScoring {
     pub scored_at: Timestamp,
     /// The parameters it was decided with; the defaults for records from
     /// before parameters were recorded, which used them.
@@ -95,7 +95,7 @@ enum Expected {
 
 /// The verdict of one scoring, as replay compares them.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Rescored {
+pub(super) struct Rescored {
     pub winner: Option<String>,
     pub reason: String,
     /// The calling member, when it was a candidate.
@@ -105,7 +105,7 @@ pub struct Rescored {
     pub run_levels: Vec<(String, Option<Level>)>,
 }
 impl Rescored {
-    pub fn completion(&self, member: Option<&str>) -> Option<Duration> {
+    pub(super) fn completion(&self, member: Option<&str>) -> Option<Duration> {
         let member = member?;
         self.completions
             .iter()
@@ -113,7 +113,7 @@ impl Rescored {
             .and_then(|(_, c)| *c)
     }
 
-    pub fn run_level(&self, member: Option<&str>) -> Option<Level> {
+    pub(super) fn run_level(&self, member: Option<&str>) -> Option<Level> {
         let member = member?;
         self.run_levels
             .iter()
@@ -208,7 +208,7 @@ impl Expected {
 impl RecordedScoring {
     /// The scoring of `record` that replay repeats, or `None` when the record
     /// holds no placement decision.
-    pub fn of(record: &Record) -> Option<Self> {
+    pub(super) fn of(record: &Record) -> Option<Self> {
         if record.placement != Placement::Placeable {
             return None;
         }
@@ -298,7 +298,7 @@ impl RecordedScoring {
         })
     }
 
-    pub fn origin(&self) -> Origin {
+    pub(super) fn origin(&self) -> Origin {
         match &self.scoring {
             Scoring::Inputs(scoring) if scoring.arrival => Origin::Arrival,
             Scoring::Inputs(_) => Origin::LastScoring,
@@ -307,7 +307,7 @@ impl RecordedScoring {
     }
 
     /// Whether the record holds what `change` needs.
-    pub fn replays(&self, change: &Change) -> bool {
+    pub(super) fn replays(&self, change: &Change) -> bool {
         match self.scoring {
             Scoring::Inputs(_) => true,
             Scoring::Estimates(_) => change.margin_only(),
@@ -318,7 +318,7 @@ impl RecordedScoring {
     /// winner and every candidate's estimate exactly; with `gates`, every
     /// member's recorded gate must also follow from its recorded load and
     /// thresholds, so that it can be derived again under changed ones.
-    pub fn reproduce(&self, gates: bool) -> Result<Rescored, Unreplayable> {
+    pub(super) fn reproduce(&self, gates: bool) -> Result<Rescored, Unreplayable> {
         let rescored = match &self.scoring {
             Scoring::Inputs(scoring) => {
                 if gates && !scoring.gates_follow() {
@@ -348,7 +348,7 @@ impl RecordedScoring {
     /// Scores under `parameters`. With a `change` to the gate thresholds, every
     /// member's gate is derived again from its recorded load, under its own
     /// recorded thresholds with the change in place.
-    pub fn score(
+    pub(super) fn score(
         &self,
         parameters: &Parameters,
         change: &Change,

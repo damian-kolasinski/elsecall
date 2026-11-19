@@ -66,7 +66,7 @@ extern "C" fn forward(signal: c_int, info: *mut libc::siginfo_t, _: *mut libc::c
 
 /// Starts forwarding. Signals the caller ignores stay ignored, so the command
 /// inherits that, as it would when run directly.
-pub fn install() {
+pub(super) fn install() {
     for signal in FORWARDED {
         // SAFETY: sigaction is called with valid pointers; the handler only uses
         // atomics and async-signal-safe calls.
@@ -88,14 +88,14 @@ pub fn install() {
 
 /// Directs forwarded signals at the started command, including any that arrived
 /// while it was starting.
-pub fn target(pid: u32) {
+pub(super) fn target(pid: u32) {
     COMMAND.store(pid as i32, Ordering::SeqCst);
     deliver_pending(pid as i32);
 }
 
 /// The command was reaped: stop forwarding, so a later signal never reaches a
 /// process that reused its PID, and acts on Elsecall as it normally would.
-pub fn finished() {
+pub(super) fn finished() {
     COMMAND.store(-1, Ordering::SeqCst);
     let installed = INSTALLED.swap(0, Ordering::SeqCst);
     for signal in FORWARDED {
@@ -125,7 +125,7 @@ fn dumps_core(signal: c_int) -> bool {
 
 /// Ends this process as the command ended: killed by the same signal, so the
 /// caller's shell sees the same status.
-pub fn exit_by(signal: c_int) -> ! {
+pub(super) fn exit_by(signal: c_int) -> ! {
     if !dumps_core(signal) {
         // SAFETY: restoring the default action and raising are plain syscalls.
         unsafe {

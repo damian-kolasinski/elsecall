@@ -11,7 +11,7 @@ use elsecall_workload::{
 };
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
-pub fn distribution(values: &[f64]) -> Value {
+pub(super) fn distribution(values: &[f64]) -> Value {
     let mut v = values.to_vec();
     v.sort_by(f64::total_cmp);
     let p = |q: f64| {
@@ -245,7 +245,7 @@ fn external_invariants(
     (invalid, unknown)
 }
 
-pub fn summarize(trace: &Trace, trial: &Trial, since: Timestamp, until: Timestamp) -> Value {
+pub(super) fn summarize(trace: &Trace, trial: &Trial, since: Timestamp, until: Timestamp) -> Value {
     let records: BTreeMap<_, _> = trace
         .requests
         .iter()

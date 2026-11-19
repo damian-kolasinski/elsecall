@@ -4,7 +4,7 @@ use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workload::trace::Trace;
 use std::collections::BTreeSet;
 
-pub fn observed(trace: &Trace, reserve: &mut Reserve) {
+pub(super) fn observed(trace: &Trace, reserve: &mut Reserve) {
     for member in &trace.members {
         let mut boundaries = BTreeSet::from([trace.since.millis(), trace.until.millis()]);
         let mut intervals = Vec::new();

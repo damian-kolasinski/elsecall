@@ -13,7 +13,7 @@ use std::{
 };
 
 #[derive(Default, Clone, Debug, Serialize)]
-pub struct Minute {
+pub(super) struct Minute {
     pub member: String,
     pub at_ms: u64,
     /// Total simulated interval exposure, including periods without load evidence.
@@ -31,7 +31,7 @@ pub struct Minute {
     pub blocked_seconds: f64,
 }
 #[derive(Default, Debug, Serialize)]
-pub struct Reserve {
+pub(super) struct Reserve {
     pub admission_violating_member_seconds: f64,
     pub admission_unknown_member_seconds: f64,
     pub violating_member_seconds: f64,

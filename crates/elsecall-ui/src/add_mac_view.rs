@@ -90,7 +90,7 @@ fn look(k: &Kit) -> Look {
 }
 
 /// Adds the sheet to `layer` while it is open.
-pub fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut Vec<El>) {
+pub(crate) fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut Vec<El>) {
     let flow = state.add_mac();
     if !flow.is_open() {
         return;

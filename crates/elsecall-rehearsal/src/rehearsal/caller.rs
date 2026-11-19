@@ -17,7 +17,7 @@ use std::{
     time::Duration,
 };
 use tokio::process::{Child, Command};
-pub struct Caller {
+pub(super) struct Caller {
     child: Child,
     original_identity: Option<ProcessIdentity>,
     status: PathBuf,
@@ -26,7 +26,7 @@ pub struct Caller {
     run_id: Option<String>,
 }
 impl Caller {
-    pub fn start(
+    pub(super) fn start(
         paths: &Paths,
         root: &Path,
         seed: u64,
@@ -140,13 +140,13 @@ impl Caller {
             run_id: None,
         })
     }
-    pub fn index(&self) -> usize {
+    pub(super) fn index(&self) -> usize {
         self.index
     }
-    pub fn identity(&self) -> Option<ProcessIdentity> {
+    pub(super) fn identity(&self) -> Option<ProcessIdentity> {
         self.original_identity
     }
-    pub fn job(&mut self) -> Result<Job> {
+    pub(super) fn job(&mut self) -> Result<Job> {
         if self.exit_code.is_none() {
             self.exit_code = self
                 .child
@@ -165,7 +165,7 @@ impl Caller {
             exit_code: self.exit_code,
         })
     }
-    pub fn terminate(&mut self) -> Result<()> {
+    pub(super) fn terminate(&mut self) -> Result<()> {
         if self.exit_code.is_none()
             && self
                 .child
@@ -182,7 +182,7 @@ impl Caller {
         }
         Ok(())
     }
-    pub async fn settle(&mut self) -> Result<()> {
+    pub(super) async fn settle(&mut self) -> Result<()> {
         if self.exit_code.is_none() {
             let status =
                 match tokio::time::timeout(Duration::from_secs(5), self.child.wait()).await {

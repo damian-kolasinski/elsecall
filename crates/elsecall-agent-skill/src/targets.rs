@@ -10,7 +10,7 @@ use super::{
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 
-pub struct Target {
+pub(crate) struct Target {
     pub agent: Agent,
     pub folder: PathBuf,
     /// The folder's state before any change, or why it could not be read.
@@ -19,7 +19,7 @@ pub struct Target {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum Done {
+pub(crate) enum Done {
     Installed,
     Updated,
     Unchanged,
@@ -30,7 +30,7 @@ pub enum Done {
 }
 
 /// What happened to one target; with --dry-run, what would have.
-pub struct Outcome {
+pub(crate) struct Outcome {
     pub done: Done,
     pub error: Option<String>,
 }
@@ -47,7 +47,7 @@ impl Outcome {
     }
 }
 
-pub fn inspect(home: &Path, chosen: &[Agent]) -> Vec<Target> {
+pub(crate) fn inspect(home: &Path, chosen: &[Agent]) -> Vec<Target> {
     chosen
         .iter()
         .map(|&agent| {
@@ -125,7 +125,7 @@ fn write(target: &Target, state: State) -> std::io::Result<()> {
     }
 }
 
-pub fn setup(targets: &[Target], dry_run: bool, force: bool) -> Vec<Outcome> {
+pub(crate) fn setup(targets: &[Target], dry_run: bool, force: bool) -> Vec<Outcome> {
     each(
         targets,
         dry_run,
@@ -143,7 +143,7 @@ pub fn setup(targets: &[Target], dry_run: bool, force: bool) -> Vec<Outcome> {
 /// What an upgrade does by itself: an older build's stub becomes this build's.
 /// Nothing is installed where nothing was, and an exported copy, someone else's
 /// skill or a newer build's stub is left as it is.
-pub fn refresh(targets: &[Target]) -> Vec<Outcome> {
+pub(crate) fn refresh(targets: &[Target]) -> Vec<Outcome> {
     each(
         targets,
         false,
@@ -155,7 +155,7 @@ pub fn refresh(targets: &[Target]) -> Vec<Outcome> {
     )
 }
 
-pub fn remove(targets: &[Target], dry_run: bool) -> Vec<Outcome> {
+pub(crate) fn remove(targets: &[Target], dry_run: bool) -> Vec<Outcome> {
     each(
         targets,
         dry_run,

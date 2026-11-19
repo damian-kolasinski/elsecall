@@ -25,7 +25,12 @@ struct Heard {
 
 impl Quotes {
     /// Keeps `member`'s answer to a request sent at `asked_at`.
-    pub fn record(&mut self, member: &str, asked_at: Instant, answer: Result<Quote, Failure>) {
+    pub(super) fn record(
+        &mut self,
+        member: &str,
+        asked_at: Instant,
+        answer: Result<Quote, Failure>,
+    ) {
         let heard = self
             .members
             .entry(member.to_owned())
@@ -55,15 +60,15 @@ impl Quotes {
     }
 
     /// Forgets members no longer in the fleet.
-    pub fn retain(&mut self, members: &[String]) {
+    pub(super) fn retain(&mut self, members: &[String]) {
         self.members.retain(|member, _| members.contains(member));
     }
 
-    pub fn answer(&self, member: &str) -> Option<Result<&Quote, &Failure>> {
+    pub(super) fn answer(&self, member: &str) -> Option<Result<&Quote, &Failure>> {
         self.members.get(member).map(|h| h.answer.as_ref())
     }
 
-    pub fn copy(&self, member: &str, workspace: &str) -> Option<&CopyQuote> {
+    pub(super) fn copy(&self, member: &str, workspace: &str) -> Option<&CopyQuote> {
         self.members
             .get(member)?
             .copies
@@ -72,7 +77,7 @@ impl Quotes {
     }
 
     /// Whether asking `member` failed within `within`.
-    pub fn failed_recently(&self, member: &str, within: Duration) -> bool {
+    pub(super) fn failed_recently(&self, member: &str, within: Duration) -> bool {
         self.members
             .get(member)
             .is_some_and(|h| h.answer.is_err() && h.asked_at.elapsed() < within)
@@ -80,7 +85,7 @@ impl Quotes {
 
     /// Takes in the state `member` reported while answering an offer; an admitted
     /// request now holds its capacity.
-    pub fn heard(&mut self, member: &str, state: &MemberState, admitted: Option<HeldWork>) {
+    pub(super) fn heard(&mut self, member: &str, state: &MemberState, admitted: Option<HeldWork>) {
         if let Some(Heard {
             answer: Ok(quote), ..
         }) = self.members.get_mut(member)
@@ -93,12 +98,12 @@ impl Quotes {
     }
 
     /// `member` could not be reached while offering it work.
-    pub fn lost(&mut self, member: &str, failure: Failure) {
+    pub(super) fn lost(&mut self, member: &str, failure: Failure) {
         self.record(member, Instant::now(), Err(failure));
     }
 
     /// Work running on each member that answered.
-    pub fn holding(&self) -> impl Iterator<Item = (&str, &HeldWork)> {
+    pub(super) fn holding(&self) -> impl Iterator<Item = (&str, &HeldWork)> {
         let mut holding: Vec<_> = self
             .members
             .iter()
@@ -117,7 +122,7 @@ impl Quotes {
     }
 
     /// The measured speed of each member that answered with one.
-    pub fn speeds(&self) -> impl Iterator<Item = (&str, f64)> {
+    pub(super) fn speeds(&self) -> impl Iterator<Item = (&str, f64)> {
         self.members.iter().filter_map(|(member, heard)| {
             let speed = heard.answer.as_ref().ok()?.state.speed?;
             Some((member.as_str(), speed))

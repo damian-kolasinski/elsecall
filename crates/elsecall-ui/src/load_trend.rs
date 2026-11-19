@@ -11,7 +11,7 @@ const STEADY_FRACTION: f64 = 0.2;
 const STEADY_FLOOR: f64 = 0.5;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum LoadTrend {
+pub(crate) enum LoadTrend {
     Rising,
     Steady,
     Falling,
@@ -19,7 +19,7 @@ pub enum LoadTrend {
 
 impl LoadTrend {
     /// Compares the last minute with the last fifteen.
-    pub fn of(load: &LoadAverages) -> Self {
+    pub(crate) fn of(load: &LoadAverages) -> Self {
         let band = (load.fifteen.abs() * STEADY_FRACTION).max(STEADY_FLOOR);
         let change = load.one - load.fifteen;
         if change > band {
@@ -31,7 +31,7 @@ impl LoadTrend {
         }
     }
 
-    pub fn word(self) -> &'static str {
+    pub(crate) fn word(self) -> &'static str {
         match self {
             Self::Rising => "rising",
             Self::Steady => "steady",

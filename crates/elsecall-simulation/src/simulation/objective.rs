@@ -4,7 +4,7 @@ use elsecall_scheduling_model::{request::Kind, timestamp::Timestamp};
 use elsecall_workload::trace::{Trace, TraceOutcome};
 use serde_json::{Value, json};
 
-pub fn summarize(trace: &Trace, trial: &Trial, since: Timestamp, until: Timestamp) -> Value {
+pub(super) fn summarize(trace: &Trace, trial: &Trial, since: Timestamp, until: Timestamp) -> Value {
     let mut overheads = Vec::new();
     let mut slowdowns = Vec::new();
     let mut unknown = Vec::new();

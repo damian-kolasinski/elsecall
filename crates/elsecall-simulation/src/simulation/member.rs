@@ -45,7 +45,7 @@ pub(super) struct Member {
 }
 
 impl Member {
-    pub fn start(
+    pub(super) fn start(
         name: &str,
         baseline_capacity: Capacity,
         base_parameters: Parameters,
@@ -93,7 +93,7 @@ impl Member {
 
     /// In-memory scheduler work must drain, except when every ready offer is
     /// suspended in recorded external I/O whose deadline is still in the future.
-    pub fn has_ready_scheduler_work(&self) -> bool {
+    pub(super) fn has_ready_scheduler_work(&self) -> bool {
         if !self.scheduler.has_immediate_work() {
             return false;
         }
@@ -121,7 +121,11 @@ impl Member {
     /// Local live grants survive real recovery; placed connections are closed
     /// with connection_lost and waiting requests receive service_unavailable.
     /// The event driver observes those records before continuing execution.
-    pub fn restart(&mut self, observed: &SchedulerSettings, candidates: &Settings) -> Result<()> {
+    pub(super) fn restart(
+        &mut self,
+        observed: &SchedulerSettings,
+        candidates: &Settings,
+    ) -> Result<()> {
         let capacity = candidates.capacity(&self.name, &observed.capacity)?;
         let parameters = candidates.parameters(&observed.parameters)?;
         // Validate first: a rejected candidate must not stop the running service.

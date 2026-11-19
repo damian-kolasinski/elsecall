@@ -16,7 +16,7 @@ use crate::add_mac_flow::{AddRequest, AddUpdate};
 
 const OUTPUT_LIMIT: u64 = 16 * 1024 * 1024;
 
-pub trait AddMacSource: Send + Sync {
+pub(crate) trait AddMacSource: Send + Sync {
     /// The Macs on the local network.
     fn nearby(&self) -> Result<Vec<NearbyMac>, Failure>;
     /// Runs add `request.run` to its end, handing each update to `updates` as it
@@ -28,7 +28,7 @@ pub trait AddMacSource: Send + Sync {
 }
 
 /// Updates from a background thread, in order, waking the window for each.
-pub struct Inbox<T> {
+pub(crate) struct Inbox<T> {
     items: Mutex<Vec<T>>,
     waker: Mutex<Option<Waker>>,
 }
@@ -43,18 +43,18 @@ impl<T> Default for Inbox<T> {
 }
 
 impl<T> Inbox<T> {
-    pub fn set_waker(&self, waker: Waker) {
+    pub(crate) fn set_waker(&self, waker: Waker) {
         *self.waker.lock().expect("inbox waker") = Some(waker);
     }
 
-    pub fn push(&self, item: T) {
+    pub(crate) fn push(&self, item: T) {
         self.items.lock().expect("inbox").push(item);
         if let Some(wake) = self.waker.lock().expect("inbox waker").as_ref() {
             wake();
         }
     }
 
-    pub fn drain(&self) -> Vec<T> {
+    pub(crate) fn drain(&self) -> Vec<T> {
         std::mem::take(&mut *self.items.lock().expect("inbox"))
     }
 }
@@ -69,18 +69,18 @@ struct Running {
 }
 
 /// The installed CLI, run once per look and per add.
-pub struct CliSource {
+pub(crate) struct CliSource {
     /// `None` for the installed CLI, found when needed.
     executable: Option<PathBuf>,
     running: Mutex<Running>,
 }
 
-pub fn production() -> Arc<dyn AddMacSource> {
+pub(crate) fn production() -> Arc<dyn AddMacSource> {
     Arc::new(CliSource::new(None))
 }
 
 impl CliSource {
-    pub fn new(executable: Option<PathBuf>) -> Self {
+    pub(crate) fn new(executable: Option<PathBuf>) -> Self {
         Self {
             executable,
             running: Mutex::new(Running::default()),

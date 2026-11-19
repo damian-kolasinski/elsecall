@@ -11,24 +11,24 @@ use std::{
 };
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Journal {
+pub(super) struct Journal {
     pub session: String,
     pub root: PathBuf,
     pub until: Timestamp,
     pub callers: Vec<ProcessIdentity>,
 }
-pub fn path(paths: &Paths) -> PathBuf {
+pub(super) fn path(paths: &Paths) -> PathBuf {
     paths.data.join("rehearsal-session.json")
 }
 impl Journal {
-    pub fn save(&self, paths: &Paths) -> Result<()> {
+    pub(super) fn save(&self, paths: &Paths) -> Result<()> {
         private_files::replace(
             &path(paths),
             &serde_json::to_vec(self).expect("recovery state serializes"),
         )
         .map_err(|e| Failure::io("Save rehearsal recovery state", e))
     }
-    pub fn read(paths: &Paths, member: &str) -> Result<Option<Self>> {
+    pub(super) fn read(paths: &Paths, member: &str) -> Result<Option<Self>> {
         use std::os::unix::fs::OpenOptionsExt;
         let file = match std::fs::OpenOptions::new()
             .read(true)
@@ -61,7 +61,7 @@ impl Journal {
         Ok(Some(state))
     }
 }
-pub fn clear(paths: &Paths) -> Result<()> {
+pub(super) fn clear(paths: &Paths) -> Result<()> {
     match std::fs::remove_file(path(paths)) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),

@@ -9,6 +9,9 @@ publish = false
 [lib]
 doctest = false
 
+[lints]
+workspace = true
+
 [dependencies]
 clap.workspace = true
 elsecall-failure.workspace = true

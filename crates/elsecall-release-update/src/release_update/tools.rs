@@ -9,7 +9,7 @@ use std::{
     time::Duration,
 };
 
-pub fn mise(paths: &Paths) -> Result<PathBuf> {
+pub(super) fn mise(paths: &Paths) -> Result<PathBuf> {
     find_mise(paths).ok_or_else(|| {
         Failure::new(
             "mise_unavailable",
@@ -23,7 +23,7 @@ pub fn mise(paths: &Paths) -> Result<PathBuf> {
 /// the first on `PATH`, where the one-command installer also looks. Every mise
 /// edits the same global configuration. The service's launchd `PATH` holds none,
 /// so only commands run from a shell find a mise there.
-pub fn find_mise(paths: &Paths) -> Option<PathBuf> {
+pub(super) fn find_mise(paths: &Paths) -> Option<PathBuf> {
     // As `command -v` in the installer, skip a file named mise that cannot run.
     let candidates: Vec<_> = mise_candidates(&paths.home, std::env::var_os("PATH").as_deref())
         .into_iter()
@@ -57,7 +57,7 @@ fn mise_candidates(home: &Path, search: Option<&std::ffi::OsStr>) -> Vec<PathBuf
     .chain(on_path)
     .collect()
 }
-pub fn run(
+pub(super) fn run(
     program: &Path,
     arguments: &[&str],
     directory: &Path,

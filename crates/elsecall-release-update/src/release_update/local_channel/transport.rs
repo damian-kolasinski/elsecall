@@ -4,7 +4,7 @@ use std::{path::Path, time::Duration};
 
 /// Reads `url` into `output` when given, else into memory, refusing more than
 /// `max_bytes`.
-pub fn fetch(url: &str, max_bytes: u64, output: Option<&Path>) -> Result<Vec<u8>> {
+pub(super) fn fetch(url: &str, max_bytes: u64, output: Option<&Path>) -> Result<Vec<u8>> {
     let limit = max_bytes.to_string();
     let mut arguments = vec![
         "-q",

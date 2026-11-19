@@ -6,7 +6,7 @@ use super::guide;
 /// Bumped with any change to the stub's text, including the guide description it
 /// embeds: refresh replaces a stub only with a higher version, so a downgrade or
 /// an older binary on PATH never rewrites a newer stub.
-pub const VERSION: u32 = 1;
+pub(crate) const VERSION: u32 = 1;
 
 const MARKER: &str = "elsecall-stub: \"";
 
@@ -14,7 +14,7 @@ const MARKER: &str = "elsecall-stub: \"";
 /// recognised by it. A new description keeps it, or this check is extended.
 const SHIPPED: &str = "Run builds, tests and other heavy commands through Elsecall";
 
-pub fn text() -> String {
+pub(crate) fn text() -> String {
     format!(
         "---
 name: elsecall
@@ -35,7 +35,7 @@ Run `elsecall skill show` and follow the guide it prints. It comes from the inst
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Owner {
+pub(crate) enum Owner {
     /// A stub of this tool, at its version.
     Stub(u32),
     /// A whole copy of the skill this tool exported.
@@ -43,7 +43,7 @@ pub enum Owner {
     Foreign,
 }
 
-pub fn owner(skill: &str) -> Owner {
+pub(crate) fn owner(skill: &str) -> Owner {
     let Some(frontmatter) = skill
         .strip_prefix("---\n")
         .and_then(|rest| rest.split_once("\n---\n"))
