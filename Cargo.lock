@@ -1067,6 +1067,7 @@ dependencies = [
  "ed25519-dalek",
  "elsecall-build-identity",
  "elsecall-failure",
+ "elsecall-guidance",
  "elsecall-labels",
  "elsecall-process",
  "elsecall-rehearsal-identity",
@@ -1112,6 +1113,14 @@ name = "elsecall-failure"
 version = "0.3.0"
 dependencies = [
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "elsecall-guidance"
+version = "0.3.0"
+dependencies = [
+ "elsecall-failure",
  "serde_json",
 ]
 

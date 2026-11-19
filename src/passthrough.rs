@@ -17,7 +17,6 @@ use crate::{
     },
     api::SCHEMA_VERSION,
     client::{self, Wait},
-    guidance::{self, Unmanaged},
     local_access,
     paths::Paths,
     run_id_file::RunIdFile,
@@ -33,6 +32,7 @@ use crate::{
 };
 use clap::Args;
 use elsecall_failure::{Failure, Result};
+use elsecall_guidance::{self as guidance, Unmanaged};
 use elsecall_run_admission::Admission;
 use executor::{CommandLine, Executor, Exit, Finished, RunContext, RunFailure, Running};
 use local::LocalExecutor;

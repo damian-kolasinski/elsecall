@@ -95,7 +95,7 @@ pub fn write(line: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::*;
 
     #[test]
     fn fleet_busy_says_when_to_retry_and_where_to_look() {

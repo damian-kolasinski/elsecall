@@ -28,7 +28,6 @@ pub mod fleet_upgrade;
 pub mod fleet_upgrade_api;
 pub mod fleet_upgrade_local_api;
 pub mod fleet_view;
-pub mod guidance;
 pub mod housekeeping;
 pub mod idle_load;
 pub mod inbound_firewall;

@@ -194,7 +194,7 @@ async fn main() -> ExitCode {
                     "Invalid lease acquire options.",
                     "Run elsecall lease acquire --help for valid options, then rerun the corrected command.",
                 );
-                elsecall::guidance::write(&elsecall::guidance::failure_line(&failure));
+                elsecall_guidance::write(&elsecall_guidance::failure_line(&failure));
                 failure
             } else {
                 Failure::new(
@@ -287,7 +287,7 @@ async fn main() -> ExitCode {
                 }
                 Err(error) => {
                     if acquire {
-                        elsecall::guidance::write(&elsecall::guidance::failure_line(&error));
+                        elsecall_guidance::write(&elsecall_guidance::failure_line(&error));
                     }
                     fail(error)
                 }
