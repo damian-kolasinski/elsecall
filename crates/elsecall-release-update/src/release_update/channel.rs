@@ -56,7 +56,7 @@ mod local {
     #[used]
     static MARKER: [u8; 36] = *b"ELSECALL-LOCAL-RELEASE-CHANNEL-BUILD";
 
-    pub fn channel() -> Result<LocalChannel> {
+    pub(super) fn channel() -> Result<LocalChannel> {
         // Keep the marker in the executable whatever the linker strips.
         std::hint::black_box(&MARKER);
         LocalChannel::new(
