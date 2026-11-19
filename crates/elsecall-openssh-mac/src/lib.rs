@@ -717,7 +717,7 @@ fn parse_tailnet(output: &[u8]) -> RemoteTailnet {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::*;
 
     #[test]
     fn facts_are_read_from_their_lines() {

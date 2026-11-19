@@ -5,7 +5,6 @@ pub mod admission_api;
 pub mod admission_cli;
 pub mod fleet_cli;
 pub mod nearby_cli;
-pub mod openssh_mac;
 pub mod outside_pressure_api;
 pub mod passthrough;
 pub mod peer_api;

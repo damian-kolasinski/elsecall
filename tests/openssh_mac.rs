@@ -2,12 +2,10 @@
 //! changes that Mac, so it runs only when `ELSECALL_E2E_SSH` names one as
 //! `account@host` and `ELSECALL_E2E_SSH_PASSWORD_FILE` holds the password.
 #![cfg(target_os = "macos")]
+use elsecall_add_mac::remote_mac::{Build, RemoteMac};
+use elsecall_openssh_mac::OpensshMac;
 use std::path::Path;
 use zeroize::Zeroizing;
-use {
-    elsecall::openssh_mac::OpensshMac,
-    elsecall_add_mac::remote_mac::{Build, RemoteMac},
-};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn the_adapter_reads_installs_and_authorizes_on_a_real_mac() {

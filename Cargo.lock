@@ -1083,6 +1083,7 @@ dependencies = [
  "elsecall-local-state",
  "elsecall-machine",
  "elsecall-membership",
+ "elsecall-openssh-mac",
  "elsecall-os-processes",
  "elsecall-outside-pressure",
  "elsecall-peer-diagnostics",
@@ -1425,6 +1426,20 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "zeroize",
+]
+
+[[package]]
+name = "elsecall-openssh-mac"
+version = "0.3.0"
+dependencies = [
+ "elsecall-add-mac",
+ "elsecall-failure",
+ "elsecall-platform-macos",
+ "elsecall-tailnet",
+ "serde_json",
+ "tempfile",
+ "tokio",
  "zeroize",
 ]
 
