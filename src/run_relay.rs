@@ -2,7 +2,7 @@
 //! member. Negotiated callers own run decryption; the service relays sealed bytes.
 //! Legacy callers retain the plaintext relay. Both paths carry the caller/member
 //! run protocol, including end-to-end heartbeats.
-use crate::{fleet::Fleet, peer_client, scheduling::service::Scheduler};
+use crate::{fleet::Fleet, scheduling::service::Scheduler};
 use axum::{
     Extension, Router,
     extract::{Path, Request, State},
@@ -13,6 +13,7 @@ use axum::{
 use elsecall_failure::Failure;
 use elsecall_local_state::local_access::LocalCaller;
 use elsecall_membership::roster::MemberName;
+use elsecall_peer_transport::peer_client;
 use elsecall_scheduling_model::run_id::RunId;
 use hyper_util::rt::TokioIo;
 use std::sync::Arc;
@@ -128,11 +129,14 @@ async fn attach(
         );
         // Preserve the service's peer-send bound below encryption. Local Unix
         // socket buffers must not hide a blocked TCP send from the CLI.
-        let stream = crate::peer_transport::Observed::new(
-            crate::send_inactivity::Writer::new(channel.stream, crate::remote_run::link::GRACE),
+        let stream = elsecall_peer_transport::peer_transport::Observed::new(
+            elsecall_peer_transport::send_inactivity::Writer::new(
+                channel.stream,
+                crate::remote_run::link::GRACE,
+            ),
             target.name.as_str(),
             &format!("/peer/v1/placements/{}/attach", id.as_str()),
-            crate::peer_transport::StreamTimeout::Caller,
+            elsecall_peer_transport::peer_transport::StreamTimeout::Caller,
         );
         tokio::spawn(async move {
             let Ok(upgraded) = upgrade.await else { return };

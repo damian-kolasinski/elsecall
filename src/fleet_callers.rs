@@ -7,9 +7,9 @@ use crate::{
         callers::Callers,
         exchange::{Answer, Question, ROUTE},
     },
-    peer_client,
 };
 use elsecall_failure::Result;
+use elsecall_peer_transport::peer_client;
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use std::{sync::Arc, time::Duration};

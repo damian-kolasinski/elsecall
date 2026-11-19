@@ -14,14 +14,14 @@ use tokio::{
 /// Silence longer than this on a peer connection is a lost connection.
 pub const GRACE: Duration = Duration::from_secs(10);
 
-pub(crate) struct Reader<R> {
+pub struct Reader<R> {
     inner: R,
     grace: Duration,
     pending: Option<Pin<Box<Sleep>>>,
 }
 
 impl<R> Reader<R> {
-    pub(crate) fn new(inner: R, grace: Duration) -> Self {
+    pub fn new(inner: R, grace: Duration) -> Self {
         Self {
             inner,
             grace,
@@ -76,7 +76,7 @@ impl<S: AsyncWrite + Unpin> AsyncWrite for Reader<S> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::receive_inactivity::*;
     use std::io::Write;
     use tokio::io::AsyncReadExt;
 

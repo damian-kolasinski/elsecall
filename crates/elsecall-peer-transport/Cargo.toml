@@ -1,0 +1,27 @@
+[package]
+name = "elsecall-peer-transport"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+base64.workspace = true
+elsecall-build-identity.workspace = true
+elsecall-failure.workspace = true
+elsecall-membership.workspace = true
+elsecall-peer-diagnostics.workspace = true
+elsecall-secure-channel.workspace = true
+elsecall-wire.workspace = true
+futures-util.workspace = true
+http-body-util.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+libc.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true

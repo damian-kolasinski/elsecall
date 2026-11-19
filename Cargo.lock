@@ -1078,6 +1078,7 @@ dependencies = [
  "elsecall-machine",
  "elsecall-membership",
  "elsecall-peer-diagnostics",
+ "elsecall-peer-transport",
  "elsecall-process",
  "elsecall-rehearsal-identity",
  "elsecall-run-admission",
@@ -1258,6 +1259,27 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+]
+
+[[package]]
+name = "elsecall-peer-transport"
+version = "0.3.0"
+dependencies = [
+ "base64 0.22.1",
+ "elsecall-build-identity",
+ "elsecall-failure",
+ "elsecall-membership",
+ "elsecall-peer-diagnostics",
+ "elsecall-secure-channel",
+ "elsecall-wire",
+ "futures-util",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "libc",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

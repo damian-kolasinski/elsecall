@@ -129,8 +129,8 @@ async fn attach(
         match upgrade.await {
             Ok(upgraded) => {
                 let stream = SecureStream::new(
-                    crate::receive_inactivity::Reader::new(
-                        crate::send_inactivity::Writer::new(
+                    elsecall_peer_transport::receive_inactivity::Reader::new(
+                        elsecall_peer_transport::send_inactivity::Writer::new(
                             TokioIo::new(upgraded),
                             crate::remote_run::link::GRACE,
                         ),

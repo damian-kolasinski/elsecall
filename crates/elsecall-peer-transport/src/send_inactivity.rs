@@ -10,13 +10,13 @@ use tokio::{
     io::{AsyncRead, AsyncWrite, ReadBuf},
     time::Sleep,
 };
-pub(crate) struct Writer<S> {
+pub struct Writer<S> {
     inner: S,
     grace: Duration,
     pending: Option<Pin<Box<Sleep>>>,
 }
 impl<S> Writer<S> {
-    pub(crate) fn new(inner: S, grace: Duration) -> Self {
+    pub fn new(inner: S, grace: Duration) -> Self {
         Self {
             inner,
             grace,
@@ -84,7 +84,7 @@ impl<S: AsyncWrite + Unpin> AsyncWrite for Writer<S> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::send_inactivity::*;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     #[tokio::test(start_paused = true)]
     async fn idle_time_does_not_spend_the_first_pending_write_budget() {

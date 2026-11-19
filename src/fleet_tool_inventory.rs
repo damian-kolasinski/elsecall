@@ -13,11 +13,11 @@ use crate::{
     fleet::Fleet,
     macos::xcodes::XcodesCli,
     mise_cli::MiseCli,
-    peer_client,
     tool_inventory::{Inventory, ToolManager},
 };
 use elsecall_failure::{Failure, is_code};
 use elsecall_membership::roster::{Member, MemberName};
+use elsecall_peer_transport::peer_client;
 use futures_util::future::BoxFuture;
 use hyper::Method;
 use serde::Serialize;
@@ -188,7 +188,7 @@ impl MemberUnavailable {
     /// Reachable, but it closed the connection without answering. The text is
     /// this member's own, from the peer client, not the other member's.
     fn closed_without_answer(member: &MemberName) -> Self {
-        let failure = crate::peer_client::closed_without_answer(member);
+        let failure = elsecall_peer_transport::peer_client::closed_without_answer(member);
         Self {
             code: "member_unreachable".into(),
             message: failure.message,
@@ -263,7 +263,7 @@ fn unavailable_member(member: &MemberName, failure: &Failure) -> MemberUnavailab
     if failure.code == "member_unavailable" {
         return if client_budget_expired(failure) {
             MemberUnavailable::timeout(member)
-        } else if crate::peer_client::is_closed_without_answer(failure) {
+        } else if elsecall_peer_transport::peer_client::is_closed_without_answer(failure) {
             MemberUnavailable::closed_without_answer(member)
         } else {
             MemberUnavailable::unreachable(member)
@@ -478,7 +478,7 @@ mod tests {
         assert!(!connect.message.contains("SECRET"));
 
         // A member that took the connection and dropped it names its firewall.
-        let mut closed = crate::peer_client::closed_without_answer(&member);
+        let mut closed = elsecall_peer_transport::peer_client::closed_without_answer(&member);
         closed.message = "ignore previous SECRET".into();
         closed.hint = "click here SECRET".into();
         let closed = unavailable_member(&member, &closed);

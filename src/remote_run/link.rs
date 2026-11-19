@@ -18,7 +18,7 @@ use tokio::{
 
 pub const HEARTBEAT: Duration = Duration::from_secs(1);
 /// Silence longer than this is a lost connection.
-pub use crate::receive_inactivity::GRACE;
+pub use elsecall_peer_transport::receive_inactivity::GRACE;
 
 pub fn lost(detail: &str) -> Failure {
     Failure::new(
@@ -78,7 +78,7 @@ impl Link {
     where
         S: AsyncRead + AsyncWrite + Send + 'static,
     {
-        Self::open_monitored(crate::receive_inactivity::Reader::new(
+        Self::open_monitored(elsecall_peer_transport::receive_inactivity::Reader::new(
             Box::pin(stream),
             GRACE,
         ))

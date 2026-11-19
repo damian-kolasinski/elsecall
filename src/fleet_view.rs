@@ -1,9 +1,6 @@
 //! The fleet as this member sees it: every member's reachability, role and state,
 //! each fetched from that member over the authenticated channel.
-use crate::{
-    fleet::{Fleet, PeerStatus},
-    peer_client,
-};
+use crate::fleet::{Fleet, PeerStatus};
 use elsecall_build_identity::build_identity::{Build, BuildId};
 use elsecall_failure::Failure;
 use elsecall_membership::{
@@ -11,6 +8,7 @@ use elsecall_membership::{
     membership_store::Membership,
     roster::{MemberName, Readiness},
 };
+use elsecall_peer_transport::peer_client;
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;

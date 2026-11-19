@@ -43,7 +43,6 @@ pub mod outside_pressure_gate;
 pub mod own_history;
 pub mod passthrough;
 pub mod peer_api;
-pub mod peer_client;
 pub mod peer_history;
 pub mod peer_listener;
 pub mod placement_api;
@@ -113,14 +112,8 @@ pub mod busy_hour_calibration;
 
 pub mod replay_placement;
 
-mod peer_transport;
-
 mod local_run_client;
-mod receive_inactivity;
 mod sealed_run;
-mod socket_io;
-
-mod send_inactivity;
 
 pub mod workload_observation_cli;
 

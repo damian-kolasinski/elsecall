@@ -187,7 +187,7 @@ async fn accept(listener: TcpListener, app: Router, limit: Arc<Semaphore>) {
             // their runner. `drive` bounds the exchange itself.
             let connection = builder
                 .serve_connection(
-                    TokioIo::new(crate::socket_io::Socket::new(
+                    TokioIo::new(elsecall_peer_transport::socket_io::Socket::new(
                         stream,
                         crate::remote_run::link::GRACE,
                     )),

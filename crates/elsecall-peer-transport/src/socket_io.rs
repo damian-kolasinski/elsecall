@@ -7,14 +7,14 @@ use std::{
 };
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
-pub(crate) struct Socket<S> {
+pub struct Socket<S> {
     stream: S,
     grace: Duration,
     pending_since: Option<tokio::time::Instant>,
 }
 
 impl<S> Socket<S> {
-    pub(crate) fn new(stream: S, grace: Duration) -> Self {
+    pub fn new(stream: S, grace: Duration) -> Self {
         Self {
             stream,
             grace,

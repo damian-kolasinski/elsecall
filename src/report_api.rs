@@ -281,7 +281,6 @@ mod tests {
     use super::*;
     use crate::scheduling::fixtures::{self, bucket};
     use crate::{
-        peer_client::RESPONSE_LIMIT,
         report_protocol::PAGE,
         reporting::{
             facts::{Estimator, Fact, Predicted},
@@ -289,6 +288,7 @@ mod tests {
         },
     };
     use elsecall_machine::inspection::{MemoryPressure, ThermalState};
+    use elsecall_peer_transport::peer_client::RESPONSE_LIMIT;
 
     #[test]
     fn the_largest_answers_fit_a_member_response() {

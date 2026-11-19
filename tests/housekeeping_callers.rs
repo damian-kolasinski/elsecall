@@ -7,21 +7,19 @@ mod diagnostics;
 mod members;
 mod processes;
 
-use elsecall::{
-    housekeeping::{
-        caller_state::CallerState,
-        callers::Callers,
-        catalog::Catalog,
-        clock::SystemClock,
-        exchange::{Answer, Question, ROUTE, RemovedCopy, WorkspaceAnswer, WorkspaceState},
-        pass::{Housekeeper, Parts},
-        settings::Settings,
-        volumes::Statfs,
-    },
-    peer_client,
+use elsecall::housekeeping::{
+    caller_state::CallerState,
+    callers::Callers,
+    catalog::Catalog,
+    clock::SystemClock,
+    exchange::{Answer, Question, ROUTE, RemovedCopy, WorkspaceAnswer, WorkspaceState},
+    pass::{Housekeeper, Parts},
+    settings::Settings,
+    volumes::Statfs,
 };
 use elsecall_failure::Result;
 use elsecall_local_state::paths::Paths;
+use elsecall_peer_transport::peer_client;
 use elsecall_scheduling_model::timestamp::Timestamp;
 use elsecall_workspace::{
     copies::Copies,

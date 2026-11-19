@@ -35,10 +35,9 @@ pub(crate) async fn attach(socket: &Path, run: &RunId) -> Result<Link> {
             .map_err(|e| Failure::io("Identify local service", e))?
             .uid(),
     )?;
-    let (mut sender, connection) = http1::handshake(TokioIo::new(crate::socket_io::Socket::new(
-        stream,
-        crate::remote_run::link::GRACE,
-    )))
+    let (mut sender, connection) = http1::handshake(TokioIo::new(
+        elsecall_peer_transport::socket_io::Socket::new(stream, crate::remote_run::link::GRACE),
+    ))
     .await
     .map_err(|_| protocol_error())?;
     tokio::spawn(async move {
@@ -78,8 +77,11 @@ pub(crate) async fn attach(socket: &Path, run: &RunId) -> Result<Link> {
         let stream = TokioIo::new(upgraded);
         return Ok(match keys {
             Some(keys) => Link::open_monitored(SecureStream::new(
-                crate::receive_inactivity::Reader::new(
-                    crate::send_inactivity::Writer::new(stream, crate::remote_run::link::GRACE),
+                elsecall_peer_transport::receive_inactivity::Reader::new(
+                    elsecall_peer_transport::send_inactivity::Writer::new(
+                        stream,
+                        crate::remote_run::link::GRACE,
+                    ),
                     crate::remote_run::link::GRACE,
                 ),
                 keys,

@@ -298,7 +298,7 @@ impl<S: AsyncWrite + Unpin> AsyncWrite for Observed<S> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::peer_transport::*;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     struct Broken;
     impl AsyncRead for Broken {

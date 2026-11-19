@@ -5,15 +5,13 @@ mod diagnostics;
 mod members;
 mod processes;
 
-use elsecall::{
-    config_sync::{
-        manifest::{FileNode, Manifest, Node, Tree},
-        protocol::{self, Message, Purpose},
-        state::State,
-    },
-    peer_client,
+use elsecall::config_sync::{
+    manifest::{FileNode, Manifest, Node, Tree},
+    protocol::{self, Message, Purpose},
+    state::State,
 };
 use elsecall_local_state::paths::Paths;
+use elsecall_peer_transport::peer_client;
 use elsecall_workspace::path::WorkspacePath;
 use members::{TestMember, enrol};
 use serde_json::Value;

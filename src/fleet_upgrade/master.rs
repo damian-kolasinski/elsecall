@@ -10,7 +10,6 @@ use crate::{
         member::{UpgradeStatus, WorkInFlight},
         protocol::{self, Manifest, Message, Os, UpgradeId},
     },
-    peer_client,
 };
 use elsecall_build_identity::{
     build_identity::{Build, BuildId, Digest},
@@ -18,6 +17,7 @@ use elsecall_build_identity::{
 };
 use elsecall_failure::{Failure, Result};
 use elsecall_membership::roster::{Member, MemberName};
+use elsecall_peer_transport::peer_client;
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use std::{

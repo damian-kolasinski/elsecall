@@ -447,14 +447,14 @@ fn random_unavailable() -> Failure {
     )
 }
 
-pub(crate) struct AcceptedChannel {
-    pub(crate) stream: TokioIo<hyper::upgrade::Upgraded>,
-    pub(crate) acceptance: elsecall_membership::peer_auth::ChannelProof,
+pub struct AcceptedChannel {
+    pub stream: TokioIo<hyper::upgrade::Upgraded>,
+    pub acceptance: elsecall_membership::peer_auth::ChannelProof,
 }
 
 /// Run-only local relay: the service authenticates its roster-selected peer but
 /// never owns the caller's ephemeral secret or derives the run's session keys.
-pub(crate) async fn relay_attach(
+pub async fn relay_attach(
     key: &MemberKey,
     member: &Member,
     run: &str,

@@ -22,11 +22,11 @@ use crate::{
     },
     configuration,
     fleet::{Fleet, RoleHandover, SyncReport},
-    peer_client,
 };
 use elsecall_config_sync_model::synced_path::SyncedPath;
 use elsecall_failure::{Failure, Result};
 use elsecall_membership::roster::{Member, MemberName, Roster};
+use elsecall_peer_transport::peer_client;
 use elsecall_workspace::digest::Digest;
 use hyper::Method;
 use serde::{Deserialize, Serialize};
@@ -429,7 +429,7 @@ impl ConfigSync {
         let result = tokio::time::timeout(EXCHANGE_TIMEOUT, self.exchange_push(member, manifest))
             .await
             .unwrap_or_else(|_| {
-                Err(crate::peer_client::operation_timeout(
+                Err(elsecall_peer_transport::peer_client::operation_timeout(
                     member,
                     protocol::ROUTE,
                     started,
@@ -533,7 +533,7 @@ impl ConfigSync {
         tokio::time::timeout(EXCHANGE_TIMEOUT, exchange)
             .await
             .unwrap_or_else(|_| {
-                Err(crate::peer_client::operation_timeout(
+                Err(elsecall_peer_transport::peer_client::operation_timeout(
                     member,
                     protocol::ROUTE,
                     started,

@@ -4,14 +4,12 @@ mod file_gate;
 mod members;
 mod processes;
 mod sync_gate;
-use elsecall::{
-    config_sync::{
-        manifest::{FileNode, Manifest},
-        protocol::{self, Message, Purpose},
-        state::State,
-    },
-    peer_client,
+use elsecall::config_sync::{
+    manifest::{FileNode, Manifest},
+    protocol::{self, Message, Purpose},
+    state::State,
 };
+use elsecall_peer_transport::peer_client;
 use members::{TestMember, enrol};
 use serde_json::Value;
 use std::{

@@ -4,7 +4,6 @@
 //! quoted.
 use crate::{
     fleet::Fleet,
-    peer_client,
     report_protocol::{FactsPage, FactsRequest, LoadRequest, PAGE},
     reporting::{
         facts::is_code,
@@ -15,6 +14,7 @@ use crate::{
 use elsecall_failure::{Failure, Result};
 use elsecall_load_log::buckets::Bucket;
 use elsecall_membership::roster::Member;
+use elsecall_peer_transport::peer_client;
 use elsecall_scheduling_model::speed::PLAUSIBLE;
 use futures_util::future::BoxFuture;
 use hyper::Method;
