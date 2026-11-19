@@ -1,8 +1,8 @@
 //! Freeze trace inputs before creating scratch trees or submitting any work.
 use super::{invalid, protocol::Launch};
-use crate::workload::trace::Trace;
 use elsecall_failure::Result;
 use elsecall_scheduling_model::request::Kind;
+use elsecall_workload::trace::Trace;
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -148,10 +148,6 @@ pub(crate) fn nested_problems(trace: &Trace) -> Vec<(String, &'static str)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::workload::{
-        demand::Demand,
-        trace::{Member, Request, TraceOutcome},
-    };
     use elsecall_scheduling::{
         fixtures::{T0, base},
         record::{HoldBasis, HoldLimitRecord, Outcome, WorkspaceIdentity},
@@ -159,6 +155,10 @@ mod tests {
     use elsecall_scheduling_model::{
         request::{AtDeadline, Placement, Urgency},
         timestamp::Timestamp,
+    };
+    use elsecall_workload::{
+        demand::Demand,
+        trace::{Member, Request, TraceOutcome},
     };
     use std::time::Duration;
     fn trace() -> Trace {

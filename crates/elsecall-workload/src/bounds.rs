@@ -1,5 +1,5 @@
 //! Validated explicit arrival bounds. Evidence outside the arrival bounds stays.
-use crate::workload::trace::Trace;
+use crate::trace::Trace;
 use elsecall_failure::Result;
 use elsecall_report_facts::window::invalid;
 use elsecall_scheduling_model::timestamp::Timestamp;

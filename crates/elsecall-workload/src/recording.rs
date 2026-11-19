@@ -1,5 +1,5 @@
 //! Controlled rehearsal provenance, distinct from observational production models.
-use crate::workload::trace::{Request, Trace};
+use crate::trace::{Request, Trace};
 use elsecall_build_identity::build_identity::Build;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 #[serde(deny_unknown_fields)]
 pub struct Recording {
     #[serde(default)]
-    pub calibration: BTreeMap<String, crate::workload::format::Calibration>,
+    pub calibration: BTreeMap<String, crate::format::Calibration>,
     #[serde(default)]
     pub ideal_ms: BTreeMap<String, Option<f64>>,
     #[serde(default)]
@@ -20,7 +20,7 @@ pub struct Recording {
     pub build: Build,
     pub compress: f64,
     #[serde(default)]
-    pub load_factor: crate::workload::format::LoadFactor,
+    pub load_factor: crate::format::LoadFactor,
     pub seed: u64,
     pub complete: bool,
     pub load_complete: BTreeMap<String, bool>,
@@ -49,7 +49,7 @@ impl Recording {
             if !self
                 .calibration
                 .get(member)
-                .is_some_and(crate::workload::format::Calibration::valid)
+                .is_some_and(crate::format::Calibration::valid)
             {
                 missing.push(format!("{member}: no valid worker calibration"));
             }
@@ -208,7 +208,7 @@ mod tests {
         trace.rehearsal = Some(Recording {
             calibration: BTreeMap::from([(
                 "a".into(),
-                crate::workload::format::Calibration {
+                crate::format::Calibration {
                     iterations: 1000,
                     elapsed_seconds: 1.0,
                     cpu_seconds: 1.0,

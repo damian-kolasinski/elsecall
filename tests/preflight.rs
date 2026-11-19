@@ -1,9 +1,7 @@
 //! Offline readiness over the production planner, simulator and tuner.
-use elsecall::{
-    tuning_preflight::{self, Options},
-    workload::trace::Trace,
-};
+use elsecall::tuning_preflight::{self, Options};
 use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_workload::trace::Trace;
 use serde_json::{Value, json};
 use std::{num::NonZeroUsize, time::Duration};
 fn fixture() -> Trace {
@@ -154,7 +152,7 @@ fn explicit_bounds_reject_empty_reversed_outside_and_malformed_windows() {
         ("2026-11-03T00:00:11Z", "2026-11-03T00:00:10Z"),
         ("2026-11-02T00:00:00Z", "2026-11-03T00:00:10Z"),
     ] {
-        assert!(elsecall::workload::bounds::within(&source, Some(since), Some(until)).is_err());
+        assert!(elsecall_workload::bounds::within(&source, Some(since), Some(until)).is_err());
     }
 }
 #[test]

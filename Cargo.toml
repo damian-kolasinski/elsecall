@@ -51,6 +51,7 @@ tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
 elsecall = { path = "." }
+elsecall-workload = { path = "crates/elsecall-workload" }
 elsecall-remote-run = { path = "crates/elsecall-remote-run" }
 elsecall-installation = { path = "crates/elsecall-installation" }
 elsecall-fleet = { path = "crates/elsecall-fleet" }
@@ -146,6 +147,7 @@ elsecall-service-log.workspace = true
 elsecall-sqlite-retention.workspace = true
 elsecall-tailnet.workspace = true
 elsecall-wire.workspace = true
+elsecall-workload.workspace = true
 elsecall-workload-config.workspace = true
 elsecall-workspace.workspace = true
 futures-util.workspace = true
@@ -172,6 +174,7 @@ x25519-dalek.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
+elsecall-workload = { workspace = true, features = ["test-support"] }
 elsecall-outside-pressure = { workspace = true, features = ["test-support"] }
 elsecall-scheduling = { workspace = true, features = ["test-support"] }
 elsecall-machine = { workspace = true, features = ["test-support"] }

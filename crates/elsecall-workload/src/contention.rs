@@ -1,6 +1,6 @@
 //! Observational duration curves, paired by exact label and warmth before
 //! pooling into a family. These are associations, not causal slowdown claims.
-use crate::workload::demand::{family, interval, median, overlap};
+use crate::demand::{family, interval, median, overlap};
 use elsecall_load_log::buckets::Bucket;
 use elsecall_report_facts::facts::Fact;
 use serde::{Deserialize, Serialize};
@@ -137,7 +137,7 @@ pub fn derive(facts: &[Fact], loads: &[(&str, &[Bucket])]) -> Vec<Curve> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::workload::demand::tests::{bucket, run};
+    use crate::demand::fixtures::{bucket, run};
     #[test]
     fn unfinished_competing_work_is_not_an_uncontended_baseline() {
         let mut facts = Vec::new();

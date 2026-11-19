@@ -27,7 +27,7 @@ pub(crate) use engine::invalid as engine_invalid;
 pub use engine::{Options, simulate};
 
 /// Shared untrusted workload boundary for offline simulation and rehearsal.
-pub fn validate_trace(trace: &crate::workload::trace::Trace) -> elsecall_failure::Result<()> {
+pub fn validate_trace(trace: &elsecall_workload::trace::Trace) -> elsecall_failure::Result<()> {
     validation::trace(trace)
 }
 

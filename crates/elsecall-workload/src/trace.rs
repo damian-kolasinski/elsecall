@@ -1,5 +1,5 @@
 //! Explicit projections: never serialize a Record wholesale into a trace.
-use crate::workload::{contention::Curve, demand::Demand};
+use crate::{contention::Curve, demand::Demand};
 use elsecall_load_log::buckets::Bucket;
 use elsecall_report_facts::facts::Fact;
 use elsecall_scheduling::{
@@ -301,13 +301,13 @@ pub struct Member {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Trace {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub placement_replay: Option<crate::workload::format::Provenance>,
+    pub placement_replay: Option<crate::format::Provenance>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "crate::workload::recording::deserialize"
+        deserialize_with = "crate::recording::deserialize"
     )]
-    pub rehearsal: Option<crate::workload::recording::Recording>,
+    pub rehearsal: Option<crate::recording::Recording>,
     pub trace_version: u32,
     /// Full-fleet collection completeness, including deliberate member subsets;
     /// fidelity and model identification are separate.

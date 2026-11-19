@@ -1,8 +1,9 @@
 //! Reviewable projections of scheduling settings, never an installed-file read or
 //! write. Unrelated fleet/consumer configuration cannot enter the artifact.
 use super::space::{Settings, arguments};
-use crate::{simulation::CandidateSettings, workload::trace::Trace};
+use crate::simulation::CandidateSettings;
 use elsecall_failure::Result;
+use elsecall_workload::trace::Trace;
 use serde_json::{Value, json};
 fn literal<T: serde::Serialize>(v: &T) -> String {
     toml::Value::try_from(v)

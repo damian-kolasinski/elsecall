@@ -234,7 +234,7 @@ impl MemberHistory for PeerHistory {
         &self,
         window: Window,
         before: Option<elsecall_report_facts::report_protocol::Cursor>,
-    ) -> BoxFuture<'static, Result<crate::workload::trace::Page>> {
+    ) -> BoxFuture<'static, Result<elsecall_workload::trace::Page>> {
         let history = self.clone();
         Box::pin(async move {
             let before_for_validation = before.clone();
@@ -250,7 +250,7 @@ impl MemberHistory for PeerHistory {
                 )
                 .await
                 .map_err(|e| unreadable(history.member.name.as_str(), "trace", &e))?;
-            crate::workload::validation::page(
+            elsecall_workload::validation::page(
                 page,
                 window,
                 before_for_validation.as_ref(),

@@ -1,6 +1,6 @@
 //! Bounded versioned trace-file decoding, shared by simulation and rehearsal.
-use crate::workload::trace::Trace;
 use elsecall_failure::{Failure, Result};
+use elsecall_workload::trace::Trace;
 use std::io::Read;
 pub fn read(path: &std::path::Path) -> Result<Trace> {
     let file = std::fs::File::open(path).map_err(|e| Failure::io("Read workload trace", e))?;
@@ -17,7 +17,7 @@ pub fn read(path: &std::path::Path) -> Result<Trace> {
     }
     let header: Header = serde_json::from_slice(&bytes)
         .map_err(|_| crate::simulation::engine_invalid("Malformed workload trace JSON."))?;
-    if header.trace_version != crate::workload::trace::VERSION {
+    if header.trace_version != elsecall_workload::trace::VERSION {
         return Err(Failure::new(
             "unsupported_trace_version",
             "Unsupported workload trace version.",

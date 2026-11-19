@@ -4,7 +4,6 @@ use super::{
     adapters::{Processes, workspace},
     engine::settings,
 };
-use crate::workload::trace::{Request, Trace};
 use elsecall_failure::{Failure, Result};
 use elsecall_scheduling::{
     messages::Grant,
@@ -14,6 +13,7 @@ use elsecall_scheduling::{
     service::Scheduler,
 };
 use elsecall_scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
+use elsecall_workload::trace::{Request, Trace};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,

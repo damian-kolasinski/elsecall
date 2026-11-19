@@ -6,10 +6,6 @@ use super::{
     member::Member,
     model,
 };
-use crate::workload::{
-    demand::family,
-    trace::{Request, Trace, TraceOutcome},
-};
 use elsecall_failure::Result;
 use elsecall_scheduling::{
     messages::{Grant, Release, RunEnded},
@@ -17,6 +13,10 @@ use elsecall_scheduling::{
     service::HostedEnd,
 };
 use elsecall_scheduling_model::{request::Kind, run_id::RunId, timestamp::Timestamp};
+use elsecall_workload::{
+    demand::family,
+    trace::{Request, Trace, TraceOutcome},
+};
 use serde::Serialize;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -241,7 +241,7 @@ pub(super) async fn collect(
                             })
                             .filter_map(|s| s.fact.sync_ms.map(|v| v as f64))
                             .collect();
-                        crate::workload::demand::median(samples)
+                        elsecall_workload::demand::median(samples)
                             .map(|ms| ms as u64)
                             .unwrap_or_else(|| {
                                 missing.insert(format!(
@@ -776,7 +776,7 @@ mod family_tests {
 
     #[test]
     fn nested_holder_exits_preserve_outer_capacity_until_its_command_ends() {
-        use crate::workload::trace::TraceOutcome;
+        use elsecall_workload::trace::TraceOutcome;
         let mut trace = crate::simulation::engine::tests::trace();
         trace.requests.truncate(1);
         let start = trace.since;
@@ -815,7 +815,7 @@ mod family_tests {
 
     #[test]
     fn holder_exit_releases_a_nine_core_lease_before_later_work() {
-        use crate::workload::trace::TraceOutcome;
+        use elsecall_workload::trace::TraceOutcome;
         let mut trace = crate::simulation::engine::tests::trace();
         trace.requests.truncate(2);
         let start = trace.since;

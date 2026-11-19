@@ -1,13 +1,13 @@
 //! Read-only placement counterfactuals. Keep measured work, label families and
 //! urgency fixed; only the placement component of current consumer rules applies.
-use crate::workload::trace::Trace;
 use clap::Args;
 use elsecall_failure::{Failure, Result};
 use elsecall_scheduling_model::request::Placement;
+use elsecall_workload::trace::Trace;
 use elsecall_workload_config::workload_settings::RulePlacement;
 use std::{io::Read, path::PathBuf};
 
-pub use crate::workload::format::{Mode, Provenance};
+pub use elsecall_workload::format::{Mode, Provenance};
 #[derive(Args, Clone, Debug, Default)]
 pub struct ReplayPlacement {
     /// Historical recorded placement, or current consumer label placement rules
@@ -60,7 +60,7 @@ impl ReplayPlacement {
                 let configuration = configuration.resolve(&directory)?;
                 for r in &mut trace.requests {
                     if r.fact.internal
-                        || crate::workload::trace::internal(r)
+                        || elsecall_workload::trace::internal(r)
                         || r.fact.synthetic
                         || elsecall_labels::rules::synthetic(r.fact.label.as_deref())
                     {
@@ -110,7 +110,7 @@ pub fn split(trace: &Trace) -> serde_json::Value {
                 && r.fact.requested_at >= trace.since
                 && r.fact.requested_at < trace.until
                 && !r.fact.internal
-                && !crate::workload::trace::internal(r)
+                && !elsecall_workload::trace::internal(r)
         })
         .collect();
     serde_json::json!({"pinned":roots.iter().filter(|r| r.placement_request == Placement::Pinned).count(),"placeable":roots.iter().filter(|r| r.placement_request == Placement::Placeable).count(),"required":roots.iter().filter(|r| matches!(r.placement_request, Placement::Member(_))).count()})
@@ -119,9 +119,9 @@ pub fn split(trace: &Trace) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::workload::trace::Request;
     use elsecall_scheduling::fixtures;
     use elsecall_scheduling_model::timestamp::Timestamp;
+    use elsecall_workload::trace::Request;
     fn trace() -> Trace {
         let mut r = Request::of(&fixtures::pinned(1, "acme test Checkout", "master", 1.0)).unwrap();
         r.fact.family = Some("acme test *".into());
@@ -129,7 +129,7 @@ mod tests {
             workspace: "a".repeat(64),
             repository: "b".repeat(64),
         });
-        r.execution_reference = Some(crate::workload::trace::ExecutionReference::Known {
+        r.execution_reference = Some(elsecall_workload::trace::ExecutionReference::Known {
             milliseconds: 1000.0,
             identified: true,
             member_speed: Some(1.0),
@@ -146,7 +146,7 @@ mod tests {
             master: Some("master".into()),
             members: ["master", "devbox"]
                 .into_iter()
-                .map(|m| crate::workload::trace::Member {
+                .map(|m| elsecall_workload::trace::Member {
                     member: m.into(),
                     load: vec![],
                     errors: vec![],
@@ -172,7 +172,7 @@ mod tests {
         ReplayPlacement::default().apply(&mut t).unwrap();
         assert_eq!(before, serde_json::to_vec(&t).unwrap());
         assert_eq!(
-            crate::workload::trace::structural_members(&t, &t.requests[0]),
+            elsecall_workload::trace::structural_members(&t, &t.requests[0]),
             vec!["master"]
         );
         let original = t.requests[0].clone();
@@ -193,7 +193,7 @@ mod tests {
         );
         assert_eq!(report["split"]["placeable"], 1);
         assert_eq!(
-            crate::workload::trace::structural_members(&t, &t.requests[0]),
+            elsecall_workload::trace::structural_members(&t, &t.requests[0]),
             vec!["master", "devbox"]
         );
         assert_eq!(t.requests[0].fact.family, original.fact.family);

@@ -1,5 +1,5 @@
 //! Validate peer trace projections before they cross into workload modelling.
-use crate::workload::trace::{PAGE, Page, TraceOutcome, sanitize_decision};
+use crate::trace::{PAGE, Page, TraceOutcome, sanitize_decision};
 use elsecall_failure::Result;
 use elsecall_report_facts::{
     facts::is_code,
@@ -153,7 +153,7 @@ pub fn page(mut page: Page, window: Window, before: Option<&Cursor>, member: &st
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::workload::trace::Request;
+    use crate::trace::Request;
     use elsecall_scheduling::fixtures::{self, Run, T0};
     use elsecall_scheduling_model::timestamp::Timestamp;
     #[test]
@@ -181,7 +181,7 @@ mod tests {
                 .contains("PRIVATE_SENTINEL")
         );
         let mut frozen = r.clone();
-        frozen.execution_reference = Some(crate::workload::trace::ExecutionReference::Unknown);
+        frozen.execution_reference = Some(crate::trace::ExecutionReference::Unknown);
         assert!(page(make(frozen), window, None, "mini").is_err());
         let mut bad = r.clone();
         bad.fact.resources.as_mut().unwrap().cpu_ms = Some(u64::MAX);
@@ -259,7 +259,7 @@ mod tests {
         let cutoff = Timestamp::from_millis(T0 + 60_000);
         let window = Window::new(start, cutoff, cutoff).unwrap();
         let make = |since| Page {
-            leftovers: vec![crate::workload::trace::Leftover {
+            leftovers: vec![crate::trace::Leftover {
                 member: "mini".into(),
                 run_id: "r-000000000001".into(),
                 since,

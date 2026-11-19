@@ -344,8 +344,9 @@ pub fn disagreement(d: &Demand) -> bool {
     }
 }
 
-#[cfg(test)]
-pub(crate) mod tests {
+/// Facts and buckets the demand model is fitted on in tests, its own and reports'.
+#[cfg(any(test, feature = "test-support"))]
+pub mod fixtures {
     use super::*;
     use elsecall_report_facts::facts::ResourceUse;
     use elsecall_scheduling::fixtures::{self, T0};
@@ -379,6 +380,12 @@ pub(crate) mod tests {
         b.outside_mean = Some((cpu_cores - grants).max(0.0) / 10.0);
         b
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fixtures::{bucket, run};
+    use super::*;
     #[test]
     fn recovers_two_true_family_demands_not_process_tree_or_declared_sizes() {
         let mut facts = Vec::new();

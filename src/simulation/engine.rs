@@ -15,7 +15,6 @@ use super::{
     timeline::{integrate, record_queues},
     validation,
 };
-use crate::workload::trace::{Request, Trace};
 use elsecall_failure::{Failure, Result};
 use elsecall_scheduling::{
     clock::{Clock, VirtualClock},
@@ -29,6 +28,7 @@ use elsecall_scheduling_model::{
     settings::{AppliedRule, Settings, Source},
     timestamp::Timestamp,
 };
+use elsecall_workload::trace::{Request, Trace};
 use serde::Serialize;
 use serde_json::{Value, json};
 use std::{
@@ -1140,13 +1140,8 @@ fn seed_copies(trace: &Trace, world: &Arc<Mutex<World>>) {
 #[cfg(test)]
 pub(super) mod tests {
     use super::*;
-    use crate::workload::trace::TraceOutcome;
+    use elsecall_workload::trace::TraceOutcome;
     pub fn trace() -> Trace {
-        use crate::workload::{
-            contention::{Curve, Point},
-            demand::Demand,
-            trace::Member as TraceMember,
-        };
         use elsecall_load_log::buckets::Bucket;
         use elsecall_scheduling::{
             fixtures,
@@ -1154,6 +1149,11 @@ pub(super) mod tests {
             records::SchedulerSettings,
         };
         use elsecall_scheduling_model::capacity::Cores;
+        use elsecall_workload::{
+            contention::{Curve, Point},
+            demand::Demand,
+            trace::Member as TraceMember,
+        };
         let start = Timestamp::parse_rfc3339("2026-11-03T00:00:00Z").unwrap();
         let mut trace:Trace=serde_json::from_value(json!({"trace_version":1,"since":start,"until":start.after(Duration::from_secs(60)),"incomplete":false,"master":"a","members":[],"requests":[],"leftovers":[],"demand":[],"contention":[],"limits":[]})).unwrap();
         let capacity = Capacity {
@@ -1524,10 +1524,10 @@ pub(super) mod tests {
     }
     #[test]
     fn next_remote_run_is_admitted_then_settles_leftovers_before_sync() {
-        use crate::workload::trace::Leftover;
         use elsecall_report_facts::facts::PlacementKind;
         use elsecall_scheduling::{leftovers::Ending, placed::Warmth, record::WorkspaceIdentity};
         use elsecall_scheduling_model::request::Placement;
+        use elsecall_workload::trace::Leftover;
         let mut trace = trace();
         trace.requests.truncate(2);
         let start = trace.since;
@@ -1602,7 +1602,7 @@ pub(super) mod tests {
         r.fact.resources.as_mut().unwrap().started_at = None;
         r.fact.resources.as_mut().unwrap().ended_at =
             Some(r.fact.requested_at.after(Duration::from_millis(250)));
-        r.outcome = Some(crate::workload::trace::TraceOutcome::Failed {
+        r.outcome = Some(elsecall_workload::trace::TraceOutcome::Failed {
             code: "fleet_busy".into(),
         });
         r.urgency = Urgency::Interactive {

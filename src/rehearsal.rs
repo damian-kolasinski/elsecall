@@ -16,8 +16,8 @@ pub use elsecall_scheduling::service::invalid_rehearsal as invalid;
 
 pub mod cancellation;
 pub mod compare;
-pub use crate::workload::recording;
+pub use elsecall_workload::recording;
 
 /// Only known service-owned labels with internal placement are background in
 /// synthetic workloads. Never infer ownership from a consumer label prefix.
-pub use crate::workload::trace::internal;
+pub use elsecall_workload::trace::internal;

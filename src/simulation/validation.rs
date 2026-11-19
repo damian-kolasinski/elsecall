@@ -1,6 +1,5 @@
 //! Validate the on-disk trace at the simulator boundary. Missing historical
 //! evidence is allowed; the fidelity gate identifies it without inventing data.
-use crate::workload::trace::{Trace, TraceOutcome, VERSION};
 use elsecall_failure::{Failure, Result};
 use elsecall_report_facts::facts::{PlacementKind, is_code};
 use elsecall_scheduling_model::{
@@ -9,6 +8,7 @@ use elsecall_scheduling_model::{
     run_id::RunId,
     speed::PLAUSIBLE,
 };
+use elsecall_workload::trace::{Trace, TraceOutcome, VERSION};
 use std::collections::{BTreeMap, BTreeSet};
 
 const DAY: u64 = 86_400_000;
@@ -237,8 +237,8 @@ pub fn trace(t: &Trace) -> Result<()> {
         let f = &r.fact;
         if !f.believable()
             || r.execution_reference.as_ref().is_some_and(|r| match r {
-                crate::workload::trace::ExecutionReference::Unknown => false,
-                crate::workload::trace::ExecutionReference::Known {
+                elsecall_workload::trace::ExecutionReference::Unknown => false,
+                elsecall_workload::trace::ExecutionReference::Known {
                     milliseconds,
                     member_speed,
                     ..
@@ -472,12 +472,12 @@ pub fn trace(t: &Trace) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::workload::{
+    use elsecall_scheduling::fixtures::{self, T0};
+    use elsecall_scheduling_model::timestamp::Timestamp;
+    use elsecall_workload::{
         contention::{Curve, Point},
         trace::{Member, Request},
     };
-    use elsecall_scheduling::fixtures::{self, T0};
-    use elsecall_scheduling_model::timestamp::Timestamp;
     fn fixture() -> Trace {
         let mut record = fixtures::pinned(1, "work", "mini", 2.0);
         record.decision = None;
@@ -552,7 +552,7 @@ mod tests {
     }
     #[test]
     fn frozen_execution_references_validate_numbers_and_preserve_explicit_unknown() {
-        use crate::workload::trace::ExecutionReference;
+        use elsecall_workload::trace::ExecutionReference;
         let mut t = fixture();
         t.requests[0].execution_reference = Some(ExecutionReference::Unknown);
         assert!(trace(&t).is_ok());

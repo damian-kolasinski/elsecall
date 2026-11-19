@@ -1,8 +1,8 @@
 //! Virtual fleet resource state: family charges, copies, leftovers and fixed
 //! observations. Scheduling policy remains in the real member services.
 use super::model::{self, Envelope};
-use crate::workload::trace::Trace;
 use elsecall_scheduling::{clock::Clock, placed::Warmth};
+use elsecall_workload::trace::Trace;
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,

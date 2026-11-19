@@ -1,9 +1,7 @@
 //! End-to-end search over the real scheduler with virtual boundary adapters.
-use elsecall::{
-    tuning::{self, Space, TuneOptions},
-    workload::trace::Trace,
-};
+use elsecall::tuning::{self, Space, TuneOptions};
 use elsecall_scheduling_model::{capacity::Cores, timestamp::Timestamp};
+use elsecall_workload::trace::Trace;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, time::Duration};
 fn fixture() -> Trace {

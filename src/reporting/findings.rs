@@ -788,7 +788,7 @@ pub fn findings(metrics: &Metrics, gathered: &Gathered) -> Vec<Finding> {
             .weight(f64::INFINITY),
         );
     }
-    found.extend(metrics.demand.iter().filter(|d| crate::workload::demand::disagreement(d)).map(|d| {
+    found.extend(metrics.demand.iter().filter(|d| elsecall_workload::demand::disagreement(d)).map(|d| {
         let value=d.effective_cores.unwrap();
         Finding::new("effective_demand", Severity::Medium,
             format!("Family {:?} on {} declares {:.2} cores but effective demand is {:.2} cores (interval {:?}; process-tree CPU {:?} cores). Check sizes against external service work before changing them.", d.family,d.member,d.declared_cores.unwrap(),value,d.interval_cores.unwrap(),d.process_tree_cores),

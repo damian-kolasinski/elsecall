@@ -1096,6 +1096,7 @@ dependencies = [
  "elsecall-sqlite-retention",
  "elsecall-tailnet",
  "elsecall-wire",
+ "elsecall-workload",
  "elsecall-workload-config",
  "elsecall-workspace",
  "futures-util",
@@ -1543,6 +1544,25 @@ dependencies = [
  "elsecall-failure",
  "serde",
  "tokio",
+]
+
+[[package]]
+name = "elsecall-workload"
+version = "0.3.0"
+dependencies = [
+ "clap",
+ "elsecall-build-identity",
+ "elsecall-failure",
+ "elsecall-labels",
+ "elsecall-load-log",
+ "elsecall-machine",
+ "elsecall-rehearsal-identity",
+ "elsecall-report-facts",
+ "elsecall-scheduling",
+ "elsecall-scheduling-model",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

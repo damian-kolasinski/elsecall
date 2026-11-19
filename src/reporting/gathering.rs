@@ -54,7 +54,7 @@ pub trait MemberHistory: Send + Sync {
         &self,
         _window: Window,
         _before: Option<elsecall_report_facts::report_protocol::Cursor>,
-    ) -> BoxFuture<'static, Result<crate::workload::trace::Page>> {
+    ) -> BoxFuture<'static, Result<elsecall_workload::trace::Page>> {
         Box::pin(async {
             Err(invalid(
                 "This history source does not support workload traces.",

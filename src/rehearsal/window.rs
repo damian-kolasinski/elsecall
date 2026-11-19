@@ -1,7 +1,7 @@
 //! Choose a synthetic rehearsal population, without hiding competing work.
-use crate::workload::trace::Trace;
 use elsecall_failure::{Failure, Result};
 use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_workload::trace::Trace;
 use serde::Serialize;
 use std::{collections::BTreeMap, num::NonZeroUsize};
 
@@ -419,10 +419,6 @@ fn slice(source: &Trace, window: &Candidate) -> Trace {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::workload::{
-        demand::Demand,
-        trace::{Member, Request},
-    };
     use elsecall_scheduling::{
         fixtures::{T0, base, bucket},
         parameters::Parameters,
@@ -432,6 +428,10 @@ mod tests {
     use elsecall_scheduling_model::{
         capacity::{Capacity, Cores},
         request::Urgency,
+    };
+    use elsecall_workload::{
+        demand::Demand,
+        trace::{Member, Request},
     };
     use std::time::Duration;
     fn fixture() -> Trace {
@@ -814,7 +814,7 @@ mod tests {
         refusal.fact.resources.as_mut().unwrap().started_at = None;
         refusal.fact.resources.as_mut().unwrap().ended_at = None;
         refusal.fact.completed = false;
-        refusal.outcome = Some(crate::workload::trace::TraceOutcome::Failed {
+        refusal.outcome = Some(elsecall_workload::trace::TraceOutcome::Failed {
             code: "fleet_busy".into(),
         });
         refusal.fact.failure = Some("fleet_busy".into());

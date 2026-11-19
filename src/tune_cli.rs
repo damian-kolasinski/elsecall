@@ -2,7 +2,7 @@
 use crate::{
     evaluation_day::day,
     tuning::{self, Space, TuneOptions},
-    workload::input::read as read_trace,
+    workload_input::read as read_trace,
 };
 use clap::{Args, Subcommand};
 use elsecall_failure::{Failure, Result};

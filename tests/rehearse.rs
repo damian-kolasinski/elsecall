@@ -3,8 +3,8 @@
 mod diagnostics;
 mod members;
 mod processes;
-use elsecall::workload::trace::Trace;
 use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_workload::trace::Trace;
 use members::{TestMember, enrol};
 use serde_json::{Value, json};
 use std::{

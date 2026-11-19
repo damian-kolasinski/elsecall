@@ -69,7 +69,6 @@ pub mod state_sizes;
 
 pub mod trace_api;
 pub mod trace_cli;
-pub mod workload;
 
 pub mod simulate_cli;
 pub mod simulation;
@@ -106,3 +105,4 @@ pub mod workload_observation_cli;
 pub mod release_update;
 pub mod release_update_api;
 pub mod release_update_cli;
+pub mod workload_input;

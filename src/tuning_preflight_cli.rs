@@ -49,7 +49,7 @@ pub struct PreflightArgs {
 }
 pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
     let mut trace = if let Some(path) = &args.trace {
-        crate::workload::input::read(path)?
+        crate::workload_input::read(path)?
     } else {
         let now = Timestamp::now();
         let start = crate::report_cli::since(args.since.as_deref().unwrap_or("7d"), now)?;
@@ -74,14 +74,15 @@ pub async fn run(args: PreflightArgs) -> Result<serde_json::Value> {
     let observed_rehearsals = args
         .busy_rehearsal
         .iter()
-        .map(|p| crate::workload::input::read(p))
+        .map(|p| crate::workload_input::read(p))
         .collect::<Result<Vec<_>>>()?;
     let start_text = if args.trace.is_some() {
         args.since.as_deref()
     } else {
         None
     };
-    let (start, end) = crate::workload::bounds::within(&trace, start_text, args.until.as_deref())?;
+    let (start, end) =
+        elsecall_workload::bounds::within(&trace, start_text, args.until.as_deref())?;
     let trace = crate::rehearsal::window::bound(&trace, start, end)?;
     let mut result = tokio::task::spawn_blocking(move || {
         crate::tuning_preflight::check(

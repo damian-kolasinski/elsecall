@@ -2,7 +2,6 @@
 use crate::{
     report_cli::since,
     trace_api::{Members, PageRequest},
-    workload::trace::{self, Member, Page, Trace},
 };
 use clap::{Args, Subcommand};
 use elsecall_failure::{Failure, Result};
@@ -10,6 +9,7 @@ use elsecall_local_client as client;
 use elsecall_local_state::paths::Paths;
 use elsecall_report_facts::window::invalid;
 use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_workload::trace::{self, Member, Page, Trace};
 use std::{collections::BTreeSet, io::Write, os::unix::fs::OpenOptionsExt, path::PathBuf};
 
 #[derive(Args, Debug)]
@@ -50,7 +50,7 @@ pub struct ExportArgs {
 pub async fn run(paths: &Paths, args: TraceArgs) -> Result<serde_json::Value> {
     let TraceCommand::Export(args) = args.command;
     let now = Timestamp::now();
-    let until = crate::workload::bounds::until(args.until.as_deref(), now)?;
+    let until = elsecall_workload::bounds::until(args.until.as_deref(), now)?;
     let start = since(&args.since, now)?;
     elsecall_report_facts::window::Window::new(start, until, now)?;
     if args.local_history {
@@ -138,7 +138,7 @@ pub async fn collect(paths: &Paths, start: Timestamp, until: Timestamp) -> Resul
                 client::post_large::<Page, _>(&paths.socket(), "/v1/trace/requests", &request)
                     .await;
             let page = match page.and_then(|page| {
-                crate::workload::validation::page(page, window, request.before.as_ref(), &member)
+                elsecall_workload::validation::page(page, window, request.before.as_ref(), &member)
             }) {
                 Ok(page) => page,
                 Err(e) => {
@@ -215,7 +215,7 @@ pub async fn collect(paths: &Paths, start: Timestamp, until: Timestamp) -> Resul
             )
             .await;
             match tail.and_then(|page| {
-                crate::workload::validation::page(page, tail_window, None, &member)
+                elsecall_workload::validation::page(page, tail_window, None, &member)
             }) {
                 Ok(page) => entry.scheduler_settings.extend(page.scheduler_settings),
                 Err(error) => entry.errors.push(error.code),

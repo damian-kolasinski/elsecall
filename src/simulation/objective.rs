@@ -1,7 +1,7 @@
 //! Per-request normalized scheduling objective. No ratio of aggregate latencies.
 use super::{engine::Trial, metrics::distribution};
-use crate::workload::trace::{Trace, TraceOutcome};
 use elsecall_scheduling_model::{request::Kind, timestamp::Timestamp};
+use elsecall_workload::trace::{Trace, TraceOutcome};
 use serde_json::{Value, json};
 
 pub fn summarize(trace: &Trace, trial: &Trial, since: Timestamp, until: Timestamp) -> Value {
@@ -169,7 +169,7 @@ pub fn constrain_failures(metrics: &mut Value, baseline: Option<u64>, basis: &st
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::workload::recording::Recording;
+    use elsecall_workload::recording::Recording;
     use std::collections::BTreeMap;
     fn fixture() -> Trace {
         let mut trace = crate::simulation::engine::tests::trace();

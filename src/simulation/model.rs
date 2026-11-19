@@ -1,10 +1,10 @@
 //! Execution physics, separate from admission/placement's own estimates.
-use crate::workload::{
+use elsecall_scheduling::placed::Warmth;
+use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_workload::{
     demand::{family, interval, median, overlap},
     trace::{Request, Trace},
 };
-use elsecall_scheduling::placed::Warmth;
-use elsecall_scheduling_model::timestamp::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
@@ -179,7 +179,7 @@ fn execution_interval(trace: &Trace, request: &Request) -> Option<(u64, u64)> {
 /// its retained duration, or an explicitly uncertain declared-size fallback.
 fn leftover_interval(
     trace: &Trace,
-    leftover: &crate::workload::trace::Leftover,
+    leftover: &elsecall_workload::trace::Leftover,
 ) -> Option<(u64, u64, f64, bool)> {
     let duration = leftover
         .duration_ms
@@ -327,8 +327,8 @@ pub fn reference(trace: &Trace, request: &Request) -> Option<(f64, bool)> {
     }
     if let Some(reference) = &request.execution_reference {
         return match reference {
-            crate::workload::trace::ExecutionReference::Unknown => None,
-            crate::workload::trace::ExecutionReference::Known {
+            elsecall_workload::trace::ExecutionReference::Unknown => None,
+            elsecall_workload::trace::ExecutionReference::Known {
                 milliseconds,
                 identified,
                 ..
@@ -358,21 +358,23 @@ pub fn reference(trace: &Trace, request: &Request) -> Option<(f64, bool)> {
 pub fn freeze_reference(
     trace: &Trace,
     request: &Request,
-) -> crate::workload::trace::ExecutionReference {
+) -> elsecall_workload::trace::ExecutionReference {
     match reference(trace, request) {
-        Some((milliseconds, identified)) => crate::workload::trace::ExecutionReference::Known {
+        Some((milliseconds, identified)) => elsecall_workload::trace::ExecutionReference::Known {
             milliseconds,
             identified,
             member_speed: reference_speed(trace, request),
         },
-        None => crate::workload::trace::ExecutionReference::Unknown,
+        None => elsecall_workload::trace::ExecutionReference::Unknown,
     }
 }
 pub fn reference_speed(trace: &Trace, request: &Request) -> Option<f64> {
     if let Some(reference) = &request.execution_reference {
         return match reference {
-            crate::workload::trace::ExecutionReference::Known { member_speed, .. } => *member_speed,
-            crate::workload::trace::ExecutionReference::Unknown => None,
+            elsecall_workload::trace::ExecutionReference::Known { member_speed, .. } => {
+                *member_speed
+            }
+            elsecall_workload::trace::ExecutionReference::Unknown => None,
         };
     }
     let member = request
@@ -393,7 +395,7 @@ pub fn reference_speed(trace: &Trace, request: &Request) -> Option<f64> {
     speed(trace, member, at)
 }
 
-pub use crate::workload::trace::structural_members;
+pub use elsecall_workload::trace::structural_members;
 
 /// Frozen admission capability and explicit transport/workspace availability.
 /// Occupancy, saturation and hold/sync estimates do not constrain a free ideal.
@@ -648,7 +650,7 @@ mod tests {
         trace.members[0].load[0].cpu_mean = Some(0.75);
         trace.members[0].load[0].weighted_cores =
             elsecall_scheduling_model::capacity::Cores::from_millis(2000);
-        trace.rehearsal = Some(crate::workload::recording::Recording {
+        trace.rehearsal = Some(elsecall_workload::recording::Recording {
             calibration: BTreeMap::new(),
             ideal_ms: Default::default(),
             uncontended_ms: BTreeMap::new(),
@@ -770,7 +772,7 @@ mod tests {
     fn observed_leftover_cpu_is_removed_from_background_exactly_once() {
         let mut trace = single_run();
         let at = trace.since.millis();
-        trace.leftovers.push(crate::workload::trace::Leftover {
+        trace.leftovers.push(elsecall_workload::trace::Leftover {
             run_id: "r-000000000099".into(),
             member: "a".into(),
             since: trace.since,
@@ -798,7 +800,7 @@ mod tests {
         let mut trace = single_run();
         trace.demand[0].effective_cores = Some(1.5);
         trace.demand[0].interval_cores = Some([1.5, 1.5]);
-        trace.leftovers.push(crate::workload::trace::Leftover {
+        trace.leftovers.push(elsecall_workload::trace::Leftover {
             run_id: "r-000000000099".into(),
             member: "a".into(),
             since: trace.since,

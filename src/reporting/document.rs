@@ -115,7 +115,7 @@ pub struct Metrics {
     pub members: Vec<MemberMetrics>,
     pub accuracy: Accuracy,
     pub leftovers: LeftoverMetrics,
-    pub demand: Vec<crate::workload::demand::Demand>,
+    pub demand: Vec<elsecall_workload::demand::Demand>,
     pub demand_omitted: usize,
 }
 
@@ -296,14 +296,14 @@ pub fn document(query: &Query, gathered: &Gathered) -> Document {
             }
         })
         .collect();
-    let mut demand = crate::workload::demand::estimate_at_width(
+    let mut demand = elsecall_workload::demand::estimate_at_width(
         demand_context,
         &loads,
         query.window.fine_width().as_millis() as u64,
     );
     let kept_families: std::collections::BTreeSet<_> = kept
         .iter()
-        .filter_map(|f| Some((f.member.as_deref()?, crate::workload::demand::family(f)?)))
+        .filter_map(|f| Some((f.member.as_deref()?, elsecall_workload::demand::family(f)?)))
         .collect();
     demand.retain(|d| {
         query.member.as_deref().is_none_or(|m| m == d.member)
@@ -472,7 +472,7 @@ mod tests {
     /// filters.
     #[test]
     fn reports_fit_demand_on_all_context_then_filter_by_label() {
-        use crate::workload::demand::tests::{bucket, run};
+        use elsecall_workload::demand::fixtures::{bucket, run};
         let mut facts = vec![run(999, "old", 0, 1000, 1.0)];
         let mut buckets = Vec::new();
         for m in 10..26 {

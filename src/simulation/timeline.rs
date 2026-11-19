@@ -4,8 +4,8 @@ use super::{
     execution::{Active, advance},
     member::Member,
 };
-use crate::workload::trace::Trace;
 use elsecall_scheduling_model::timestamp::Timestamp;
+use elsecall_workload::trace::Trace;
 use serde::Serialize;
 use std::{
     collections::{BTreeMap, BTreeSet},

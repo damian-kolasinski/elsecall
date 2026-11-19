@@ -155,7 +155,7 @@ impl MemberHistory for OwnHistory {
         &self,
         window: Window,
         before: Option<elsecall_report_facts::report_protocol::Cursor>,
-    ) -> BoxFuture<'static, Result<crate::workload::trace::Page>> {
+    ) -> BoxFuture<'static, Result<elsecall_workload::trace::Page>> {
         let history = self.clone();
         blocking(move || {
             let records = history.scheduler.trace_records(
@@ -164,9 +164,9 @@ impl MemberHistory for OwnHistory {
                 before
                     .as_ref()
                     .map(|c| (Timestamp::from_millis(c.requested_at_ms), c.run_id.as_str())),
-                crate::workload::trace::PAGE,
+                elsecall_workload::trace::PAGE,
             )?;
-            let mut page = crate::workload::trace::Page::of_records(&records);
+            let mut page = elsecall_workload::trace::Page::of_records(&records);
             if before.is_none() {
                 page.scheduler_settings = history
                     .scheduler

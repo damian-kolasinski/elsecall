@@ -2,7 +2,7 @@
 use crate::{
     evaluation_day::day,
     simulation::{self, Options},
-    workload::input::read as read_trace,
+    workload_input::read as read_trace,
 };
 use clap::Args;
 use elsecall_failure::Result;

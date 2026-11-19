@@ -115,7 +115,7 @@ pub(crate) async fn single(
     args: RehearseArgs,
     settings: &BTreeMap<String, String>,
     signals: &mut crate::rehearsal::cancellation::Signals,
-    source: &crate::workload::trace::Trace,
+    source: &elsecall_workload::trace::Trace,
     frozen_calibration: Option<&BTreeMap<String, crate::rehearsal::worker::Calibration>>,
     frozen_ideals: Option<&BTreeMap<String, Option<f64>>>,
 ) -> Result<Value> {
@@ -704,7 +704,7 @@ pub(crate) async fn single(
 fn mapping(
     submitted: &[Arrival],
     collected: &BTreeMap<usize, Job>,
-    trace: &crate::workload::trace::Trace,
+    trace: &elsecall_workload::trace::Trace,
     epoch: Timestamp,
 ) -> Vec<Value> {
     submitted.iter().map(|a|{
@@ -715,10 +715,10 @@ fn mapping(
     }).collect()
 }
 
-pub(crate) fn source(args: &RehearseArgs) -> Result<crate::workload::trace::Trace> {
-    let mut trace = crate::workload::input::read(&args.trace)?;
+pub(crate) fn source(args: &RehearseArgs) -> Result<elsecall_workload::trace::Trace> {
+    let mut trace = crate::workload_input::read(&args.trace)?;
     args.replay_placement.apply(&mut trace)?;
     let (since, until) =
-        crate::workload::bounds::within(&trace, args.since.as_deref(), args.until.as_deref())?;
+        elsecall_workload::bounds::within(&trace, args.since.as_deref(), args.until.as_deref())?;
     crate::rehearsal::window::bound(&trace, since, until)
 }
