@@ -54,6 +54,7 @@ const SCENES: &[(&str, Scene)] = &[
     ("release-future", scene_release_future),
     ("release-fleet", scene_release_fleet),
     ("add-mac-prepare", scene_add_mac_prepare),
+    ("add-mac-network", scene_add_mac_network),
     ("add-mac-looking", scene_add_mac_looking),
     ("add-mac-choose", scene_add_mac_choose),
     ("add-mac-sign-in", scene_add_mac_sign_in),
@@ -630,6 +631,7 @@ fn poll_add_mac(state: &mut AppState, now: f64, tx: &mut Tx) -> bool {
     let animated = matches!(
         state.add_mac.page,
         AddMacPage::Prepare
+            | AddMacPage::Network
             | AddMacPage::Adding {
                 approval: Some(_),
                 ..
@@ -927,8 +929,13 @@ fn scene_add_mac_prepare(state: &mut AppState) {
 }
 
 fn scene_add_mac_looking(state: &mut AppState) {
-    scene_add_mac_prepare(state);
+    scene_add_mac_network(state);
     state.add_mac.show_choose();
+}
+
+fn scene_add_mac_network(state: &mut AppState) {
+    scene_add_mac_prepare(state);
+    state.add_mac.show_network();
 }
 
 fn scene_add_mac_choose(state: &mut AppState) {

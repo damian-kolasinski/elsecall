@@ -129,6 +129,11 @@ fn a_mac_is_added_from_the_header_through_every_page() {
         "the instructions show first"
     );
     click(&mut rt, "add-mac-continue");
+    assert!(rt.presented("add-mac-wifi-art").is_some());
+    click(&mut rt, "add-mac-back");
+    assert!(rt.presented("add-mac-settings-art").is_some());
+    click(&mut rt, "add-mac-continue");
+    click(&mut rt, "add-mac-continue");
     poll_until(&mut rt, "the Macs nearby", |state| {
         !state.add_mac().found().is_empty()
     });
@@ -192,6 +197,7 @@ fn closing_the_sheet_while_adding_stops_the_add_and_keeps_the_sheet() {
     });
     let mut rt = window(Arc::clone(&cli));
     click(&mut rt, "add-mac");
+    click(&mut rt, "add-mac-continue");
     click(&mut rt, "add-mac-continue");
     poll_until(&mut rt, "the Macs nearby", |state| {
         !state.add_mac().found().is_empty()

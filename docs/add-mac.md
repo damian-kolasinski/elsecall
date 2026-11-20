@@ -12,8 +12,9 @@ A change to anything here is a product decision and updates this document first.
 
 1. **On the new Mac, once:** System Settings → General → Sharing → Remote Login on,
    with "Allow access for" including the account used below (all users, the
-   default, does). The Mac must be on the same local network as the master. Nothing
-   else is done on the new Mac: no download, no installer, no Terminal, no approvals.
+   default, does). Join the master's Wi-Fi in System Settings › Wi-Fi, or connect
+   both Macs to the same local network by Ethernet. The Add Mac sheet illustrates
+   both Remote Login and Wi-Fi.
 2. **On the master:** Add Mac in the fleet window, or `elsecall fleet nearby` in the
    CLI. The master lists the Macs it finds on the local network. A Mac it does not
    find can be added by host name or address.
@@ -39,7 +40,9 @@ it without changing its readiness.
    Continuity is on, and reads each host's model from `_device-info._tcp` to keep
    only Macs. A Mac seen only through `_companion-link._tcp` is listed with Remote
    Login off and what to turn on. Listing is best effort; a typed host name works
-   without it. Members are listed as members, so the window can repair one.
+   without it. Discovery omits the current Mac. The Add Mac picker also hides
+   virtual Macs and confirmed fleet members. Enter an address manually to add
+   a virtual Mac or repair a fleet member.
    Discovery is a port; the production adapter uses the system's DNS-SD.
 2. **Connects over SSH** to the Mac by its host name or address, with the account and
    password, and checks the Mac before changing anything. It refuses a Mac it cannot run the master's build

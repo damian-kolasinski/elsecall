@@ -33,6 +33,7 @@ const SCENES: &[&str] = &[
     "release-future",
     "release-fleet",
     "add-mac-prepare",
+    "add-mac-network",
     "add-mac-looking",
     "add-mac-choose",
     "add-mac-sign-in",
@@ -43,7 +44,11 @@ const SCENES: &[&str] = &[
 ];
 /// Animated scenes again later in their loop: the switch turned on, and the
 /// browser's page after the click.
-const TIMED: &[(&str, f64)] = &[("add-mac-prepare", 2.8), ("add-mac-approve", 2.4)];
+const TIMED: &[(&str, f64)] = &[
+    ("add-mac-prepare", 2.8),
+    ("add-mac-network", 3.3),
+    ("add-mac-approve", 2.4),
+];
 const BLESS: &str =
     "ELSECALL_UI_BLESS=1 cargo test -p elsecall-ui --bin elsecall-ui scenes_match_goldens";
 const CONFIGURATION_SCENES: &[&str] = &[

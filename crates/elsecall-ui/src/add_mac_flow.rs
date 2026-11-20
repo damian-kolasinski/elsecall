@@ -68,6 +68,8 @@ pub(crate) enum Page {
     Closed,
     /// What to do on the new Mac.
     Prepare,
+    /// Connect the new Mac to the same local network.
+    Network,
     /// Pick a Mac nearby, or type its address.
     Choose {
         selected: Option<String>,
@@ -117,10 +119,7 @@ impl NearbyMacExt for NearbyMac {
     fn status(&self) -> MacStatus {
         match (&self.membership, self.remote_login, &self.model) {
             (_, RemoteLogin::Off, _) => MacStatus::RemoteLoginOff,
-            (Membership::Member { member }, ..) => MacStatus::Member(member.clone()),
-            (Membership::PossibleMember { member }, ..) => {
-                MacStatus::PossibleMember(member.clone())
-            }
+            (Membership::PossibleMember { .. }, ..) => MacStatus::PossibleMember,
             (_, RemoteLogin::On { .. }, None) => MacStatus::Unknown,
             (_, RemoteLogin::On { .. }, Some(_)) => MacStatus::Ready,
         }
@@ -134,14 +133,13 @@ pub(crate) enum MacStatus {
     RemoteLoginOff,
     /// An SSH host that reports no model; it may not be a Mac.
     Unknown,
-    Member(String),
-    PossibleMember(String),
+    PossibleMember,
 }
 
 impl MacStatus {
     /// Whether the operator can pick it.
     pub(crate) fn selectable(&self) -> bool {
-        // Any Mac Remote Login reaches; adding a member again repairs it.
+        // A discoverable candidate needs Remote Login to be picked.
         !matches!(self, MacStatus::RemoteLoginOff)
     }
 }
@@ -184,10 +182,19 @@ impl AddMac {
 
     pub(crate) fn set_nearby(&mut self, found: Result<Vec<NearbyMac>, Failure>) {
         self.nearby = match (found, std::mem::replace(&mut self.nearby, Nearby::Looking)) {
-            (Ok(macs), _) => Nearby::Found {
-                macs,
-                trouble: None,
-            },
+            (Ok(mut macs), _) => {
+                macs.retain(|mac| {
+                    !matches!(mac.membership, Membership::Member { .. })
+                        && !mac
+                            .model
+                            .as_deref()
+                            .is_some_and(|model| model.starts_with("VirtualMac"))
+                });
+                Nearby::Found {
+                    macs,
+                    trouble: None,
+                }
+            }
             // What was found stays, with why the latest look failed.
             (Err(failure), Nearby::Found { macs, .. }) => Nearby::Found {
                 macs,
@@ -231,7 +238,11 @@ impl AddMac {
         }
     }
 
-    /// From the instructions to choosing a Mac.
+    pub(crate) fn show_network(&mut self) {
+        self.page = Page::Network;
+    }
+
+    /// From the network instructions to choosing a Mac.
     pub(crate) fn show_choose(&mut self) {
         self.page = Page::Choose { selected: None };
         // Picks the first Mac ready to add among those already found.
@@ -268,7 +279,7 @@ impl AddMac {
         };
         self.found()
             .iter()
-            .find(|mac| &mac.host == host && valid_host(&mac.host))
+            .find(|mac| &mac.host == host && mac.status().selectable() && valid_host(&mac.host))
             .map(|mac| Target {
                 host: mac.host.clone(),
                 name: mac.name.clone(),
@@ -284,7 +295,8 @@ impl AddMac {
 
     pub(crate) fn back(&mut self) {
         self.page = match std::mem::replace(&mut self.page, Page::Closed) {
-            Page::Choose { .. } => Page::Prepare,
+            Page::Network => Page::Prepare,
+            Page::Choose { .. } => Page::Network,
             Page::SignIn { target } | Page::Failed { target, .. } => Page::Choose {
                 selected: Some(target.host),
             },
@@ -546,10 +558,6 @@ mod tests {
         flow.manual.replace_text("a b; rm");
         assert_eq!(flow.chosen(), None, "only a plain host name or address");
         assert_eq!(
-            mac("Mac mini", true, Some("m")).status(),
-            MacStatus::Member("m".into())
-        );
-        assert_eq!(
             mac("Studio", false, None).status(),
             MacStatus::RemoteLoginOff
         );
@@ -611,9 +619,25 @@ mod safety_tests {
     }
 
     #[test]
-    fn a_member_can_be_picked_to_repair_it() {
-        let mut flow = choosing(vec![mac("Mac mini", true, Some("mac-mini"))]);
-        flow.select("mac-mini.local");
+    fn virtual_macs_and_members_are_hidden_but_can_be_entered_by_address() {
+        let mut vm = mac("Virtual Mac", true, None);
+        vm.model = Some("VirtualMac2,1".into());
+        let mut possible = mac("Studio", true, None);
+        possible.membership = Membership::PossibleMember {
+            member: "studio".into(),
+        };
+        let mut flow = choosing(vec![vm, mac("Mac mini", true, Some("mac-mini")), possible]);
+        assert_eq!(flow.found().len(), 1);
+        assert_eq!(
+            flow.chosen(),
+            None,
+            "a possible member is never picked automatically"
+        );
+        flow.select("studio.local");
+        assert_eq!(flow.chosen().unwrap().host, "studio.local");
+        flow.manual.replace_text("virtual-mac.local");
+        assert_eq!(flow.chosen().unwrap().host, "virtual-mac.local");
+        flow.manual.replace_text("mac-mini.local");
         assert_eq!(flow.chosen().unwrap().host, "mac-mini.local");
     }
 
