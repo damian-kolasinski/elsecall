@@ -1847,8 +1847,9 @@ a `category` and `code`, a message and hint, and `actions` with a ready-to-run
 `elsecall` command, the member to run it on, and whether only a person can complete
 it. Today a member awaiting provisioning, a member on another build than the
 master, and a placed run that failed because its member lacks a tool nothing pins
-(`missing_tool_pin`, on the member that placed it) each get one; an item clears
-when its condition does. [Fleet
+(`missing_tool_pin`, on the member that placed it), and a synced change to files
+that look like secrets waiting for a person (`secret_consent`) each get one; an item
+clears when its condition does. [Fleet
 attention](docs/fleet-attention.md) describes the model and its categories.
 
 A machine that has not joined a fleet is the master of a fleet of one only while it has
@@ -2159,12 +2160,16 @@ paths = ["~/.config/acme-ios"]
 A path is refused (`invalid_configuration`, and again by every member on arrival)
 when it is home itself, not below home, not printable ASCII (APFS folds other
 letters onto ASCII ones), contains `.` or `..`, overlaps another declared path, or
-is, lies inside or contains `~/.ssh`, `~/.gnupg`, `~/Library/Keychains`,
-`~/Library/LaunchAgents`, `~/Library/Application Support/Elsecall`, `~/.elsecall` or
-`~/.local/bin`, compared case-insensitively. Each member also refuses a path that
-overlaps its workspace root, and a path that really resolves (through links above
-it, or as the file system names it) somewhere refused or outside home; that check
-comes before any directory is created. At most 16 paths, 4,000 files and
+is, lies inside or contains `~/.ssh/authorized_keys`, the login keychain
+(`~/Library/Keychains/login.keychain-db`), `~/Library/LaunchAgents`,
+`~/Library/Application Support/Elsecall`, `~/.elsecall` or `~/.local/bin`, compared
+case-insensitively. A path inside `~/.ssh`, `~/.gnupg` or `~/Library/Keychains`,
+such as `~/.ssh/id_ed25519`, may be synced, and every change to it is asked about
+first (below); `~/.ssh` as a whole stays refused, since it holds `authorized_keys`.
+Each member also refuses a path that overlaps its workspace root, and a path that
+really resolves (through links above it, or as the file system names it) somewhere
+refused, into one of those three places when the path does not name it, or outside
+home; that check comes before any directory is created. At most 16 paths, 4,000 files and
 directories, 16 MiB per file and 64 MiB in all are synced.
 
 The master syncs only enabled paths its own `[sync] paths` declares. An enabled path
@@ -2189,6 +2194,31 @@ exactly the plan with that ID; if anything changed since, it refuses with
 enabling it would remove it everywhere. `elsecall sync disable <path>` works the same
 way and stops syncing: every member keeps its files as they are, overrides and
 backups included.
+
+**Secret-looking files are asked about, not blocked.** A file looks like a secret
+by its name (`.env*`, `*.pem`, `*.p12`, `*.key`, `id_*`, `.netrc`, `hosts.yml`,
+`*.mobileprovision`, keychains), its place (inside `~/.ssh`, `~/.gnupg` or
+`~/Library/Keychains`), its permissions (owner-only while the synced directory is
+not) or its content (a private key's header, a known token prefix, a value assigned
+to a secret's name or a generated-looking value); a file naming the master's home
+folder, which differs on other members, is asked about too. The plan lists such
+files under `secret_looking`, by name and reason; enabling the plan syncs them as
+shown. After that, a change that adds or changes one waits on the master: the path
+keeps its last synced state on every member, `elsecall fleet` shows a
+`secret_consent` attention item naming the files, and a person confirms it:
+
+```sh
+elsecall sync consent ~/.config/acme-ios                       # what waits, and its consent_id
+elsecall sync consent ~/.config/acme-ios --confirm <consent_id>          # this change only
+elsecall sync consent ~/.config/acme-ios --confirm <consent_id> --always # and later ones
+```
+
+Without `--always`, the next change to those files asks again; with it, they sync
+unasked from then on, and a new secret-looking file in the path is asked about. The
+consent travels with the synced set, so it survives a master move. `--confirm` needs
+a terminal on standard input and error, so an agent's tool call cannot confirm by
+accident (`person_required`); this is a guard, not a security boundary, since
+anything running as the operator could attach one.
 
 **Status and pushing**, from any member:
 

@@ -50,6 +50,7 @@ mod remote_run;
 mod report;
 mod run;
 mod run_link;
+mod secret_consent;
 mod service_configuration;
 mod shutdown;
 mod simulate;

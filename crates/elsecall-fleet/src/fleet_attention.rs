@@ -2,7 +2,8 @@
 //! members on another build than the master, and placed runs that failed for
 //! lack of a tool nothing pins. Derived from the view each time it is read, so an
 //! item clears as soon as its condition does.
-use crate::fleet_view::{MemberView, Role, UnpinnedTool};
+use crate::config_sync_model::consent::ConsentRequest;
+use crate::fleet_view::{MemberView, Reach, Role, UnpinnedTool};
 use elsecall_contract::attention::{Action, Category, Item};
 use elsecall_contract::build_identity::Build;
 use elsecall_peers::roster::{MemberName, Readiness};
@@ -18,6 +19,15 @@ pub(crate) fn items(members: &[MemberView], master: Option<&MemberName>) -> Vec<
         .iter()
         .find(|m| matches!(m.role, Role::Master))
         .and_then(|m| m.build.as_ref());
+    let waiting = members
+        .iter()
+        .filter(|m| matches!(m.role, Role::Master))
+        .filter_map(|m| match &m.reach {
+            Reach::Reachable { status, .. } => status.config_sync.as_ref(),
+            Reach::Unreachable { .. } => None,
+        })
+        .flat_map(|summary| &summary.consent)
+        .map(|request| secret_consent(request, master));
     members
         .iter()
         .flat_map(|member| {
@@ -27,7 +37,54 @@ pub(crate) fn items(members: &[MemberView], master: Option<&MemberName>) -> Vec<
                 .then(|| version_skew(&member.name, master, member.build.as_ref(), master_build));
             awaiting.into_iter().chain(skewed)
         })
+        .chain(waiting)
         .collect()
+}
+
+/// One `secret_consent` item per synced path whose change waits on the master,
+/// with two confirmations, both for a person only: this change, or this change
+/// and later ones to the same files.
+fn secret_consent(request: &ConsentRequest, master: &MemberName) -> Item {
+    let category = Category::SecretConsent;
+    let path = request.path.to_string();
+    let names: Vec<&str> = request.files.iter().map(|f| f.file.as_str()).collect();
+    let confirm = |always: bool| {
+        let mut words = vec!["sync", "consent", &path, "--confirm", &request.consent_id];
+        if always {
+            words.push("--always");
+        }
+        elsecall(&words)
+    };
+    Item {
+        id: Item::id(category, master.as_str(), Some(&path)),
+        member: master.to_string(),
+        category,
+        subject: Some(path.clone()),
+        code: "secret_consent".into(),
+        message: format!(
+            "Files in {path} look like secrets ({}): their latest change waits on {master} until a person confirms it.",
+            names.join(", ")
+        ),
+        hint: format!(
+            "Review them with elsecall sync consent {path} on {master}; a person confirms from their own terminal."
+        ),
+        since: None,
+        actions: vec![
+            Action {
+                summary: "Sync this change to every member, and ask again at the next one.".into(),
+                command: confirm(false),
+                run_on: master.to_string(),
+                person_only: true,
+            },
+            Action {
+                summary: "Sync this change, and changes to these files automatically from now on."
+                    .into(),
+                command: confirm(true),
+                run_on: master.to_string(),
+                person_only: true,
+            },
+        ],
+    }
 }
 
 /// `elsecall` followed by `arguments`.
@@ -198,7 +255,6 @@ fn newer(a: &str, b: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::fleet_attention::*;
-    use crate::fleet_view::Reach;
     use elsecall_contract::failure::Failure;
     use serde_json::json;
 

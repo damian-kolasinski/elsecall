@@ -1,7 +1,7 @@
 //! Changing what the fleet syncs, on the master: planning paths by dry run, and
 //! enabling or disabling one once the operator confirms the plan they saw.
 use super::{ConfigSync, MemberPlan, Plan, Planned, PlannedPath, blocking, not_declared, round};
-use crate::config_sync::manifest::Tree;
+use crate::config_sync::{consent::secret_looking, manifest::Tree};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
 use elsecall_workspace::digest::Digest;
@@ -52,6 +52,18 @@ impl ConfigSync {
         let replica = self.replica.clone();
         let scan_paths = paths.clone();
         let scanned = blocking(move || replica.scan(&scan_paths)).await?;
+        let replica = self.replica.clone();
+        let looked: Vec<(SyncedPath, Tree)> = scanned
+            .iter()
+            .map(|(path, scanned)| (path.clone(), scanned.tree.clone()))
+            .collect();
+        let mut secret = blocking(move || {
+            looked
+                .iter()
+                .map(|(path, tree)| Ok((path.clone(), secret_looking(path, tree, &*replica)?)))
+                .collect::<Result<BTreeMap<_, _>>>()
+        })
+        .await?;
         let trees: BTreeMap<SyncedPath, Tree> = scanned
             .iter()
             .map(|(p, s)| (p.clone(), s.tree.clone()))
@@ -92,6 +104,7 @@ impl ConfigSync {
                 bytes: scanned.tree.bytes(),
                 skipped: scanned.skipped,
                 overridden_on_master: scanned.overridden,
+                secret_looking: secret.remove(&path).unwrap_or_default(),
                 path,
             })
             .collect();
@@ -187,7 +200,8 @@ impl ConfigSync {
                     let active = self.active(&manifest)?;
                     let replica = self.replica.clone();
                     let rescanned = blocking(move || replica.scan(&active)).await?;
-                    Self::with_paused(&manifest, rescanned)
+                    let trees = Self::with_paused(&manifest, rescanned);
+                    self.hold_for_consent(&manifest, trees, None).await?
                 }
                 None => BTreeMap::new(),
             };

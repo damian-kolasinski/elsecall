@@ -284,14 +284,56 @@ These are implemented in later deliveries and recorded now.
   From delivery 6, a tool plan that follows from pins is applied without asking.
 - **Secret-looking files are detected, then asked about rather than blocked.**
   The prompt has a checkbox, "Sync changes to these automatically from now on".
-  Unchecked, Elsecall asks again on the next change.
+  Unchecked, Elsecall asks again on the next change. Delivery 5 implements it; see
+  "Consent for secret files" below.
 - **Hard blocks stay only for** `~/.ssh/authorized_keys`, the login keychain,
-  `~/Library/LaunchAgents` and Elsecall's own state. The other paths
-  [configuration sync](config-sync-slice.md) forbids today (the rest of `~/.ssh`,
-  `~/.gnupg`, other keychains) become asks (delivery 5).
+  `~/Library/LaunchAgents` and Elsecall's own state (`~/.elsecall`,
+  `~/Library/Application Support/Elsecall`, and `~/.local/bin`, where its command
+  lives). The other paths [configuration sync](config-sync-slice.md) forbade (the
+  rest of `~/.ssh`, `~/.gnupg`, other keychains) became asks in delivery 5.
 - **Steps only a person can do**, which the UI guides: macOS privacy prompts on
   the member's own screen; an Apple ID, only when no member has the pinned Xcode;
   and exporting a signing identity from the master's keychain, once.
+
+### Consent for secret files
+
+Delivery 5 decided the following.
+
+- **Detection.** A file in a synced or planned path looks secret by name (`.env*`,
+  `*.pem`, `*.p12`, `*.pfx`, `*.key`, `id_*` but not `*.pub`, `.netrc`, `hosts.yml`,
+  `*.mobileprovision`, keychains, credential files), by place (inside `~/.ssh`,
+  `~/.gnupg` or `~/Library/Keychains`), by permissions (owner-only on the master
+  while the synced directory is not: sync itself writes every file owner-only on
+  members, so a member turned master would otherwise ask about everything), or by
+  content (a private key's header, a known token prefix, or an assignment whose name
+  is a secret's or whose value looks generated). A file naming the master's
+  absolute home folder is asked about too, since members' home folders differ.
+- **Asking.** A change adding or changing such a file waits on the master, its whole
+  path with it, and a `secret_consent` attention item names the files by name and
+  reason. Its two actions are `elsecall sync consent <path> --confirm <id>` and the
+  same with `--always`, the checkbox. Both are `person_only`. Without `--always` the
+  next change asks again; with it, the files' later changes sync unasked, and a new
+  secret-looking file in the path asks again. Enabling a path from a plan syncs the
+  secret-looking files the plan listed, since the person confirmed that plan.
+- **Consent travels with the role.** It is stored in the synced set's manifest,
+  which every member holds as a replica, so a new master has it.
+- **Agents cannot confirm by accident; they could on purpose.** The action is
+  `person_only`, so a hand-off never runs it automatically, and the CLI sends
+  `--confirm` only from a terminal on standard input and error, which an agent's
+  tool calls do not have (`person_required`). Nothing in the CLI can tell a person
+  from a program running as the same user, which could attach a terminal or call
+  the local service directly; the guard stops mistakes, not a determined process.
+- **Values stay out.** Plans, status, attention items, logs and history name files
+  and reasons; content is examined in memory only, as configuration sync already
+  reads it to fingerprint it.
+- **Candidates from `[consistency] configuration` are not proposed yet.** Those
+  paths are the ones jobs depend on, so proposing them for sync is attractive, but
+  `workloads.toml` belongs to a repository, which is untrusted: letting it put a
+  path into the master's sync plan, even as a question, would let a repository
+  steer which of the operator's files get asked about and shipped. Declaring stays
+  in the master's `config.toml`; the existing consistency warnings already point at
+  the paths that differ. Delivery 6's hand-off may offer the declaration as a
+  change for a person to review.
 
 ## Deliveries
 

@@ -8,6 +8,8 @@
 //! member never holds up syncs to the others. Other members accept
 //! pushes only from the recorded master and apply them, laying their own overrides
 //! over the mirrored files each time.
+#[path = "service_consent.rs"]
+mod consent;
 #[path = "service_configuration.rs"]
 mod service_configuration;
 #[path = "service_synced_set.rs"]
@@ -67,6 +69,8 @@ pub struct ConfigSync {
     /// After a handover's final push, the master issues nothing until this time,
     /// so the role moves with exactly the state every member was checked to hold.
     held_until: Mutex<Option<Instant>>,
+    /// On the master: the changes waiting for a person, as the latest scan found.
+    waiting: Mutex<Vec<elsecall_fleet::config_sync_model::consent::ConsentRequest>>,
 }
 
 /// How long a master holds still after a handover's final push.
@@ -139,6 +143,10 @@ pub struct PlannedPath {
     /// Files the master's own overrides decide, whose fleet values stay as issued.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub overridden_on_master: Vec<String>,
+    /// Files that look like secrets, by name and reason. Enabling the plan syncs
+    /// them as shown; each later change to one is asked about first.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub secret_looking: Vec<elsecall_fleet::config_sync_model::consent::SecretFile>,
 }
 
 #[derive(Debug, Serialize)]
@@ -234,6 +242,7 @@ impl ConfigSync {
             exchanges: MemberLocks::default(),
             receiving: tokio::sync::Mutex::new(()),
             held_until: Mutex::new(None),
+            waiting: Mutex::new(Vec::new()),
         })
     }
 
@@ -344,7 +353,9 @@ impl ConfigSync {
         let paths = self.active(&snapshot)?;
         let replica = self.replica.clone();
         let scanned = blocking(move || replica.scan(&paths)).await?;
-        let trees = Self::with_paused(&manifest, scanned);
+        let trees = self
+            .hold_for_consent(&manifest, Self::with_paused(&manifest, scanned), None)
+            .await?;
         if trees == manifest.paths && service == manifest.service {
             return Ok(Some(manifest));
         }
@@ -825,6 +836,7 @@ impl ConfigSync {
         summary.service.effective_fingerprint = self.effective_fingerprint.get().cloned();
         if role == SyncRole::Source {
             summary.paused = self.summary_paused(&summary);
+            summary.consent = self.waiting_consent(&summary);
         }
         summary
     }

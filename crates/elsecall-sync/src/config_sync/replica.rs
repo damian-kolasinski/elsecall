@@ -285,8 +285,16 @@ impl Replica {
             generation,
             issued_by: by,
             key: self.key()?,
-            paths: trees,
             service: self.manifest().and_then(|m| m.service),
+            // Consent stays with the paths it was given for.
+            consented: self
+                .manifest()
+                .map(|m| m.consented)
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|(path, _)| trees.contains_key(path))
+                .collect(),
+            paths: trees,
         };
         manifest.validate().map_err(|why| {
             Failure::new(
@@ -313,6 +321,56 @@ impl Replica {
     ) -> Result<Manifest> {
         let mut manifest = self.draft(trees, by)?;
         manifest.service = service;
+        self.issue_manifest(manifest)
+    }
+
+    /// Issues `trees` as `issue_with_service` does, and records that a person
+    /// agreed to sync later changes to `files` (`~/…`) under `path` unasked.
+    pub fn issue_consenting(
+        &self,
+        trees: BTreeMap<SyncedPath, Tree>,
+        by: MemberName,
+        service: Option<FileNode>,
+        path: &SyncedPath,
+        files: impl IntoIterator<Item = String>,
+    ) -> Result<Manifest> {
+        let mut manifest = self.draft(trees, by)?;
+        manifest.service = service;
+        let files: Vec<String> = files.into_iter().collect();
+        if !files.is_empty() {
+            manifest
+                .consented
+                .entry(path.clone())
+                .or_default()
+                .extend(files);
+        }
+        self.issue_manifest(manifest)
+    }
+
+    /// One file of a synced path on this member: its content and full mode.
+    pub fn inspect(&self, path: &SyncedPath, key: &FileKey) -> Result<(Zeroizing<Vec<u8>>, u32)> {
+        let location = self
+            .home
+            .locate(path, false)?
+            .ok_or_else(changed_meanwhile)?;
+        disk::inspect_file(&location, key)
+    }
+
+    /// The permission bits of the directory enclosing `path`'s files.
+    pub fn enclosing_mode(&self, path: &SyncedPath) -> Result<u32> {
+        let location = self
+            .home
+            .locate(path, false)?
+            .ok_or_else(changed_meanwhile)?;
+        disk::enclosing_mode(&location)
+    }
+
+    /// The home folder, as this member names it.
+    pub fn home_folder(&self) -> &std::path::Path {
+        self.home.path()
+    }
+
+    fn issue_manifest(&self, manifest: Manifest) -> Result<Manifest> {
         manifest
             .validate()
             .map_err(crate::service_configuration::invalid)?;
@@ -842,6 +900,7 @@ impl Replica {
             backups,
             pruned_backups: pruned,
             paused: Vec::new(),
+            consent: Vec::new(),
             error: None,
             service: self.service_summary(manifest.as_ref()),
         }

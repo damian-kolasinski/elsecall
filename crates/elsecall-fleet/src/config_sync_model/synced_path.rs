@@ -2,11 +2,13 @@
 //! keep them away from places mirroring must never write.
 //!
 //! The rules are lexical and case-insensitive, as APFS is: a path is refused when it
-//! is home itself, or when it is, lies inside, or contains a forbidden location.
-//! Components are printable ASCII, so case-insensitive comparison is exact: APFS
-//! folds many non-ASCII letters onto ASCII ones (`ſ` onto `s`), which a lexical
-//! rule could not follow. Members check the same rules again on arrival, and
-//! against where the path really resolves on their disk (see `disk`).
+//! is home itself, or when it is, lies inside, or contains a hard-blocked location.
+//! A path inside an ask-first location (`~/.ssh`, `~/.gnupg`, keychains) may be
+//! synced, but every change to it waits for a person to confirm it (see
+//! `config_sync::consent`). Components are printable ASCII, so case-insensitive
+//! comparison is exact: APFS folds many non-ASCII letters onto ASCII ones (`ſ` onto
+//! `s`), which a lexical rule could not follow. Members check the same rules again on
+//! arrival, and against where the path really resolves on their disk (see `disk`).
 use serde::{Deserialize, Serialize};
 use std::{
     fmt,
@@ -22,16 +24,23 @@ pub const BACKUPS_TOTAL: usize = 1000;
 const MAXIMUM_LENGTH: usize = 1024;
 const MAXIMUM_COMPONENT: usize = 255;
 
-/// Locations no synced path may be, lie inside, or contain, relative to home.
-pub const FORBIDDEN: &[&str] = &[
-    ".ssh",
-    ".gnupg",
-    "Library/Keychains",
+/// Locations no synced path may be, lie inside, or contain, relative to home:
+/// what lets other members in (`authorized_keys`), the login keychain, what
+/// starts at login, and Elsecall's own state and command.
+pub const HARD_BLOCKED: &[&str] = &[
+    ".ssh/authorized_keys",
+    "Library/Keychains/login.keychain-db",
+    "Library/Keychains/login.keychain",
     "Library/LaunchAgents",
     "Library/Application Support/Elsecall",
     ".elsecall",
     ".local/bin",
 ];
+
+/// Locations whose files are credentials by nature: a path may lie inside one,
+/// and every change to it is asked about first. A path containing one also
+/// contains a hard-blocked location, so only paths inside are possible.
+pub const ASK_FIRST: &[&str] = &[".ssh", ".gnupg", "Library/Keychains"];
 
 /// A validated home-relative path, such as `~/.config/acme-ios`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -92,7 +101,7 @@ impl SyncedPath {
         let path = Self {
             relative: relative.to_owned(),
         };
-        if let Some(forbidden) = path.forbidden_overlap(FORBIDDEN.iter().copied()) {
+        if let Some(forbidden) = path.forbidden_overlap(HARD_BLOCKED.iter().copied()) {
             return Err(format!(
                 "{text:?} overlaps ~/{forbidden}, which Elsecall never syncs"
             ));
@@ -111,21 +120,31 @@ impl SyncedPath {
             .find(|location| overlaps(&own, &folded_components(location)))
     }
 
-    /// The forbidden location (fixed or among `extra`) that `relative`, a path below
-    /// home as the file system really names it, is, lies inside or contains; `""`
-    /// when it is home itself. It may be any text, since it comes from the disk.
-    pub fn resolved_overlap(relative: &str, extra: &[String]) -> Option<String> {
+    /// The forbidden location that `relative`, where this path really resolves
+    /// below home, is, lies inside or contains; `""` when it is home itself.
+    /// Forbidden are the hard-blocked locations, those among `extra`, and the
+    /// ask-first ones this path does not itself name: a `~/.config` that links
+    /// into `~/.ssh` must not put files there that were never asked about. It
+    /// may be any text, since it comes from the disk.
+    pub fn resolved_overlap(&self, relative: &str, extra: &[String]) -> Option<String> {
         let relative = relative.trim_matches('/');
         if relative.is_empty() {
             return Some(String::new());
         }
         let own = folded_components(relative);
-        FORBIDDEN
+        let declared = self.ask_first();
+        HARD_BLOCKED
             .iter()
             .copied()
+            .chain(ASK_FIRST.iter().copied().filter(|l| Some(*l) != declared))
             .chain(extra.iter().map(String::as_str))
             .find(|location| overlaps(&own, &folded_components(location)))
             .map(str::to_owned)
+    }
+
+    /// The ask-first location this path lies inside, if any.
+    pub fn ask_first(&self) -> Option<&'static str> {
+        self.forbidden_overlap(ASK_FIRST.iter().copied())
     }
 
     /// Whether the two paths are the same or one contains the other.
@@ -243,11 +262,12 @@ mod tests {
             "~/...",
             "~/ .",
             "~/.ssh",
-            "~/.SSH/config",
-            "~/.ssh/known_hosts",
-            "~/.gnupg",
+            "~/.SSH/authorized_keys",
+            "~/.ssh/authorized_keys/x",
             "~/Library",
+            "~/Library/Keychains",
             "~/library/keychains/login.keychain-db",
+            "~/Library/Keychains/login.keychain",
             "~/Library/LaunchAgents/x.plist",
             "~/Library/Application Support",
             "~/Library/Application Support/Elsecall/config.toml",
@@ -270,8 +290,45 @@ mod tests {
             "~/Library/Preferences/x.plist",
             "~/.local/share/app",
         ] {
-            assert!(SyncedPath::parse(accepted).is_ok(), "{accepted}");
+            let path = SyncedPath::parse(accepted).unwrap();
+            assert_eq!(path.ask_first(), None, "{accepted}");
         }
+        // Inside an ask-first location: allowed, and asked about.
+        for (asked, location) in [
+            ("~/.ssh/id_ed25519", ".ssh"),
+            ("~/.SSH/config", ".ssh"),
+            ("~/.ssh/known_hosts", ".ssh"),
+            ("~/.gnupg", ".gnupg"),
+            (
+                "~/Library/Keychains/signing.keychain-db",
+                "Library/Keychains",
+            ),
+        ] {
+            let path = SyncedPath::parse(asked).unwrap();
+            assert_eq!(path.ask_first(), Some(location), "{asked}");
+        }
+    }
+
+    #[test]
+    fn a_path_may_resolve_only_into_the_ask_first_location_it_names() {
+        let ordinary = SyncedPath::parse("~/.config/demo").unwrap();
+        assert_eq!(ordinary.resolved_overlap(".config/demo", &[]), None);
+        assert_eq!(
+            ordinary.resolved_overlap(".ssh/demo", &[]).as_deref(),
+            Some(".ssh"),
+            "a ~/.config linking into ~/.ssh"
+        );
+        assert_eq!(ordinary.resolved_overlap("", &[]).as_deref(), Some(""));
+        let key = SyncedPath::parse("~/.ssh/id_ed25519").unwrap();
+        assert_eq!(key.resolved_overlap(".ssh/id_ed25519", &[]), None);
+        assert_eq!(
+            key.resolved_overlap(".ssh/authorized_keys", &[]).as_deref(),
+            Some(".ssh/authorized_keys")
+        );
+        assert_eq!(
+            key.resolved_overlap(".gnupg/x", &[]).as_deref(),
+            Some(".gnupg")
+        );
     }
 
     #[test]

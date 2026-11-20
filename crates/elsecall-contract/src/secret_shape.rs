@@ -42,22 +42,26 @@ const PREFIXED_MINIMUM: usize = 16;
 /// A segment at least this long that mixes letters and digits reads as generated.
 const GENERATED_SEGMENT: usize = 12;
 
-/// Whether `word` (one whitespace-free word) looks like a credential.
+/// Whether `word` (one whitespace-free word) looks like a credential: it has a
+/// token prefix, or looks generated.
 pub fn looks_like_token(word: &str) -> bool {
-    if word.len() >= PREFIXED_MINIMUM
-        && TOKEN_PREFIXES.iter().any(|prefix| word.starts_with(prefix))
-    {
-        return true;
-    }
-    word.split(['-', '_', '.', '/', ':', '@']).any(generated)
+    token_prefixed(word) || looks_generated(word)
 }
 
-/// A long segment holding both letters and digits, as random keys, hex digests
-/// and base64 do, and names such as `darwin23` or `arm64` are too short to.
-fn generated(segment: &str) -> bool {
-    segment.len() >= GENERATED_SEGMENT
-        && segment.bytes().any(|b| b.is_ascii_digit())
-        && segment.bytes().any(|b| b.is_ascii_alphabetic())
+/// Whether `word` starts with a well-known service's token prefix.
+pub fn token_prefixed(word: &str) -> bool {
+    word.len() >= PREFIXED_MINIMUM && TOKEN_PREFIXES.iter().any(|prefix| word.starts_with(prefix))
+}
+
+/// Whether `word` holds a long segment that mixes letters and digits, as
+/// random keys, hex digests and base64 do, and names such as `darwin23` or
+/// `arm64` are too short to.
+pub fn looks_generated(word: &str) -> bool {
+    word.split(['-', '_', '.', '/', ':', '@']).any(|segment| {
+        segment.len() >= GENERATED_SEGMENT
+            && segment.bytes().any(|b| b.is_ascii_digit())
+            && segment.bytes().any(|b| b.is_ascii_alphabetic())
+    })
 }
 
 /// Whether a variable or key name says its value is a credential, such as
