@@ -48,7 +48,7 @@ impl ToolManager for XcodesCli {
     }
 
     fn inventory(&self) -> Result<ManagerInventory, InventoryFailure> {
-        let mut tools = scan(&applications_dir()?)?;
+        let mut tools = scan_all(&directories()?)?;
         apply_default(&mut tools, selected_developer()?.as_deref())?;
         let executable = match xcodes_program()? {
             None => Executable::Missing,
@@ -67,9 +67,31 @@ impl ToolManager for XcodesCli {
 /// The Xcodes installed here, with the selected one marked default, without
 /// asking `xcodes`: what the installers need.
 pub(crate) fn installed() -> Result<Vec<InstalledTool>, InventoryFailure> {
-    let mut tools = scan(&applications_dir()?)?;
+    let mut tools = scan_all(&directories()?)?;
     apply_default(&mut tools, selected_developer()?.as_deref())?;
     Ok(tools)
+}
+
+/// Where Xcodes are installed: `/Applications`, and the store Elsecall's helper
+/// places them in, which the link in `/Applications` may be missing from. An
+/// `ELSECALL_XCODE_APPLICATIONS` override replaces both.
+fn directories() -> Result<Vec<PathBuf>, InventoryFailure> {
+    let unset = command_capture::path_override("ELSECALL_XCODE_APPLICATIONS").is_none();
+    let mut directories = vec![applications_dir()?];
+    if unset {
+        directories.push(PathBuf::from(crate::xcode_privileges::STORE));
+    }
+    Ok(directories)
+}
+
+/// The Xcodes in every directory, one entry per bundle however many paths
+/// reach it.
+fn scan_all(directories: &[PathBuf]) -> Result<Vec<InstalledTool>, InventoryFailure> {
+    let mut tools = Vec::new();
+    for directory in directories {
+        tools.extend(scan(directory)?);
+    }
+    Ok(dedupe_bundles(tools))
 }
 
 fn applications_dir() -> Result<PathBuf, InventoryFailure> {

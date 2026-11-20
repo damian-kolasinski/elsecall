@@ -11,6 +11,7 @@ pub mod peer_api;
 pub mod peer_listener;
 mod piped_password;
 mod placement_config_sync;
+pub mod root_shell;
 mod run_workspace_pins;
 pub mod server;
 pub mod ui_app;

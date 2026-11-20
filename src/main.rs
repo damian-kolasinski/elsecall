@@ -476,7 +476,9 @@ async fn run(cli: Cli) -> Result<bool> {
         }
         Command::Status => output(client::get::<Health>(&paths.socket(), "/v1/health").await?),
         Command::Machine => output(client::get::<Machine>(&paths.socket(), "/v1/machine").await?),
-        Command::Tools(args) => output(elsecall_tools::tools_cli::run(&paths, args).await?),
+        Command::Tools(args) => {
+            output(elsecall_tools::tools_cli::run(&paths, args, &elsecall::root_shell::Sudo).await?)
+        }
         Command::Doctor => {
             let configuration = elsecall_sync::service_configuration::load(&paths, None);
             let log_settings = configuration
