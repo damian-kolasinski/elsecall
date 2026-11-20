@@ -14,6 +14,7 @@ use elsecall_contract::failure::Result;
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use serde::Serialize;
 use std::{
+    collections::HashSet,
     path::Path,
     sync::{Arc, Mutex},
     time::Duration,
@@ -43,10 +44,19 @@ pub struct Watcher {
 
 #[derive(Default)]
 struct State {
-    /// The previous round's sample, the baseline for CPU rates.
-    previous: Option<Snapshot>,
-    current: Vec<Warning>,
+    /// The latest round, once this run has taken one.
+    last: Option<Sampled>,
     pruned: Option<Timestamp>,
+}
+
+/// One round's sample and the warnings that hold as of it. Warnings exist only
+/// beside the sample that listed their processes, so a start shows none until
+/// it has sampled, and none outlives its process, a reboot or a failed round.
+struct Sampled {
+    /// The baseline for the next round's CPU rates.
+    snapshot: Snapshot,
+    /// About processes `snapshot` lists, the longest-standing first.
+    warnings: Vec<Warning>,
 }
 
 fn log(event: &str, detail: impl Serialize) {
@@ -76,18 +86,11 @@ impl Watcher {
         sampler: Arc<dyn ProcessSampler>,
         physical_memory: u64,
     ) -> Result<Self> {
-        let store = TrendStore::open(path)?;
-        // Until the first judged round, a start shows what the previous run
-        // left open; that round confirms or ends each of them.
-        let current = store.open_warnings()?;
         Ok(Self {
             sampler,
-            store,
+            store: TrendStore::open(path)?,
             physical_memory,
-            state: Mutex::new(State {
-                current,
-                ..State::default()
-            }),
+            state: Mutex::new(State::default()),
         })
     }
 
@@ -96,32 +99,83 @@ impl Watcher {
     }
 
     /// Takes one round at `at`. The first round after a start only sets the
-    /// baseline for CPU rates; rates since a process started would count a
-    /// day-old daemon's whole life.
+    /// baseline for CPU rates, since rates since a process started would count
+    /// a day-old daemon's whole life, and resumes the warnings the previous run
+    /// left open whose processes still run. Rounds must not overlap: each
+    /// reads the last round and replaces it, as [`follow`] takes them.
     pub fn watch(&self, at: Timestamp, own: &OwnWork) {
-        let current = match self.sampler.sample() {
+        let snapshot = match self.sampler.sample() {
             Ok(processes) => Snapshot { at, processes },
             Err(error) => {
                 // Without samples nothing is known to hold any more.
-                self.state().current.clear();
+                if let Some(last) = &mut self.state().last {
+                    last.warnings.clear();
+                }
                 return log("outside_processes_sample_failed", &error.code);
             }
         };
-        let Some(previous) = self.state().previous.replace(current.clone()) else {
-            return;
-        };
-        let usage = usage_between(Some(&previous), &current);
-        if let Err(error) = self.judge(at, &usage, own) {
-            log("outside_processes_record_failed", &error.code);
+        let usage = self
+            .state()
+            .last
+            .as_ref()
+            .map(|last| usage_between(Some(&last.snapshot), &snapshot));
+        let warnings = match usage {
+            None => self.resume(at, &snapshot),
+            Some(usage) => {
+                let judged = self.judge(at, &usage, own);
+                self.prune_when_due(at);
+                judged
+            }
         }
-        self.prune_when_due(at);
+        .unwrap_or_else(|error| {
+            log("outside_processes_record_failed", &error.code);
+            Vec::new()
+        });
+        self.state().last = Some(Sampled { snapshot, warnings });
+    }
+
+    /// The warnings the previous run left open that still name a process in
+    /// `snapshot`, by PID and start time, and held within [`LAPSE`] of `at`,
+    /// until the next round judges them. The rest ended at the last round that
+    /// saw them: after a reboot, that is all of them.
+    fn resume(&self, at: Timestamp, snapshot: &Snapshot) -> Result<Vec<Warning>> {
+        let running: HashSet<_> = snapshot
+            .processes
+            .iter()
+            .map(|process| (process.pid, process.started))
+            .collect();
+        let (held, gone): (Vec<_>, Vec<_>) =
+            self.store
+                .open_warnings()?
+                .into_iter()
+                .partition(|warning| {
+                    running.contains(&(warning.pid, warning.started))
+                        && at.since(warning.observed_at) <= LAPSE
+                });
+        for warning in &gone {
+            self.end(warning)?;
+        }
+        Ok(held)
+    }
+
+    fn end(&self, warning: &Warning) -> Result<()> {
+        log(
+            "outside_process_warning_cleared",
+            serde_json::json!({
+                "concern": warning.concern.kind(),
+                "process": &warning.process,
+                "pid": warning.pid,
+                "until": warning.observed_at,
+            }),
+        );
+        self.store.end(warning)
     }
 
     /// Records the round's outside candidates and raises, keeps and ends
     /// warnings. A process that was ever Elsecall's own work stays so for its
     /// life: build daemons, compiler servers and VMs a grant started serve the
     /// grants after it too, outside its time.
-    fn judge(&self, at: Timestamp, usage: &[Usage], own: &OwnWork) -> Result<()> {
+    fn judge(&self, at: Timestamp, usage: &[Usage], own: &OwnWork) -> Result<Vec<Warning>> {
         let identity = |u: &Usage| (u.process.pid, u.process.started);
         let own_now = attribution::own_processes(usage, own);
         let remembered = self.store.remember_own(
@@ -144,7 +198,9 @@ impl Watcher {
         self.store.record(&round)?;
         let kept_since =
             Timestamp::from_millis(at.millis().saturating_sub(trend::KEPT.as_millis() as u64));
-        let found = trend::concerns(&self.store.rounds(kept_since)?, self.physical_memory);
+        // Rounds after `at`, left by a clock that has since gone back, would
+        // judge processes this round did not see.
+        let found = trend::concerns(&self.store.rounds(kept_since, at)?, self.physical_memory);
         let open = self.store.open_warnings()?;
         // A concern that lapsed for a round or two, as growth through a garbage
         // collection, continues its episode instead of starting another.
@@ -179,20 +235,10 @@ impl Watcher {
             current.push(warning);
         }
         for earlier in open.iter().filter(|o| !current.iter().any(|w| w.same(o))) {
-            log(
-                "outside_process_warning_cleared",
-                serde_json::json!({
-                    "concern": earlier.concern.kind(),
-                    "process": &earlier.process,
-                    "pid": earlier.pid,
-                    "until": earlier.observed_at,
-                }),
-            );
-            self.store.end(earlier)?;
+            self.end(earlier)?;
         }
         current.sort_by_key(|w| w.since);
-        self.state().current = current;
-        Ok(())
+        Ok(current)
     }
 
     fn prune_when_due(&self, at: Timestamp) {
@@ -212,7 +258,11 @@ impl Watcher {
 
 impl WarningReport for Watcher {
     fn warnings(&self) -> Vec<Warning> {
-        self.state().current.clone()
+        self.state()
+            .last
+            .as_ref()
+            .map(|last| last.warnings.clone())
+            .unwrap_or_default()
     }
 
     fn between(&self, since: Timestamp, until: Timestamp) -> Result<Vec<WarningEpisode>> {
