@@ -130,7 +130,7 @@ fn the_master_upgrades_one_member_then_every_member_and_skew_clears() {
     assert_eq!(item["code"], "version_skew");
     assert_eq!(
         item["actions"][0]["command"],
-        "elsecall fleet upgrade --member bravo"
+        serde_json::json!(["elsecall", "fleet", "upgrade", "--member", "bravo"])
     );
     assert_eq!(item["actions"][0]["run_on"], "alpha");
     // Doctor flags it; its verdict stays about this machine (here unhealthy only

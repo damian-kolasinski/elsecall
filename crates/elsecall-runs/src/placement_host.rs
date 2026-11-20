@@ -101,7 +101,10 @@ impl PlacementHost {
                     Some(warmth(&location)),
                 )?;
                 (
-                    claim.map(|claim| Workplace::Copy { location, claim }),
+                    claim.map(|claim| Workplace::Copy {
+                        location,
+                        claim: Box::new(claim),
+                    }),
                     reply,
                 )
             }

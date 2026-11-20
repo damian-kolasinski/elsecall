@@ -249,10 +249,12 @@ A placeable run's workspace is the git working tree containing the caller's work
 directory. Placeable work requested outside a git working tree runs locally, and its
 record says so.
 
-Work required on a member is bound to that member, so it never runs elsewhere. Required
-from outside a git working tree, it runs on the member with no workspace: it starts in
+Work the master is asked to run on a required member is placed there with or without a
+workspace. Required from outside a git working tree, it runs on the member with no
+workspace: it starts in
 the home directory of the member's Elsecall account, nothing is synced, no outputs come
-back, and no `ELSECALL_*` variable names a workspace or copy. Input, output, signals and
+back, no `ELSECALL_*` variable names a workspace or copy, and no consistency warnings are
+checked, since the two sides' directories differ by design. Input, output, signals and
 the exit code pass through as for any placed run. Such runs hold no copy, so they never
 wait for each other or for a copy's leftovers; what they leave running is capped as
 usual. The member's records name the location `home`. The master authorizes these runs

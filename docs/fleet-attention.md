@@ -13,21 +13,24 @@ categories to it.
   "id": "awaiting_provisioning:macbook-pro",
   "member": "macbook-pro",
   "category": "awaiting_provisioning",
+  "subject": null,
   "code": "member_awaiting_provisioning",
   "message": "macbook-pro is awaiting provisioning: placement gives it no work until it is marked ready. Work required on it by name still runs there.",
   "hint": "Install the tools the fleet's work pins on macbook-pro, then run elsecall fleet ready macbook-pro on mac-mini.",
   "since": null,
   "actions": [{
     "summary": "Mark macbook-pro ready once its tools are installed, so placement may give it work.",
-    "command": "elsecall fleet ready macbook-pro",
+    "command": ["elsecall", "fleet", "ready", "macbook-pro"],
     "run_on": "mac-mini",
     "person_only": false
   }]
 }
 ```
 
-- **`id`** is `<category>:<member>`, with `:<subject>` added for a category that can
-  hold several items per member (such as one per missing tool). It is the same on
+- **`id`** is `<category>:<member>`, with `:<subject>` added when the item has a
+  `subject`: what on the member it is about, for a category that can hold several
+  items per member (such as one per missing tool). Read the subject from `subject`,
+  never from the `id`. It is the same on
   every read while the condition lasts, and the same again if the condition returns,
   so a reader can tell an item it already handled from a new one.
 - **`member`** is the member the condition is about, which is not always where its
@@ -39,8 +42,9 @@ categories to it.
   line does.
 - **`since`** is when the condition began when the member records it; otherwise null.
   Neither of today's conditions records its start.
-- **`actions`**, the first one first, each carry a ready-to-run `elsecall` command,
-  the member to run it on (`run_on`), and `person_only`: whether only a person can
+- **`actions`**, the first one first, each carry a ready-to-run `elsecall` command as
+  its arguments (`command`, run without a shell, so a subject needs no quoting), the
+  member to run it on (`run_on`), and `person_only`: whether only a person can
   complete it, because it asks for a password, shows a prompt on a member's screen, or
   is a decision an agent must not make alone. An agent may still run such a command
   to start it, then hand over to the person.
@@ -51,12 +55,13 @@ A category is what an operator trusts an agent with. The hand-off will let an
 operator accept a category's future items automatically, so every item in a category
 has the same kind of cause and is resolved by the same kind of action. A new kind of
 condition gets its own category rather than widening one, and a reader shows a
-category it does not know but never accepts it automatically.
+category it does not know but never accepts it automatically (this build reads one as
+`unknown`). Nor is a `person_only` action ever run automatically.
 
 | Category | Code | When | Action |
 |---|---|---|---|
 | `awaiting_provisioning` | `member_awaiting_provisioning` | The member was enrolled before its tools were installed, as Add Mac does; placement leaves it out. | `elsecall fleet ready <member>` on the master, once its tools are installed. |
-| `version_skew` | `version_skew` | The member runs another build than the master; work between them is refused. | `elsecall fleet upgrade --member <member>` on the master. |
+| `version_skew` | `version_skew` | The member runs another build than the master; work between them is refused. | `elsecall fleet upgrade --member <member>` on the master. When the member runs a later version than the master, this installs an older build on it, so the action is `person_only` and the hint offers updating the master first. |
 
 Planned: `missing_tool_pin` (a run failed on a tool nothing pins), `secret_consent` (a
 member must agree to receive a secret file, a person-only action) and

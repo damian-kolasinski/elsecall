@@ -879,10 +879,10 @@ local run.
 - **Who places.** Only the master places work. On any other member, and for a
   request made from inside a local lease or run, the command runs on the calling
   member and its record says why. An unknown member is `member_unavailable`.
-- **Outside a git working tree.** A request made outside one still runs on the
-  required member, never on the calling member in its place. It runs in the member
-  account's **home directory**, with no copy: nothing is synced and no outputs come
-  back. Input, output, signals, the exit code, the 125 envelope and the status file
+- **Outside a git working tree.** On the master, a request made outside one still
+  runs on the required member, not on the master in its place. It runs in the member
+  account's **home directory**, with no copy: nothing is synced, no outputs come back
+  and no consistency warnings are checked. Input, output, signals, the exit code, the 125 envelope and the status file
   pass through as for any placed run. The command gets `ELSECALL_RUN_ID`,
   `ELSECALL_MEMBER`, `ELSECALL_ADMISSION` and `ELSECALL_CALLER_MEMBER`, but no
   `ELSECALL_CALLER_WORKSPACE` or `ELSECALL_WORKSPACE_COPY`, and mise's trusted paths

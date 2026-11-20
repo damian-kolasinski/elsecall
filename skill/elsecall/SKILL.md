@@ -14,8 +14,8 @@ Elsecall admits heavy work onto this Mac only when it has room, and can place it
 - Never retry a `fleet_busy` or `service_unavailable` failure in a loop. Wait as the failure line says, then run the same command once more.
 - A script that re-executes itself through `elsecall run` (its entry line) is admitted as a whole. Call it by its path, as `Scripts/build.sh`, not through `elsecall run` and not as `sh Scripts/build.sh`.
 - `ELSECALL_ADMISSION` in a command's environment says how it was admitted. Never set it yourself.
-- `elsecall run --member NAME -- COMMAND...` runs only on that member, never here in its place. From a git working tree it runs in the member's copy of the tree; from outside one, in the member's home directory with nothing synced, as for `elsecall run --member mac-mini -- sw_vers`.
-- `elsecall fleet` lists what needs attention in `data.attention`. Each item's `actions` give an `elsecall` command and the member to run it on (`run_on`); leave an action with `person_only: true` to the operator unless they ask you to start it.
+- On the master, `elsecall run --member NAME -- COMMAND...` runs on that member: from a git working tree in the member's copy of the tree, from outside one in the member's home directory with nothing synced, as for `elsecall run --member macbook-pro -- sw_vers`. On any other member, or from inside other Elsecall work, it runs here instead; `ELSECALL_MEMBER` in the command and `elsecall explain RUN_ID` say where it ran.
+- `elsecall fleet` lists what needs attention in `data.attention`. Each item's `actions` give an `elsecall` command as its arguments and the member to run it on (`run_on`); leave an action with `person_only: true` to the operator unless they ask you to start it.
 - `elsecall runs` shows what is running and queued here; `elsecall explain RUN_ID` shows why a request waited, ran where it did, or failed.
 - `ELSECALL=off` runs everything directly, without admission. Use it only when the operator asks, or to test a script without the service.
 - Install, update or uninstall Elsecall only when the operator asks: other projects on this machine depend on its installation.

@@ -108,7 +108,7 @@ pub enum Workplace {
     Copy {
         location: CopyLocation,
         /// Exclusive use of the copy for the whole run.
-        claim: Claim,
+        claim: Box<Claim>,
     },
     /// The account's home directory, for work required here from outside a
     /// working tree: nothing is synced, and nothing but the command's streams and
@@ -192,12 +192,17 @@ async fn execute(
     host: &Arc<dyn Host>,
 ) -> Outcome<Finished> {
     let at = |reached| move |failure| (failure, reached);
-    let too_late = || {
-        Failure::new(
+    let too_late = || match assignment.workplace {
+        Workplace::Copy { .. } => Failure::new(
             "fleet_busy",
             "The command could not start within its hold limit; the workspace sync took too long.",
             "Retry: the copy is warm now, so the next sync is faster. Or pass a longer --hold-limit.",
-        )
+        ),
+        Workplace::Home(_) => Failure::new(
+            "fleet_busy",
+            "The command could not start within its hold limit.",
+            "Retry, or pass a longer --hold-limit.",
+        ),
     };
     // The hold limit bounds everything up to the start, so a caller cannot hold
     // this member's capacity by syncing or waiting forever.

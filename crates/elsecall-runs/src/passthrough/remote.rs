@@ -67,12 +67,19 @@ pub struct RemoteExecutor {
     pub synced_paths: Vec<String>,
 }
 
-fn hold_limit_passed() -> Failure {
-    Failure::new(
-        "fleet_busy",
-        "The command could not start on the member within its hold limit, which includes the workspace sync.",
-        "Retry: the copy stays warm, so the next sync moves only what changed. Or pass a longer --hold-limit.",
-    )
+fn hold_limit_passed(origin: &Origin) -> Failure {
+    match origin {
+        Origin::Tree { .. } => Failure::new(
+            "fleet_busy",
+            "The command could not start on the member within its hold limit, which includes the workspace sync.",
+            "Retry: the copy stays warm, so the next sync moves only what changed. Or pass a longer --hold-limit.",
+        ),
+        Origin::Outside(_) => Failure::new(
+            "fleet_busy",
+            "The command could not start on the member within its hold limit.",
+            "Retry, or pass a longer --hold-limit.",
+        ),
+    }
 }
 
 /// Whether stdout and stderr are one destination, as with `2>&1`.
@@ -117,15 +124,17 @@ impl Executor for RemoteExecutor {
             crate::local_run_client::attach(&self.socket, &context.run_id),
         )
         .await
-        .unwrap_or_else(|_| Err(hold_limit_passed()));
+        .unwrap_or_else(|_| Err(hold_limit_passed(&self.origin)));
         let mut link = match attached {
             Ok(stream) => stream,
             Err(failure) => {
                 report.send().await;
-                return Err(RunFailure::remote(
-                    failure,
-                    RemoteFailurePhase::WorkspaceSync,
-                ));
+                // Without a working tree nothing syncs: everything is execution.
+                let phase = match self.origin {
+                    Origin::Tree { .. } => RemoteFailurePhase::WorkspaceSync,
+                    Origin::Outside(_) => RemoteFailurePhase::Execution,
+                };
+                return Err(RunFailure::remote(failure, phase));
             }
         };
         let merged = merged_output();
@@ -158,7 +167,9 @@ impl Executor for RemoteExecutor {
             .unwrap_or_default();
         let declared = consistency::Declared::from(&self.configuration)
             .without_synced(&self.synced_paths, &home);
-        // Consistency is checked for the tree's own configuration locations.
+        // Consistency compares the two sides' toolchains as each sees them from its
+        // working directory; without a working tree the directories differ by
+        // design (the caller's against the member's home), so it is not checked.
         let salt = tree
             .filter(|_| !declared.is_empty())
             .and_then(|_| consistency::salt());
@@ -232,7 +243,7 @@ impl Executor for RemoteExecutor {
             }
         })
         .await
-        .unwrap_or_else(|_| Err(hold_limit_passed()));
+        .unwrap_or_else(|_| Err(hold_limit_passed(&self.origin)));
         let execution_started = match started {
             Ok(started) => started,
             Err(failure) => {

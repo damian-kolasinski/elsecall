@@ -26,8 +26,8 @@ pub struct PlacementOffer {
     pub workload: Option<elsecall_contract::scheduling_model::workload_metadata::Workload>,
     /// The working tree the member's copy follows. Absent for work required on
     /// the member from outside a working tree: it runs in the member's home
-    /// directory, with no copy. Members on other builds never see such an offer,
-    /// since placement between builds is refused.
+    /// directory, with no copy. Members on other builds announced as such never
+    /// see such an offer, since placement between them is refused.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub workspace: Option<WorkspaceRef>,
     /// How long the request may still take to start, sync included.

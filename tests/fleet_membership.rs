@@ -452,7 +452,10 @@ fn a_member_awaiting_provisioning_needs_attention_until_marked_ready() {
             "{item}"
         );
         let action = &item["actions"][0];
-        assert_eq!(action["command"], "elsecall fleet ready bravo");
+        assert_eq!(
+            action["command"],
+            serde_json::json!(["elsecall", "fleet", "ready", "bravo"])
+        );
         assert_eq!(action["run_on"], "alpha");
         assert_eq!(action["person_only"], false);
     }
@@ -463,11 +466,14 @@ fn a_member_awaiting_provisioning_needs_attention_until_marked_ready() {
     );
 
     // The action resolves it, and the item clears everywhere.
-    let ready = a.fleet()["attention"][0]["actions"][0]["command"]
-        .as_str()
+    let command = a.fleet()["attention"][0]["actions"][0]["command"].clone();
+    let words: Vec<&str> = command
+        .as_array()
         .unwrap()
-        .to_owned();
-    let words: Vec<&str> = ready.split(' ').skip(1).collect();
+        .iter()
+        .skip(1)
+        .map(|word| word.as_str().unwrap())
+        .collect();
     a.ok(&words);
     for member in [&a, &b] {
         assert_eq!(member.fleet()["attention"], serde_json::json!([]));

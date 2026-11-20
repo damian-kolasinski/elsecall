@@ -131,9 +131,9 @@ pub(super) fn restore(
             caller_processes.insert(frame, pid);
         }
         let placed = if remote {
-            let tree = workspace(request).ok_or_else(|| {
-                missing(&fact.run_id, "workspace identity for active remote copy")
-            })?;
+            // Work required on a member from outside a working tree runs in its
+            // home directory, with no copy.
+            let tree = workspace(request);
             let command_started = fact
                 .resources
                 .as_ref()
@@ -143,10 +143,17 @@ pub(super) fn restore(
                 side: Side::Caller,
                 calling_member: fact.calling_member.clone(),
                 member: member.clone(),
-                caller_workspace: Some(tree.root),
-                repository: Some(tree.common_dir),
-                copy: Some("/virtual/copy".into()),
-                location: Some("mapped".into()),
+                location: Some(if tree.is_some() { "mapped" } else { "home" }.into()),
+                copy: Some(
+                    if tree.is_some() {
+                        "/virtual/copy"
+                    } else {
+                        "/virtual/home"
+                    }
+                    .into(),
+                ),
+                caller_workspace: tree.as_ref().map(|t| t.root.clone()),
+                repository: tree.map(|t| t.common_dir),
                 warmth: fact.warmth,
                 reached: if command_started {
                     Reached::Started

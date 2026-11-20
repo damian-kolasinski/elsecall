@@ -13,12 +13,14 @@ use serde::{Deserialize, Serialize};
 /// One condition that needs an agent or a person.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Item {
-    /// `<category>:<member>`, followed by `:<subject>` for a category that can
-    /// hold several items per member.
+    /// `<category>:<member>`, followed by `:<subject>` when the item has one.
     pub id: String,
     /// The member the condition is about.
     pub member: String,
     pub category: Category,
+    /// What on the member the condition is about, for a category that can hold
+    /// several items per member, such as a tool's name; null otherwise.
+    pub subject: Option<String>,
     /// The condition, in the vocabulary of error codes, such as `version_skew`.
     pub code: String,
     pub message: String,
@@ -33,8 +35,7 @@ pub struct Item {
 /// trusts an agent with: every item in one has the same kind of cause and is
 /// resolved by the same kind of action, so accepting a category's future items
 /// automatically means one thing. A new kind of condition gets a new category
-/// rather than widening an existing one; readers show categories they do not
-/// know and never accept them automatically.
+/// rather than widening an existing one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Category {
@@ -44,6 +45,10 @@ pub enum Category {
     /// A member runs another build than the master: placement and the other work
     /// members exchange are refused between them.
     VersionSkew,
+    /// A category a newer build added, as this build reads it: shown, never
+    /// accepted automatically. No producer makes it.
+    #[serde(other)]
+    Unknown,
 }
 
 impl Category {
@@ -51,6 +56,7 @@ impl Category {
         match self {
             Self::AwaitingProvisioning => "awaiting_provisioning",
             Self::VersionSkew => "version_skew",
+            Self::Unknown => "unknown",
         }
     }
 }
@@ -60,8 +66,9 @@ impl Category {
 pub struct Action {
     /// What it does, in one sentence.
     pub summary: String,
-    /// The `elsecall` command that does it, ready to run.
-    pub command: String,
+    /// The `elsecall` command that does it, as its arguments, `elsecall` first:
+    /// ready to run without a shell, whatever its subject holds.
+    pub command: Vec<String>,
     /// The member to run the command on, such as the master for fleet changes.
     pub run_on: String,
     /// Whether only a person can complete it: the command asks for a password or
@@ -71,9 +78,7 @@ pub struct Action {
 }
 
 impl Item {
-    /// The identity of `category`'s item about `member`, narrowed to one
-    /// `subject` (such as a tool's name) for a category that can hold several
-    /// items per member.
+    /// The identity of `category`'s item about `member`, and its `subject` if any.
     pub fn id(category: Category, member: &str, subject: Option<&str>) -> String {
         match subject {
             None => format!("{}:{member}", category.as_str()),
@@ -94,13 +99,19 @@ mod tests {
             id: Item::id(category, "macbook-pro", None),
             member: "macbook-pro".into(),
             category,
+            subject: None,
             code: "member_awaiting_provisioning".into(),
             message: "waits".into(),
             hint: "provision it".into(),
             since: None,
             actions: vec![Action {
                 summary: "Mark it ready.".into(),
-                command: "elsecall fleet ready macbook-pro".into(),
+                command: vec![
+                    "elsecall".into(),
+                    "fleet".into(),
+                    "ready".into(),
+                    "macbook-pro".into(),
+                ],
                 run_on: "mac-mini".into(),
                 person_only: false,
             }],
@@ -112,13 +123,14 @@ mod tests {
                 "id": "awaiting_provisioning:macbook-pro",
                 "member": "macbook-pro",
                 "category": "awaiting_provisioning",
+                "subject": null,
                 "code": "member_awaiting_provisioning",
                 "message": "waits",
                 "hint": "provision it",
                 "since": null,
                 "actions": [{
                     "summary": "Mark it ready.",
-                    "command": "elsecall fleet ready macbook-pro",
+                    "command": ["elsecall", "fleet", "ready", "macbook-pro"],
                     "run_on": "mac-mini",
                     "person_only": false
                 }]
@@ -128,7 +140,7 @@ mod tests {
     }
 
     #[test]
-    fn a_subject_narrows_the_identity_and_categories_name_themselves() {
+    fn a_subject_narrows_the_identity_and_unknown_categories_still_read() {
         assert_eq!(
             Item::id(Category::VersionSkew, "mac-mini", Some("xcode")),
             "version_skew:mac-mini:xcode"
@@ -139,5 +151,10 @@ mod tests {
                 json!(category.as_str())
             );
         }
+        assert_eq!(
+            serde_json::from_value::<Category>(json!("secret_consent")).unwrap(),
+            Category::Unknown,
+            "a newer build's category reads, as one this build does not know"
+        );
     }
 }
