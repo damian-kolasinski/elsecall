@@ -105,6 +105,7 @@ impl Scheduler {
                     copy: p.copy.clone().expect("caller snapshot has a copy identity"),
                     calling_member: record.calling_member.clone(),
                     synced_paths: Vec::new(),
+                    warnings: Vec::new(),
                 }),
             reused: false,
         };

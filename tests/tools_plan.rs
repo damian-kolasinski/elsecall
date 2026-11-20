@@ -34,6 +34,10 @@ pub(crate) struct Managers {
 }
 
 impl Managers {
+    pub(crate) fn pairs_owned(&self) -> Vec<(String, String)> {
+        self.env.clone()
+    }
+
     pub(crate) fn pairs(&self) -> Vec<(&str, &str)> {
         self.env
             .iter()

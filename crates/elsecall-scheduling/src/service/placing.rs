@@ -202,6 +202,21 @@ impl Scheduler {
         entry.phase = Phase::Active {
             holders: BTreeSet::from([placing.requester]),
         };
+        // A member that lacks what the workspace pins gets the run only when no
+        // other could start it in time, or when it was named; say so.
+        let warnings: Vec<String> = placing
+            .workspace
+            .as_ref()
+            .and_then(|workspace| {
+                let lacking = self.members.lacking(workspace);
+                if entry.auto.is_some() {
+                    lacking.fallback(&target)
+                } else {
+                    lacking.named_member(&target)
+                }
+            })
+            .into_iter()
+            .collect();
         let synced_paths = placing
             .config_sync
             .as_ref()
@@ -254,6 +269,7 @@ impl Scheduler {
                 copy,
                 calling_member: self.name(),
                 synced_paths,
+                warnings,
             }),
         );
         book.entries.insert(id.clone(), entry);

@@ -38,7 +38,7 @@ use std::{
     time::Duration,
 };
 use tokio::{sync::Notify, time::Instant};
-use tracking::{Members, Planned, Ready, Timing, Trigger};
+use tracking::{Lack, Members, Planned, Ready, Timing, Trigger};
 
 /// How long a member may take to answer its signal.
 const SIGNAL_TIMEOUT: Duration = Duration::from_secs(10);
@@ -401,6 +401,7 @@ impl ProvisioningLoop {
             unread: plan.unread.len(),
             partial: context.partial,
             held: decision.held,
+            lacks: lacks(&plan.steps),
         };
         let complete = planned.complete();
         let readying = complete && awaiting(fleet, name);
@@ -454,6 +455,44 @@ impl ProvisioningLoop {
         });
     }
 
+    /// The members whose last plan installs something the workspace at `root`
+    /// on this member pins, or the master's global config does, with what.
+    /// Members never planned lack nothing here, and on any member but the
+    /// master nothing is known.
+    pub fn lacking(&self, root: &std::path::Path) -> elsecall_scheduling::pin_fit::Lacking {
+        let Some(home) = std::env::var_os("HOME").filter(|home| !home.is_empty()) else {
+            return elsecall_scheduling::pin_fit::Lacking::default();
+        };
+        let name = crate::plan::reported::workspace_name(root, std::path::Path::new(&home));
+        let shared = self.lock();
+        let Some(master) = &shared.master else {
+            return elsecall_scheduling::pin_fit::Lacking::default();
+        };
+        let lacking = shared
+            .members
+            .0
+            .iter()
+            .filter(|(member, _)| *member != master)
+            .filter_map(|(member, tracked)| {
+                let mut tools: Vec<String> = tracked
+                    .planned
+                    .iter()
+                    .flat_map(|planned| &planned.lacks)
+                    .filter(|lack| {
+                        lack.workspace.as_ref().is_none_or(|(holder, workspace)| {
+                            holder == master && *workspace == name
+                        })
+                    })
+                    .map(|lack| lack.tool.clone())
+                    .collect();
+                tools.sort();
+                tools.dedup();
+                (!tools.is_empty()).then(|| (member.to_string(), tools))
+            })
+            .collect();
+        elsecall_scheduling::pin_fit::Lacking(lacking)
+    }
+
     fn with(&self, name: &MemberName, change: impl FnOnce(&mut tracking::Tracked, &Timing)) {
         if let Some(tracked) = self.lock().members.0.get_mut(name) {
             change(tracked, &self.timing);
@@ -463,6 +502,43 @@ impl ProvisioningLoop {
     fn read<T>(&self, name: &MemberName, read: impl FnOnce(&tracking::Tracked) -> T) -> Option<T> {
         self.lock().members.0.get(name).map(read)
     }
+}
+
+/// What each step installs, for every workspace whose pins ask for it.
+fn lacks(steps: &[crate::plan::member::Step]) -> Vec<Lack> {
+    use crate::{plan::wants::Reason, tool_inventory::Manager};
+    steps
+        .iter()
+        .flat_map(|step| {
+            let tool = match step.key.manager {
+                Manager::Mise => format!("{} {}", step.key.tool.as_str(), step.version.as_str()),
+                Manager::Xcodes => format!("Xcode {}", step.version.as_str()),
+                Manager::Simulators => format!(
+                    "the {} {} runtime",
+                    step.key.tool.as_str(),
+                    step.version.as_str()
+                ),
+            };
+            step.reasons.iter().map(move |reason| Lack {
+                workspace: match reason {
+                    Reason::Pin {
+                        member,
+                        workspace: Some(workspace),
+                        ..
+                    }
+                    | Reason::DefaultRuntime {
+                        member, workspace, ..
+                    } => Some((member.clone(), workspace.clone())),
+                    Reason::Pin {
+                        workspace: None, ..
+                    }
+                    | Reason::Exception { .. }
+                    | Reason::ExceptionRuntime { .. } => None,
+                },
+                tool: tool.clone(),
+            })
+        })
+        .collect()
 }
 
 fn undelivered(name: &MemberName) -> Failure {

@@ -65,6 +65,18 @@ pub(crate) struct Planned {
     /// the master's global config. Its plan may lack what they pin.
     pub(crate) partial: bool,
     pub(crate) held: Vec<HeldStep>,
+    /// What its steps install, and for which workspace: placement by pins
+    /// keeps that workspace's work elsewhere meanwhile.
+    pub(crate) lacks: Vec<Lack>,
+}
+
+/// One version a member lacks, and the workspace whose pins ask for it, as
+/// the member holding it names it; none when it counts for every workspace
+/// (the master's global config, or an exception).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Lack {
+    pub(crate) workspace: Option<(MemberName, String)>,
+    pub(crate) tool: String,
 }
 
 impl Planned {
@@ -352,6 +364,7 @@ mod tests {
             unread: 0,
             partial: false,
             held: Vec::new(),
+            lacks: Vec::new(),
         }
     }
 
