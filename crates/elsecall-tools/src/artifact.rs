@@ -1,6 +1,6 @@
 //! Copying an installed tool from one member to another over the members'
-//! channel: the master's mise executable for a member without mise, and later
-//! an installed Xcode bundle.
+//! channel: the master's mise executable for a member without mise, and an
+//! Xcode bundle the master has installed.
 //!
 //! The member that needs it opens a sealed channel to the member that has it
 //! (`POST /peer/v1/tools/artifact/<artifact>`, upgraded to
@@ -13,6 +13,7 @@
 //! `ditto -x` on the receiver), keeping links, modes and extended attributes.
 //! Any enrolled member may ask: what travels is installed software, not a
 //! secret.
+use crate::tool_inventory::ToolVersion;
 use elsecall_contract::wire::{self, CHUNK, Frame};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -26,6 +27,8 @@ pub(crate) const PROTOCOL: &str = "elsecall-artifact/1";
 pub(crate) enum Artifact {
     /// The mise executable, one file.
     Mise,
+    /// An installed Xcode of exactly this version, as `ditto -c` archives it.
+    Xcode(ToolVersion),
 }
 
 impl Artifact {
@@ -33,6 +36,7 @@ impl Artifact {
     pub(crate) fn path(&self) -> String {
         match self {
             Self::Mise => "/peer/v1/tools/artifact/mise".into(),
+            Self::Xcode(version) => format!("/peer/v1/tools/artifact/xcode/{}", version.as_str()),
         }
     }
 
@@ -40,6 +44,7 @@ impl Artifact {
     pub(crate) fn purpose(&self) -> String {
         match self {
             Self::Mise => "tools-artifact:mise".into(),
+            Self::Xcode(version) => format!("tools-artifact:xcode:{}", version.as_str()),
         }
     }
 }

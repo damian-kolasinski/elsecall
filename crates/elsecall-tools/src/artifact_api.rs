@@ -2,7 +2,10 @@
 //!
 //! `POST /peer/v1/tools/artifact/mise` upgrades to `elsecall-artifact/1` and
 //! streams this member's mise executable, the file the inventory runs, after
-//! following links. Before upgrading, the member answers 404
+//! following links. `POST /peer/v1/tools/artifact/xcode/<version>` streams the
+//! installed Xcode of exactly that version as `ditto -c` archives it, keeping
+//! links, modes and extended attributes; the receiver unpacks it with
+//! `ditto -x`. Before upgrading, the member answers 404
 //! `artifact_unavailable` when it has none, and 503 `artifact_busy` while it
 //! already sends two artifacts. Any enrolled member may ask. The content is
 //! streamed from the file as it is read, never held whole, and a copy that has
@@ -34,12 +37,72 @@ use std::{path::PathBuf, sync::Arc};
 
 /// Artifacts this member sends at once; more wait for none and are refused.
 static SENDING: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(2);
-/// How long sending one artifact may take: a mise executable at a slow
-/// member's pace.
-const SEND_DEADLINE: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+/// How long sending a mise executable may take, at a slow member's pace.
+const MISE_DEADLINE: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+/// How long sending an Xcode may take: some 8 GB at a slow member's pace.
+const XCODE_DEADLINE: std::time::Duration = std::time::Duration::from_secs(2 * 60 * 60);
 
 pub(crate) fn peer_routes() -> Router<Arc<Fleet>> {
-    Router::new().route(&Artifact::Mise.path(), post(serve_mise))
+    Router::new()
+        .route(&Artifact::Mise.path(), post(serve_mise))
+        .route("/peer/v1/tools/artifact/xcode/{version}", post(serve_xcode))
+}
+
+async fn serve_xcode(
+    State(fleet): State<Arc<Fleet>>,
+    Extension(peer): Extension<AuthenticatedPeer>,
+    axum::extract::Path(version): axum::extract::Path<String>,
+    request: Request,
+) -> Response {
+    let Some(version) = crate::pins::dotted_version(&version, 2) else {
+        return failure(
+            StatusCode::BAD_REQUEST,
+            Failure::new(
+                "invalid_request",
+                "An Xcode version is digits and dots.",
+                "Run elsecall tools apply on the master.",
+            ),
+        );
+    };
+    let wanted = version.clone();
+    let bundle = tokio::task::spawn_blocking(move || {
+        crate::xcodes::installed()
+            .ok()?
+            .into_iter()
+            .find_map(|tool| {
+                match (
+                    tool.detail,
+                    crate::tool_inventory::compare_versions(tool.version.as_str(), wanted.as_str()),
+                ) {
+                    (
+                        Some(crate::tool_inventory::Detail::Xcode { path, .. }),
+                        std::cmp::Ordering::Equal,
+                    ) => Some(path),
+                    _ => None,
+                }
+            })
+    })
+    .await
+    .ok()
+    .flatten();
+    let Some(bundle) = bundle else {
+        return failure(
+            StatusCode::NOT_FOUND,
+            Failure::new(
+                "artifact_unavailable",
+                format!("This member has no Xcode {} to copy.", version.as_str()),
+                "Install that Xcode on the master, then apply again.",
+            ),
+        );
+    };
+    upgrade(
+        &fleet,
+        &peer,
+        request,
+        &Artifact::Xcode(version),
+        Source::Tree(bundle),
+    )
+    .await
 }
 
 #[derive(Deserialize)]
@@ -82,9 +145,34 @@ async fn serve_mise(
     .await
 }
 
-/// What a source streams.
+/// What a source streams: a file as it is, or a folder as `ditto -c`
+/// archives it.
 enum Source {
     File(PathBuf),
+    Tree(PathBuf),
+}
+
+impl Source {
+    /// The program that reads it to its standard output.
+    fn reader(&self) -> tokio::process::Command {
+        let (program, args): (&str, Vec<&std::ffi::OsStr>) = match self {
+            Self::File(path) => ("/bin/cat", vec![path.as_os_str()]),
+            Self::Tree(path) => (
+                "/usr/bin/ditto",
+                vec!["-c".as_ref(), path.as_os_str(), "-".as_ref()],
+            ),
+        };
+        let mut command = tokio::process::Command::new(program);
+        command.args(args);
+        command
+    }
+
+    fn deadline(&self) -> std::time::Duration {
+        match self {
+            Self::File(_) => MISE_DEADLINE,
+            Self::Tree(_) => XCODE_DEADLINE,
+        }
+    }
 }
 
 async fn upgrade(
@@ -151,29 +239,25 @@ async fn upgrade(
             return;
         };
         let mut channel = SecureStream::new(TokioIo::new(upgraded), keys);
+        let deadline = source.deadline();
         let sending = async {
-            match source {
-                Source::File(path) => {
-                    let mut reader = tokio::process::Command::new("/bin/cat");
-                    reader
-                        .arg(path)
-                        .stdin(std::process::Stdio::null())
-                        .stdout(std::process::Stdio::piped())
-                        .stderr(std::process::Stdio::null())
-                        .kill_on_drop(true);
-                    let mut child = elsecall_host::child_start::spawn_async(&mut reader)?;
-                    let mut stdout = child.stdout.take().expect("piped stdout");
-                    let sent = artifact::send_content(&mut stdout, &mut channel).await?;
-                    // Only a source that read the whole file vouches for it.
-                    if child.wait().await?.success() {
-                        sent.finish(&mut channel).await.map(drop)
-                    } else {
-                        Err(std::io::Error::other("the artifact could not be read"))
-                    }
-                }
+            let mut reader = source.reader();
+            reader
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .kill_on_drop(true);
+            let mut child = elsecall_host::child_start::spawn_async(&mut reader)?;
+            let mut stdout = child.stdout.take().expect("piped stdout");
+            let sent = artifact::send_content(&mut stdout, &mut channel).await?;
+            // Only a source that read everything vouches for it.
+            if child.wait().await?.success() {
+                sent.finish(&mut channel).await.map(drop)
+            } else {
+                Err(std::io::Error::other("the artifact could not be read"))
             }
         };
-        let sent = tokio::time::timeout(SEND_DEADLINE, sending).await;
+        let sent = tokio::time::timeout(deadline, sending).await;
         if !matches!(sent, Ok(Ok(()))) {
             elsecall_host::service_log!(
                 "{}",

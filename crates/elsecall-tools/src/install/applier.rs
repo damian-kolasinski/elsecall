@@ -61,7 +61,10 @@ impl Applier {
             data,
             admission,
             vec![
-                Arc::new(crate::install::mise::MiseInstaller { source }),
+                Arc::new(crate::install::mise::MiseInstaller {
+                    source: source.clone(),
+                }),
+                Arc::new(crate::install::xcode::XcodeInstaller { source }),
                 Arc::new(crate::install::runtimes::RuntimeInstaller),
             ],
         )

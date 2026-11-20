@@ -55,6 +55,9 @@ pub enum Category {
     /// the tool and the stage that failed, never what a command printed.
     /// Applying the plan again retries it.
     ProvisioningStepFailed,
+    /// A member needs an Xcode the master does not have, so cannot copy: a
+    /// person downloads it onto the master, with an Apple ID.
+    XcodeAppleIdRequired,
     /// A category a newer build added, as this build reads it: shown, never
     /// accepted automatically. No producer makes it.
     #[serde(other)]
@@ -69,6 +72,7 @@ impl Category {
             Self::MissingToolPin => "missing_tool_pin",
             Self::SecretConsent => "secret_consent",
             Self::ProvisioningStepFailed => "provisioning_step_failed",
+            Self::XcodeAppleIdRequired => "xcode_apple_id_required",
             Self::Unknown => "unknown",
         }
     }
@@ -164,6 +168,7 @@ mod tests {
             Category::MissingToolPin,
             Category::SecretConsent,
             Category::ProvisioningStepFailed,
+            Category::XcodeAppleIdRequired,
         ] {
             assert_eq!(
                 serde_json::to_value(category).unwrap(),

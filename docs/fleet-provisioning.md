@@ -355,7 +355,9 @@ These are implemented in later deliveries and recorded now.
 - **Xcode is copied from the master's installed bundle**, an
   `/Applications/Xcode-*.app`, streamed over the members' channel. No Apple ID is
   needed. Placing it, selecting it and accepting its license use the narrowly
-  scoped sudoers drop-in the Xcode delivery installs, never a general root shell.
+  scoped sudoers drop-in the Xcode delivery installs, never a general root shell
+  (delivery 4: placed in `/Library/Elsecall/Xcodes`, a tree only root writes,
+  and linked from `/Applications` by the account).
 - **Installs run as admitted work on the member**, through the same admission as
   jobs, so they do not starve running work and are visible like it.
 - **Nothing is ever uninstalled automatically.** A version nothing pins is
@@ -666,6 +668,15 @@ never reaches a record, a status, an item or a log. The codes so far:
 | `download` | `xcode_unreadable` | The member's Xcodes could not be read. |
 | `download` | `runtime_download_failed` | `xcodebuild -downloadPlatform` exited with an error. |
 | `download` | `runtime_download_timeout` | It ran for an hour. |
+| `privileges` | `xcode_privileges_missing` | The helper or the sudoers rule is not installed, or the helper is another build's. |
+| `copy` | `xcode_not_on_master` | The master has no Xcode of that version, or the step runs on the master. |
+| `copy` | `xcode_copy_failed` | The copy could not be unpacked. |
+| `copy` | `artifact_cut`, `artifact_busy`, `artifact_unreachable`, `artifact_unsupported` | As for mise. |
+| `place` | `xcode_not_verified` | The copy did not verify as Apple's Xcode of that version. |
+| `copy` | `xcode_unsupported` | The version is not one the helper places. |
+| `place` | `xcode_place_failed` | The helper could not place it, as when that version is already in the store. |
+| `license` | `xcode_license_failed` | Placing it, its license or first-launch tasks failed; nothing was placed. |
+| `select` | `xcode_select_failed` | `xcode-select` failed. |
 | `bootstrap` | `artifact_on_master` | The member without mise is the master, which has nothing to copy it from. |
 | `bootstrap` | `artifact_unavailable` | The master has no mise to copy. |
 | `bootstrap` | `artifact_unreachable` | The master could not be reached, or this member has no roster. |
@@ -679,6 +690,36 @@ never reaches a record, a status, an item or a log. The codes so far:
 | `install` | `tool_install_timeout` | It ran for 30 minutes. |
 | `admission` or `apply` | `apply_interrupted` | The service stopped while the step waited or ran. |
 | `apply` | `apply_failed` | The apply stopped unexpectedly; its unfinished steps fail with it. |
+
+### Attention: an Xcode no member can copy
+
+A step that failed as `xcode_not_on_master` is not a `provisioning_step_failed`
+item, since retrying cannot fix it: every member's fleet view derives one
+`xcode_apple_id_required` item per Xcode version some member's latest apply
+could not copy, about the master, where a person gets it:
+
+```json
+{
+  "id": "xcode_apple_id_required:mac-mini:26.4",
+  "member": "mac-mini",
+  "category": "xcode_apple_id_required",
+  "subject": "26.4",
+  "code": "xcode_not_on_master",
+  "message": "Xcode 26.4 is pinned, and the master, mac-mini, has none to copy: members get Xcode only from the master.",
+  "hint": "A person downloads Xcode 26.4 onto mac-mini with an Apple ID (xcodes install 26.4, or developer.apple.com/download), or copies it there from a Mac that has it; then run elsecall tools apply on mac-mini.",
+  "since": "2026-11-20T09:30:00.000Z",
+  "actions": [{
+    "summary": "Once Xcode 26.4 is installed on mac-mini, apply the plan again to copy it to the members that need it.",
+    "command": ["elsecall", "tools", "apply"],
+    "run_on": "mac-mini",
+    "person_only": true
+  }]
+}
+```
+
+`since` is the earliest such failure. The action is `person_only`: only a person
+signs in to Apple. The item clears once no member's latest apply failed that
+way, as after the next apply finds the Xcode on the master.
 
 ### On the member
 
@@ -746,6 +787,40 @@ system libraries, so the master's runs on a member. The copy is held in memory
 until it is written, up to 1 GiB; Homebrew's mise 2026.11 is 237 MB. In a macOS
 VM, a member without mise copied Homebrew's from the master, checked it and
 installed a tool with it within one 133-second step.
+
+**Xcode** is copied from the master's installed bundle, with no Apple ID. A step
+runs these stages, all part of its admitted run:
+
+1. `privileges`: Elsecall's helper and this account's sudoers rule are in
+   place (`elsecall tools privileges`, below); otherwise nothing is copied,
+   since nothing could be placed, and the item asks a person to install them.
+2. `copy`: the master streams its installed Xcode of exactly that version over
+   the members' channel (`POST /peer/v1/tools/artifact/xcode/<version>`, the
+   bundle as `ditto -c` archives it, keeping links, modes and attributes), into
+   `ditto -x`, which unpacks it as this account into `~/Library/Application
+   Support/Elsecall/xcode-staging/Xcode-<version>.app`. The copy may take two
+   hours. A master without that Xcode, and a step on the master itself, fail as
+   `xcode_not_on_master`: members get Xcode only from the master, so a person
+   gets it there, with an Apple ID (`xcode_apple_id_required`, below).
+3. `place`: the helper places the staged bundle in `/Library/Elsecall/Xcodes`
+   and accepts its license (below), so a placed Xcode is a ready one: when the
+   license fails (stage `license`) nothing is placed, and the next apply tries
+   again. The staged copy is removed whatever happens. This account then links
+   it as `/Applications/Xcode-<version>.app`, unless that name is taken or it
+   may not write there; the inventory finds it in the store either way.
+4. `select`: the helper selects it when `xcode-select -p` names no Xcode
+   (Command Line Tools only, as on a bare Mac). A member that selects another
+   Xcode keeps it; moving a selection is delivery 6's drift work. A failed
+   selection is reported once: the Xcode is installed, so the next plan has no
+   step for it.
+
+A version the helper would refuse, not two or three numbers or before 16.0,
+fails as `xcode_unsupported` before anything is copied, and a step on the master
+itself as `xcode_not_on_master` before any privilege is asked for.
+
+`ELSECALL_XCODE_ADMIN`, an absolute path, replaces `sudo -n <helper>` and the
+privileges check, as the other tool overrides do in every build; it runs as
+this account, so it grants nothing, and the tests use it for a fake helper.
 
 **Simulator runtimes.** A runtime step is `xcodebuild -downloadPlatform
 <platform> -buildVersion <version> -architectureVariant arm64`, as Xcode's own
@@ -876,6 +951,18 @@ of every member's latest apply:
 }
 ```
 
+A step that failed as `xcode_privileges_missing` has a first action for a person
+on the member, before the retry:
+
+```json
+{
+  "summary": "On macbook-pro, let Elsecall place, select and license Xcode: installs its helper and a sudoers rule for it alone, with an administrator's password.",
+  "command": ["elsecall", "tools", "privileges", "install"],
+  "run_on": "macbook-pro",
+  "person_only": true
+}
+```
+
 The `subject` is `<manager>:<tool>@<version>`, and `since` is when the step
 failed. The item stands until the member's next apply, which retries the step,
 or no longer needs it and ends it with an empty apply. The text is written by the reading member from the code;
@@ -927,6 +1014,64 @@ On the host, unit tests run the helper rendered with a scratch layout and fakes
 for `codesign`, `xcode-select` and `xcodebuild` (including that none of the
 caller's environment reaches them), and check the drop-in with `visudo -c`;
 nothing is installed in the operator's account.
+
+### Evidence: a bare member provisioned from the master
+
+In a macOS VM, two members on one Mac, each an account running its own `elsecall
+serve` on loopback: the master `mac-mini` with Xcode 26.2 and nextest 0.9.150
+(installed through its mise with `version_prefix`), and `macbook-pro`, an
+administrator account with no mise (`ELSECALL_MISE` named a missing file), no
+Xcode and no runtimes. A workspace on the master pinned Xcode 26.2 in
+`.xcode-version` and nextest with `version_prefix` in `mise.toml`.
+
+- `macbook-pro`'s inventory read mise, xcodes and simulators all `missing`;
+  `elsecall tools privileges install`, with its password piped in, read `ready:
+  true`.
+- Its plan: nextest 0.9.150 with `options: {version_prefix: "cargo-nextest-"}`,
+  Xcode 26.2 and the default runtime iOS 26.2.
+- `elsecall tools apply --member macbook-pro --wait` on the master installed all
+  three in 876 seconds, as three `elsecall tools install` runs that exited 0:
+  - nextest, 133 seconds, copying the master's mise (Homebrew's, 237 MB) first;
+  - Xcode, 725 seconds: the copy streamed at about 12 MB/s over the sealed
+    channel and both `ditto`s, then placing (with its signature check) took
+    about a minute; it ended in `/Library/Elsecall/Xcodes`, linked from
+    `/Applications` and selected, since only the Command Line Tools were;
+  - iOS 26.2, 16 seconds.
+- Afterwards its inventory listed all three, its plan had no steps, and the
+  fleet's attention was empty.
+- With `.xcode-version` changed to 26.4, which the master lacks, the Xcode step
+  failed at `copy` as `xcode_not_on_master` and the runtime at `download` as
+  `xcode_missing`; the fleet showed one `xcode_apple_id_required` item for
+  `mac-mini`, version 26.4, its action `person_only`.
+
+That run's helper linked the bundle from `/Applications` as root and accepted
+the license in a separate step; the final helper, run again as the same
+administrator account, placed and licensed Xcode 26.2 in 62 seconds, wrote
+nothing in `/Applications`, refused Xcode 15.4 (64), and selected it.
+
+### What delivery 6 builds on
+
+Delivery 4 installs only when asked; the automatic loop, drift detection,
+placement by pins, marking a member ready and the UI are delivery 6. It can
+build on:
+
+- **One command per member, safe to repeat.** `elsecall tools apply --member
+  NAME` installs whatever the plan lists and nothing else, never uninstalls,
+  and with nothing to install records an empty apply that clears the member's
+  failures. A member already applying answers `apply_in_progress`.
+- **A readable outcome.** `elsecall tools applied [--member NAME] [--wait]`,
+  and each member's `status.provisioning` in `elsecall fleet`: `running` or
+  `finished`, how many steps, how many installed, and each failed step's stage
+  and code. A member is fully provisioned for the current pins when its plan has
+  no steps and no unresolved requests.
+- **Attention items by category.** `provisioning_step_failed` is an agent's to
+  retry, except its `person_only` first action for Xcode privileges;
+  `xcode_apple_id_required` is a person's. A hand-off can accept the first
+  category's retries automatically and must never accept the second's.
+- **The person steps, as commands.** `elsecall tools privileges install` on a
+  member, with its password typed or piped in, and an Apple ID download on the
+  master. Add Mac already takes the new Mac's administrator password for its
+  own root steps; offering the first there is delivery 6's to wire.
 
 ## Open questions for later deliveries
 
