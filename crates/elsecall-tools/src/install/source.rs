@@ -18,12 +18,24 @@ pub(crate) trait Source: Send + Sync {
         sink: &'a mut (dyn AsyncWrite + Unpin + Send),
         limit: u64,
     ) -> BoxFuture<'a, Result<u64, &'static str>>;
+
+    /// Whether this member is the master itself, which has no one to copy from.
+    fn master_is_self(&self) -> bool;
 }
 
 /// The master this member records, over the members' channel.
 pub(crate) struct MasterSource(pub(crate) Result<Arc<Fleet>, elsecall_contract::failure::Failure>);
 
 impl Source for MasterSource {
+    fn master_is_self(&self) -> bool {
+        match &self.0 {
+            Err(_) => true,
+            Ok(fleet) => fleet
+                .roster()
+                .map_or(true, |roster| roster.master().key == fleet.public_key()),
+        }
+    }
+
     fn fetch<'a>(
         &'a self,
         artifact: &'a Artifact,

@@ -105,6 +105,8 @@ pub(crate) fn equipped() -> Managers {
             ),
             ("ELSECALL_XCODES".into(), utf8(&dir.join("no-xcodes"))),
             ("ELSECALL_SIMCTL".into(), utf8(&dir.join("simctl"))),
+            // Never the machine's own sudo: a relative path has no privileges.
+            ("ELSECALL_XCODE_ADMIN".into(), "not-absolute".into()),
         ],
         _root: root,
     }
@@ -132,6 +134,8 @@ pub(crate) fn bare() -> Managers {
             ),
             ("ELSECALL_XCODES".into(), utf8(&dir.join("no-xcodes"))),
             ("ELSECALL_SIMCTL".into(), utf8(&dir.join("no-simctl"))),
+            // Never the machine's own sudo: a relative path has no privileges.
+            ("ELSECALL_XCODE_ADMIN".into(), "not-absolute".into()),
         ],
         _root: root,
     }

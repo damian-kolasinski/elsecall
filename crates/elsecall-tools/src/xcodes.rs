@@ -251,7 +251,9 @@ fn xcode_release(
     Some((version, build.to_owned()))
 }
 
-fn selected_developer() -> Result<Option<PathBuf>, InventoryFailure> {
+/// The developer folder `xcode-select -p` names; none when it fails or names
+/// no bundle.
+pub(crate) fn selected_developer() -> Result<Option<PathBuf>, InventoryFailure> {
     let program = select_from(command_capture::classify(command_capture::path_override(
         "ELSECALL_XCODE_SELECT",
     )))?;

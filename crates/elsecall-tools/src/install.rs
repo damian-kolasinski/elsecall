@@ -15,6 +15,7 @@ pub(crate) mod request;
 mod runtimes;
 pub(crate) mod source;
 mod work;
+mod xcode;
 
 use crate::tool_inventory::Manager;
 use elsecall_contract::{

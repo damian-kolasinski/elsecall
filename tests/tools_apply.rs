@@ -100,14 +100,8 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
     assert!(
         steps(&bravo_started["apply"])
             .iter()
-            .all(|(tool, _, state)| {
-                if tool == "xcode" {
-                    state == "skipped"
-                } else {
-                    state == "queued" || state == "running"
-                }
-            }),
-        "managers that do not install yet are skipped before anything runs: {started}"
+            .all(|(_, _, state)| state == "queued" || state == "running"),
+        "{started}"
     );
 
     let finished = alpha.ok(&["tools", "applied", "--member", "bravo", "--wait"]);
@@ -118,7 +112,7 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
         [
             ("bun".into(), "1.3.5".into(), "installed".into()),
             ("node".into(), "22.19.0".into(), "failed".into()),
-            ("xcode".into(), "26.2".into(), "skipped".into()),
+            ("xcode".into(), "26.2".into(), "failed".into()),
             ("iOS".into(), "26.2".into(), "failed".into()),
         ]
     );
@@ -128,7 +122,7 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
     );
     assert_eq!(apply["steps"][1]["stage"], "install");
     assert_eq!(apply["steps"][1]["code"], "tool_install_failed");
-    assert_eq!(apply["steps"][2]["reason"], "not_supported");
+    assert_eq!(apply["steps"][2]["code"], "xcode_privileges_missing");
     assert_eq!(
         (&apply["steps"][3]["stage"], &apply["steps"][3]["code"]),
         (&json!("download"), &json!("xcode_missing")),
@@ -155,8 +149,8 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
         .collect();
     assert_eq!(
         installs.len(),
-        3,
-        "one admitted run per step that ran, skipped ones not: {runs}"
+        4,
+        "one admitted run per step that ran: {runs}"
     );
 
     let view = alpha.fleet();
@@ -166,8 +160,9 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
         .iter()
         .filter(|item| item["category"] == "provisioning_step_failed")
         .collect();
-    assert_eq!(items.len(), 2, "{view}");
-    assert_eq!(items[1]["subject"], "simulators:iOS@26.2");
+    assert_eq!(items.len(), 3, "{view}");
+    assert_eq!(items[1]["subject"], "xcodes:xcode@26.2");
+    assert_eq!(items[2]["subject"], "simulators:iOS@26.2");
     assert_eq!(
         items[0]["id"],
         "provisioning_step_failed:bravo:mise:node@22.19.0"
@@ -193,7 +188,7 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
             .iter()
             .filter(|item| item["category"] == "provisioning_step_failed")
             .count(),
-        2,
+        3,
         "the retried steps failed again and still need attention: {view}"
     );
     let everyone = alpha.ok(&["tools", "apply", "--wait"]);
@@ -452,5 +447,169 @@ fn privileges_report_what_this_account_may_do_without_asking_for_anything() {
         status["account"]
             .as_str()
             .is_some_and(|name| !name.is_empty())
+    );
+}
+
+/// A stand-in for `sudo -n <helper>`, run as this account: places the staged
+/// bundle into the member's Applications folder and logs each root step.
+fn fake_admin(applications: &std::path::Path, log: &std::path::Path) -> PathBuf {
+    let path = applications.with_file_name("xcode-admin");
+    executable(
+        &path,
+        &format!(
+            "#!/bin/sh\necho \"$*\" >> '{log}'\ncase \"$1\" in\n  place) /usr/bin/ditto \"$HOME/Library/Application Support/Elsecall/xcode-staging/Xcode-$2.app\" '{apps}/Xcode-'\"$2\"'.app' ;;\nesac\n",
+            log = utf8(log),
+            apps = utf8(applications),
+        ),
+    );
+    path
+}
+
+fn bare_with_admin() -> (crate::tools_plan::Managers, PathBuf, PathBuf) {
+    let mut tools = bare();
+    let applications = PathBuf::from(
+        &tools
+            .env
+            .iter()
+            .find(|(key, _)| key == "ELSECALL_XCODE_APPLICATIONS")
+            .unwrap()
+            .1,
+    );
+    let log = applications.with_file_name("admin.log");
+    let admin = fake_admin(&applications, &log);
+    for (key, value) in &mut tools.env {
+        if key == "ELSECALL_XCODE_ADMIN" {
+            *value = utf8(&admin);
+        }
+    }
+    (tools, applications, log)
+}
+
+#[test]
+fn xcode_is_copied_from_the_master_then_placed_licensed_and_selected() {
+    let master_tools = equipped();
+    let master_bundle = PathBuf::from(
+        &master_tools
+            .env
+            .iter()
+            .find(|(key, _)| key == "ELSECALL_XCODE_APPLICATIONS")
+            .unwrap()
+            .1,
+    )
+    .join("Xcode-26.2.0.app");
+    write(
+        &master_bundle.join("Contents/Developer/usr/bin/tool"),
+        "#!/bin/sh\n",
+    );
+    std::os::unix::fs::symlink(
+        "tool",
+        master_bundle.join("Contents/Developer/usr/bin/alias"),
+    )
+    .unwrap();
+    let (bare_tools, applications, log) = bare_with_admin();
+    let alpha = TestMember::start_with("alpha", "", &master_tools.pairs());
+    let bravo = TestMember::start_with("bravo", "", &bare_tools.pairs());
+    enrol(&alpha, &bravo);
+    workspace(&alpha, "acme-ios", &[(".xcode-version", "26.2\n")]);
+    plan_with(&alpha, 1, &["tools", "plan"]);
+
+    let done = alpha.ok(&["tools", "apply", "--member", "bravo", "--wait"]);
+    let apply = &done["members"][0]["apply"];
+    assert_eq!(
+        steps(apply)[0],
+        ("xcode".into(), "26.2".into(), "installed".into()),
+        "{done}"
+    );
+    assert_eq!(
+        fs::read_to_string(&log).unwrap(),
+        "place 26.2\nselect 26.2\n",
+        "placed (which accepts the license), and selected since bravo selected none"
+    );
+    let placed = applications.join("Xcode-26.2.app/Contents");
+    assert_eq!(
+        fs::read(placed.join("Info.plist")).unwrap(),
+        fs::read(master_bundle.join("Contents/Info.plist")).unwrap()
+    );
+    assert_eq!(
+        fs::read_link(placed.join("Developer/usr/bin/alias")).unwrap(),
+        PathBuf::from("tool"),
+        "links travel as links"
+    );
+    let staging = bravo
+        .home()
+        .join("Library/Application Support/Elsecall/xcode-staging");
+    assert_eq!(
+        fs::read_dir(&staging)
+            .map(|entries| entries.count())
+            .unwrap_or(0),
+        0,
+        "the staged copy is removed"
+    );
+    assert_eq!(
+        (&apply["steps"][1]["tool"], &apply["steps"][1]["code"]),
+        (&json!("iOS"), &json!("runtime_download_failed")),
+        "the runtime then tries the Xcode just placed: {done}"
+    );
+
+    workspace(&alpha, "acme-next", &[(".xcode-version", "26.4\n")]);
+    plan_with(&alpha, 2, &["tools", "plan"]);
+    let missing = alpha.ok(&["tools", "apply", "--member", "bravo", "--wait"]);
+    let step = missing["members"][0]["apply"]["steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|step| step["version"] == "26.4" && step["tool"] == "xcode")
+        .cloned()
+        .unwrap();
+    assert_eq!(
+        (&step["stage"], &step["code"]),
+        (&json!("copy"), &json!("xcode_not_on_master"))
+    );
+    let view = alpha.fleet();
+    let items: Vec<&Value> = view["attention"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|item| item["category"] == "xcode_apple_id_required")
+        .collect();
+    assert_eq!(items.len(), 1, "{view}");
+    assert_eq!(items[0]["id"], "xcode_apple_id_required:alpha:26.4");
+    assert_eq!(items[0]["actions"][0]["person_only"], true);
+}
+
+#[test]
+fn without_privileges_nothing_is_copied_and_a_person_is_asked_on_the_member() {
+    let master_tools = equipped();
+    let bare_tools = bare();
+    let alpha = TestMember::start_with("alpha", "", &master_tools.pairs());
+    let bravo = TestMember::start_with("bravo", "", &bare_tools.pairs());
+    enrol(&alpha, &bravo);
+    workspace(&alpha, "acme-ios", &[(".xcode-version", "26.2\n")]);
+    plan_with(&alpha, 1, &["tools", "plan"]);
+    let done = alpha.ok(&["tools", "apply", "--member", "bravo", "--wait"]);
+    let step = &done["members"][0]["apply"]["steps"][0];
+    assert_eq!(
+        (&step["stage"], &step["code"]),
+        (&json!("privileges"), &json!("xcode_privileges_missing")),
+        "{done}"
+    );
+    assert!(
+        !bravo
+            .home()
+            .join("Library/Application Support/Elsecall/xcode-staging")
+            .exists()
+    );
+    let view = alpha.fleet();
+    let item = view["attention"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["subject"] == "xcodes:xcode@26.2")
+        .cloned()
+        .unwrap();
+    assert_eq!(
+        item["actions"][0],
+        json!({"summary": item["actions"][0]["summary"], "command": ["elsecall", "tools", "privileges", "install"],
+               "run_on": "bravo", "person_only": true})
     );
 }

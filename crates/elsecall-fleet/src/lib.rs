@@ -14,6 +14,7 @@ pub mod fleet_view;
 pub mod inbound_firewall;
 pub mod lan_address;
 pub mod nearby_macs;
+mod provisioning_attention;
 pub mod provisioning_model;
 pub mod remote_mac;
 pub mod resource_report;
