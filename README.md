@@ -877,9 +877,19 @@ code, forwarded signals, the 125 envelope and the status file all behave as for 
 local run.
 
 - **Who places.** Only the master places work. On any other member, and for a
-  request made outside a git working tree or from inside a local lease or run, the
-  command runs on the calling member and its record says why. An unknown member is
-  `member_unavailable`.
+  request made from inside a local lease or run, the command runs on the calling
+  member and its record says why. An unknown member is `member_unavailable`.
+- **Outside a git working tree.** A request made outside one still runs on the
+  required member, never on the calling member in its place. It runs in the member
+  account's **home directory**, with no copy: nothing is synced and no outputs come
+  back. Input, output, signals, the exit code, the 125 envelope and the status file
+  pass through as for any placed run. The command gets `ELSECALL_RUN_ID`,
+  `ELSECALL_MEMBER`, `ELSECALL_ADMISSION` and `ELSECALL_CALLER_MEMBER`, but no
+  `ELSECALL_CALLER_WORKSPACE` or `ELSECALL_WORKSPACE_COPY`, and mise's trusted paths
+  stay as the member has them. Runs in the home directory never wait for each other.
+  Both records say `"location": "home"`. This is how the master runs a command on a
+  chosen member, such as `elsecall run --member mac-mini -- sw_vers`. Placeable work
+  outside a working tree still runs on the calling member, as below.
 - **Waiting.** The request waits on the master, which offers it to the member until
   the member admits it or the hold limit passes. A member admits placed work at once
   or refuses it: without room, while its own requests wait, or while another run

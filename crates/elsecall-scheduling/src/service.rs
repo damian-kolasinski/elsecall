@@ -16,6 +16,7 @@ pub use hosting::{HostedEnd, HostedExit};
 mod placing;
 mod quotes;
 mod ratio_cache;
+mod routing;
 mod running;
 mod running_estimates;
 mod upgrading;
@@ -56,6 +57,7 @@ use elsecall_contract::scheduling_model::{
 use elsecall_host::processes::{self, ProcessIdentity, ProcessInfo, ProcessTable};
 use placing::Placing;
 use quotes::Quotes;
+use routing::Route;
 use serde::Serialize;
 use std::{
     collections::{BTreeSet, HashMap, HashSet, VecDeque},
@@ -275,16 +277,6 @@ pub struct OwnLoad {
     pub holders: Vec<u32>,
     /// When the earliest active grant started; `None` without active grants.
     pub granted_since: Option<Timestamp>,
-}
-
-/// Where a request runs.
-enum Route {
-    /// On this member, with a note saying why when the caller asked for more.
-    Here(Option<String>),
-    /// On the named member, placed by this master.
-    There(String),
-    /// On the member with the earliest expected completion, chosen by this master.
-    Auto,
 }
 
 impl Scheduler {
@@ -745,7 +737,7 @@ impl Scheduler {
                     let placing = Placing {
                         requester: requester.identity,
                         target: None,
-                        workspace: auto.workspace.clone(),
+                        workspace: Some(auto.workspace.clone()),
                         expires_at: now.after(expires_after),
                         responder,
                         // Asking members took time out of the hold limit.
@@ -767,12 +759,11 @@ impl Scheduler {
                     self.pump(&mut book);
                 }
                 Some(Some(target)) => {
-                    let workspace = request.workspace.clone().expect("routed with a workspace");
                     self.place(
                         &mut book,
                         entry,
                         target,
-                        workspace,
+                        request.workspace.clone(),
                         now.after(expires_after),
                         responder,
                     );
@@ -980,68 +971,6 @@ impl Scheduler {
             fallbacks: Vec::new(),
         };
         (record, expires_after)
-    }
-
-    /// Where a request runs. Only the master places work on other members; a
-    /// placeable request made anywhere else, or outside a working tree, runs here.
-    fn route(&self, request: &WorkRequest) -> Result<Route> {
-        let standing = self.members.standing();
-        let member = match &request.placement {
-            Placement::Pinned => return Ok(Route::Here(None)),
-            Placement::Placeable => {
-                let note = if standing
-                    .members
-                    .iter()
-                    .all(|m| Some(m) == standing.name.as_ref())
-                {
-                    "This member is in no fleet with other members, so placeable work runs on it."
-                        .to_owned()
-                } else if standing.master != standing.name {
-                    format!(
-                        "This member is not the master ({}), and only the master places work: the request runs on the calling member.",
-                        standing.master.as_deref().unwrap_or("unknown")
-                    )
-                } else if request.workspace.is_none() {
-                    "Requested outside a git working tree, so it runs on the calling member."
-                        .to_owned()
-                } else {
-                    return Ok(Route::Auto);
-                };
-                return Ok(Route::Here(Some(note)));
-            }
-            Placement::Member(member) => member,
-        };
-        if self.is_own_name(member, standing.name.as_deref()) {
-            return Ok(Route::Here(Some(
-                "The required member is the calling member.".into(),
-            )));
-        }
-        if standing.members.is_empty() {
-            return Err(Failure::new(
-                "member_unavailable",
-                format!("Member {member} is not reachable: this member is not in a fleet yet."),
-                format!("Drop --member, or require this member ({}).", self.name()),
-            ));
-        }
-        if !standing.members.iter().any(|m| m == member) {
-            return Err(Failure::new(
-                "member_unavailable",
-                format!("{member} is not a member of this fleet."),
-                "List the members with elsecall fleet.",
-            ));
-        }
-        if standing.master != standing.name {
-            return Ok(Route::Here(Some(format!(
-                "This member is not the master ({}), and only the master places work: the request runs on the calling member.",
-                standing.master.as_deref().unwrap_or("unknown")
-            ))));
-        }
-        if request.workspace.is_none() {
-            return Ok(Route::Here(Some(
-                "Requested outside a git working tree, so it runs on the calling member.".into(),
-            )));
-        }
-        Ok(Route::There(member.clone()))
     }
 
     /// The nearest ancestor holding active work, which a request from inside it reuses.

@@ -143,7 +143,7 @@ pub(super) fn restore(
                 side: Side::Caller,
                 calling_member: fact.calling_member.clone(),
                 member: member.clone(),
-                caller_workspace: tree.root,
+                caller_workspace: Some(tree.root),
                 repository: Some(tree.common_dir),
                 copy: Some("/virtual/copy".into()),
                 location: Some("mapped".into()),
@@ -300,7 +300,7 @@ mod tests {
             side: Side::Caller,
             calling_member: "a".into(),
             member: "b".into(),
-            caller_workspace: "/never/exported".into(),
+            caller_workspace: Some("/never/exported".into()),
             repository: None,
             copy: None,
             location: None,
@@ -470,17 +470,24 @@ mod tests {
             run_id: RunId::parse("r-000000000099").unwrap(),
             size: Cores::ONE,
             label: None,
-            workspace: elsecall_scheduling::placed::WorkspaceRef {
+            workspace: Some(elsecall_scheduling::placed::WorkspaceRef {
                 root: "/virtual/new".into(),
                 common_dir: "/virtual/new/.git".into(),
-            },
+            }),
             start_within_ms: 0,
             size_basis: None,
             expected_run_ms: None,
         };
         assert!(matches!(
             schedulers["b"]
-                .accept_placed("a", &offer, true, "/virtual/copy", "mapped", Warmth::Warm)
+                .accept_placed(
+                    "a",
+                    &offer,
+                    true,
+                    "/virtual/copy",
+                    "mapped",
+                    Some(Warmth::Warm)
+                )
                 .unwrap(),
             OfferReply::Busy { .. }
         ));

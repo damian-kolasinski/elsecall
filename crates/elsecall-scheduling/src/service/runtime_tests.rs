@@ -1154,10 +1154,10 @@ async fn an_update_waits_only_for_work_a_restart_would_cut_short() {
         run_id: RunId::parse("r-0000000000ff").unwrap(),
         size: Cores::ONE,
         label: None,
-        workspace: WorkspaceRef {
+        workspace: Some(WorkspaceRef {
             root: "/virtual/acme".into(),
             common_dir: "/virtual/acme/.git".into(),
-        },
+        }),
         start_within_ms: 10_000,
         size_basis: None,
         expected_run_ms: None,
@@ -1169,7 +1169,7 @@ async fn an_update_waits_only_for_work_a_restart_would_cut_short() {
             true,
             "/virtual/copy",
             "mapped",
-            Warmth::Warm,
+            Some(Warmth::Warm),
         )
         .unwrap();
     assert!(matches!(reply, OfferReply::Accepted { .. }), "{reply:?}");

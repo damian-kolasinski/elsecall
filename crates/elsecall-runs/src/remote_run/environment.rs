@@ -72,8 +72,9 @@ pub struct Placed<'a> {
     pub elsecall: Vec<(&'static str, OsString)>,
     pub working_directory: &'a OsStr,
     /// The root of the copy the command runs in: `ELSECALL_WORKSPACE_COPY`, and
-    /// trusted by mise.
-    pub copy: &'a OsStr,
+    /// trusted by mise. `None` for a run without a workspace, which leaves mise's
+    /// trust as the member has it.
+    pub copy: Option<&'a OsStr>,
 }
 
 fn set(environment: &mut Vec<(OsString, OsString)>, name: OsString, value: OsString) {
@@ -122,7 +123,7 @@ impl Placed<'_> {
             .iter()
             .find(|(name, _)| name == MISE_TRUSTED)
             .map(|(_, value)| value.as_os_str());
-        if let Some(trusted) = trusting(trusted, self.copy) {
+        if let Some(trusted) = self.copy.and_then(|copy| trusting(trusted, copy)) {
             set(&mut environment, MISE_TRUSTED.into(), trusted);
         }
         set(
@@ -133,11 +134,13 @@ impl Placed<'_> {
         for (name, value) in self.elsecall {
             set(&mut environment, name.into(), value);
         }
-        set(
-            &mut environment,
-            "ELSECALL_WORKSPACE_COPY".into(),
-            self.copy.into(),
-        );
+        if let Some(copy) = self.copy {
+            set(
+                &mut environment,
+                "ELSECALL_WORKSPACE_COPY".into(),
+                copy.into(),
+            );
+        }
         environment
     }
 }
@@ -192,7 +195,7 @@ mod tests {
             ],
             elsecall: vec![("ELSECALL_RUN_ID", "r-1".into())],
             working_directory: OsStr::new("/copy/src"),
-            copy: OsStr::new("/copy"),
+            copy: Some(OsStr::new("/copy")),
         }
         .build();
         let get = |name: &str| {
@@ -218,7 +221,7 @@ mod tests {
             forwarded,
             elsecall: Vec::new(),
             working_directory: OsStr::new(copy),
-            copy: OsStr::new(copy),
+            copy: Some(OsStr::new(copy)),
         }
         .build()
         .into_iter()
@@ -260,5 +263,30 @@ mod tests {
             .as_deref(),
             Some("/Users/devbox/work")
         );
+    }
+
+    #[test]
+    fn a_run_without_a_copy_names_none_and_leaves_mise_trust_alone() {
+        let environment = Placed {
+            target: os(&[
+                ("HOME", "/Users/devbox"),
+                (MISE_TRUSTED, "/Users/devbox/work"),
+            ]),
+            path: None,
+            forwarded: &[],
+            elsecall: Vec::new(),
+            working_directory: OsStr::new("/Users/devbox"),
+            copy: None,
+        }
+        .build();
+        let get = |name: &str| {
+            environment
+                .iter()
+                .find(|(n, _)| n == name)
+                .map(|(_, v)| v.to_str().unwrap().to_owned())
+        };
+        assert_eq!(get("ELSECALL_WORKSPACE_COPY"), None);
+        assert_eq!(get(MISE_TRUSTED).as_deref(), Some("/Users/devbox/work"));
+        assert_eq!(get("PWD").as_deref(), Some("/Users/devbox"));
     }
 }

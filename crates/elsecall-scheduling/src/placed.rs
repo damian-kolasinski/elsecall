@@ -24,7 +24,12 @@ pub struct PlacementOffer {
     pub label: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub workload: Option<elsecall_contract::scheduling_model::workload_metadata::Workload>,
-    pub workspace: WorkspaceRef,
+    /// The working tree the member's copy follows. Absent for work required on
+    /// the member from outside a working tree: it runs in the member's home
+    /// directory, with no copy. Members on other builds never see such an offer,
+    /// since placement between builds is refused.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace: Option<WorkspaceRef>,
     /// How long the request may still take to start, sync included.
     pub start_within_ms: u64,
     /// Where the size came from; a learned size shrinks to fit the member.
@@ -199,11 +204,18 @@ pub struct PlacedRecord {
     pub side: Side,
     pub calling_member: String,
     pub member: String,
-    pub caller_workspace: String,
+    /// The working tree on the calling member; null for a run requested outside
+    /// one, which ran in the member's home directory.
+    #[serde(default)]
+    pub caller_workspace: Option<String>,
     /// The caller repository's common git directory, which its worktrees share.
     #[serde(default)]
     pub repository: Option<String>,
+    /// Where the command ran on the member: its copy of the working tree, or its
+    /// home directory for a run without one.
     pub copy: Option<String>,
+    /// How the member placed it: `mapped` or `same-path` for a copy, `home`
+    /// without one.
     pub location: Option<String>,
     /// The copy's state when the member admitted the run.
     #[serde(default)]

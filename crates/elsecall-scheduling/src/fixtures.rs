@@ -228,7 +228,7 @@ pub fn placed(run: Run) -> Record {
             side: Side::Caller,
             calling_member: "mini".into(),
             member: run.member.into(),
-            caller_workspace: "/w/app".into(),
+            caller_workspace: Some("/w/app".into()),
             repository: None,
             copy: None,
             location: None,

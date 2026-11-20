@@ -63,7 +63,11 @@ impl Members for Channel {
         let world = self.world.clone();
         Box::pin(async move {
             let target = target?;
-            let key = (member, offer.workspace.root.clone());
+            // Work without a workspace runs in the member's home directory: no copy.
+            let Some(workspace) = &offer.workspace else {
+                return target.accept_placed(&from, &offer, true, "/virtual/home", "home", None);
+            };
+            let key = (member, workspace.root.clone());
             let copy = world
                 .lock()
                 .unwrap()
@@ -80,7 +84,7 @@ impl Members for Channel {
                 !copy.busy,
                 "/virtual/copy",
                 "mapped",
-                copy.warmth,
+                Some(copy.warmth),
             )?;
             if matches!(reply, OfferReply::Accepted { .. }) {
                 world

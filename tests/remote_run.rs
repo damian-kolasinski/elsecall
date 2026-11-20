@@ -869,8 +869,7 @@ fn only_the_master_places_and_a_member_refuses_while_its_own_requests_wait() {
         &alpha,
         outside.path(),
         &[
-            "--member",
-            "bravo",
+            "--placeable",
             "--",
             "/bin/sh",
             "-c",

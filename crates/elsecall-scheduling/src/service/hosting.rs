@@ -43,8 +43,10 @@ pub enum HostedExit {
 }
 
 impl Scheduler {
-    /// Considers a run `from` (this member's master) offers. `copy_free` says
-    /// whether its workspace's copy is free here.
+    /// Considers a run `from` (this member's master) offers. `copy` is the
+    /// directory it would run in, its workspace's copy or, for a run without a
+    /// workspace, the home directory; `copy_free` says whether it is free here,
+    /// and `warmth` how warm a copy is.
     pub fn accept_placed(
         &self,
         from: &str,
@@ -52,9 +54,11 @@ impl Scheduler {
         copy_free: bool,
         copy: &str,
         location: &str,
-        warmth: Warmth,
+        warmth: Option<Warmth>,
     ) -> Result<OfferReply> {
-        offer.workspace.validate()?;
+        if let Some(workspace) = &offer.workspace {
+            workspace.validate()?;
+        }
         if let Some(label) = &offer.label
             && (label.is_empty()
                 || label.chars().count() > 200
@@ -142,7 +146,10 @@ impl Scheduler {
                 size_basis: Some(basis),
                 calling_member: from.into(),
                 workspace_recorded: true,
-                workspace: Some(crate::record::WorkspaceIdentity::of(from, &offer.workspace)),
+                workspace: offer
+                    .workspace
+                    .as_ref()
+                    .map(|w| crate::record::WorkspaceIdentity::of(from, w)),
                 member: Some(member.clone()),
                 placement_note: Some(format!("Placed here by {from}, the master.")),
                 nested_in: None,
@@ -169,11 +176,11 @@ impl Scheduler {
                     side: Side::Member,
                     calling_member: from.into(),
                     member,
-                    caller_workspace: offer.workspace.root.clone(),
-                    repository: Some(offer.workspace.common_dir.clone()),
+                    caller_workspace: offer.workspace.as_ref().map(|w| w.root.clone()),
+                    repository: offer.workspace.as_ref().map(|w| w.common_dir.clone()),
                     copy: Some(copy.into()),
                     location: Some(location.into()),
-                    warmth: Some(warmth),
+                    warmth,
                     reached: Reached::Placed,
                     sync: None,
                     exit_code: None,
@@ -209,7 +216,7 @@ impl Scheduler {
             state: self.state_of(&book),
             copy: copy.into(),
             location: location.into(),
-            warmth: Some(warmth),
+            warmth,
         })
     }
 
