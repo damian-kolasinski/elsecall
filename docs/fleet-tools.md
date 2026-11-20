@@ -1,7 +1,9 @@
 # Fleet tool management
 
-Elsecall keeps the development tools on a fleet at the versions the operator asked
-for. This document fixes the vocabulary and the rules. Slices implement them one
+Elsecall keeps the development tools on a fleet at the versions the workspaces it
+runs pin. This document fixes the vocabulary and the rules of inventory and
+`fleet-tools.toml`. [Fleet provisioning](fleet-provisioning.md) records how pins
+decide what each member needs and how members get it. Slices implement them one
 at a time. A change to anything here is a product decision and updates this
 document first.
 
@@ -19,28 +21,41 @@ document first.
 
 ## Desired state
 
-The master holds `fleet-tools.toml` beside `fleet-config.toml`. It names exact
-versions only. A missing file means nothing is desired. `[defaults]` applies to
-every member. `[members.<name>]` replaces it for one member: a manager `version`
+What a member needs comes from **pins**: the versions the workspaces jobs run in
+already declare (mise config, `.xcode-version`, `.elsecall-tools.toml`) and the
+master's global mise config. Elsecall installs exactly what is pinned and never
+copies what the master happens to have installed. `elsecall tools pins` reads
+them; [Fleet provisioning](fleet-provisioning.md) has the sources and rules.
+
+The master also holds `fleet-tools.toml` beside `fleet-config.toml`. It names
+exact versions only, and a missing file means no exceptions. Slice 2b-1 made it
+the hand-written desired state. Its role is now **exceptions** to the pins: tools
+to leave out, and intended per-member differences. The plan per member
+(provisioning delivery 2) implements that role; until then the file works as
+[Slice 2b-1](#slice-2b-1-desired-state) describes. `[defaults]` applies to every
+member. `[members.<name>]` replaces it for one member: a manager `version`
 replaces the default executable, and a tool entry replaces that tool's whole
 default (install lists are not merged). An empty tool entry means nothing is
-wanted for that tool on that member. The format, the CLI, and the rules are in
-[Slice 2b-1](#slice-2b-1-desired-state).
+wanted for that tool on that member.
 
 ## Plan and apply
 
-Changing what is installed is explicit. A plan shows what would change. Apply
-does it. Nothing is installed, selected or removed as a side effect of reading
-the fleet.
+A plan shows what would change on a member. Apply does it. Nothing is installed,
+selected or removed as a side effect of reading the fleet. An agent may confirm a
+tool plan; a person confirms file and credential plans. Once the automatic loop
+lands (provisioning delivery 6), tool plans that follow from pins are applied
+without asking, as admitted work on the member.
 
-A version that is installed but not in the desired set is reported. Elsecall
-does not uninstall it.
+A version that is installed but not pinned is reported. Elsecall never
+uninstalls anything automatically.
 
 ## Xcode
 
-The master downloads each Xcode archive once and streams it to members. Steps
-that need root (placing the app, selecting it, accepting the license) go through
-a narrowly scoped sudoers drop-in.
+Members get Xcode by copying the master's installed bundle
+(`/Applications/Xcode-*.app`) over the members' channel, so no Apple ID is
+needed. Only when no member has the pinned Xcode does a person sign in to
+download it. Steps that need root (placing the app, selecting it, accepting the
+license) go through a narrowly scoped sudoers drop-in.
 It does not grant a general root shell.
 
 ## Joining a machine
@@ -54,7 +69,8 @@ to the Xcode slice, which also says what it allows.
 Agents use the CLI. A native rune app talks to the same local socket. Both see
 the same inventory and, in later slices, the same plan.
 
-Homebrew, Mint and simulator runtimes are out of scope.
+Homebrew and Mint are out of scope. Simulator runtimes are in scope through
+provisioning: they are pinned in `.elsecall-tools.toml`.
 
 ## Slice 1: inventory
 
@@ -212,6 +228,9 @@ member is given. Exit 0 when some members are unavailable: that is data. Exit
 `invalid_request` and exits 2.
 
 ## Slice 2b-1: desired state
+
+[Fleet provisioning](fleet-provisioning.md) narrows this file to exceptions to
+the pins. The format and commands below stay until its delivery 2 changes them.
 
 This slice reads and edits the master's desired versions. It does not distribute
 the file, compare it with inventory, or install anything. Distribution onto the

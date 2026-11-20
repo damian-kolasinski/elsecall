@@ -56,6 +56,7 @@ mod test_environment;
 mod tools_desired;
 mod tools_fleet_inventory;
 mod tools_inventory;
+mod tools_pins;
 mod trace;
 mod tune;
 mod uninstall;

@@ -23,6 +23,7 @@ elsecall-peers.workspace = true
 elsecall-scheduling.workspace = true
 futures-util.workspace = true
 hyper.workspace = true
+libc.workspace = true
 plist.workspace = true
 serde.workspace = true
 serde_json.workspace = true

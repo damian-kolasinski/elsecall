@@ -265,6 +265,7 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall tools inventory` | This machine's tool managers, the tools installed through them and which version is the default (see [Fleet tool management](docs/fleet-tools.md)) |
 | `elsecall tools inventory --fleet` | Every member's tool inventory: this member first, then the others in roster order. A machine that has not joined a fleet is a fleet of one |
 | `elsecall tools inventory --member NAME` | That member's one entry from the fleet inventory |
+| `elsecall tools pins [PATH]` | The tool versions a workspace pins (mise project config, the global mise config, `.xcode-version`, `.elsecall-tools.toml`), each marked exact or not, read without running the workspace's code; PATH defaults to the current directory (see [Fleet provisioning](docs/fleet-provisioning.md)) |
 | `elsecall tools desired [--member NAME]` | Desired tool versions resolved for every fleet member, or one (see [Fleet tool management](docs/fleet-tools.md)) |
 | `elsecall tools set TOOL VERSION [--member NAME] [--install-only]` | On the master, set an exact desired version in `fleet-tools.toml`. `TOOL` is `mise`, `xcodes`, `mise:<name>`, or `xcode` |
 | `elsecall tools unset TOOL [--version VERSION] [--member NAME]` | On the master, remove a desired version or a whole entry |
