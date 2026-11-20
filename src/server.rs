@@ -482,8 +482,11 @@ pub async fn serve_with_updates(
     let recent_workspaces: Arc<dyn elsecall_tools::plan_api::RecentWorkspaces> = Arc::new(
         crate::run_workspace_pins::RunWorkspacePins(run_workspaces.clone()),
     );
-    let applier =
-        elsecall_tools::install::Applier::new(paths.data.clone(), Arc::new(scheduler.clone()));
+    let applier = elsecall_tools::install::Applier::new(
+        paths.data.clone(),
+        Arc::new(scheduler.clone()),
+        fleet.clone(),
+    );
     if let Ok(fleet) = &fleet {
         fleet.report_provisioning(applier.clone());
     }

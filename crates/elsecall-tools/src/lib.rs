@@ -3,6 +3,8 @@
 //! installing it.
 pub mod apply_api;
 mod apply_cli;
+mod artifact;
+mod artifact_api;
 pub mod fleet_tool_inventory;
 pub mod install;
 mod inventory_reader;

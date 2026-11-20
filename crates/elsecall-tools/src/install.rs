@@ -12,6 +12,7 @@ pub(crate) mod applier;
 pub(crate) mod mise;
 pub(crate) mod record;
 pub(crate) mod request;
+pub(crate) mod source;
 mod work;
 
 use crate::tool_inventory::Manager;

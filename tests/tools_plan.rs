@@ -63,7 +63,7 @@ pub(crate) fn equipped() -> Managers {
     executable(
         &dir.join("mise"),
         &format!(
-            "#!/bin/sh\ncase \"$*\" in\n  --version) echo 2026.10.11 ;;\n  'ls --json') cat '{0}/ls.json' ;;\n  'ls --global --json') cat '{0}/ls-global.json' ;;\n  *) exit 2 ;;\nesac\n",
+            "#!/bin/sh\n# Like mise, a shim under any name but its own.\ncase \"${{0##*/}}\" in mise) ;; *) exit 1 ;; esac\ncase \"$*\" in\n  --version) echo 2026.10.11 ;;\n  'ls --json') cat '{0}/ls.json' ;;\n  'ls --global --json') cat '{0}/ls-global.json' ;;\n  *) exit 2 ;;\nesac\n",
             utf8(dir)
         ),
     );

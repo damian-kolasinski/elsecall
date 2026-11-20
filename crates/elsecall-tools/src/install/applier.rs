@@ -49,12 +49,18 @@ pub struct Applier {
 }
 
 impl Applier {
-    /// The applier for this member, with the record `data` keeps.
-    pub fn new(data: PathBuf, admission: Arc<dyn InstallAdmission>) -> Arc<Self> {
+    /// The applier for this member, with the record `data` keeps, copying what
+    /// it lacks from the master `fleet` records.
+    pub fn new(
+        data: PathBuf,
+        admission: Arc<dyn InstallAdmission>,
+        fleet: std::result::Result<Arc<elsecall_fleet::fleet::Fleet>, Refusal>,
+    ) -> Arc<Self> {
+        let source = Arc::new(crate::install::source::MasterSource(fleet));
         Self::with_installers(
             data,
             admission,
-            vec![Arc::new(crate::install::mise::MiseInstaller)],
+            vec![Arc::new(crate::install::mise::MiseInstaller { source })],
         )
     }
 
@@ -142,6 +148,9 @@ impl Applier {
 
     async fn run(self: Arc<Self>) {
         let count = self.latest().map_or(0, |record| record.entries.len());
+        // A manager that could not be put in place fails its later steps with
+        // the same failure, instead of trying again for each.
+        let mut unusable: Vec<(crate::tool_inventory::Manager, StepFailure)> = Vec::new();
         for index in 0..count {
             let Some(entry) = self.latest().map(|record| record.entries[index].clone()) else {
                 return;
@@ -150,12 +159,32 @@ impl Applier {
             else {
                 continue;
             };
+            let earlier = unusable
+                .iter()
+                .find(|(manager, _)| *manager == entry.step.manager)
+                .map(|(_, failure)| *failure);
+            if let Some(failure) = earlier {
+                self.update(|record| {
+                    record.entries[index].state = State::Failed(Failure {
+                        stage: failure.stage.into(),
+                        code: failure.code.into(),
+                        at: Timestamp::now(),
+                    })
+                });
+                continue;
+            }
             self.update(|record| {
                 record.entries[index].state = State::Running {
                     since: Timestamp::now(),
                 }
             });
-            let state = match self.install(installer.as_ref(), &entry.step).await {
+            let outcome = self.install(installer.as_ref(), &entry.step).await;
+            if let Err(failure) = outcome
+                && failure.stage == "bootstrap"
+            {
+                unusable.push((entry.step.manager, failure));
+            }
+            let state = match outcome {
                 Ok(()) => State::Installed {
                     at: Timestamp::now(),
                 },

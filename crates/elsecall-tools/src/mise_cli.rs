@@ -78,6 +78,17 @@ pub(crate) fn located() -> Result<(PathBuf, Option<PathBuf>), InventoryFailure> 
     begin(home_dir(), locate_mise())
 }
 
+/// Where a copied mise goes: where the inventory looks first, `ELSECALL_MISE`
+/// when it is set and otherwise `~/.local/bin/mise`. None when neither can be
+/// named.
+pub(crate) fn install_target() -> Option<PathBuf> {
+    match command_capture::classify(command_capture::path_override("ELSECALL_MISE")) {
+        command_capture::OverridePath::Absolute(path) => Some(path),
+        command_capture::OverridePath::NotAbsolute => None,
+        command_capture::OverridePath::Unset => home_dir().map(|home| home.join(".local/bin/mise")),
+    }
+}
+
 fn begin(
     home: Option<PathBuf>,
     located: command_capture::Located,

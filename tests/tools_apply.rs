@@ -274,3 +274,104 @@ case \"$1\" in\n  --version) echo 2026.10.11 ;;\n  ls) echo '{}' ;;\n  install) 
 fn view_status(viewer: &TestMember, member: &str) -> Value {
     viewer.view_of(member)["status"].clone()
 }
+
+#[test]
+fn a_member_without_mise_copies_the_masters_before_installing() {
+    let master_tools = equipped();
+    let mut bare_tools = bare();
+    let mut target = PathBuf::new();
+    for (key, value) in &mut bare_tools.env {
+        if key == "ELSECALL_MISE" {
+            target = PathBuf::from(value.as_str())
+                .with_file_name("bin")
+                .join("mise");
+            *value = utf8(&target);
+        }
+    }
+    let master_mise = PathBuf::from(
+        &master_tools
+            .env
+            .iter()
+            .find(|(key, _)| key == "ELSECALL_MISE")
+            .unwrap()
+            .1,
+    );
+    let alpha = TestMember::start_with("alpha", "", &master_tools.pairs());
+    let bravo = TestMember::start_with("bravo", "", &bare_tools.pairs());
+    enrol(&alpha, &bravo);
+    workspace(
+        &alpha,
+        "acme-ios",
+        &[("mise.toml", "[tools]\nbun = \"1.3.5\"\n")],
+    );
+    plan_with(&alpha, 1, &["tools", "plan"]);
+    assert!(!target.exists(), "bravo starts without mise");
+
+    let done = alpha.ok(&["tools", "apply", "--member", "bravo", "--wait"]);
+    let step = &done["members"][0]["apply"]["steps"][0];
+    assert_eq!(step["tool"], "bun", "{done}");
+    assert_eq!(
+        (step["state"].as_str(), step["stage"].as_str()),
+        (Some("failed"), Some("install")),
+        "mise was copied; the master's fake mise then refuses to install: {done}"
+    );
+    assert_eq!(fs::read(&target).unwrap(), fs::read(&master_mise).unwrap());
+    let mode =
+        std::os::unix::fs::PermissionsExt::mode(&fs::metadata(&target).unwrap().permissions());
+    assert_eq!(mode & 0o777, 0o755);
+    let left: Vec<_> = fs::read_dir(target.parent().unwrap())
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name())
+        .collect();
+    assert_eq!(left, ["mise"], "nothing staged is left behind");
+    let inventory = bravo.ok(&["tools", "inventory"]);
+    assert_eq!(
+        inventory["managers"][0]["executable"]["state"], "found",
+        "{inventory}"
+    );
+}
+
+#[test]
+fn a_master_without_mise_has_none_to_copy_and_later_steps_fail_with_it() {
+    let master_tools = bare();
+    let bare_tools = bare();
+    let alpha = TestMember::start_with("alpha", "", &master_tools.pairs());
+    let bravo = TestMember::start_with("bravo", "", &bare_tools.pairs());
+    enrol(&alpha, &bravo);
+    workspace(
+        &alpha,
+        "acme-ios",
+        &[(
+            "mise.toml",
+            "[tools]\nbun = \"1.3.5\"\nnode = \"22.19.0\"\n",
+        )],
+    );
+    plan_with(&alpha, 1, &["tools", "plan"]);
+    alpha.ok(&["tools", "set", "mise:bun", "1.3.5", "--member", "bravo"]);
+    alpha.ok(&["tools", "set", "mise:node", "22.19.0", "--member", "bravo"]);
+
+    let done = alpha.ok(&["tools", "apply", "--member", "bravo", "--wait"]);
+    let steps = done["members"][0]["apply"]["steps"]
+        .as_array()
+        .unwrap()
+        .clone();
+    assert_eq!(steps.len(), 2, "{done}");
+    for step in &steps {
+        assert_eq!(
+            (&step["stage"], &step["code"]),
+            (&json!("bootstrap"), &json!("artifact_unavailable")),
+            "{done}"
+        );
+    }
+    let runs = bravo.ok(&["runs"]);
+    let installs = runs["runs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|run| run["label"] == "elsecall tools install")
+        .count();
+    assert_eq!(
+        installs, 1,
+        "the second step fails without asking again: {runs}"
+    );
+}
