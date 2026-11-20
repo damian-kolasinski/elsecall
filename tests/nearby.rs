@@ -182,4 +182,9 @@ fn nearby_lists_macs_whether_remote_login_is_on_and_which_are_members() {
             .contains("elsecall fleet add"),
         "{data}"
     );
+    let without_self = member.ok(&["fleet", "nearby", "--browse", "1s", "--exclude-this-mac"]);
+    assert_eq!(
+        summary(&without_self),
+        Value::Array(expected.as_array().unwrap()[..3].to_vec())
+    );
 }

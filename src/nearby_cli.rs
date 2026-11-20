@@ -16,7 +16,7 @@ use std::{net::IpAddr, time::Duration};
 
 const FLEET_TIMEOUT: Duration = Duration::from_secs(15);
 
-pub async fn run(paths: &Paths, browse: Duration) -> Result<(Value, bool)> {
+pub async fn run(paths: &Paths, browse: Duration, exclude_this_mac: bool) -> Result<(Value, bool)> {
     // Asking every member for its state takes as long as browsing, so both run at once.
     let socket = paths.socket();
     let (view, advertisements) = tokio::join!(
@@ -24,10 +24,12 @@ pub async fn run(paths: &Paths, browse: Duration) -> Result<(Value, bool)> {
         tokio::task::spawn_blocking(move || Bonjour.advertisements(browse)),
     );
     let advertisements = advertisements.expect("browsing does not panic")?;
-    let own_name = local_host_name().map(|name| format!("{name}.local"));
-    let own_addresses = lan_addresses();
     let mut macs = nearby(advertisements, &view?.known_members());
-    macs.retain(|mac| !is_this_mac(mac, own_name.as_deref(), &own_addresses));
+    if exclude_this_mac {
+        let own_name = local_host_name().map(|name| format!("{name}.local"));
+        let own_addresses = lan_addresses();
+        macs.retain(|mac| !is_this_mac(mac, own_name.as_deref(), &own_addresses));
+    }
     let next_step = next_step(&macs);
     Ok((json!({ "macs": macs, "next_step": next_step }), true))
 }

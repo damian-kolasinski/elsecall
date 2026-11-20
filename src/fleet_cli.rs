@@ -58,6 +58,9 @@ enum FleetCommand {
         /// How long to browse the network before resolving what answered
         #[arg(long, default_value = "2s", value_parser = humantime::parse_duration)]
         browse: Duration,
+        /// Omit the Mac running this command from discovery results.
+        #[arg(long)]
+        exclude_this_mac: bool,
     },
     /// Enrol another machine by the code its `fleet identity` printed (step 1 of 2)
     Enroll {
@@ -161,8 +164,11 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
             )
             .await;
         }
-        Some(FleetCommand::Nearby { browse }) => {
-            return crate::nearby_cli::run(paths, browse.min(MAX_BROWSE)).await;
+        Some(FleetCommand::Nearby {
+            browse,
+            exclude_this_mac,
+        }) => {
+            return crate::nearby_cli::run(paths, browse.min(MAX_BROWSE), exclude_this_mac).await;
         }
         Some(FleetCommand::Identity) => (Method::GET, "/v1/fleet/identity", None),
         Some(FleetCommand::Enroll {

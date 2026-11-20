@@ -228,7 +228,7 @@ fn envelope(stdout: &[u8]) -> Result<serde_json::Value, Failure> {
 impl AddMacSource for CliSource {
     fn nearby(&self) -> Result<Vec<NearbyMac>, Failure> {
         let output = Command::new(self.executable()?)
-            .args(["fleet", "nearby", "--browse", "2s"])
+            .args(["fleet", "nearby", "--browse", "2s", "--exclude-this-mac"])
             .stdin(Stdio::null())
             .stderr(Stdio::null())
             .output()

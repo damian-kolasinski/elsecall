@@ -275,7 +275,7 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall copies prune [--dry-run]` | Run a housekeeping pass now, or report what it would remove |
 | `elsecall fleet identity` | This member's name, public key, tailnet endpoints and member code |
 | `elsecall fleet add <host> --user <account> [--approval-wait 10m]` | On the master: add a Mac over SSH, with the account's password on standard input (see "Adding a Mac") |
-| `elsecall fleet nearby [--browse 2s]` | The Macs on the local network, whether Remote Login is on, and which are members (see "Finding Macs nearby") |
+| `elsecall fleet nearby [--browse 2s] [--exclude-this-mac]` | The Macs on the local network, whether Remote Login is on, and which are members (see "Finding Macs nearby") |
 | `elsecall fleet enroll <code> [--awaiting-provisioning]` / `join <code>` | Enrol another machine (on a member), then join (on that machine) |
 | `elsecall fleet ready <name>` | Mark a member awaiting provisioning ready, so placement may give it work |
 | `elsecall fleet remove <name>` / `leave` | Remove a member (on another member), then forget the fleet (on that machine) |
@@ -1671,7 +1671,7 @@ leaves that member out while placement continues with eligible responding member
 Sync and result streams keep their longer exchange/inactivity bounds. See the
 [harness peer-I/O contract](docs/tuning-harness.md#peer-io-diagnosis-and-bounds).
 
-**Finding Macs nearby.** `elsecall fleet nearby` lists other Macs on the local network,
+**Finding Macs nearby.** `elsecall fleet nearby` lists the Macs on the local network,
 the first step of [Adding a Mac](docs/add-mac.md). It browses Bonjour for `_ssh._tcp`
 (Remote Login on) and `_companion-link._tcp` (most Macs while Continuity is on), keeps
 the hosts whose `_device-info._tcp` model is a Mac model identifier (or SSH hosts that
@@ -1689,7 +1689,8 @@ suggests only a Mac that can be added. It browses in the CLI's own process while
 asks the service for the fleet; when macOS Local Network privacy denies that process,
 it fails with `local_network_denied`, and with `bonjour_unavailable` when the system's
 Bonjour service does not answer. Listing is best effort: a Mac that does not
-advertise itself can still be added by host name or address.
+advertise itself can still be added by host name or address. Pass
+`--exclude-this-mac` to omit the Mac running the command, as the Add Mac picker does.
 
 **Adding a Mac.** `elsecall fleet add <host> --user <account>`, run on the master with
 the account's password on standard input, adds a Mac with Remote Login on in one

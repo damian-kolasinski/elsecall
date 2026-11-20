@@ -46,8 +46,8 @@ it without changing its readiness.
    Continuity is on, and reads each host's model from `_device-info._tcp` to keep
    only Macs. A Mac seen only through `_companion-link._tcp` is listed with Remote
    Login off and what to turn on. Listing is best effort; a typed host name works
-   without it. Discovery omits the current Mac. The Add Mac picker also hides
-   virtual Macs and confirmed fleet members. Enter an address manually to add
+   without it. The Add Mac picker omits the current Mac, virtual Macs, and
+   confirmed fleet members. Enter an address manually to add
    a virtual Mac or repair a fleet member.
    Discovery is a port; the production adapter uses the system's DNS-SD.
 2. **Connects over SSH** to the Mac by its host name or address, with the account and
