@@ -8,7 +8,8 @@
 //! `postinstall`, are ignored: reading never runs them. Versions must be
 //! literal, so a template is an error rather than something to render. A
 //! version repeated for one tool is one pin. The asdf names mise accepts for
-//! its own tools (`nodejs`, `golang`) are read as the names inventory reports.
+//! its own tools (`nodejs`, `golang`) are read as the names inventory reports;
+//! naming one tool both ways in a file is an error, as mise would keep one.
 use crate::{
     pins::{Environment, Pin, Reading, SourceFile, Target, invalid, literal_version},
     tool_inventory::{ToolName, ToolVersion},
@@ -50,6 +51,16 @@ pub(super) fn tools(text: &str, file: &str) -> Result<Vec<ToolRequests>> {
         count += versions.len();
         if count > MAX_PINS {
             return Err(invalid(file, "tools", "at most 1024 versions in one file"));
+        }
+        if requests
+            .iter()
+            .any(|request: &ToolRequests| request.tool == tool)
+        {
+            return Err(invalid(
+                file,
+                &key,
+                "the tool is also named another way in this file; mise keeps only one",
+            ));
         }
         add(&mut requests, tool, versions);
     }
@@ -249,17 +260,26 @@ mod tests {
     fn aliases_take_mise_names_and_repeats_are_one_pin() {
         let text = r#"
             [tools]
-            nodejs = ["22.19.0", "22.19.0"]
-            node = ["20.19.5", "22.19.0"]
+            nodejs = ["22.19.0", "20.19.5", "22.19.0"]
             golang = "1.24.1"
         "#;
         assert_eq!(
             pinned(text),
             [
                 ("go".into(), vec!["1.24.1".into()]),
-                ("node".into(), vec!["20.19.5".into(), "22.19.0".into()]),
+                ("node".into(), vec!["22.19.0".into(), "20.19.5".into()]),
             ]
         );
+        let error = tools(
+            "[tools]
+node = \"20.19.5\"
+nodejs = \"22.19.0\"
+",
+            "mise.toml",
+        )
+        .unwrap_err();
+        assert_eq!(error.code, "pin_source_invalid");
+        assert!(!error.message.contains("22.19.0"), "{}", error.message);
     }
 
     #[test]

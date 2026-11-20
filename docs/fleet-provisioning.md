@@ -109,7 +109,9 @@ The reader also does not trust the files themselves. A workspace path is
 resolved one component at a time from each link's text, so nothing outside the
 workspace is touched, not even to refuse it: `mise.toml` linking to
 `~/.ssh/id_ed25519`, or `.config` linking to another folder, is refused by the
-link. The resolved file is opened without following links and without blocking,
+link. An absolute link back into the workspace must spell the workspace's
+canonical path (`/private/tmp`, not `/tmp`); a relative link is the usual form.
+The resolved file is opened without following links and without blocking,
 so a FIFO is refused rather than waited on. Only a regular UTF-8 file of at most
 1 MiB is read, and at most 64 `conf.d` files and 64 environment files per name
 pattern are listed. Errors name the file, the key and the rule, and never a

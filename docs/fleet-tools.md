@@ -292,8 +292,9 @@ example `22.19.0`. A malformed tool name on the command line, or `--install-only
 
 A pin is stored exactly as given. `22` and `zulu-17` are valid text. This slice
 does not resolve them through the manager. Repository pins like these are
-reported as inexact, with the newest matching version installed on the master;
-[Fleet provisioning](fleet-provisioning.md) has the rules.
+reported as inexact, with the newest matching version, when the master has a
+matching version installed; [Fleet provisioning](fleet-provisioning.md) has the
+rules.
 
 Member names in the file use roster syntax. A hand-edited section for someone
 who is not in the roster still parses. `tools desired` lists those names in
