@@ -10,10 +10,12 @@ document first.
 ## Vocabulary
 
 - **Tool manager.** Software Elsecall drives to install tools. The managers are
-  `mise` and `xcodes`.
+  `mise`, `xcodes` and `simulators` (simulator runtimes, through `simctl`).
 - **Tool.** Something a manager installs, named within that manager. A mise tool
   uses mise's own identifier, exactly as `mise ls` reports it (`node`, `tuist`,
-  `packslip:example/acme`). Xcode is the single tool `xcode`.
+  `packslip:example/acme`). Xcode is the single tool `xcode`. A simulator
+  runtime's tool is its platform as `simctl` names it (`iOS`, `tvOS`,
+  `watchOS`, `visionOS`).
 - **Installed version.** An exact version present on disk.
 - **Default.** The version used when no project selects one. For mise, that is
   the version selected by mise's global config. For Xcode, it is the app
@@ -84,10 +86,11 @@ manager failed: that failure is a `state: "failed"` entry with `error.code`,
 `error.message` and `error.hint`. Exit 1 only when the service call itself
 fails. The command waits 150 seconds. Other local commands still wait 3.
 
-The `data` object is `managers`, mise first, then xcodes. A read entry has
+The `data` object is `managers`: mise, then xcodes, then simulators. A read entry has
 `manager`, `state: "read"`, `executable` and `tools`. `executable.state` is
 `found` (`path`, `version`) or `missing`. Each tool has `name`, `version` and
-`default`. An Xcode tool also has `build` and `path` (the `.app` bundle). Tools
+`default`. An Xcode tool also has `build` and `path` (the `.app` bundle); a
+simulator runtime also has `build`. Tools
 are ordered by name, then by version with the newest last, then by bundle path.
 Version order splits on `.` and `-`, compares a numeric segment as a number and
 any other segment as a string, and ranks a numeric segment before a non-numeric
@@ -101,8 +104,9 @@ A path override is honoured in every build, the same way `ELSECALL_MACHINE_LOAD`
 is. An empty value is unset. A non-empty value that is not an absolute path
 fails that manager with `tool_manager_failed` and the hint
 `ELSECALL_<NAME> must be an absolute path` — `ELSECALL_MISE`, `ELSECALL_XCODES`,
-`ELSECALL_XCODE_APPLICATIONS` or `ELSECALL_XCODE_SELECT`. Elsecall passes that
-absolute path to the command. For `ELSECALL_MISE` and `ELSECALL_XCODES`, a
+`ELSECALL_XCODE_APPLICATIONS`, `ELSECALL_XCODE_SELECT` or `ELSECALL_SIMCTL`.
+Elsecall passes that absolute path to the command. For `ELSECALL_MISE`,
+`ELSECALL_XCODES` and `ELSECALL_SIMCTL`, a
 non-empty absolute path that is not a file hides the built-in locations and the
 executable is `missing`. That is not a failure. Installed Xcodes are still
 listed when `xcodes` itself is missing.
@@ -146,8 +150,29 @@ If the executable is present but `xcodes version` fails or times out, the
 report is the failure and the scanned apps are not included: a manager is
 either read or failed.
 
+**simulators.** Simulator runtimes, read through `simctl`, which ships inside
+Xcode. When `ELSECALL_SIMCTL` is unset, the executable is what
+`/usr/bin/xcrun --find simctl` prints (10 seconds). When that fails, as on a Mac
+with only the Command Line Tools, the executable is `missing` and no runtimes
+are listed; that is not a failure, and a timeout is `tool_manager_timeout`.
+Otherwise Elsecall runs the absolute path in `/`, with stdin closed:
+
+- `simctl --version` — the version is the CoreSimulator project version
+  (`@(#)PROGRAM:simctl  PROJECT:CoreSimulator-1051.17.7` → `1051.17.7`).
+- `simctl runtime list -j` — an object keyed by runtime identifier. A runtime
+  whose `state` is `Ready` is installed; an entry in any other state is left
+  out, even one missing fields, as is a
+  `platformIdentifier` that is not the iOS, tvOS, watchOS or visionOS
+  simulator. The tool is the platform (`iOS`), the version is the runtime's
+  `version` (`26.2`) and `build` is its build (`23C54`). No runtime is a
+  default. Two runtimes of one version with different builds (betas) are both
+  listed.
+
+Each command has 30 seconds, with the same failure codes as mise. On a Mac with
+Xcode 26.2 and nineteen runtimes the read takes about 0.1 seconds.
+
 The managers are read off the async worker. One manager failing does not hide
-the other.
+the others.
 
 ## Slice 2a: fleet inventory
 
@@ -155,8 +180,9 @@ Any member can read every member's inventory. This slice still does not install,
 select, uninstall, read `fleet-tools.toml`, or open a UI.
 
 `GET /peer/v1/tools/inventory` returns this member's inventory: the same `data`
-document as `GET /v1/tools/inventory` (`managers`, mise then xcodes, in that
-order; an Xcode `path` is absolute). It is a signed peer request. Any enrolled
+document as `GET /v1/tools/inventory` (`managers`, mise, xcodes then simulators,
+in that order; an Xcode `path` is absolute, and a runtime is one of the four
+platforms, has a `build` and no `path`, and is never a default). It is a signed peer request. Any enrolled
 member may call it, the same rule as the report routes. A member on another
 build is refused with `version_skew`, the same way a report route is: a request
 that names no build is not refused, and a named build that differs from this

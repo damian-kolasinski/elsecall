@@ -4,8 +4,8 @@
 //! returned. Inventories are built with [`ManagerInventory::try_new`], which
 //! sorts tools (name, then version with the newest last, then bundle path) and
 //! refuses more than one default version of the same tool. A document from
-//! another member is accepted only when it is mise, then xcodes, and every
-//! Xcode path is absolute.
+//! another member is accepted only when it is mise, then xcodes, then
+//! simulators, and every Xcode path is absolute.
 use serde::{Deserialize, Serialize, ser::SerializeMap};
 use std::{
     collections::BTreeSet,
@@ -18,6 +18,8 @@ pub enum Manager {
     Mise,
     #[serde(rename = "xcodes")]
     Xcodes,
+    #[serde(rename = "simulators")]
+    Simulators,
 }
 
 impl Manager {
@@ -25,6 +27,7 @@ impl Manager {
         match self {
             Self::Mise => "mise",
             Self::Xcodes => "xcodes",
+            Self::Simulators => "simulators",
         }
     }
 }
@@ -98,7 +101,14 @@ pub struct InstalledTool {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Detail {
-    Xcode { build: String, path: PathBuf },
+    Xcode {
+        build: String,
+        path: PathBuf,
+    },
+    /// A simulator runtime's build; the runtime has no path of its own.
+    Runtime {
+        build: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -206,7 +216,7 @@ impl ManagerInventory {
 fn detail_path(tool: &InstalledTool) -> &Path {
     match &tool.detail {
         Some(Detail::Xcode { path, .. }) => path,
-        None => Path::new(""),
+        Some(Detail::Runtime { .. }) | None => Path::new(""),
     }
 }
 
@@ -361,9 +371,13 @@ impl Serialize for InstalledTool {
         map.serialize_entry("name", &self.name)?;
         map.serialize_entry("version", &self.version)?;
         map.serialize_entry("default", &self.default)?;
-        if let Some(Detail::Xcode { build, path }) = &self.detail {
-            map.serialize_entry("build", build)?;
-            map.serialize_entry("path", path)?;
+        match &self.detail {
+            Some(Detail::Xcode { build, path }) => {
+                map.serialize_entry("build", build)?;
+                map.serialize_entry("path", path)?;
+            }
+            Some(Detail::Runtime { build }) => map.serialize_entry("build", build)?,
+            None => {}
         }
         map.end()
     }
@@ -474,8 +488,16 @@ mod incoming {
                     manager: Manager::Xcodes,
                     ..
                 },
+                ManagerReport::Read(ManagerInventory {
+                    manager: Manager::Simulators,
+                    ..
+                })
+                | ManagerReport::Failed {
+                    manager: Manager::Simulators,
+                    ..
+                },
             ] => Ok(Inventory { managers }),
-            _ => Err("an inventory lists mise, then xcodes"),
+            _ => Err("an inventory lists mise, then xcodes, then simulators"),
         }
     }
 
@@ -498,7 +520,7 @@ mod incoming {
         }
         let mut installed = Vec::with_capacity(tools.len());
         for tool in tools {
-            installed.push(installed_tool(tool)?);
+            installed.push(installed_tool(raw.manager, tool)?);
         }
         let inventory = ManagerInventory::try_new(raw.manager, executable, installed)
             .map_err(|_| "a manager reported more than one default version of a tool")?;
@@ -535,22 +557,31 @@ mod incoming {
         }
     }
 
-    fn installed_tool(raw: RawTool) -> Result<InstalledTool, &'static str> {
+    fn installed_tool(manager: Manager, raw: RawTool) -> Result<InstalledTool, &'static str> {
         let name = ToolName::new(raw.name).ok_or("a tool name is empty or contains whitespace")?;
         let version = ToolVersion::new(raw.version)
             .ok_or("a tool version is empty or contains whitespace")?;
-        let detail = match (raw.build, raw.path) {
-            (None, None) => None,
-            (Some(build), Some(path)) => {
-                if ToolVersion::new(&build).is_none() {
-                    return Err("an Xcode build is empty or contains whitespace");
+        if let Some(build) = &raw.build
+            && ToolVersion::new(build.as_str()).is_none()
+        {
+            return Err("a build is empty or contains whitespace");
+        }
+        let detail = match (manager, raw.build, raw.path) {
+            (Manager::Mise, None, None) => None,
+            (Manager::Xcodes, Some(build), Some(path)) => Some(Detail::Xcode {
+                build,
+                path: absolute_path(&path)?,
+            }),
+            (Manager::Simulators, Some(build), None) => {
+                const PLATFORMS: [&str; 4] = ["iOS", "tvOS", "visionOS", "watchOS"];
+                if !PLATFORMS.contains(&name.as_str()) || raw.default {
+                    return Err("a runtime is a simulator platform and never a default");
                 }
-                Some(Detail::Xcode {
-                    build,
-                    path: absolute_path(&path)?,
-                })
+                Some(Detail::Runtime { build })
             }
-            _ => return Err("an Xcode tool needs both a build and a path"),
+            (Manager::Mise, ..) => return Err("a mise tool has no build or path"),
+            (Manager::Xcodes, ..) => return Err("an Xcode tool needs both a build and a path"),
+            (Manager::Simulators, ..) => return Err("a runtime needs a build and no path"),
         };
         Ok(InstalledTool {
             name,
@@ -854,11 +885,25 @@ mod tests {
             }],
         )
         .unwrap();
+        let runtimes = ManagerInventory::try_new(
+            Manager::Simulators,
+            Executable::Missing,
+            vec![InstalledTool {
+                name: ToolName::new("iOS").unwrap(),
+                version: ToolVersion::new("26.2").unwrap(),
+                default: false,
+                detail: Some(Detail::Runtime {
+                    build: "23C54".into(),
+                }),
+            }],
+        )
+        .unwrap();
         let failed = InventoryFailure::timeout("mise ls --json");
         let inventory = Inventory {
             managers: vec![
                 ManagerReport::Read(read),
                 ManagerReport::Read(xcode),
+                ManagerReport::Read(runtimes),
                 ManagerReport::Failed {
                     manager: Manager::Mise,
                     failure: failed.clone(),
@@ -892,6 +937,12 @@ mod tests {
                         }]
                     },
                     {
+                        "manager": "simulators",
+                        "state": "read",
+                        "executable": {"state": "missing"},
+                        "tools": [{"name": "iOS", "version": "26.2", "default": false, "build": "23C54"}]
+                    },
+                    {
                         "manager": "mise",
                         "state": "failed",
                         "error": {
@@ -919,7 +970,7 @@ mod tests {
             serde_json::from_value::<Inventory>(serde_json::to_value(&inventory).unwrap()).is_err()
         );
         let peer = Inventory {
-            managers: inventory.managers[..2].to_vec(),
+            managers: inventory.managers[..3].to_vec(),
         };
         let parsed: Inventory =
             serde_json::from_value(serde_json::to_value(&peer).unwrap()).unwrap();
@@ -978,7 +1029,8 @@ mod tests {
                         "build": "16F6",
                         "path": "Xcode.app"
                     }]
-                }
+                },
+                {"manager": "simulators", "state": "read", "executable": {"state": "missing"}, "tools": []}
             ]
         });
         assert!(serde_json::from_value::<Inventory>(relative).is_err());
@@ -996,9 +1048,52 @@ mod tests {
                         "build": "16F6",
                         "path": "/Applications/Xcode.app"
                     }]
-                }
+                },
+                {"manager": "simulators", "state": "read", "executable": {"state": "missing"}, "tools": []}
             ]
         });
         assert!(serde_json::from_value::<Inventory>(absolute).is_ok());
+        let without_runtimes = serde_json::json!({
+            "managers": [
+                {"manager": "mise", "state": "read", "executable": {"state": "missing"}, "tools": []},
+                {"manager": "xcodes", "state": "read", "executable": {"state": "missing"}, "tools": []}
+            ]
+        });
+        assert!(serde_json::from_value::<Inventory>(without_runtimes).is_err());
+    }
+
+    #[test]
+    fn a_peer_runtime_has_a_build_and_no_path() {
+        let document = |tool: serde_json::Value| {
+            serde_json::json!({
+                "managers": [
+                    {"manager": "mise", "state": "read", "executable": {"state": "missing"}, "tools": []},
+                    {"manager": "xcodes", "state": "read", "executable": {"state": "missing"}, "tools": []},
+                    {"manager": "simulators", "state": "read", "executable": {"state": "missing"}, "tools": [tool]}
+                ]
+            })
+        };
+        let runtime = document(
+            serde_json::json!({"name": "iOS", "version": "26.2", "default": false, "build": "23C54"}),
+        );
+        let parsed: Inventory = serde_json::from_value(runtime).unwrap();
+        let ManagerReport::Read(read) = &parsed.managers[2] else {
+            panic!("simulators should be read");
+        };
+        assert_eq!(
+            read.tools[0].detail,
+            Some(Detail::Runtime {
+                build: "23C54".into()
+            })
+        );
+        for tool in [
+            serde_json::json!({"name": "iOS", "version": "26.2", "default": false}),
+            serde_json::json!({"name": "iOS", "version": "26.2", "default": true, "build": "23C54"}),
+            serde_json::json!({"name": "--ios", "version": "26.2", "default": false, "build": "23C54"}),
+            serde_json::json!({"name": "iOS", "version": "26.2", "default": false,
+                               "build": "23C54", "path": "/Library/Runtime"}),
+        ] {
+            assert!(serde_json::from_value::<Inventory>(document(tool)).is_err());
+        }
     }
 }

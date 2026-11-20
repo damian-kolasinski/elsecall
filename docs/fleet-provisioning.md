@@ -246,8 +246,8 @@ it on that member alone (`elsecall run --member <member> -- mise use --global
   (`pins`), shipped in delivery 1.
 - **`ToolManager`**: how a manager reads what is installed and, from delivery 4,
   installs. Adapters: mise, Xcode, simulator runtimes. Today's
-  `tool_inventory::ToolManager` is its read half, with mise and Xcode adapters;
-  delivery 2 adds a simulator runtime reader and delivery 4 adds installing.
+  `tool_inventory::ToolManager` is its read half, with mise, Xcode and
+  simulator runtime (`simctl`) adapters; delivery 4 adds installing.
 - **The planner** (delivery 2) joins them: pins from the workspaces jobs ran in, minus
   what the member has installed, minus the exceptions. Neither port knows about
   the other.

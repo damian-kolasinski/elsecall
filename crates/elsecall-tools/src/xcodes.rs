@@ -157,7 +157,7 @@ fn dedupe_bundles(tools: Vec<InstalledTool>) -> Vec<InstalledTool> {
 fn bundle_path(tool: &InstalledTool) -> &Path {
     match &tool.detail {
         Some(Detail::Xcode { path, .. }) => path,
-        None => Path::new(""),
+        Some(Detail::Runtime { .. }) | None => Path::new(""),
     }
 }
 

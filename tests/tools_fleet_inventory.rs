@@ -100,8 +100,25 @@ exit 2
             utf8(&app)
         ),
     );
+    let runtimes = dir.join("runtimes.json");
+    fs::write(
+        &runtimes,
+        format!(
+            r#"{{"A":{{"platformIdentifier":"com.apple.platform.iphonesimulator","version":"{xcode_version}","build":"R{build}","state":"Ready"}}}}"#
+        ),
+    )
+    .unwrap();
+    let simctl = dir.join("simctl");
+    executable(
+        &simctl,
+        &format!(
+            "#!/bin/sh\nif [ \"$*\" = \"--version\" ]; then echo 'PROJECT:CoreSimulator-1051.17.7'; exit 0; fi\nif [ \"$*\" = \"runtime list -j\" ]; then cat '{}'; exit 0; fi\nexit 2\n",
+            utf8(&runtimes)
+        ),
+    );
     Fakes {
         env: vec![
+            ("ELSECALL_SIMCTL".into(), utf8(&simctl)),
             ("ELSECALL_MISE".into(), utf8(&mise)),
             ("ELSECALL_XCODE_APPLICATIONS".into(), utf8(&apps)),
             ("ELSECALL_XCODE_SELECT".into(), utf8(&select)),
@@ -173,6 +190,15 @@ fn assert_tools(entry: &Value, mise: &str, node: &str, xcode: &str, build: &str)
     assert_eq!(entry["managers"][1]["tools"][0]["version"], xcode);
     assert_eq!(entry["managers"][1]["tools"][0]["build"], build);
     assert_eq!(entry["managers"][1]["tools"][0]["default"], true);
+    assert_eq!(
+        entry["managers"][2],
+        serde_json::json!({
+            "manager": "simulators",
+            "state": "read",
+            "executable": {"state": "found", "path": entry["managers"][2]["executable"]["path"], "version": "1051.17.7"},
+            "tools": [{"name": "iOS", "version": xcode, "default": false, "build": format!("R{build}")}]
+        })
+    );
 }
 
 #[test]

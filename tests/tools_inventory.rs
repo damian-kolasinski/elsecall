@@ -189,17 +189,56 @@ fn layout(mise_body: &str) -> Layout {
         ),
     );
     let missing = root.join("no-xcodes");
+    let simctl = root.join("simctl");
+    executable(&simctl, &simctl_script(root));
     Layout {
         environment: vec![
             ("ELSECALL_MISE".into(), utf8(&mise)),
             ("ELSECALL_XCODE_APPLICATIONS".into(), utf8(&apps)),
             ("ELSECALL_XCODE_SELECT".into(), utf8(&select)),
             ("ELSECALL_XCODES".into(), utf8(&missing)),
+            ("ELSECALL_SIMCTL".into(), utf8(&simctl)),
         ],
         home,
         xcode_16,
         xcode_26,
     }
+}
+
+/// A `simctl` that knows two Ready runtimes, one being deleted, and a platform
+/// that is not a simulator.
+fn simctl_script(root: &Path) -> String {
+    let listing = root.join("runtimes.json");
+    fs::write(
+        &listing,
+        r#"{
+          "6A1F": {"platformIdentifier": "com.apple.platform.iphonesimulator", "version": "26.2",
+                   "build": "23C54", "state": "Ready", "kind": "Patchable Cryptex Disk Image"},
+          "2E15": {"platformIdentifier": "com.apple.platform.iphonesimulator", "version": "18.6",
+                   "build": "22G86", "state": "Ready", "kind": "Cryptex Disk Image"},
+          "9C0D": {"platformIdentifier": "com.apple.platform.watchsimulator", "version": "26.0",
+                   "build": "23R353", "state": "Deleting"},
+          "0B7E": {"platformIdentifier": "com.apple.platform.macosx", "version": "26.0",
+                   "build": "25A1", "state": "Ready"}
+        }"#,
+    )
+    .unwrap();
+    format!(
+        "#!/bin/sh\nset -eu\nif [ \"$*\" = \"--version\" ]; then\n  printf '%s\\n' '@(#)PROGRAM:simctl  PROJECT:CoreSimulator-1051.17.7'\n  exit 0\nfi\nif [ \"$*\" = \"runtime list -j\" ]; then\n  cat '{}'\n  exit 0\nfi\nexit 2\n",
+        utf8(&listing)
+    )
+}
+
+fn runtimes_read(layout: &Layout) -> Value {
+    json!({
+        "manager": "simulators",
+        "state": "read",
+        "executable": {"state": "found", "path": override_path(layout, "ELSECALL_SIMCTL"), "version": "1051.17.7"},
+        "tools": [
+            {"name": "iOS", "version": "18.6", "default": false, "build": "22G86"},
+            {"name": "iOS", "version": "26.2", "default": false, "build": "23C54"}
+        ]
+    })
 }
 
 fn start(layout: &Layout) -> Service {
@@ -237,13 +276,25 @@ fn start(layout: &Layout) -> Service {
 }
 
 fn mise_path(layout: &Layout) -> String {
+    override_path(layout, "ELSECALL_MISE")
+}
+
+fn override_path(layout: &Layout, variable: &str) -> String {
     layout
         .environment
         .iter()
-        .find(|(name, _)| name == "ELSECALL_MISE")
+        .find(|(name, _)| name == variable)
         .unwrap()
         .1
         .clone()
+}
+
+fn set_override(layout: &mut Layout, variable: &str, path: &Path) {
+    for (name, value) in &mut layout.environment {
+        if name == variable {
+            *value = utf8(path);
+        }
+    }
 }
 
 fn mise_read(path: &str) -> Value {
@@ -307,8 +358,57 @@ fn reports_the_fake_managers_exactly() {
                         "state": "read",
                         "executable": {"state": "missing"},
                         "tools": xcode_tools(&layout)
-                    }
+                    },
+                    runtimes_read(&layout)
                 ]
+            }
+        })
+    );
+}
+
+#[test]
+fn without_simctl_no_runtimes_are_listed() {
+    let mut layout = layout("");
+    let missing = layout.home.path().join("no-simctl");
+    set_override(&mut layout, "ELSECALL_SIMCTL", &missing);
+    let _service = start(&layout);
+    let result = cli(layout.home.path(), &["tools", "inventory"]);
+    assert!(result.status.success(), "{result:?}");
+    assert_eq!(
+        json_output(&result)["data"]["managers"][2],
+        json!({
+            "manager": "simulators",
+            "state": "read",
+            "executable": {"state": "missing"},
+            "tools": []
+        })
+    );
+}
+
+#[test]
+fn a_failing_simctl_keeps_the_other_managers() {
+    let mut layout = layout("");
+    let simctl = layout.home.path().join("broken-simctl");
+    executable(
+        &simctl,
+        "#!/bin/sh\nif [ \"$*\" = \"--version\" ]; then echo 'PROJECT:CoreSimulator-1051.17.7'; exit 0; fi\nexit 3\n",
+    );
+    set_override(&mut layout, "ELSECALL_SIMCTL", &simctl);
+    let _service = start(&layout);
+    let result = cli(layout.home.path(), &["tools", "inventory"]);
+    assert!(result.status.success(), "{result:?}");
+    let managers = &json_output(&result)["data"]["managers"];
+    assert_eq!(managers[0], mise_read(&mise_path(&layout)));
+    assert_eq!(managers[1]["state"], "read");
+    assert_eq!(
+        managers[2],
+        json!({
+            "manager": "simulators",
+            "state": "failed",
+            "error": {
+                "code": "tool_manager_failed",
+                "message": "simctl runtime list -j exited with status 3.",
+                "hint": "Run the tool manager in a terminal to see why, then retry elsecall tools inventory."
             }
         })
     );
@@ -342,7 +442,8 @@ fn a_failing_xcodes_version_keeps_the_mise_inventory() {
                             "message": "xcodes version exited with status 1.",
                             "hint": "Run the tool manager in a terminal to see why, then retry elsecall tools inventory."
                         }
-                    }
+                    },
+                    runtimes_read(&layout)
                 ]
             }
         })
@@ -395,7 +496,8 @@ fn a_failing_mise_keeps_the_xcode_inventory() {
                         "state": "read",
                         "executable": {"state": "missing"},
                         "tools": xcode_tools(&layout)
-                    }
+                    },
+                    runtimes_read(&layout)
                 ]
             }
         })
@@ -408,8 +510,10 @@ fn a_failing_mise_keeps_the_xcode_inventory() {
 fn live_machine_tools_inventory() {
     let mise = elsecall_tools::mise_cli::MiseCli;
     let xcodes = elsecall_tools::xcodes::XcodesCli;
-    let managers: [&dyn elsecall_tools::tool_inventory::ToolManager; 2] = [&mise, &xcodes];
+    let runtimes = elsecall_tools::simulator_runtimes::SimctlRuntimes;
+    let managers: [&dyn elsecall_tools::tool_inventory::ToolManager; 3] =
+        [&mise, &xcodes, &runtimes];
     let inventory = elsecall_tools::tool_inventory::gather(&managers);
     println!("{}", serde_json::to_string_pretty(&inventory).unwrap());
-    assert_eq!(inventory.managers.len(), 2);
+    assert_eq!(inventory.managers.len(), 3);
 }

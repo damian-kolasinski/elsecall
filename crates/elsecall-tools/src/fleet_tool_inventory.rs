@@ -11,6 +11,7 @@
 //! A machine that has not joined a fleet is that roster of one.
 use crate::{
     mise_cli::MiseCli,
+    simulator_runtimes::SimctlRuntimes,
     tool_inventory::{Inventory, ToolManager},
     xcodes::XcodesCli,
 };
@@ -107,9 +108,7 @@ pub async fn gather(sources: &[Source]) -> FleetInventory {
 
 /// This machine's managers. The same read the local inventory route serves.
 pub fn read_installed() -> Inventory {
-    let mise = MiseCli;
-    let xcodes = XcodesCli;
-    let managers: [&dyn ToolManager; 2] = [&mise, &xcodes];
+    let managers: [&dyn ToolManager; 3] = [&MiseCli, &XcodesCli, &SimctlRuntimes];
     crate::tool_inventory::gather(&managers)
 }
 
