@@ -14,3 +14,4 @@ pub mod inbound_firewall;
 pub mod lan_address;
 pub mod nearby_macs;
 pub mod remote_mac;
+pub mod resource_report;

@@ -1,0 +1,30 @@
+{
+  "enrolled": true,
+  "members": [
+    {
+      "name": "mac-mini", "role": "master", "this_member": true, "reachability": "reachable",
+      "build": {"version":"0.3.0"}, "version_skew":false,
+      "status": {
+        "machine": {"logical_cpus":12,"cpu_utilization":0.85,"memory":{"used_bytes":25769803776,"total_bytes":34359738368},"load_average":{"one_minute":11.2,"five_minutes":9.8,"fifteen_minutes":8.5}},
+        "active_grants": {"total":2,"assigned":6.5,"operations":[
+          {"run_id":"r-000000000001","kind":"run","label":"Build acme-ios","size":4},
+          {"run_id":"r-000000000002","kind":"lease","label":"Test Checkout","size":2.5}
+        ]}
+      },
+      "outside_warnings":[
+        {"process":"mdworker_shared","pid":615,"owner":"root","started":"2026-11-01T03:00:00Z","since":"2026-11-01T07:00:00Z","observed_at":"2026-11-01T13:55:00Z","concern":"spinning","cpu_cores":1.2}
+      ],
+      "blocked": {
+        "reason":"memory_pressure","level":"warning","since":"2026-11-01T13:50:00Z","attributed_at":"2026-11-01T13:59:38Z",
+        "outside":[
+          {"name":"Simulator","pid":8123,"owner":"this_user","resident_bytes":5368709120,"footprint_bytes":4831838208,"cpu_cores":1.0,"uptime_seconds":7200},
+          {"name":"fseventsd","pid":412,"owner":"root","resident_bytes":2147483648,"cpu_cores":0.1,"uptime_seconds":64000}
+        ]
+      }
+    },
+    {
+      "name":"macbook-pro","role":"member","reachability":"reachable","build":{"version":"0.3.0"},"version_skew":false,
+      "status":{"active_grants":{"total":0,"assigned":0,"operations":[]},"machine":{"logical_cpus":10,"cpu_utilization":0.22,"memory":{"used_bytes":12884901888,"total_bytes":34359738368},"load_average":{"one_minute":2.1,"five_minutes":2.0,"fifteen_minutes":1.8}}}
+    }
+  ]
+}

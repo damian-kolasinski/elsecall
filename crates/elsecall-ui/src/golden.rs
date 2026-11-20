@@ -70,6 +70,24 @@ fn fleet_scenes_match_goldens() {
             compare(scene, appearance, "", &[]);
         }
     }
+    let script = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/load-details.json"
+    );
+    for appearance in APPEARANCES {
+        for (suffix, at) in [
+            ("-breakdown", "2.7"),
+            ("-empty", "8"),
+            ("-dismissed", "9.8"),
+        ] {
+            compare(
+                "resource-load",
+                appearance,
+                suffix,
+                &["--script", script, "--at", at],
+            );
+        }
+    }
     let hover = tempfile::NamedTempFile::new().unwrap();
     // The demand cell of the selected MacBook at minimum width.
     std::fs::write(hover.path(), r#"[{"t":0.1,"type":"move","x":976,"y":267}]"#).unwrap();

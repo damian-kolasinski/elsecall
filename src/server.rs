@@ -225,6 +225,9 @@ pub async fn serve_with_updates(
         pre_run,
         load_log.clone(),
     )?;
+    if let Ok(fleet) = &fleet {
+        fleet.report_grants(scheduler.clone());
+    }
     if let Ok(sync) = &config_sync {
         sync.report_effective_settings(scheduler.effective_settings_fingerprint());
     }

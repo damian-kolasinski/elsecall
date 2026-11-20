@@ -573,6 +573,18 @@ fn a_members_running_leases_outlast_its_upgrade() {
     std::fs::write(bravo.data().join("workloads.toml"), personal).unwrap();
     let mut holder = hold_lease(&bravo, "nightly-build");
 
+    let grants = |member: &TestMember| {
+        member.view_of("bravo")["status"]["active_grants"]["operations"]
+            .as_array()
+            .unwrap()
+            .clone()
+    };
+    assert!(
+        grants(&alpha)
+            .iter()
+            .any(|g| g["label"] == "nightly-build" && g["kind"] == "lease" && g["size"] == 1.0)
+    );
+
     // The restart leaves a local lease whole, so the member upgrades without
     // waiting for it, and the new service holds it.
     let pid = bravo.installed_pid().unwrap();
@@ -593,6 +605,7 @@ fn a_members_running_leases_outlast_its_upgrade() {
     );
     std::fs::write(bravo.home.path().join("release"), "").unwrap();
     assert!(holder.wait().unwrap().success());
+    assert!(!grants(&alpha).iter().any(|g| g["label"] == "nightly-build"));
     let runs = bravo.ok(&["runs"]);
     assert_eq!(
         labelled(&runs, "nightly-build")["outcome"]["kind"],

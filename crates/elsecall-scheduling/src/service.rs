@@ -4,6 +4,7 @@ mod auto;
 mod background;
 pub use background::Tasks;
 mod expiry;
+mod holding;
 mod hosting;
 mod initial;
 mod internal;
@@ -24,7 +25,7 @@ use crate::load_log::{LoadLog, minute::Second};
 use crate::{
     admission::{Admission, Class},
     binding::{Bindings, Lost},
-    busy::{self, Situation, Work},
+    busy::{self, Situation},
     clock::{Clock, SystemClock},
     estimates::{self, HoldBasis},
     learning,
@@ -1224,37 +1225,6 @@ impl Scheduler {
                 );
             }
         }
-    }
-
-    /// Work holding this member's capacity, for a `fleet_busy` report.
-    fn holding(&self, book: &Book) -> Vec<Work> {
-        let mut holding: Vec<_> = book
-            .admission
-            .holding()
-            .filter_map(|(root, size)| {
-                // A root that ended still holds capacity for its nested work.
-                let work = book.entries.get(root).or_else(|| {
-                    book.entries
-                        .values()
-                        .filter(|e| e.record.shares_capacity_of.as_ref() == Some(root))
-                        .min_by_key(|e| &e.record.run_id)
-                })?;
-                Some(Work {
-                    run_id: work.record.run_id.clone(),
-                    kind: work.record.kind,
-                    label: work.record.label.clone(),
-                    size,
-                    started_at: work.record.started_at,
-                    expected_run: work.expected_run,
-                })
-            })
-            .collect();
-        holding.sort_by(|a, b| {
-            a.started_at
-                .cmp(&b.started_at)
-                .then(a.run_id.cmp(&b.run_id))
-        });
-        holding
     }
 
     /// Why a request of `size` cannot start here now, as `fleet_busy`.
