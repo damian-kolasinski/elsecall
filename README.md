@@ -1914,8 +1914,10 @@ while a daemon that spins or leaks keeps one identity for hours.
 
 - `spinning`: over the last 6 hours, it kept 0.8 cores or more busy on average, and at
   least half a core in 90% of the 5-minute samples. A spinner squeezed by heavy work
-  still counts; Spotlight indexing in bursts of about half a core does not.
-  `cpu_cores` is the 6-hour average.
+  now and then still counts; Spotlight indexing in bursts of about half a core does
+  not. `cpu_cores` is the 6-hour average. The warning ends once three samples in a
+  row (15 minutes) see the process below half a core, whatever the average still
+  says, and continues if it spins again within the hour.
 - `growing`: over the last 6 hours, its memory rose by at least 1 GiB and 25%, steadily
   (each quarter of the window above the one before, which an app loading a project
   once does not do), to at least 2 GiB or 5% of physical memory, whichever is more.
@@ -1929,10 +1931,13 @@ otherwise (root daemons). A window is judged only once samples cover all of it (
 least 80% of its samples taken, reaching back to its start) and the process lived
 through it; a Mac asleep for more than about an hour of the window is not judged
 until the window has passed. Samples are kept for 12 hours in
-`outside-processes.sqlite`, so a service restart does not restart a window, and a
-restarted service shows the warnings it had until its second sample confirms or ends
-them. `since` is as far back as the samples show the concern holding, and keeps its
-first value while the concern holds. A warning ends when a sample no longer shows
+`outside-processes.sqlite`, so a service restart does not restart a window. A
+restarted service shows no warnings until its first sample; that sample brings back
+the warnings it had whose processes, by PID and start time, still run and that held
+within the last hour, until its second sample confirms or ends them, and ends the
+rest, so a warning never outlives its process or a reboot. `since` is as far back
+as the samples show the concern holding, and keeps its first value while the
+concern holds. A warning ends when a sample no longer shows
 it, for example once the process was restarted; one that holds again within an hour
 continues. Warnings are kept for 30 days after they end, for reports.
 

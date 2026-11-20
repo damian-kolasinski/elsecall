@@ -36,6 +36,8 @@ struct Process {
     growth_per_hour: u64,
     /// When its memory briefly reads as nothing, as through a collection.
     dip: Range<u64>,
+    /// From when it burns CPU at another rate, and that rate.
+    calms: Option<(u64, f64)>,
 }
 
 #[derive(Default)]
@@ -46,6 +48,37 @@ struct Machine {
 impl Machine {
     fn add(&self, process: Process) {
         self.processes.lock().unwrap().push(process);
+    }
+
+    /// Ends the process `pid` that runs now, at `at`.
+    fn exit(&self, pid: u32, at: u64) {
+        for process in self.processes.lock().unwrap().iter_mut() {
+            if process.pid == pid && process.lives.contains(&at) {
+                process.lives.end = at;
+            }
+        }
+    }
+
+    /// Every process ends at `at`, and from a minute later the machine runs
+    /// launchd, WindowServer and the service again, each a new process.
+    fn reboot(&self, at: u64) {
+        for process in self.processes.lock().unwrap().iter_mut() {
+            process.lives.end = process.lives.end.min(at);
+        }
+        let booted = at + 60..u64::MAX;
+        self.add(Process {
+            lives: booted.clone(),
+            ..daemon(1, "launchd", 0.0, 0, 0)
+        });
+        self.add(Process {
+            lives: booted.clone(),
+            ..daemon(700, "WindowServer", 0.3, GIB, 0)
+        });
+        self.add(Process {
+            owner: Owner::ThisUser,
+            lives: booted,
+            ..daemon(SERVICE, "elsecall", 0.01, 64 << 20, 0)
+        });
     }
 }
 impl ProcessSampler for Machine {
@@ -73,7 +106,12 @@ impl ProcessSampler for Machine {
                         },
                         footprint_bytes: None,
                     },
-                    cpu_time: Duration::from_secs_f64(alive * p.cores),
+                    cpu_time: Duration::from_secs_f64(match p.calms {
+                        Some((from, cores)) if now > from => {
+                            (from - p.lives.start) as f64 * p.cores + (now - from) as f64 * cores
+                        }
+                        _ => alive * p.cores,
+                    }),
                 }
             })
             .collect())
@@ -92,6 +130,7 @@ fn daemon(pid: u32, name: &'static str, cores: f64, memory: u64, growth_per_hour
         memory,
         growth_per_hour,
         dip: 0..0,
+        calms: None,
     }
 }
 
@@ -194,10 +233,11 @@ fn a_daemon_spinning_a_core_for_six_hours_warns_and_clears_when_restarted() {
     assert_eq!(warning.since, at(begin + INTERVAL.as_secs()));
     assert_eq!(warning.concern, Concern::Spinning { cpu_cores: 1.0 });
 
-    // A restart keeps the history and the onset: the warning shows from the
-    // start, through the baseline round, and the round after confirms it.
+    // A restart keeps the history and the onset. It shows nothing before its
+    // first sample; that sample still lists the process, so the warning shows
+    // again from the baseline round, and the round after confirms it.
     let member = member.restarted();
-    assert_eq!(member.watcher.warnings(), std::slice::from_ref(&warning));
+    assert_eq!(member.watcher.warnings(), []);
     member.run(member.now() + INTERVAL.as_secs(), None);
     assert_eq!(member.watcher.warnings(), [warning]);
     member.run(member.now() + INTERVAL.as_secs(), None);
@@ -223,6 +263,102 @@ fn a_daemon_spinning_a_core_for_six_hours_warns_and_clears_when_restarted() {
     let episodes = member.watcher.between(at(0), at(member.now())).unwrap();
     assert_eq!(episodes.len(), 1);
     assert_eq!(episodes[0].until, Some(at(killed - 1)));
+}
+
+/// A member that warns about `audiomxd`, pid 704, which has spun 0.83 cores
+/// for six hours, and the warning.
+fn spinning_audiomxd() -> (Arc<Machine>, Member, Warning) {
+    let machine = machine();
+    machine.add(daemon(704, "audiomxd", 0.83, 40 << 20, 0));
+    let member = Member::new(machine.clone());
+    member.run(member.now() + 6 * HOUR + INTERVAL.as_secs(), None);
+    let warnings = member.watcher.warnings();
+    assert_eq!(member.warnings(), [("spinning", "audiomxd".to_owned())]);
+    (machine, member, warnings[0].clone())
+}
+
+#[test]
+fn a_spinning_warning_ends_with_its_process() {
+    // It exits: the next round ends the warning, at the last round that saw
+    // it.
+    let (machine, member, warning) = spinning_audiomxd();
+    machine.exit(704, member.now() + 1);
+    member.run(member.now() + INTERVAL.as_secs(), None);
+    assert_eq!(member.warnings(), []);
+    let episodes = member.watcher.between(at(0), at(member.now())).unwrap();
+    assert_eq!(episodes.len(), 1);
+    assert_eq!(episodes[0].until, Some(warning.observed_at));
+
+    // Its PID goes to a new process that spins just the same: that is another
+    // process, too young to warn about, so the warning ends all the same.
+    let (machine, member, _) = spinning_audiomxd();
+    let replaced = member.now() + 1;
+    machine.exit(704, replaced);
+    machine.add(Process {
+        lives: replaced..u64::MAX,
+        ..daemon(704, "audiomxd", 0.83, 40 << 20, 0)
+    });
+    member.run(member.now() + INTERVAL.as_secs(), None);
+    assert_eq!(member.warnings(), []);
+}
+
+#[test]
+fn a_spinning_warning_ends_once_the_process_calms_down() {
+    // Still a candidate at 0.4 cores, and the six-hour window passes for
+    // another half hour; three rounds below half a core end the warning.
+    let (machine, member, _) = spinning_audiomxd();
+    let calmed = member.now() + 1;
+    for process in machine.processes.lock().unwrap().iter_mut() {
+        if process.pid == 704 {
+            process.calms = Some((calmed, 0.4));
+        }
+    }
+    member.run(member.now() + 2 * INTERVAL.as_secs(), None);
+    assert_eq!(member.warnings(), [("spinning", "audiomxd".to_owned())]);
+    member.run(member.now() + INTERVAL.as_secs(), None);
+    assert_eq!(member.warnings(), []);
+}
+
+#[test]
+fn a_reboot_ends_every_warning_before_the_service_judges_again() {
+    let (machine, member, warning) = spinning_audiomxd();
+    // The member reboots; Core Audio starts a new, idle audiomxd, and the
+    // service comes back fifteen minutes later over the same history.
+    let down = member.now() + 60;
+    machine.reboot(down);
+    machine.add(Process {
+        lives: down + 90..u64::MAX,
+        ..daemon(812, "audiomxd", 0.0, 30 << 20, 0)
+    });
+    *machine.now.lock().unwrap() = down + 15 * 60;
+    let member = member.restarted();
+    assert_eq!(member.watcher.warnings(), [], "nothing before a sample");
+    // The baseline sample lists none of the old processes: the warning ends
+    // at once, at the last round before the reboot.
+    member.run(member.now() + INTERVAL.as_secs(), None);
+    assert_eq!(member.watcher.warnings(), []);
+    let episodes = member.watcher.between(at(0), at(member.now())).unwrap();
+    assert_eq!(episodes.len(), 1);
+    assert_eq!(episodes[0].until, Some(warning.observed_at));
+    // A restart after that has nothing left open to show.
+    let member = member.restarted();
+    member.run(member.now() + 2 * INTERVAL.as_secs(), None);
+    assert_eq!(member.watcher.warnings(), []);
+}
+
+#[test]
+fn a_clock_that_went_back_judges_no_rounds_ahead_of_it() {
+    let (machine, member, _) = spinning_audiomxd();
+    // The member reboots and comes back with its clock an hour behind the
+    // rounds before the reboot, which still list audiomxd.
+    let back = member.now() - HOUR;
+    machine.reboot(back);
+    *machine.now.lock().unwrap() = back + 15 * 60;
+    let member = member.restarted();
+    // The baseline round, then a judged one: the rounds ahead of the clock
+    // would make the old audiomxd the latest process seen.
+    member.run(member.now() + 2 * INTERVAL.as_secs(), None);
+    assert_eq!(member.watcher.warnings(), []);
 }
 
 #[test]

@@ -25,6 +25,10 @@ pub const SPIN_STEADY: f64 = 0.9;
 /// …this many cores or more. A spinner squeezed by heavy work still passes;
 /// Spotlight's bursty indexing, about half a core on average, does not.
 pub const SPIN_FLOOR: f64 = 0.5;
+/// A spinner that this many latest rounds in a row saw below the floor has
+/// stopped, whatever its window's mean still says, which takes up to 40
+/// minutes to notice. A round or two below it is a squeeze, not a stop.
+pub const SPIN_STOPPED: usize = 3;
 
 /// A process grows when, over this window, its memory rose…
 pub const GROWTH_WINDOW: Duration = Duration::from_secs(6 * 60 * 60);
@@ -189,6 +193,14 @@ fn spinning(
 ) -> Option<(f64, Timestamp)> {
     let first = window(rounds, SPIN_WINDOW, Some(started))?;
     let shares: Vec<f64> = track[first..].iter().map(|s| cores(*s)).collect();
+    if shares
+        .iter()
+        .rev()
+        .take(SPIN_STOPPED)
+        .all(|c| *c < SPIN_FLOOR)
+    {
+        return None;
+    }
     let mean = shares.iter().sum::<f64>() / shares.len() as f64;
     let steady = shares.iter().filter(|c| **c >= SPIN_FLOOR).count();
     if mean < SPIN_CORES || (steady as f64) < SPIN_STEADY * shares.len() as f64 {
@@ -319,6 +331,23 @@ mod tests {
         // Half the window at two cores averages one, but is not continuous.
         let half = rounds(SIX_HOURS, |i| Some((if i % 2 == 0 { 2.0 } else { 0.1 }, 0)));
         assert_eq!(concerns(&half, 64 * GIB), []);
+    }
+
+    #[test]
+    fn a_spinner_that_drops_below_the_floor_stops_before_its_mean_does() {
+        // Six hours at a core, then 0.4 cores: the window's mean and steady
+        // share pass for another half hour, but three rounds below the floor
+        // end it.
+        let calming = |below: usize| {
+            rounds(SIX_HOURS + below, |i| {
+                Some((if i < SIX_HOURS { 1.0 } else { 0.4 }, 0))
+            })
+        };
+        assert_eq!(
+            kinds(&concerns(&calming(SPIN_STOPPED - 1), 64 * GIB)),
+            ["spinning"]
+        );
+        assert_eq!(concerns(&calming(SPIN_STOPPED), 64 * GIB), []);
     }
 
     #[test]

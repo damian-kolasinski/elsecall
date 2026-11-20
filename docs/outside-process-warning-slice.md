@@ -51,11 +51,21 @@ machine would warn today.
 - **Continuity.** `since` is clamped to the process's start, so peers never see a
   concern that predates its process. A warning that holds again within an hour of
   ending continues its episode, so a one-round lapse (a collection, noise) does not
-  split it. A restart shows the warnings the store left open until its first judged
-  round confirms or ends them; a failed sample clears what is shown.
+  split it. Warnings shown live beside the sample that listed their processes, so
+  none outlives its process: a start shows none until it has sampled, its first
+  (baseline) sample keeps the warnings the store left open only for processes it
+  still lists by PID and start time and only if they held within the hour, until
+  the next round judges them, and ends the rest, which after a reboot is all of
+  them. A failed sample or round clears what is shown. Rounds are judged up to the
+  current one, never past it, and pruning deletes rounds ahead of the clock, so a
+  clock that went back cannot judge processes from rounds still ahead of it.
 - **Thresholds** (`trend`): spinning is a 6-hour mean of 0.8 cores or more with 90% of
   rounds at half a core or more. 0.8 leaves room for a full-core spinner squeezed by
-  heavy work; the 90% floor rejects bursts and Spotlight-like churn. Growing is at
+  heavy work; the 90% floor rejects bursts and Spotlight-like churn. A spinner the
+  last three rounds (15 minutes) saw below half a core has stopped, where the mean
+  and the 90% floor take up to 40 minutes to notice; a round or two below is a
+  squeeze, and a spinner squeezed longer continues its episode when it spins again
+  within the hour. Growing is at
   least 1 GiB and 25% over 6 hours, to at least the larger of 2 GiB and 5% of
   physical memory, with each quarter's median above the last, which a one-off load
   step does not give. Oversized is a quarter of physical memory in every round of an

@@ -181,14 +181,14 @@ impl TrendStore {
         Ok(living)
     }
 
-    /// Rounds from `since` on, oldest first.
-    pub fn rounds(&self, since: Timestamp) -> Result<Vec<Round>> {
+    /// Rounds from `since` through `until`, oldest first.
+    pub fn rounds(&self, since: Timestamp, until: Timestamp) -> Result<Vec<Round>> {
         let connection = self.connection();
         let mut statement = connection
-            .prepare("SELECT at FROM rounds WHERE at >= ?1 ORDER BY at")
+            .prepare("SELECT at FROM rounds WHERE at >= ?1 AND at <= ?2 ORDER BY at")
             .map_err(failure)?;
         let mut rounds: Vec<Round> = statement
-            .query_map([millis(since)], |row| row.get::<_, i64>(0))
+            .query_map([millis(since), millis(until)], |row| row.get::<_, i64>(0))
             .map_err(failure)?
             .map(|at| {
                 at.map(|at| Round {
@@ -201,11 +201,11 @@ impl TrendStore {
         let mut statement = connection
             .prepare(
                 "SELECT at, pid, started, name, owner, cpu_cores, memory_bytes FROM seen
-                 WHERE at >= ?1 ORDER BY at, pid",
+                 WHERE at >= ?1 AND at <= ?2 ORDER BY at, pid",
             )
             .map_err(failure)?;
         let rows = statement
-            .query_map([millis(since)], |row| {
+            .query_map([millis(since), millis(until)], |row| {
                 Ok((
                     row.get::<_, i64>(0)?,
                     row.get::<_, u32>(1)?,
@@ -319,15 +319,17 @@ impl TrendStore {
         Ok(episodes)
     }
 
-    /// Deletes rounds no window needs and warnings past retention.
+    /// Deletes rounds no window needs, rounds ahead of `now` that a clock which
+    /// went back left, and warnings past retention.
     pub fn prune(&self, now: Timestamp) -> Result<()> {
         let rounds = now.millis().saturating_sub(trend::KEPT.as_millis() as u64) as i64;
+        let ahead = millis(now);
         let warnings = now.millis().saturating_sub(RETENTION.as_millis() as u64) as i64;
         let connection = self.connection();
         connection
             .execute_batch(&format!(
-                "DELETE FROM rounds WHERE at < {rounds};
-                 DELETE FROM seen WHERE at < {rounds};
+                "DELETE FROM rounds WHERE at < {rounds} OR at > {ahead};
+                 DELETE FROM seen WHERE at < {rounds} OR at > {ahead};
                  DELETE FROM warnings WHERE until IS NOT NULL AND until < {warnings};"
             ))
             .map_err(failure)?;
@@ -396,7 +398,10 @@ mod tests {
         }
         let store = TrendStore::open(&path).unwrap();
         let rounds = store
-            .rounds(Timestamp::from_millis(now - 2 * hour))
+            .rounds(
+                Timestamp::from_millis(now - 2 * hour),
+                Timestamp::from_millis(now),
+            )
             .unwrap();
         assert_eq!(rounds.len(), 2, "an empty round still counts");
         assert_eq!(rounds[0].seen, vec![]);
@@ -414,7 +419,20 @@ mod tests {
         assert_eq!(all[1].until, None);
 
         store.prune(Timestamp::from_millis(now)).unwrap();
-        assert_eq!(store.rounds(Timestamp::from_millis(0)).unwrap().len(), 2);
+        let all_rounds = |until| {
+            store
+                .rounds(Timestamp::from_millis(0), Timestamp::from_millis(until))
+                .unwrap()
+                .len()
+        };
+        assert_eq!(all_rounds(now), 2);
+        assert_eq!(all_rounds(now - 1), 1, "rounds after `until` are left out");
+        store.prune(Timestamp::from_millis(now - 1)).unwrap();
+        assert_eq!(
+            all_rounds(now),
+            1,
+            "a clock that went back prunes rounds ahead"
+        );
         assert_eq!(
             store
                 .between(Timestamp::from_millis(0), Timestamp::from_millis(now))
