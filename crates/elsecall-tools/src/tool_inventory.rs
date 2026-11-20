@@ -12,7 +12,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Variants are in the order inventories list them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Manager {
     #[serde(rename = "mise")]
     Mise,

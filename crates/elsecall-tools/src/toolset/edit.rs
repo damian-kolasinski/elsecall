@@ -1,4 +1,4 @@
-//! Edits to the text of `fleet-tools.toml`.
+//! Edits to the text of `fleet-tools.toml`, which holds exceptions to the pins.
 //!
 //! `toml_edit` changes one key and leaves every other comment and table alone.
 //! The result is parsed again and returned only when the whole document validates.
@@ -17,9 +17,11 @@ pub(crate) enum Scope {
     Member(MemberName),
 }
 
-/// One change to the desired state.
+/// One change to the exceptions. Only a member scope names versions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Edit {
+    /// An empty entry: nothing the pins ask for this tool is planned.
+    LeaveOut { manager: Manager, tool: ToolName },
     SetDefault {
         manager: Manager,
         tool: ToolName,
@@ -30,17 +32,10 @@ pub(crate) enum Edit {
         tool: ToolName,
         version: ToolVersion,
     },
-    SetExecutable {
-        manager: Manager,
-        version: ToolVersion,
-    },
     Unset {
         manager: Manager,
         tool: ToolName,
         version: Option<ToolVersion>,
-    },
-    UnsetExecutable {
-        manager: Manager,
     },
 }
 
@@ -54,6 +49,7 @@ pub(crate) fn apply(text: &str, scope: &Scope, edit: &Edit) -> Result<String> {
         .parse()
         .map_err(|_| invalid("fleet-tools.toml", "the document must be TOML"))?;
     let changed = match edit {
+        Edit::LeaveOut { manager, tool } => leave_out(&mut doc, scope, *manager, tool)?,
         Edit::SetDefault {
             manager,
             tool,
@@ -64,15 +60,11 @@ pub(crate) fn apply(text: &str, scope: &Scope, edit: &Edit) -> Result<String> {
             tool,
             version,
         } => add_install(&mut doc, scope, *manager, tool, version)?,
-        Edit::SetExecutable { manager, version } => {
-            set_executable(&mut doc, scope, *manager, version)?
-        }
         Edit::Unset {
             manager,
             tool,
             version,
         } => unset(&mut doc, scope, *manager, tool, version.as_ref())?,
-        Edit::UnsetExecutable { manager } => unset_executable(&mut doc, scope, *manager)?,
     };
     let updated = if changed {
         doc.to_string()
@@ -81,6 +73,28 @@ pub(crate) fn apply(text: &str, scope: &Scope, edit: &Edit) -> Result<String> {
     };
     Toolset::parse(updated.as_bytes())?;
     Ok(updated)
+}
+
+fn leave_out(
+    doc: &mut DocumentMut,
+    scope: &Scope,
+    manager: Manager,
+    tool: &ToolName,
+) -> Result<bool> {
+    if let Some(state) = tool_state(doc, scope, manager, tool)?
+        && state.default.is_none()
+        && state.install.is_empty()
+    {
+        return Ok(false);
+    }
+    with_tool(doc, scope, manager.as_str(), tool.as_str(), |table| {
+        table.set_implicit(false);
+        let keys: Vec<String> = table.iter().map(|(key, _)| key.to_owned()).collect();
+        for key in keys {
+            table.remove(&key);
+        }
+        Ok(true)
+    })
 }
 
 fn set_default(
@@ -113,61 +127,16 @@ fn add_install(
     version: &ToolVersion,
 ) -> Result<bool> {
     let version = version.as_str();
-    if let Some(state) = tool_state(doc, scope, manager, tool)? {
-        if holds(&state, version) {
-            return Ok(false);
-        }
-        return push_install(doc, scope, manager, tool, version);
-    }
-    let inherited = inherited_state(doc, scope, manager, tool)?;
-    if holds(&inherited, version) {
+    if let Some(state) = tool_state(doc, scope, manager, tool)?
+        && holds(&state, version)
+    {
         return Ok(false);
     }
-    let default = inherited.default.clone();
-    let mut install: Vec<String> = inherited
-        .install
-        .into_iter()
-        .filter(|item| default.as_deref() != Some(item.as_str()))
-        .collect();
-    if !install.iter().any(|item| item == version) {
-        install.push(version.to_owned());
-    }
-    let tool_name = tool.as_str();
-    with_tool(doc, scope, manager.as_str(), tool_name, |table| {
-        if let Some(default) = &default {
-            set_string(table, "default", default);
-        }
-        let mut array = toml_edit::Array::new();
-        for item in &install {
-            array.push(item.as_str());
-        }
-        let _ = table.insert("install", Item::Value(Value::Array(array)));
-        Ok(true)
-    })
+    push_install(doc, scope, manager, tool, version)
 }
 
 fn holds(state: &ToolState, version: &str) -> bool {
     state.default.as_deref() == Some(version) || state.install.iter().any(|item| item == version)
-}
-
-fn inherited_state(
-    doc: &DocumentMut,
-    scope: &Scope,
-    manager: Manager,
-    tool: &ToolName,
-) -> Result<ToolState> {
-    match scope {
-        Scope::Defaults => Ok(ToolState {
-            default: None,
-            install: Vec::new(),
-        }),
-        Scope::Member(_) => Ok(tool_state(doc, &Scope::Defaults, manager, tool)?.unwrap_or(
-            ToolState {
-                default: None,
-                install: Vec::new(),
-            },
-        )),
-    }
 }
 
 fn push_install(
@@ -198,20 +167,6 @@ fn push_install(
         }
         Ok(true)
     })
-}
-
-fn set_executable(
-    doc: &mut DocumentMut,
-    scope: &Scope,
-    manager: Manager,
-    version: &ToolVersion,
-) -> Result<bool> {
-    if executable_version(doc, scope, manager)?.as_deref() == Some(version.as_str()) {
-        return Ok(false);
-    }
-    let path = manager_path(scope, manager.as_str());
-    let manager_table = manager_table(doc, scope, manager.as_str(), &path)?;
-    Ok(set_string(manager_table, "version", version.as_str()))
 }
 
 fn unset(
@@ -255,17 +210,6 @@ fn unset(
         Ok(())
     })?;
     prune(doc, scope, manager_name, &mut orphans);
-    Ok(true)
-}
-
-fn unset_executable(doc: &mut DocumentMut, scope: &Scope, manager: Manager) -> Result<bool> {
-    if executable_version(doc, scope, manager)?.is_none() {
-        return Ok(false);
-    }
-    let manager_name = manager.as_str();
-    let path = manager_path(scope, manager_name);
-    manager_table(doc, scope, manager_name, &path)?.remove("version");
-    prune(doc, scope, manager_name, &mut Vec::new());
     Ok(true)
 }
 
@@ -609,26 +553,6 @@ fn tool_state(
     Ok(Some(ToolState { default, install }))
 }
 
-fn executable_version(
-    doc: &DocumentMut,
-    scope: &Scope,
-    manager: Manager,
-) -> Result<Option<String>> {
-    let Some(table) = find_manager(doc, scope, manager.as_str())? else {
-        return Ok(None);
-    };
-    match table.get("version") {
-        None => Ok(None),
-        Some(item) => {
-            let path = format!("{}.version", manager_path(scope, manager.as_str()));
-            item.as_str()
-                .map(str::to_owned)
-                .map(Some)
-                .ok_or_else(|| invalid(&path, "expected a string"))
-        }
-    }
-}
-
 fn find_manager<'a>(
     doc: &'a DocumentMut,
     scope: &Scope,
@@ -675,16 +599,18 @@ fn manager_path(scope: &Scope, manager: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tool_inventory::Manager::{Mise, Xcodes};
+    use crate::{
+        tool_inventory::Manager::{Mise, Simulators, Xcodes},
+        toolset::document::Exception,
+    };
 
     const NOTED: &str = "# fleet note\n\
-[defaults.xcodes]\n\
-version = \"1.6.0\" # xcodes executable\n\
+[defaults.mise.tools.sentry-cli] # everywhere\n\
 \n\
-[defaults.mise.tools.node]\n\
-default = \"22.19.0\" # global\n\
+[members.alpha.xcodes.tools.xcode]\n\
+default = \"26.3\" # on purpose\n\
 \n\
-[defaults.mise.tools.tuist]\n\
+[members.alpha.mise.tools.tuist]\n\
 install = [\"4.205.0\"] # alongside\n";
 
     fn version(text: &str) -> ToolVersion {
@@ -695,13 +621,26 @@ install = [\"4.205.0\"] # alongside\n";
         ToolName::new(name).unwrap()
     }
 
-    fn defaults(text: &str, edit: &Edit) -> String {
-        apply(text, &Scope::Defaults, edit).unwrap()
+    fn alpha() -> Scope {
+        Scope::Member("alpha".parse().unwrap())
+    }
+
+    fn member(text: &str, edit: &Edit) -> String {
+        apply(text, &alpha(), edit).unwrap()
+    }
+
+    fn exceptions(text: &str) -> Vec<(String, Exception)> {
+        Toolset::parse(text.as_bytes())
+            .unwrap()
+            .exceptions(&"alpha".parse().unwrap())
+            .into_iter()
+            .map(|exception| (exception.key, exception.exception))
+            .collect()
     }
 
     #[test]
     fn comments_survive_each_edit() {
-        let add = defaults(
+        let add = member(
             NOTED,
             &Edit::AddInstall {
                 manager: Mise,
@@ -709,37 +648,26 @@ install = [\"4.205.0\"] # alongside\n";
                 version: version("1.2.13"),
             },
         );
-        assert!(add.contains("# fleet note"), "{add}");
-        assert!(add.contains("# xcodes executable"), "{add}");
-        assert!(add.contains("# global"), "{add}");
-        assert!(add.contains("# alongside"), "{add}");
-        assert!(add.contains("1.2.13"), "{add}");
-
-        let set_default = defaults(
+        for kept in [
+            "# fleet note",
+            "# everywhere",
+            "# on purpose",
+            "# alongside",
+            "1.2.13",
+        ] {
+            assert!(add.contains(kept), "{kept}: {add}");
+        }
+        let set_default = member(
             NOTED,
             &Edit::SetDefault {
-                manager: Mise,
-                tool: tool("node"),
-                version: version("22.16.0"),
-            },
-        );
-        assert!(set_default.contains("# fleet note"), "{set_default}");
-        assert!(set_default.contains("# global"), "{set_default}");
-        assert!(set_default.contains("22.16.0"), "{set_default}");
-        assert!(!set_default.contains("22.19.0"), "{set_default}");
-
-        let executable = defaults(
-            NOTED,
-            &Edit::SetExecutable {
                 manager: Xcodes,
-                version: version("1.6.1"),
+                tool: tool("xcode"),
+                version: version("26.4"),
             },
         );
-        assert!(executable.contains("# xcodes executable"), "{executable}");
-        assert!(executable.contains("# global"), "{executable}");
-        assert!(executable.contains("1.6.1"), "{executable}");
-
-        let unset = defaults(
+        assert!(set_default.contains("# on purpose"), "{set_default}");
+        assert!(set_default.contains("26.4") && !set_default.contains("26.3"));
+        let unset = member(
             NOTED,
             &Edit::Unset {
                 manager: Mise,
@@ -747,21 +675,65 @@ install = [\"4.205.0\"] # alongside\n";
                 version: None,
             },
         );
-        assert!(unset.contains("# fleet note"), "{unset}");
-        assert!(unset.contains("# global"), "{unset}");
-        assert!(unset.contains("# xcodes executable"), "{unset}");
+        assert!(unset.contains("# fleet note") && unset.contains("# on purpose"));
         assert!(!unset.contains("tuist"), "{unset}");
+    }
 
-        let cleared = defaults(NOTED, &Edit::UnsetExecutable { manager: Xcodes });
-        assert!(cleared.contains("# fleet note"), "{cleared}");
-        assert!(cleared.contains("# global"), "{cleared}");
-        assert!(cleared.contains("# alongside"), "{cleared}");
-        assert!(!cleared.contains("xcodes"), "{cleared}");
+    #[test]
+    fn leaving_out_writes_an_empty_entry_and_replaces_versions() {
+        let everywhere = apply(
+            "# keep\n",
+            &Scope::Defaults,
+            &Edit::LeaveOut {
+                manager: Mise,
+                tool: tool("bun"),
+            },
+        )
+        .unwrap();
+        assert!(
+            everywhere.contains("[defaults.mise.tools.bun]\n"),
+            "{everywhere}"
+        );
+        assert!(everywhere.contains("# keep"), "{everywhere}");
+        let replaced = member(
+            NOTED,
+            &Edit::LeaveOut {
+                manager: Xcodes,
+                tool: tool("xcode"),
+            },
+        );
+        assert!(
+            replaced.contains("[members.alpha.xcodes.tools.xcode]"),
+            "{replaced}"
+        );
+        assert!(!replaced.contains("26.3"), "{replaced}");
+        assert!(exceptions(&replaced).contains(&(
+            "members.alpha.xcodes.tools.xcode".to_owned(),
+            Exception::LeaveOut
+        )));
+        let runtimes = member(
+            "",
+            &Edit::LeaveOut {
+                manager: Simulators,
+                tool: tool("iOS"),
+            },
+        );
+        assert_eq!(runtimes, "[members.alpha.simulators.tools.iOS]\n");
+        assert_eq!(
+            member(
+                NOTED,
+                &Edit::LeaveOut {
+                    manager: Mise,
+                    tool: tool("tuist")
+                }
+            ),
+            NOTED.replace("install = [\"4.205.0\"] # alongside\n", "")
+        );
     }
 
     #[test]
     fn set_on_an_empty_file_creates_tables() {
-        let node = defaults(
+        let node = member(
             "",
             &Edit::SetDefault {
                 manager: Mise,
@@ -769,9 +741,11 @@ install = [\"4.205.0\"] # alongside\n";
                 version: version("22.19.0"),
             },
         );
-        assert!(node.contains("[defaults.mise.tools.node]\n"), "{node}");
-        assert!(node.contains("default = \"22.19.0\"\n"), "{node}");
-        let install = defaults(
+        assert_eq!(
+            node,
+            "[members.alpha.mise.tools.node]\ndefault = \"22.19.0\"\n"
+        );
+        let install = member(
             "",
             &Edit::AddInstall {
                 manager: Mise,
@@ -779,36 +753,26 @@ install = [\"4.205.0\"] # alongside\n";
                 version: version("4.205.0"),
             },
         );
-        assert!(
-            install.contains("[defaults.mise.tools.tuist]\n"),
-            "{install}"
+        assert_eq!(
+            install,
+            "[members.alpha.mise.tools.tuist]\ninstall = [\"4.205.0\"]\n"
         );
-        assert!(install.contains("4.205.0"), "{install}");
-        let member = "alpha".parse().unwrap();
-        let executable = apply(
+    }
+
+    #[test]
+    fn versions_under_defaults_are_refused() {
+        let error = apply(
             "",
-            &Scope::Member(member),
-            &Edit::SetExecutable {
-                manager: Xcodes,
-                version: version("1.6.0"),
+            &Scope::Defaults,
+            &Edit::SetDefault {
+                manager: Mise,
+                tool: tool("node"),
+                version: version("22.19.0"),
             },
         )
-        .unwrap();
-        assert!(
-            executable.contains("[members.alpha.xcodes]\n"),
-            "{executable}"
-        );
-        assert!(executable.contains("version = \"1.6.0\"\n"), "{executable}");
-        let parsed = Toolset::parse(executable.as_bytes()).unwrap();
-        assert_eq!(
-            parsed
-                .resolve(&"alpha".parse().unwrap())
-                .xcodes
-                .executable
-                .unwrap()
-                .as_str(),
-            "1.6.0"
-        );
+        .unwrap_err();
+        assert_eq!(error.code, "invalid_fleet_tools");
+        assert!(error.message.contains("only leaves a tool out"), "{error}");
     }
 
     #[test]
@@ -818,59 +782,49 @@ install = [\"4.205.0\"] # alongside\n";
 default = \"22.19.0\"\n\
 install = [\"22.16.0\"]\n\
 \n\
-[defaults.mise.tools.tuist]\n\
-install = [\"4.0.0\"] # stays\n";
-        let scope = Scope::Member("alpha".parse().unwrap());
-        let without_default = apply(
+[defaults.mise.tools.tuist] # stays\n";
+        let without_default = member(
             original,
-            &scope,
             &Edit::Unset {
                 manager: Mise,
                 tool: tool("node"),
                 version: Some(version("22.19.0")),
             },
-        )
-        .unwrap();
-        assert!(without_default.contains("22.16.0"), "{without_default}");
-        assert!(!without_default.contains("22.19.0"), "{without_default}");
-        assert!(without_default.contains("# stays"), "{without_default}");
-        let cleared = apply(
+        );
+        assert!(without_default.contains("22.16.0") && !without_default.contains("22.19.0"));
+        let cleared = member(
             &without_default,
-            &scope,
             &Edit::Unset {
                 manager: Mise,
                 tool: tool("node"),
                 version: Some(version("22.16.0")),
             },
+        );
+        assert!(!cleared.contains("alpha"), "{cleared}");
+        assert!(
+            cleared.contains("# keep") && cleared.contains("# stays"),
+            "{cleared}"
+        );
+        let left_out = apply(
+            &cleared,
+            &Scope::Defaults,
+            &Edit::Unset {
+                manager: Mise,
+                tool: tool("tuist"),
+                version: None,
+            },
         )
         .unwrap();
-        assert!(!cleared.contains("members"), "{cleared}");
-        assert!(!cleared.contains("alpha"), "{cleared}");
-        assert!(!cleared.contains("node"), "{cleared}");
-        assert!(cleared.contains("# keep"), "{cleared}");
-        assert!(cleared.contains("# stays"), "{cleared}");
-        assert!(cleared.contains("tuist"), "{cleared}");
-
-        let only_version = "# keep\n[defaults.mise]\nversion = \"1.0.0\"\n\n[defaults.xcodes.tools.xcode]\ndefault = \"26.2\" # selected\n";
-        let removed = defaults(only_version, &Edit::UnsetExecutable { manager: Mise });
-        assert!(!removed.contains("mise"), "{removed}");
-        assert!(removed.contains("# keep"), "{removed}");
-        assert!(removed.contains("# selected"), "{removed}");
-        assert!(removed.contains("xcode"), "{removed}");
+        assert!(!left_out.contains("tuist"), "{left_out}");
+        assert!(left_out.contains("# keep"), "{left_out}");
     }
 
     #[test]
     fn an_edit_that_does_not_validate_is_refused() {
-        let broken = "# keep\n\
-[defaults.mise.tools.node]\n\
-default = \"22.19.0\"\n\
-\n\
-[defaults.mise.tools.bun]\n\
-default = \"1.0.0\"\n\
-extra = \"SENTINEL\"\n";
+        let broken = "[members.alpha.mise.tools.bun]\ndefault = \"1.0.0\"\nextra = \"SENTINEL\"\n";
         let error = apply(
             broken,
-            &Scope::Defaults,
+            &alpha(),
             &Edit::AddInstall {
                 manager: Mise,
                 tool: tool("node"),
@@ -878,16 +832,14 @@ extra = \"SENTINEL\"\n";
             },
         )
         .unwrap_err();
-        assert_eq!(error.code, "invalid_fleet_tools");
         assert!(
-            error.message.contains("defaults.mise.tools.bun.extra"),
+            error.message.contains("members.alpha.mise.tools.bun.extra"),
             "{error}"
         );
         assert!(!error.message.contains("SENTINEL"), "{error}");
-
         let error = apply(
-            NOTED,
-            &Scope::Defaults,
+            "",
+            &alpha(),
             &Edit::SetDefault {
                 manager: Mise,
                 tool: tool("node"),
@@ -896,182 +848,104 @@ extra = \"SENTINEL\"\n";
         )
         .unwrap_err();
         assert!(
-            error.message.contains("defaults.mise.tools.node.default"),
-            "{error}"
-        );
-        assert!(
             error
                 .message
                 .contains("versions must be exact, e.g. 22.19.0"),
             "{error}"
         );
         assert!(!error.message.contains("latest"), "{error}");
-
         let error = apply(
             "",
-            &Scope::Defaults,
-            &Edit::SetDefault {
+            &alpha(),
+            &Edit::LeaveOut {
                 manager: Xcodes,
                 tool: tool("node"),
-                version: version("16.4"),
             },
         )
         .unwrap_err();
         assert!(
-            error.message.contains("defaults.xcodes.tools.node"),
-            "{error}"
-        );
-        assert!(
             error.message.contains("xcodes manages only the tool xcode"),
             "{error}"
         );
-        assert!(!error.message.contains("16.4"), "{error}");
     }
 
     #[test]
     fn tool_names_with_colon_and_slash_are_quoted() {
-        let text = defaults(
+        let text = apply(
             "# keep\n",
-            &Edit::SetDefault {
+            &Scope::Defaults,
+            &Edit::LeaveOut {
                 manager: Mise,
                 tool: tool("packslip:example/acme"),
-                version: version("0.12.0"),
             },
-        );
-        assert!(text.contains("# keep"), "{text}");
+        )
+        .unwrap();
         assert!(
             text.contains("[defaults.mise.tools.\"packslip:example/acme\"]"),
             "{text}"
         );
-        let parsed = Toolset::parse(text.as_bytes()).unwrap();
-        let wants = parsed.resolve(&"alpha".parse().unwrap());
-        assert!(
-            wants
-                .mise
-                .tools
-                .contains_key(&tool("packslip:example/acme"))
+        assert_eq!(
+            exceptions(&text),
+            [(
+                "defaults.mise.tools.\"packslip:example/acme\"".to_owned(),
+                Exception::LeaveOut
+            )]
         );
     }
 
     #[test]
     fn a_noop_keeps_the_original_text() {
-        let original = "[defaults.mise.tools.node]\ndefault = \"22.19.0\" # keep\n";
-        let same = defaults(
-            original,
-            &Edit::SetDefault {
+        let original = "[members.alpha.mise.tools.node]\ndefault = \"22.19.0\" # keep\n";
+        for edit in [
+            Edit::SetDefault {
                 manager: Mise,
                 tool: tool("node"),
                 version: version("22.19.0"),
             },
-        );
-        assert_eq!(same, original);
-        let skipped = defaults(
-            original,
-            &Edit::AddInstall {
+            Edit::AddInstall {
                 manager: Mise,
                 tool: tool("node"),
                 version: version("22.19.0"),
             },
-        );
-        assert_eq!(skipped, original);
-    }
-
-    const INHERITED: &str = "[defaults.mise.tools.node]\n\
-default = \"22.19.0\"\n\
-install = [\"22.16.0\"]\n";
-
-    fn alpha() -> Scope {
-        Scope::Member("alpha".parse().unwrap())
-    }
-
-    fn install_node(text: &str, pinned: &str) -> String {
-        apply(
-            text,
-            &alpha(),
-            &Edit::AddInstall {
+            Edit::Unset {
                 manager: Mise,
                 tool: tool("node"),
-                version: version(pinned),
+                version: Some(version("1.0.0")),
+            },
+        ] {
+            assert_eq!(member(original, &edit), original, "{edit:?}");
+        }
+        let left_out = "[defaults.mise.tools.bun] # keep\n";
+        let same = apply(
+            left_out,
+            &Scope::Defaults,
+            &Edit::LeaveOut {
+                manager: Mise,
+                tool: tool("bun"),
             },
         )
-        .unwrap()
+        .unwrap();
+        assert_eq!(same, left_out);
     }
 
     #[test]
-    fn member_install_only_snapshots_an_inherited_want() {
-        let added = install_node(INHERITED, "18.0.0");
-        let parsed = Toolset::parse(added.as_bytes()).unwrap();
-        let want = parsed
-            .resolve(&"alpha".parse().unwrap())
-            .mise
-            .tools
-            .get(&tool("node"))
-            .unwrap()
-            .clone();
-        let value = serde_json::to_value(&want).unwrap();
-        assert_eq!(value["default"], "22.19.0", "{added}");
-        assert_eq!(
-            value["install"],
-            json_install(&["18.0.0", "22.16.0"]),
-            "{added}"
-        );
-        assert_eq!(
-            added,
-            "[defaults.mise.tools.node]\n\
-default = \"22.19.0\"\n\
-install = [\"22.16.0\"]\n\
-\n\
-[members.alpha.mise.tools.node]\n\
-default = \"22.19.0\"\n\
-install = [\"22.16.0\", \"18.0.0\"]\n"
-        );
-    }
-
-    #[test]
-    fn member_install_only_of_an_inherited_version_keeps_the_text() {
-        assert_eq!(install_node(INHERITED, "22.19.0"), INHERITED);
-        assert_eq!(install_node(INHERITED, "22.16.0"), INHERITED);
-    }
-
-    #[test]
-    fn an_existing_overlay_is_edited_in_place() {
-        let original = "[defaults.mise.tools.node]\n\
-default = \"22.19.0\"\n\
-install = [\"22.16.0\"]\n\
-\n\
-[members.alpha.mise.tools.node]\n\
+    fn an_existing_entry_is_edited_in_place() {
+        let original = "[members.alpha.mise.tools.node]\n\
 default = \"20.0.0\"\n\
 install = [\"20.11.0\"]\n";
-        let edited = install_node(original, "18.0.0");
+        let edited = member(
+            original,
+            &Edit::AddInstall {
+                manager: Mise,
+                tool: tool("node"),
+                version: version("18.0.0"),
+            },
+        );
         assert_eq!(
             edited,
-            "[defaults.mise.tools.node]\n\
-default = \"22.19.0\"\n\
-install = [\"22.16.0\"]\n\
-\n\
-[members.alpha.mise.tools.node]\n\
+            "[members.alpha.mise.tools.node]\n\
 default = \"20.0.0\"\n\
 install = [\"20.11.0\", \"18.0.0\"]\n"
         );
-        let parsed = Toolset::parse(edited.as_bytes()).unwrap();
-        let value = serde_json::to_value(
-            parsed
-                .resolve(&"alpha".parse().unwrap())
-                .mise
-                .tools
-                .get(&tool("node"))
-                .unwrap(),
-        )
-        .unwrap();
-        assert_eq!(value["default"], "20.0.0", "{edited}");
-        assert_eq!(
-            value["install"],
-            json_install(&["18.0.0", "20.11.0"]),
-            "{edited}"
-        );
-    }
-
-    fn json_install(versions: &[&str]) -> serde_json::Value {
-        serde_json::Value::Array(versions.iter().map(|v| serde_json::json!(v)).collect())
     }
 }

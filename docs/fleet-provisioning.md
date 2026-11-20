@@ -254,11 +254,13 @@ it on that member alone (`elsecall run --member <member> -- mise use --global
 
 ### `fleet-tools.toml` holds only exceptions
 
-[Slice 2b-1](fleet-tools.md#slice-2b-1-desired-state) made `fleet-tools.toml`
-the hand-written desired state. Pins replace that role. The file now holds only
-exceptions: tools to leave out, and intended per-member differences, such as a
-member kept on an older Xcode on purpose. Delivery 2 implements this and settles the
-format; the intent is the existing shape, where an empty entry wants nothing:
+Slice 2b-1 made `fleet-tools.toml` the hand-written desired state. Pins replace
+that role. The file now holds only exceptions: tools to leave out, and intended
+per-member differences, such as a member kept on an older Xcode on purpose.
+Delivery 2 settled the format ([Exceptions](fleet-tools.md#exceptions)): the
+existing shape, where an empty entry wants nothing, with versions only in a
+member's entry and no manager executables. A file in the older shape is refused
+by key, not read with a new meaning:
 
 ```toml
 [defaults.mise.tools.sentry-cli]          # leave this pin out everywhere
@@ -267,7 +269,9 @@ format; the intent is the existing shape, where an empty entry wants nothing:
 default = "26.3"                          # this member intentionally differs
 ```
 
-Until delivery 2 lands, the file and its commands work as Slice 2b-1 describes.
+An exception changes only what pins ask for: one for a tool nothing pins plans
+nothing. `elsecall tools exceptions`, `leave-out`, `set --member` and `unset`
+read and write it.
 
 ### Provisioning
 

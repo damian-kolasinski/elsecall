@@ -29,16 +29,10 @@ master's global mise config. Elsecall installs exactly what is pinned and never
 copies what the master happens to have installed. `elsecall tools pins` reads
 them; [Fleet provisioning](fleet-provisioning.md) has the sources and rules.
 
-The master also holds `fleet-tools.toml` beside `fleet-config.toml`. It names
-exact versions only, and a missing file means no exceptions. Slice 2b-1 made it
-the hand-written desired state. Its role is now **exceptions** to the pins: tools
-to leave out, and intended per-member differences. The plan per member
-(provisioning delivery 2) implements that role; until then the file works as
-[Slice 2b-1](#slice-2b-1-desired-state) describes. `[defaults]` applies to every
-member. `[members.<name>]` replaces it for one member: a manager `version`
-replaces the default executable, and a tool entry replaces that tool's whole
-default (install lists are not merged). An empty tool entry means nothing is
-wanted for that tool on that member.
+The master also holds `fleet-tools.toml` beside `fleet-config.toml`: the
+**exceptions** to the pins, tools to leave out and intended per-member
+differences. A missing file means no exceptions. [Exceptions](#exceptions) has
+its format and commands.
 
 ## Plan and apply
 
@@ -253,107 +247,92 @@ member is given. Exit 0 when some members are unavailable: that is data. Exit
 1 only when the local service call fails. An unknown `--member` is
 `invalid_request` and exits 2.
 
-## Slice 2b-1: desired state
+## Exceptions
 
-[Fleet provisioning](fleet-provisioning.md) narrows this file to exceptions to
-the pins. The format and commands below stay until its delivery 2 changes them.
+`fleet-tools.toml` holds only exceptions to the pins. Slice 2b-1 made it the
+hand-written desired state; provisioning delivery 2 narrowed it, and a file in
+that older shape is refused, never read with a new meaning.
 
-This slice reads and edits the master's desired versions. It does not distribute
-the file, compare it with inventory, or install anything. Distribution onto the
-config-sync generation, so the file survives `fleet move-master`, comes in slice
-2b-2.
-
-The file is `~/Library/Application Support/Elsecall/fleet-tools.toml`, in the same
-directory as `fleet-config.toml`. A missing file is an empty desired state, not
-an error. The document is at most 64 KiB and has at most 64 member sections.
-Anything else is `invalid_fleet_tools`. Diagnostics name the key path and the
-rule, and never echo values.
+The file is `~/Library/Application Support/Elsecall/fleet-tools.toml` on the
+master, in the same directory as `fleet-config.toml`. A missing file is no
+exceptions, not an error. The document is at most 64 KiB and has at most 64
+member sections. Anything else is `invalid_fleet_tools`. Diagnostics name the
+key path and the rule, and never echo values.
 
 ```toml
-# Manager tables are named after slice-1 managers: `mise`, `xcodes`.
-[defaults.mise]
-version = "2026.11.6"            # optional: the mise executable every member runs
-
-[defaults.mise.tools.node]
-default = "22.19.0"              # the global default; implies installed
-
-[defaults.mise.tools.tuist]
-install = ["4.205.0"]            # installed alongside, not default
-
-[defaults.mise.tools."packslip:example/acme"]
-default = "0.12.0"
-
-[defaults.xcodes]
-version = "1.6.0"                # optional: the xcodes executable
-
-[defaults.xcodes.tools.xcode]    # Xcode is the single tool `xcode` under `xcodes`
-default = "26.2"
-install = ["26.0.1"]
+# Manager tables are named after inventory's managers: `mise`, `xcodes`, `simulators`.
+[defaults.mise.tools.sentry-cli]          # leave this pin out on every member
 
 [members.macbook-pro.xcodes.tools.xcode]
-default = "26.3"                 # replaces the whole defaults entry for this tool on this member
+default = "26.3"                          # this member intentionally differs
 
-[members.macbook-pro.mise.tools.tuist]   # an empty entry: nothing wanted for tuist on this member
+[members.macbook-pro.mise.tools.sentry-cli]
+install = ["3.8.0"]                       # and keeps a tool the others leave out
+
+[members.mac-mini.simulators.tools.iOS]   # no iOS runtimes on this member
 ```
 
-The top level allows only `defaults` and `members`. A manager allows only
-`version` and `tools`. A tool allows only `default` (one exact version) and
-`install` (exact versions kept alongside it). Unknown keys are rejected. Under
-`xcodes`, the only tool is `xcode`.
+- The top level allows only `defaults` and `members`. A manager table allows
+  only `tools`. Under `xcodes` the only tool is `xcode`; under `simulators` the
+  tools are the platforms `iOS`, `tvOS`, `visionOS` and `watchOS`.
+- A tool entry under `[defaults]` must be empty: it leaves that tool out on
+  every member, whatever the pins ask for it. Even an empty `install = []`
+  is refused there.
+- A tool entry under `[members.<name>]` is empty, leaving the tool out on that
+  member, or names `default` (one exact version) and `install` (exact versions
+  kept beside it), at least one version. Those versions are planned on that member instead of the
+  pinned ones; `default` is the one to select, as the global mise default or
+  the selected Xcode. `install` never contains `default`.
+- A member's entry replaces the defaults' entry for that tool.
+- An exception only changes what pins ask for: one for a tool nothing pins
+  plans nothing, and the plan lists it so it can be removed.
 
-Resolved for one member, each manager has an optional executable `version` and a
-map of tools. A member's `version` replaces the default executable. A member's
-tool entry replaces the whole default for that tool: install lists are not
-merged. An entry with neither key wants nothing, so that tool is left out of the
-resolved map. `install` never contains `default`. A manager the document does
-not mention is still present, with `version` null and no tools.
-
-Versions are exact and compared byte for byte with inventory versions. They
-follow the inventory's version rules and also reject `latest`, `lts`, `system`,
-and anything starting with `ref:`, `path:`, `prefix:`, or `sub-`. The failure is
-`invalid_fleet_tools` (the command exits 1) and says versions must be exact, for
-example `22.19.0`. A malformed tool name on the command line, or `--install-only`
-/ `--version` used on the manager executable itself, is `invalid_request` (exit
-2).
-
-A pin is stored exactly as given. `22` and `zulu-17` are valid text. This slice
-does not resolve them through the manager. Repository pins like these are
-reported as inexact, with the newest matching version, when the master has a
-matching version installed; [Fleet provisioning](fleet-provisioning.md) has the
-rules.
+Versions are exact. They follow the inventory's version rules and also reject
+`latest`, `lts`, `system`, and anything starting with `ref:`, `path:`,
+`prefix:`, or `sub-`; the failure says versions must be exact, for example
+`22.19.0`. The older shape is refused with the key that holds it: a version
+under `[defaults]` ("a [defaults] entry only leaves a tool out…"), and a
+manager's executable `version` ("fleet-tools.toml holds only exceptions to the
+pins and no longer sets a manager's executable"). The hint names this section.
 
 Member names in the file use roster syntax. A hand-edited section for someone
-who is not in the roster still parses. `tools desired` lists those names in
+who is not in the roster still parses; `tools exceptions` lists those names in
 `unknown_members`. A `--member` argument has to name someone in the current
 roster; otherwise the command is `unknown_member`.
 
-`elsecall tools desired [--member NAME]` prints one resolved member per roster
-entry, or just `--member`. A machine that has not joined a fleet is the master
-of a fleet of one, so the list is that machine.
-
-`elsecall tools set TOOL VERSION [--member NAME] [--install-only]` writes on the
-master. `TOOL` is `mise` or `xcodes` (that manager's executable `version`),
+The commands talk to the local service (`/v1/tools/exceptions`). `TOOL` is
 `mise:<name>` (everything after the first colon is the mise tool, such as
-`mise:packslip:example/acme`), `xcodes:<name>`, or `xcode` (the
-same as `xcodes:xcode`). Without `--install-only` the version becomes `default`
-and is dropped from `install`. With it, the version is added to `install`, and
-it is left untouched when that version is already the default or already
-installed, including one the member inherits. A member `--install-only` of a
-version that member does not already have writes a snapshot only when that
-member has no entry for the tool: the snapshot copies the inherited default,
-copies `install` with the default version removed, and appends the new version.
-An entry already in that scope is updated in place and keeps the default it
-already set. `--member` writes that member's overlay; omitting it writes `[defaults]`.
+`mise:packslip:example/acme`), `xcode` (or `xcodes:xcode`), or
+`simulators:<platform>`. `mise` and `xcodes` alone, the executables slice 2b-1
+could set, and a malformed tool name are `invalid_request` (exit 2).
 
-`elsecall tools unset TOOL [--version VERSION] [--member NAME]` removes the tool
-entry, or the manager `version`, when `--version` is omitted. With `--version`
-it removes that version from `default` and `install`. The last version in an
-entry removes the entry. An emptied manager or member table is removed.
+- `elsecall tools exceptions [--member NAME]` prints, for every roster member
+  or one, the exceptions that apply to it: its own entries and the defaults'
+  for tools it has none for, ordered by manager and tool. Each has `manager`,
+  `tool`, `key` (the entry's key in the file) and `kind`: `leave_out`, or
+  `versions` with `default` (or null) and `install`. A machine that has not
+  joined a fleet is the master of a fleet of one.
+- `elsecall tools leave-out TOOL [--member NAME]` writes an empty entry, for
+  every member or for one. An entry with versions in that scope loses them.
+- `elsecall tools set TOOL VERSION --member NAME [--install-only]` gives one
+  member its own versions. `--member` is required: for every member, change the
+  pin. Without `--install-only` the version becomes `default` and is dropped
+  from `install`; with it, the version is added to `install` unless the entry
+  already holds it.
+- `elsecall tools unset TOOL [--version VERSION] [--member NAME]` removes the
+  entry, or with `--version` that version from `default` and `install`. The last
+  version in an entry removes the entry; it does not leave the tool out. An
+  emptied manager or member table is removed.
 
 Writes require this process to be the master. On any other member the failure
 is `not_master` and names the current master. Writes are serialized, and the
 file is read again inside that lock, so a hand edit made between commands is
 kept. Comments and formatting outside the edited key are preserved. The file is
 owner-only, mode 0600. It is not cached. An edit that leaves the bytes unchanged
-is not written. Slice 2b-2 must refuse `tools set` and `tools unset` while the
-config-sync handover hold is active.
+is not written.
+
+The file lives on the master only. Carrying it on the config-sync generation, so
+it survives `fleet move-master`, is still to come (slice 2b-2); until then, copy
+`fleet-tools.toml` to the new master after a move. When it lands, `tools
+leave-out`, `set` and `unset` are refused while the config-sync handover hold is
+active.
