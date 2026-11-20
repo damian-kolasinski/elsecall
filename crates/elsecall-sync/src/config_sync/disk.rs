@@ -143,6 +143,11 @@ impl Home {
         }
     }
 
+    /// The home folder, as this member names it.
+    pub fn path(&self) -> &Path {
+        &self.home
+    }
+
     /// Checks `path` against this member's own rules, lexically.
     pub fn check(&self, path: &SyncedPath) -> Result<()> {
         match path.forbidden_overlap(self.forbidden.iter().map(String::as_str)) {
@@ -166,7 +171,7 @@ impl Home {
     /// Refuses `relative` (below home, as the disk names it) when it is, lies
     /// inside or contains a forbidden location.
     fn check_resolved(&self, path: &SyncedPath, relative: &str) -> Result<()> {
-        match SyncedPath::resolved_overlap(relative, &self.forbidden) {
+        match path.resolved_overlap(relative, &self.forbidden) {
             None => Ok(()),
             Some(location) if location.is_empty() => {
                 Err(unsafe_path(path, "it resolves to home itself"))
@@ -504,7 +509,32 @@ pub fn read_tree(location: &Location, key: &SyncKey, cache: &FingerprintCache) -
 
 /// Reads one file of the tree at `location`, never through a link.
 pub fn read_file(location: &Location, key: &FileKey) -> Result<Zeroizing<Vec<u8>>> {
-    let file = match key {
+    read_bounded(open_file(location, key)?)
+}
+
+/// One file's content and full permission bits, never through a link.
+pub fn inspect_file(location: &Location, key: &FileKey) -> Result<(Zeroizing<Vec<u8>>, u32)> {
+    use std::os::unix::fs::MetadataExt;
+    let file = open_file(location, key)?;
+    let mode = file.metadata().map_err(io("Inspect a synced file"))?.mode();
+    Ok((read_bounded(file)?, mode))
+}
+
+/// The permission bits of what encloses the files at `location`: the synced
+/// directory itself, or for a synced file, the directory holding it.
+pub fn enclosing_mode(location: &Location) -> Result<u32> {
+    let status = confined::stat_at(location.parent.as_raw_fd(), &location.name)
+        .map_err(io("Inspect a synced path"))?;
+    match status {
+        Some(status) if status.kind == Kind::Directory => Ok(status.mode),
+        _ => Ok(confined::fstat(&*location.parent)
+            .map_err(io("Inspect a synced path"))?
+            .mode),
+    }
+}
+
+fn open_file(location: &Location, key: &FileKey) -> Result<File> {
+    Ok(match key {
         None => Confined::open_child_file(&location.parent, &location.name)
             .map_err(io("Read a synced file"))?,
         Some(path) => Confined::open_at(&location.parent, &location.name)
@@ -513,8 +543,7 @@ pub fn read_file(location: &Location, key: &FileKey) -> Result<Zeroizing<Vec<u8>
                     .ok_or_else(|| std::io::Error::other("not a regular file"))
             })
             .map_err(io("Read a synced file"))?,
-    };
-    read_bounded(file)
+    })
 }
 
 fn temporary() -> Result<CString> {

@@ -170,6 +170,7 @@ pub(super) fn restore(
                 leftovers: None,
                 leftovers_wait_ms: None,
                 interrupted: None,
+                missing_tool: None,
             })
         } else {
             None
@@ -323,6 +324,7 @@ mod tests {
             leftovers: None,
             leftovers_wait_ms: None,
             interrupted: None,
+            missing_tool: None,
         });
         let mut nested = active(2, "b", "b", at);
         nested.requested_at = Timestamp::from_millis(at.millis() - 500);

@@ -29,19 +29,48 @@ enables. README "Configuration sync" is the operator's guide.
   syncs a path its configuration does not name.
 - **Path rules** (`config_sync::synced_path`, unit-tested): home-relative, printable
   ASCII, plain components, not home itself, no overlap between declared paths, and
-  never equal to, inside or containing `~/.ssh`, `~/.gnupg`, `~/Library/Keychains`,
+  never equal to, inside or containing a hard-blocked location: `~/.ssh/authorized_keys`,
+  `authorized_keys2`, `rc` and `environment` in `~/.ssh`,
+  the login keychain (`~/Library/Keychains/login.keychain-db` and `login.keychain`),
   `~/Library/LaunchAgents`, `~/Library/Application Support/Elsecall`, `~/.elsecall`
   (workspaces, overrides) or `~/.local/bin` (the CLI), compared case-insensitively.
+  The rest of `~/.ssh`, `~/.gnupg` and `~/Library/Keychains` are ask-first (changed
+  in [fleet provisioning](fleet-provisioning.md) delivery 5, where they were
+  forbidden): a path inside one may be synced, and every change to it waits for a
+  person's consent (below). A path cannot contain one, since each holds a
+  hard-blocked location.
   ASCII is required because APFS folds non-ASCII letters onto ASCII ones (`~/.ſsh`
   opens `~/.ssh`), which no lexical rule can follow. The rules run on the master's
   configuration, on every manifest a member receives (deserializing validates it),
   and again on each member against where the path really resolves: links above a
   synced path (a `~/.config` in a dotfiles repository) are followed, the deepest
   existing directory's real path (`F_GETPATH`) plus the rest of the path must pass
-  the rules and avoid the member's workspace root before anything is created, missing
+  the rules, reach no ask-first location the path does not itself name (a
+  `~/.config` linking into `~/.ssh`), and avoid the member's workspace root before
+  anything is created, missing
   directories are then created without following links, and the synced entry itself,
   if present, is checked as the file system names it. Nothing below a synced path is
   ever followed (`workspace::confined`).
+- **Consent for secret-looking files** (delivery 5 of [fleet
+  provisioning](fleet-provisioning.md)). `config_sync::secret_files` classifies a
+  file by name, place, permissions and content, and `config_sync::consent` holds back
+  at each scan every path whose change adds or changes such a file that no consent
+  covers. The path keeps the tree last issued (the whole change waits, ordinary files
+  with it) and a `ConsentRequest` names the files and reasons, never content. The
+  master keeps the open requests from its latest scan in memory and shows them in its
+  sync status (`consent`), from which every member's fleet view derives
+  `secret_consent` attention items; after a service restart they reappear at the next
+  sync event, or with `sync consent <path>`. `sync consent <path> --confirm <id>`
+  issues exactly the change shown (the ID is a digest of the path and each waiting
+  file's name, keyed fingerprint and mode, so other content refuses with
+  `consent_changed`). `--always` adds the files' names to the manifest's `consented`
+  set, which travels with every replica, so consent moves with the master role; it is
+  part of the manifest's id once given, and stays with its path until the path is
+  disabled. Enabling a path from a plan syncs what the plan listed, secret-looking
+  files included, under `secret_looking`; enabling a path already synced holds its
+  secret changes as any scan does. The CLI sends `sync consent --confirm`, and
+  `sync enable --confirm` for a plan listing secret-looking files, only from a
+  terminal (`person_required` otherwise).
 - **Replica store behind a port.** `ReplicaStore` holds content by keyed
   fingerprint; `FileStore` keeps owner-only files in `config-sync/objects/`. It is
   the storage explicitly meant for secret values: it lets a member rebuild the
@@ -275,6 +304,13 @@ synced or declared.
 The devbox's `config.toml` was restored to empty afterwards.
 
 ## Limits
+
+- Secret detection is by shape and leans towards asking. It misses a credential
+  with no known prefix and an ordinary-looking value, in a file with an ordinary
+  name, assigned to an ordinary key. Only the first 256 KiB of a file is examined.
+- An open consent request lives in the master's memory: after a restart it shows
+  again at the next sync event. A held change does not stop pre-run syncs, which
+  push the path as last confirmed.
 
 - Pushes are not atomic across paths: each path is replaced in one step, in order.
   A failure after some paths were replaced (an I/O error, not a validation or

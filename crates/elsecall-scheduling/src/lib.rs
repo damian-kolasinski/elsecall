@@ -13,6 +13,7 @@ pub mod load;
 pub mod load_log;
 mod loss_history;
 pub mod messages;
+pub mod missing_tool;
 pub mod outside_pressure;
 pub mod outside_pressure_gate;
 pub mod parameters;

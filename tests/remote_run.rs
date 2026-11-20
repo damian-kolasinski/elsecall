@@ -629,7 +629,7 @@ fn streams_exit_codes_and_failures_pass_through_exactly() {
         b"",
     );
     assert_eq!(output.status.code(), Some(125));
-    assert_eq!(envelope(&output)["error"]["code"], "invalid_request");
+    assert_eq!(envelope(&output)["error"]["code"], "command_not_found");
     assert!(
         !String::from_utf8_lossy(&output.stderr).contains("elsecall-no-such-command"),
         "arguments are never echoed"

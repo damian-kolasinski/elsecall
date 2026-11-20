@@ -41,7 +41,8 @@ categories to it.
 - **`message`** and **`hint`** say what is wrong and what resolves it, as a failure
   line does.
 - **`since`** is when the condition began when the member records it; otherwise null.
-  Neither of today's conditions records its start.
+  Of today's conditions only a missing tool records its start: the end of the run
+  that hit it.
 - **`actions`**, the first one first, each carry a ready-to-run `elsecall` command as
   its arguments (`command`, run without a shell, so a subject needs no quoting), the
   member to run it on (`run_on`), and `person_only`: whether only a person can
@@ -62,10 +63,17 @@ category it does not know but never accepts it automatically (this build reads o
 |---|---|---|---|
 | `awaiting_provisioning` | `member_awaiting_provisioning` | The member was enrolled before its tools were installed, as Add Mac does; placement leaves it out. | `elsecall fleet ready <member>` on the master, once its tools are installed. |
 | `version_skew` | `version_skew` | The member runs another build than the master; work between them is refused. | `elsecall fleet upgrade --member <member>` on the master. When the member runs a later version than the master, this installs an older build on it, so the action is `person_only` and the hint offers updating the master first. |
+| `missing_tool_pin` | `missing_tool_pin` | A run this member placed failed on `member` because a tool it called (the `subject`) is missing there, and nothing pins it. One item per member and tool, from the latest such run; `since` is when that run ended. | Pin the tool in the file the hint names: `elsecall tools pins <workspace>` on the member that placed the run shows the pin. Second, `person_only` and not recommended: install it on that member alone. |
 
-Planned: `missing_tool_pin` (a run failed on a tool nothing pins), `secret_consent` (a
-member must agree to receive a secret file, a person-only action) and
-`provisioning_step_failed`. Each will be one item per member and subject.
+| `secret_consent` | `secret_consent` | A change to files in a synced path (the `subject`) that look like secrets waits on the master, `member`, until a person confirms it. One item per path; the message names the files, never their content. | `elsecall sync consent <path> --confirm <id>` on the master syncs this change; the second action adds `--always`, so later changes to those files sync unasked. Both are `person_only`, and the CLI refuses `--confirm` without a terminal. |
+
+Planned: `provisioning_step_failed`, one item per member and subject.
+
+A `missing_tool_pin` item is derived from the runs this member placed, so it shows in
+that member's fleet view, which is the master's for placed work. It clears when the
+tool is pinned, when a later run of the same job on that member exits 0, or after 7
+days. [Fleet provisioning](fleet-provisioning.md), "When a job needs something
+unpinned", says how the tool is recognised without keeping any output.
 
 Left out on purpose:
 

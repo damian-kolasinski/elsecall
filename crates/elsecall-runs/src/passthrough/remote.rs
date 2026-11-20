@@ -5,6 +5,10 @@
 use crate::passthrough::executor::{
     CommandLine, Executor, Exit, Finished, ResultReturn, RunContext, RunFailure, RunResult, Running,
 };
+use crate::passthrough::{
+    local,
+    missing_tool_lines::{self, Recogniser},
+};
 use crate::remote_run::{
     consistency, environment, fingerprint,
     link::{self, Link, Outbox, SyncOverLink},
@@ -247,6 +251,13 @@ impl Executor for RemoteExecutor {
         let execution_started = match started {
             Ok(started) => started,
             Err(failure) => {
+                if failure.code == "command_not_found" {
+                    report.data.missing_tool = command
+                        .program
+                        .to_str()
+                        .filter(|program| local::exists_here(program))
+                        .and_then(missing_tool_lines::missing_program);
+                }
                 // Without a working tree nothing syncs: everything is execution.
                 let phase = if report.data.reached == Reached::Synced || tree.is_none() {
                     RemoteFailurePhase::Execution
@@ -270,6 +281,7 @@ impl Executor for RemoteExecutor {
             report,
             warnings,
             outputs,
+            recogniser: Recogniser::new(local::exists_here),
             root: match &self.origin {
                 Origin::Tree { located, .. } => located.root.clone(),
                 Origin::Outside(directory) => directory.clone(),
@@ -445,6 +457,8 @@ pub struct RemoteRun {
     warnings: Vec<String>,
     /// The declared outputs, which alone may come back.
     outputs: Vec<WorkspacePath>,
+    /// Watches the output passing through for a tool the member lacks.
+    recogniser: Recogniser,
     /// Where outputs come back to: the working tree, or for a run without one
     /// the caller's directory, where none may come back.
     root: PathBuf,
@@ -470,10 +484,12 @@ impl RemoteRun {
                         break Err(protocol("output beyond its window"));
                     }
                     Ok(Frame::Stdout(bytes)) => {
+                        self.recogniser.stdout(&bytes);
                         unwritten[0] += bytes.len() as u64;
                         stdout.write(bytes);
                     }
                     Ok(Frame::Stderr(bytes)) => {
+                        self.recogniser.stderr(&bytes);
                         unwritten[1] += bytes.len() as u64;
                         match &stderr {
                             Some(stderr) => stderr.write(bytes),
@@ -909,8 +925,14 @@ impl Running for RemoteRun {
                 self.report.data.warnings = self.warnings.clone();
                 let _ = self.link.message(&RunMessage::Done).await;
                 self.link.close().await;
+                let recognised =
+                    std::mem::replace(&mut self.recogniser, Recogniser::new(local::exists_here))
+                        .finish();
                 let exit = match exited {
                     Exited::Code { code } => {
+                        if code != 0 {
+                            self.report.data.missing_tool = recognised;
+                        }
                         self.report.data.exit_code = Some(code);
                         Exit::Code(code)
                     }
@@ -986,6 +1008,7 @@ mod tests {
                 execution_started: Instant::now(),
                 merged: true,
                 input: None,
+                recogniser: Recogniser::new(|_| true),
                 report: Report {
                     socket: root.path().join("absent.sock"),
                     run_id: RunId::parse("r-000000000001").unwrap(),

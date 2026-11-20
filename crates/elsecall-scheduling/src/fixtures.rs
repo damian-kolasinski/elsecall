@@ -244,6 +244,7 @@ pub fn placed(run: Run) -> Record {
             leftovers: None,
             leftovers_wait_ms: None,
             interrupted: None,
+            missing_tool: None,
         });
     }
     record

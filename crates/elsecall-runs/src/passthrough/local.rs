@@ -59,6 +59,11 @@ fn not_startable(detail: &str) -> Failure {
     )
 }
 
+/// Whether a program by this name is on this process's `PATH`.
+pub(crate) fn exists_here(program: &str) -> bool {
+    resolve(OsStr::new(program)).is_some()
+}
+
 /// Fails when the command cannot start at all, as for a typo in its name.
 pub fn preflight(command: &CommandLine) -> Result<()> {
     resolve(&command.program)

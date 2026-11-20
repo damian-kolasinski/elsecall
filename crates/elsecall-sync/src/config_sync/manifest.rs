@@ -135,7 +135,16 @@ pub struct Manifest {
     /// Opaque service settings, carried by the same replica store and channel.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub service: Option<FileNode>,
+    /// Files, as `~/…`, whose changes a person agreed to sync without being
+    /// asked again, by synced path. Held by every member, so consent moves with
+    /// the master role.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub consented: BTreeMap<SyncedPath, BTreeSet<String>>,
 }
+
+/// The most files one path's consent names, and the longest name.
+const MAXIMUM_CONSENTED: usize = MAXIMUM_ENTRIES;
+const MAXIMUM_CONSENTED_NAME: usize = 2048;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -146,6 +155,8 @@ struct RawManifest {
     paths: BTreeMap<SyncedPath, Tree>,
     #[serde(default)]
     service: Option<FileNode>,
+    #[serde(default)]
+    consented: BTreeMap<SyncedPath, BTreeSet<String>>,
 }
 
 impl TryFrom<RawManifest> for Manifest {
@@ -157,6 +168,7 @@ impl TryFrom<RawManifest> for Manifest {
             key: raw.key,
             paths: raw.paths,
             service: raw.service,
+            consented: raw.consented,
         };
         manifest.validate()?;
         Ok(manifest)
@@ -173,6 +185,20 @@ impl Manifest {
         }
         let paths: Vec<SyncedPath> = self.paths.keys().cloned().collect();
         synced_path::check_set(&paths, MAXIMUM_PATHS)?;
+        for (path, files) in &self.consented {
+            if !self.paths.contains_key(path) {
+                return Err(format!("consent names {path}, which is not synced"));
+            }
+            let prefix = path.to_string();
+            if files.len() > MAXIMUM_CONSENTED
+                || files.iter().any(|file| {
+                    file.len() > MAXIMUM_CONSENTED_NAME
+                        || !(file == &prefix || file.starts_with(&format!("{prefix}/")))
+                })
+            {
+                return Err(format!("consent for {path} names files outside it"));
+            }
+        }
         let mut entries = 0;
         let mut bytes = 0;
         for tree in self.paths.values() {
@@ -196,14 +222,23 @@ impl Manifest {
 
     /// Identifies the synced content: equal for equal paths and trees whoever
     /// issued them, keyed so it reveals nothing.
+    /// Consent counts as content once given, so a member holding other consent
+    /// is not in sync.
     pub fn id(&self) -> Fingerprint {
-        match self.service {
+        let content = match self.service {
             None => content_id(&self.key, &self.paths),
             Some(node) => self.key.digest_labelled(
                 "service-manifest",
                 &serde_json::to_vec(&(&self.paths, node)).expect("manifest serializes"),
             ),
+        };
+        if self.consented.is_empty() {
+            return content;
         }
+        self.key.digest_labelled(
+            "consented-manifest",
+            &serde_json::to_vec(&(content, &self.consented)).expect("manifest serializes"),
+        )
     }
 
     /// Every blob the replica store must hold, including service settings.
@@ -253,6 +288,7 @@ mod tests {
         assert_eq!(tree.bytes(), 3);
         let manifest = Manifest {
             service: None,
+            consented: BTreeMap::new(),
             generation: 1,
             issued_by: "alpha".parse().unwrap(),
             key: key.clone(),

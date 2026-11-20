@@ -1,5 +1,7 @@
 //! `elsecall sync` commands: thin requests to the local service.
-use crate::config_sync_local_api::{HistoryRequest, PathRequest, PlanRequest, PushRequest};
+use crate::config_sync_local_api::{
+    ConsentRequest, HistoryRequest, PathRequest, PlanRequest, PushRequest,
+};
 use clap::{Args, Subcommand};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
@@ -44,6 +46,18 @@ enum SyncCommand {
         #[arg(long)]
         confirm: Option<String>,
     },
+    /// Confirm syncing a change to files that look like secrets. Without
+    /// --confirm, shows what waits and its ID. Only a person confirms: with
+    /// --confirm, this needs a terminal
+    Consent {
+        path: String,
+        /// The consent ID shown by sync consent or the attention item
+        #[arg(long)]
+        confirm: Option<String>,
+        /// Sync changes to these files automatically from now on
+        #[arg(long, requires = "confirm")]
+        always: bool,
+    },
     /// Push the master's current files now (asks the master): it issues any change,
     /// then pushes to every member, or with --member only to that one, and only if
     /// it differs
@@ -66,6 +80,23 @@ fn path(text: &str) -> Result<SyncedPath> {
             "Write paths relative to home, such as ~/.config/app; see README \"Configuration sync\".",
         )
     })
+}
+
+/// Refuses to give consent unless a terminal is attached to standard input
+/// and error, as when a person types the command. An agent's tool calls run
+/// without one, so they stop here; this is a guard against confirming by
+/// accident, not a security boundary, since anything running as the same user
+/// can attach a terminal or call the service directly.
+fn person_present() -> Result<()> {
+    use std::io::IsTerminal;
+    if std::io::stdin().is_terminal() && std::io::stderr().is_terminal() {
+        return Ok(());
+    }
+    Err(Failure::new(
+        "person_required",
+        "Only a person confirms syncing files that look like secrets, from their own terminal.",
+        "Ask the operator to review the files (elsecall sync consent <path>) and run the confirm command themselves.",
+    ))
 }
 
 /// Runs a sync command; returns the data to print and whether it fully succeeded.
@@ -91,10 +122,33 @@ pub async fn run(paths: &Paths, args: SyncArgs) -> Result<(Value, bool)> {
             path: text,
             confirm,
         } => {
-            let request = PathRequest {
-                path: path(&text)?,
-                confirm,
-            };
+            let path = path(&text)?;
+            if confirm.is_some() {
+                // Enabling a plan syncs the secret-looking files it lists: that
+                // is consent, which only a person gives.
+                let shown: Value = client::post_large(
+                    &socket,
+                    "/v1/sync/enable",
+                    &PathRequest {
+                        path: path.clone(),
+                        confirm: None,
+                    },
+                )
+                .await?;
+                let secret = shown["plan"]["paths"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .any(|p| {
+                        p["secret_looking"]
+                            .as_array()
+                            .is_some_and(|f| !f.is_empty())
+                    });
+                if secret {
+                    person_present()?;
+                }
+            }
+            let request = PathRequest { path, confirm };
             client::post_large(&socket, "/v1/sync/enable", &request).await?
         }
         SyncCommand::Disable {
@@ -106,6 +160,21 @@ pub async fn run(paths: &Paths, args: SyncArgs) -> Result<(Value, bool)> {
                 confirm,
             };
             client::post_large(&socket, "/v1/sync/disable", &request).await?
+        }
+        SyncCommand::Consent {
+            path: text,
+            confirm,
+            always,
+        } => {
+            if confirm.is_some() {
+                person_present()?;
+            }
+            let request = ConsentRequest {
+                path: path(&text)?,
+                confirm,
+                always,
+            };
+            client::post_large(&socket, "/v1/sync/consent", &request).await?
         }
         SyncCommand::Push { member } => {
             client::post_large(&socket, "/v1/sync/push", &PushRequest { member }).await?

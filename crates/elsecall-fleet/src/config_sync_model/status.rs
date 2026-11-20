@@ -67,6 +67,10 @@ pub struct SyncSummary {
     /// keep their last issued state until declared there again, or disabled.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub paused: Vec<SyncedPath>,
+    /// On the master: synced paths whose latest change waits for a person,
+    /// because files in it look like secrets. Found at the latest sync event.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub consent: Vec<crate::config_sync_model::consent::ConsentRequest>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<Failure>,
 }

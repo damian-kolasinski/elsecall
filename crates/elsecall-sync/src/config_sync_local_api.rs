@@ -30,6 +30,18 @@ pub struct PathRequest {
     pub confirm: Option<String>,
 }
 
+/// Confirms a change that waits for a person; without `confirm`, shows it.
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ConsentRequest {
+    pub path: SyncedPath,
+    #[serde(default)]
+    pub confirm: Option<String>,
+    /// Sync later changes to these files without asking.
+    #[serde(default)]
+    pub always: bool,
+}
+
 #[derive(Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct PushRequest {
@@ -52,6 +64,7 @@ pub fn routes(sync: Arc<ConfigSync>) -> Router {
         .route("/v1/sync/plan", post(plan))
         .route("/v1/sync/enable", post(enable))
         .route("/v1/sync/disable", post(disable))
+        .route("/v1/sync/consent", post(consent))
         .route("/v1/sync/push", post(push))
         .route("/v1/sync/history", post(history))
         .with_state(sync)
@@ -108,6 +121,15 @@ async fn enable(State(sync): State<Arc<ConfigSync>>, body: Bytes) -> Response {
 async fn disable(State(sync): State<Arc<ConfigSync>>, body: Bytes) -> Response {
     match parse::<PathRequest>(&body) {
         Ok(request) => respond(sync.disable(request.path, request.confirm).await),
+        Err(error) => respond::<()>(Err(error)),
+    }
+}
+async fn consent(State(sync): State<Arc<ConfigSync>>, body: Bytes) -> Response {
+    match parse::<ConsentRequest>(&body) {
+        Ok(request) => respond(
+            sync.consent(request.path, request.confirm, request.always)
+                .await,
+        ),
         Err(error) => respond::<()>(Err(error)),
     }
 }

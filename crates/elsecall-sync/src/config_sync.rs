@@ -12,11 +12,14 @@
 //! - `pins`: store content a push in progress still reads;
 //! - `member_locks`: one exchange at a time per member;
 //! - `replica`: issuing, applying, planning and status on this member;
+//! - `secret_files` and `consent`: which files look like secrets, and holding a
+//!   change to them until a person confirms it;
 //! - `report`: what plans and status show;
 //! - `protocol`: the sealed channel between the master and a member;
 //! - `service`: the running roles: the master's scans and pushes, a member's
 //!   sessions and upkeep, plans, enabling, and the handover before a master move.
 pub mod compare;
+pub mod consent;
 pub mod disk;
 pub mod fingerprint;
 pub mod history;
@@ -26,6 +29,7 @@ pub mod pins;
 pub mod protocol;
 pub mod replica;
 pub mod report;
+pub mod secret_files;
 pub mod service;
 pub mod state;
 pub mod store;

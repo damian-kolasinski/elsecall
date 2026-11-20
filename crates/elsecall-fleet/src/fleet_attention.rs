@@ -1,10 +1,13 @@
-//! What in the fleet view needs attention: members awaiting provisioning and
-//! members on another build than the master. Derived from the view each time it is
-//! read, so an item clears as soon as its condition does.
-use crate::fleet_view::{MemberView, Role};
+//! What in the fleet view needs attention: members awaiting provisioning,
+//! members on another build than the master, and placed runs that failed for
+//! lack of a tool nothing pins. Derived from the view each time it is read, so an
+//! item clears as soon as its condition does.
+use crate::config_sync_model::consent::ConsentRequest;
+use crate::fleet_view::{MemberView, Reach, Role, UnpinnedTool};
 use elsecall_contract::attention::{Action, Category, Item};
 use elsecall_contract::build_identity::Build;
 use elsecall_peers::roster::{MemberName, Readiness};
+use elsecall_scheduling::missing_tool::Manager;
 
 /// The items `members` call for, member by member in roster order. Fleet changes
 /// run on `master`; without one (no roster), nothing can be acted on.
@@ -16,6 +19,15 @@ pub(crate) fn items(members: &[MemberView], master: Option<&MemberName>) -> Vec<
         .iter()
         .find(|m| matches!(m.role, Role::Master))
         .and_then(|m| m.build.as_ref());
+    let waiting = members
+        .iter()
+        .filter(|m| matches!(m.role, Role::Master))
+        .filter_map(|m| match &m.reach {
+            Reach::Reachable { status, .. } => status.config_sync.as_ref(),
+            Reach::Unreachable { .. } => None,
+        })
+        .flat_map(|summary| &summary.consent)
+        .map(|request| secret_consent(request, master));
     members
         .iter()
         .flat_map(|member| {
@@ -25,7 +37,54 @@ pub(crate) fn items(members: &[MemberView], master: Option<&MemberName>) -> Vec<
                 .then(|| version_skew(&member.name, master, member.build.as_ref(), master_build));
             awaiting.into_iter().chain(skewed)
         })
+        .chain(waiting)
         .collect()
+}
+
+/// One `secret_consent` item per synced path whose change waits on the master,
+/// with two confirmations, both for a person only: this change, or this change
+/// and later ones to the same files.
+fn secret_consent(request: &ConsentRequest, master: &MemberName) -> Item {
+    let category = Category::SecretConsent;
+    let path = request.path.to_string();
+    let names: Vec<&str> = request.files.iter().map(|f| f.file.as_str()).collect();
+    let confirm = |always: bool| {
+        let mut words = vec!["sync", "consent", &path, "--confirm", &request.consent_id];
+        if always {
+            words.push("--always");
+        }
+        elsecall(&words)
+    };
+    Item {
+        id: Item::id(category, master.as_str(), Some(&path)),
+        member: master.to_string(),
+        category,
+        subject: Some(path.clone()),
+        code: "secret_consent".into(),
+        message: format!(
+            "Files in {path} look like secrets ({}): their latest change waits on {master} until a person confirms it.",
+            names.join(", ")
+        ),
+        hint: format!(
+            "Review them with elsecall sync consent {path} on {master}; a person confirms from their own terminal."
+        ),
+        since: None,
+        actions: vec![
+            Action {
+                summary: "Sync this change to every member, and ask again at the next one.".into(),
+                command: confirm(false),
+                run_on: master.to_string(),
+                person_only: true,
+            },
+            Action {
+                summary: "Sync this change, and changes to these files automatically from now on."
+                    .into(),
+                command: confirm(true),
+                run_on: master.to_string(),
+                person_only: true,
+            },
+        ],
+    }
 }
 
 /// `elsecall` followed by `arguments`.
@@ -115,6 +174,78 @@ fn version_skew(
     }
 }
 
+/// One `missing_tool_pin` item per member and tool: a run `own` placed failed on
+/// that member because the tool is missing there, and nothing pins it.
+pub(crate) fn missing_tool_pins(unpinned: &[UnpinnedTool], own: &MemberName) -> Vec<Item> {
+    unpinned
+        .iter()
+        .map(|tool| missing_tool_pin(tool, own))
+        .collect()
+}
+
+fn missing_tool_pin(unpinned: &UnpinnedTool, own: &MemberName) -> Item {
+    let category = Category::MissingToolPin;
+    let standing = &unpinned.standing;
+    let (member, tool) = (&standing.member, standing.missing.tool.as_str());
+    let pin_in = match &standing.workspace {
+        Some(workspace) if !unpinned.pin_in.starts_with('~') => {
+            format!("{workspace}/{}", unpinned.pin_in)
+        }
+        _ => unpinned.pin_in.clone(),
+    };
+    let lacking = match &standing.missing.called {
+        Some(called) => format!("{called} needs {tool}, which"),
+        None => tool.to_owned(),
+    };
+    let mut actions = vec![Action {
+        summary: format!(
+            "Pin {tool} in {pin_in}, so every member installs it (recommended); then this command shows the pin."
+        ),
+        command: match &standing.workspace {
+            Some(workspace) => elsecall(&["tools", "pins", workspace]),
+            None => elsecall(&["fleet"]),
+        },
+        run_on: own.to_string(),
+        person_only: false,
+    }];
+    // A backend name (`npm:…`) is not offered for installing by hand.
+    if standing.missing.manager == Manager::Mise && !tool.contains(':') {
+        actions.push(Action {
+            summary: format!(
+                "Not recommended: install {tool} on {member} alone, outside any pin. The next member without it fails the same way."
+            ),
+            command: elsecall(&[
+                "run",
+                "--member",
+                member,
+                "--",
+                "mise",
+                "use",
+                "--global",
+                &format!("{tool}@latest"),
+            ]),
+            run_on: own.to_string(),
+            person_only: true,
+        });
+    }
+    Item {
+        id: Item::id(category, member, Some(tool)),
+        member: member.clone(),
+        category,
+        subject: Some(tool.to_owned()),
+        code: "missing_tool_pin".into(),
+        message: format!(
+            "Run {} failed on {member}: {lacking} is not installed there, and nothing pins it.",
+            standing.run_id
+        ),
+        hint: format!(
+            "Pin {tool} in {pin_in} so every member installs it. Installing it on {member} by hand fixes only {member}."
+        ),
+        since: Some(standing.ended_at),
+        actions,
+    }
+}
+
 /// Whether dotted version `a` is later than `b`, comparing numeric parts; a part
 /// that is not a number ends the comparison.
 fn newer(a: &str, b: &str) -> bool {
@@ -125,7 +256,6 @@ fn newer(a: &str, b: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::fleet_attention::*;
-    use crate::fleet_view::Reach;
     use elsecall_contract::failure::Failure;
     use serde_json::json;
 
@@ -264,6 +394,105 @@ mod tests {
             items(&awaiting, None).is_empty(),
             "nothing can act without a master"
         );
+    }
+
+    #[test]
+    fn a_run_that_hit_an_unpinned_tool_names_the_member_tool_run_and_file() {
+        use elsecall_scheduling::missing_tool::{MissingTool, Standing, ToolName};
+        let own: MemberName = "mac-mini".parse().unwrap();
+        let standing =
+            |manager, tool: &str, called: Option<&str>, workspace: Option<&str>| UnpinnedTool {
+                standing: Standing {
+                    run_id: elsecall_contract::scheduling_model::run_id::RunId::parse(
+                        "r-000000000001",
+                    )
+                    .unwrap(),
+                    member: "macbook-pro".into(),
+                    missing: MissingTool {
+                        manager,
+                        tool: ToolName::new(tool).unwrap(),
+                        called: called.map(|c| ToolName::new(c).unwrap()),
+                    },
+                    workspace: workspace.map(str::to_owned),
+                    ended_at:
+                        elsecall_contract::scheduling_model::timestamp::Timestamp::from_millis(
+                            1_000,
+                        ),
+                },
+                pin_in: match (manager, workspace) {
+                    (Manager::Xcodes, _) => ".xcode-version".into(),
+                    (_, Some(_)) => "mise.toml".into(),
+                    (_, None) => "~/.config/mise/config.toml".into(),
+                },
+            };
+        let items = missing_tool_pins(
+            &[
+                standing(Manager::Mise, "bun", None, Some("/Users/me/acme-ios")),
+                standing(
+                    Manager::Xcodes,
+                    "xcode",
+                    Some("xcodebuild"),
+                    Some("/Users/me/acme-ios"),
+                ),
+                standing(Manager::Mise, "tuist", None, None),
+            ],
+            &own,
+        );
+        let bun = serde_json::to_value(&items[0]).unwrap();
+        assert_eq!(bun["id"], "missing_tool_pin:macbook-pro:bun");
+        assert_eq!(bun["category"], "missing_tool_pin");
+        assert_eq!(bun["subject"], "bun");
+        assert_eq!(
+            bun["message"],
+            "Run r-000000000001 failed on macbook-pro: bun is not installed there, and nothing pins it."
+        );
+        assert_eq!(
+            bun["hint"],
+            "Pin bun in /Users/me/acme-ios/mise.toml so every member installs it. Installing it on macbook-pro by hand fixes only macbook-pro."
+        );
+        assert_eq!(
+            bun["actions"][0]["command"],
+            json!(["elsecall", "tools", "pins", "/Users/me/acme-ios"])
+        );
+        assert_eq!(bun["actions"][0]["person_only"], false);
+        assert_eq!(
+            bun["actions"][1]["command"],
+            json!([
+                "elsecall",
+                "run",
+                "--member",
+                "macbook-pro",
+                "--",
+                "mise",
+                "use",
+                "--global",
+                "bun@latest"
+            ])
+        );
+        assert_eq!(
+            bun["actions"][1]["person_only"], true,
+            "not recommended, a person's call"
+        );
+
+        let xcode = &items[1];
+        assert!(
+            xcode
+                .message
+                .contains("xcodebuild needs xcode, which is not installed"),
+            "{xcode:?}"
+        );
+        assert!(
+            xcode.hint.contains("/Users/me/acme-ios/.xcode-version"),
+            "{xcode:?}"
+        );
+        assert_eq!(xcode.actions.len(), 1, "Xcode has no by-hand command");
+
+        let outside = &items[2];
+        assert!(
+            outside.hint.contains("~/.config/mise/config.toml"),
+            "{outside:?}"
+        );
+        assert_eq!(outside.actions[0].command, elsecall(&["fleet"]));
     }
 
     #[test]

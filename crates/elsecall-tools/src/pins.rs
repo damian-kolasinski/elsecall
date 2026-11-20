@@ -9,6 +9,7 @@
 mod conflicts;
 mod elsecall_tools_file;
 mod exactness;
+pub mod lookup;
 mod mise_config;
 mod mise_global;
 mod mise_project;

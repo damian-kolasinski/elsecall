@@ -86,9 +86,21 @@ pub struct PlacedRunSummary {
     pub warnings: Vec<String>,
 }
 
+/// A run this member placed that failed for lack of a tool nothing pins, and
+/// the file to pin it in.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UnpinnedTool {
+    pub standing: elsecall_scheduling::missing_tool::Standing,
+    /// Relative to the run's workspace, or `~/…` for the global mise config.
+    pub pin_in: String,
+}
+
 /// Where the fleet view learns about placed runs.
 pub trait PlacedRuns: Send + Sync {
     fn latest_with(&self, member: &str) -> Option<PlacedRunSummary>;
+    /// Runs this member placed that still stand as failed for lack of a tool
+    /// that no pin covers, the latest per member and tool.
+    fn unpinned_tools(&self) -> Vec<UnpinnedTool>;
 }
 
 #[derive(Debug, Serialize)]
@@ -274,6 +286,21 @@ pub async fn view(fleet: &Fleet, placed: &dyn PlacedRuns) -> FleetView {
     }
     flag_skew(&mut view);
     view.attention = crate::fleet_attention::items(&view.members, view.master.as_ref());
+    if let Some(own) = view.members.iter().find(|m| m.this_member) {
+        let own = own.name.clone();
+        let names: Vec<&MemberName> = view.members.iter().map(|m| &m.name).collect();
+        let unpinned: Vec<_> = placed
+            .unpinned_tools()
+            .into_iter()
+            .filter(|tool| {
+                names
+                    .iter()
+                    .any(|name| name.as_str() == tool.standing.member)
+            })
+            .collect();
+        view.attention
+            .extend(crate::fleet_attention::missing_tool_pins(&unpinned, &own));
+    }
     view
 }
 

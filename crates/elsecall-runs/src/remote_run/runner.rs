@@ -618,6 +618,16 @@ fn not_startable(detail: &str) -> Failure {
     )
 }
 
+/// The program is not on the member's `PATH`: a tool the member lacks, which
+/// the caller may name, since it knows the command line.
+fn program_not_found() -> Failure {
+    Failure::new(
+        "command_not_found",
+        "The command could not be started on the member: no executable by that name is on its PATH.",
+        "Pin the tool in the workspace so every member installs it, then run elsecall fleet for what needs attention.",
+    )
+}
+
 /// A unidirectional pipe whose ends do not leak into other children.
 fn pipe_pair() -> std::io::Result<(OwnedFd, OwnedFd)> {
     let mut fds = [0; 2];
@@ -749,7 +759,10 @@ impl Command {
             .stdout(Stdio::from(stdout_write))
             .stderr(Stdio::from(stderr_write))
             .process_group(0);
-        let child = command.spawn().map_err(failed)?;
+        let child = command.spawn().map_err(|e| match e.kind() {
+            std::io::ErrorKind::NotFound => program_not_found(),
+            _ => failed(e),
+        })?;
         // Close this process's copies of the command's ends, so its exit ends them.
         drop(command);
         drop(starting);
