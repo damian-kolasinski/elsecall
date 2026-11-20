@@ -97,15 +97,23 @@ under that banner.
 4. **Sign in**: the exact Mac again (name, model, host, address), then an
    administrator account and its password in a secure field. The field clears when
    the add starts. The sheet keeps the password in zeroized memory for retries on
-   the same Mac and clears it on success, Back, or close. When sign-in is refused,
+   the same Mac and clears it on success, Back, Stop, or close. When sign-in is refused,
    **Edit sign-in** lets you correct the account or password.
+   The lid-closed option appears checked for recognized MacBooks. It requires AC
+   power during setup and disables system sleep, including on battery.
 5. **Add**: each step of `fleet add` as it runs. When Tailscale waits for approval,
    the window opens its page in the browser and the sheet shows an illustration of
-   clicking Connect, with **Open the page again**. **Stop**, the sheet's close button
+   clicking Connect, with **Open the page again**. The firewall step illustrates
+   choosing **Allow** on the new Mac. If a rule still blocks incoming connections,
+   the sheet waits for the rule and shows where to check it. **Stop**, the sheet's close button
    and Escape stop the add and keep the sheet to show how it ended; quitting the window
    stops it too. The end shows the new member with its readiness, serial number, host
    key and Tailscale key expiry, or the failure with **Try again**, which reuses the
    sign-in and requires the same SSH host key once one has been seen.
+
+The status cell shows **Provision** for a member awaiting provisioning. Its hover
+help explains that automatic job placement skips the member and reports whether
+it is reachable. The button has no action until provisioning is available.
 
 Add Mac shows only on the master, the Mac that adds others.
 
@@ -118,7 +126,7 @@ window's clock at about 30 frames a second while they show, and hold their last 
 under Reduce Motion.
 
 Scenes: `add-mac-prepare`, `add-mac-network`, `add-mac-looking`, `add-mac-choose`, `add-mac-sign-in`,
-`add-mac-adding`, `add-mac-approve`, `add-mac-done`, `add-mac-failed`. Goldens also
+`add-mac-adding`, `add-mac-approve`, `add-mac-firewall`, `add-mac-done`, `add-mac-failed`. Goldens also
 capture the illustrations later in their loops and the approval
 page at the window's minimum size. Pointer-driven tests walk the sheet from the header
 to a member, and stop an add, with the CLI faked at its boundary.

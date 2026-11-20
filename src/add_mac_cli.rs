@@ -1,10 +1,12 @@
 //! `elsecall fleet add`: adds a Mac from the master over SSH. It runs in the CLI's
 //! own process, which macOS lets reach the local network, unlike the service.
+mod configuration;
+
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::{
-    add_mac::{self, Approval, Event, Master},
+    add_mac::{self, Approval, Event, Master, Step, StepReport},
     authorized_keys,
-    remote_mac::Build,
+    remote_mac::{Build, RemoteMac},
 };
 use elsecall_host::paths::Paths;
 use elsecall_macos::macos::tailscale::TailscaleCli;
@@ -42,6 +44,7 @@ pub async fn run(
     approval_wait: Duration,
     format: Progress,
     mut ssh_host_key: Option<String>,
+    keep_awake_with_lid_closed: bool,
 ) -> Result<(Value, bool)> {
     // Watched from the start, so stopping is graceful at any point.
     let mut interrupt =
@@ -54,7 +57,7 @@ pub async fn run(
     // A program following the add keeps standard input open: when it closes,
     // whoever started the add is gone, and the add stops.
     let closed = (format == Progress::Json).then(watch_stdin);
-    let master = master(paths, approval_wait)?;
+    let master = master(paths, approval_wait, keep_awake_with_lid_closed)?;
     let progress = |event: Event| report_progress(format, &host, event);
     // Stopping drops the flow, and with it the SSH connection.
     let flow = async {
@@ -68,7 +71,26 @@ pub async fn run(
             progress(Event::HostKey { public_key });
         }
         let mut mac = connected?;
-        add_mac::add(&mut mac, &host, &master, &fleet, progress).await
+        let mut report = add_mac::add(&mut mac, &host, &master, &fleet, progress).await?;
+        let power_setup = master.keep_awake_with_lid_closed.then_some(mac);
+        progress(Event::Step {
+            step: Step::Configuration,
+        });
+        let outcome = configuration::synchronize(&master.socket, &report.member).await?;
+        report.steps.push(StepReport {
+            step: Step::Configuration,
+            outcome,
+        });
+        if let Some(mut mac) = power_setup {
+            mac.keep_awake_with_lid_closed().await.map_err(|failure| {
+                Failure::new(
+                    "member_lid_closed_setup_failed",
+                    format!("{} joined the fleet. {}", report.member, failure.message),
+                    failure.hint,
+                )
+            })?;
+        }
+        Ok(report)
     };
     let gone = async {
         match closed {
@@ -112,6 +134,12 @@ fn report_progress(format: Progress, host: &str, event: Event) {
             let _ = writeln!(stderr, "elsecall fleet add {host}: {}", step.doing());
         }
         (Progress::Text, Event::HostKey { .. }) => {}
+        (Progress::Text, Event::FirewallApproval) => {
+            let _ = writeln!(
+                stderr,
+                "elsecall fleet add {host}: click Allow on the incoming connections prompt on the new Mac. Add Mac continues when the firewall allows the connection."
+            );
+        }
         (Progress::Text, Event::Approve { link, approval }) => {
             let what = match approval {
                 Approval::Login => "approve the Mac in Tailscale",
@@ -171,7 +199,11 @@ fn password(input: &mut impl BufRead, terminal: bool) -> Result<Zeroizing<String
 }
 
 /// The master's build, tailnet and SSH key.
-fn master(paths: &Paths, approval_wait: Duration) -> Result<Master> {
+fn master(
+    paths: &Paths,
+    approval_wait: Duration,
+    keep_awake_with_lid_closed: bool,
+) -> Result<Master> {
     let executable = paths.executable();
     if !executable.is_file() {
         return Err(Failure::new(
@@ -203,6 +235,7 @@ fn master(paths: &Paths, approval_wait: Duration) -> Result<Master> {
         tailnet_domain,
         ssh_public_key,
         approval_wait,
+        keep_awake_with_lid_closed,
     })
 }
 

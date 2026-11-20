@@ -59,9 +59,9 @@ impl OpensshMac {
                     "-o",
                     "ControlMaster=yes",
                     "-o",
-                    // Ends the connection a minute after its last command, should this
-                    // process die without ending it.
-                    "ControlPersist=60",
+                    // Outlasts the post-enrollment configuration sync, including an
+                    // idle service restart, before the final power change.
+                    "ControlPersist=180",
                     "-o",
                     "PreferredAuthentications=keyboard-interactive,password",
                     "-o",

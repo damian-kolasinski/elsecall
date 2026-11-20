@@ -11,7 +11,7 @@ use elsecall_fleet::remote_mac::LoginLink;
 use rune::Tx;
 
 use super::{AppState, init, poll, render, scene_members};
-use crate::add_mac_flow::{AddRequest, AddUpdate, Page, mac};
+use crate::add_mac_flow::{Action, AddRequest, AddUpdate, Page, mac};
 use crate::add_mac_source::AddMacSource;
 use crate::theme;
 
@@ -28,12 +28,12 @@ struct FakeCli {
 
 impl AddMacSource for FakeCli {
     fn nearby(&self) -> Result<Vec<NearbyMac>, elsecall_contract::failure::Failure> {
-        Ok(vec![
-            mac("MacBook Pro", true, None),
-            mac("Studio", false, None),
-        ])
+        let mut macbook = mac("MacBook Pro", true, None);
+        macbook.model = Some("MacBookPro18,4".into());
+        Ok(vec![macbook, mac("Studio", false, None)])
     }
     fn add(&self, request: AddRequest, updates: &(dyn Fn(AddUpdate) + Sync)) {
+        assert!(request.keep_awake_with_lid_closed);
         let previous = self.added.lock().unwrap().replace((
             request.host.clone(),
             request.account.clone(),
@@ -56,7 +56,20 @@ impl AddMacSource for FakeCli {
                 .unwrap()
                 .recv_timeout(Duration::from_secs(10));
             if self.fail_first {
-                updates(AddUpdate::Finished(Err(Failure::unavailable())));
+                updates(AddUpdate::Event(Event::Step {
+                    step: Step::Firewall,
+                }));
+                updates(AddUpdate::Event(Event::FirewallApproval));
+                let _ = self
+                    .approved
+                    .lock()
+                    .unwrap()
+                    .recv_timeout(Duration::from_secs(10));
+                updates(AddUpdate::Finished(Err(Failure::new(
+                    "firewall_unchanged",
+                    "Firewall approval timed out.",
+                    "Click Allow on the new Mac.",
+                ))));
                 return;
             }
         } else {
@@ -161,8 +174,16 @@ fn a_mac_is_added_from_the_header_through_every_page() {
         rt.state.add_mac().chosen().unwrap().host,
         "macbook-pro.local"
     );
+    rt.state.add_mac_mut().manual.replace_text("studio.local");
+    rt.invalidate();
+    rt.frame(0.0);
+    click(&mut rt, "add-mac-continue");
+    assert!(rt.presented("add-mac-keep-awake").is_none());
+    click(&mut rt, "add-mac-back");
+    click(&mut rt, "add-mac-host-macbook-pro.local");
     click(&mut rt, "add-mac-continue");
     assert!(rt.presented("add-mac-password").is_some());
+    assert!(rt.presented("add-mac-keep-awake").is_some());
     assert!(
         rt.presented("add-mac-target").is_some(),
         "the exact Mac is shown"
@@ -177,7 +198,7 @@ fn a_mac_is_added_from_the_header_through_every_page() {
         matches!(
             state.add_mac().page,
             Page::Adding {
-                approval: Some(_),
+                action: Some(Action::Tailnet { .. }),
                 ..
             }
         )
@@ -194,6 +215,17 @@ fn a_mac_is_added_from_the_header_through_every_page() {
         "the sheet no longer holds it"
     );
 
+    approve.send(()).unwrap();
+    poll_until(&mut rt, "firewall approval", |state| {
+        matches!(
+            state.add_mac().page,
+            Page::Adding {
+                action: Some(Action::Firewall),
+                ..
+            }
+        )
+    });
+    assert!(rt.presented("add-mac-firewall-art").is_some());
     approve.send(()).unwrap();
     poll_until(&mut rt, "the retry", |state| {
         matches!(state.add_mac().page, Page::Failed { .. })

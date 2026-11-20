@@ -40,6 +40,8 @@ const SCENES: &[&str] = &[
     "add-mac-sign-in",
     "add-mac-adding",
     "add-mac-approve",
+    "add-mac-firewall",
+    "add-mac-firewall-failed",
     "add-mac-done",
     "add-mac-failed",
 ];
@@ -123,9 +125,11 @@ fn fleet_scenes_match_goldens() {
             compare(scene, appearance, &suffix, &["--at", &at]);
         }
     }
-    // The sheet's widest page at the window's minimum size.
+    // Sign-in and approval instructions at the window's minimum size.
     for appearance in APPEARANCES {
+        compare("add-mac-sign-in", appearance, "-minimum", MINIMUM_WINDOW);
         compare("add-mac-approve", appearance, "-minimum", MINIMUM_WINDOW);
+        compare("add-mac-firewall", appearance, "-minimum", MINIMUM_WINDOW);
     }
 }
 

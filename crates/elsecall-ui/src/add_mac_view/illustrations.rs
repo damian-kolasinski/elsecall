@@ -197,6 +197,50 @@ fn switch(on: f32, l: &Look) -> El {
     )
 }
 
+/// An illustration of the prompt on the new Mac and the button to choose.
+pub(super) fn firewall_art(l: &Look) -> El {
+    col()
+        .size(ART_WIDTH, 122.0)
+        .padding(theme::SPACE_3)
+        .gap(theme::SPACE_2)
+        .radius(10.0)
+        .border(1.0, l.border)
+        .fill(l.card)
+        .child(
+            text("Allow incoming connections?")
+                .font(l.body)
+                .color(l.text),
+        )
+        .child(text("Elsecall").font(l.small).color(l.secondary))
+        .child(rune::el().grow(1.0))
+        .child(
+            row()
+                .w_full()
+                .justify_end()
+                .gap(theme::SPACE_2)
+                .child(
+                    row()
+                        .h(24.0)
+                        .px(theme::SPACE_3)
+                        .center()
+                        .radius(5.0)
+                        .fill(l.raised)
+                        .child(text("Deny").font(l.label).color(l.secondary)),
+                )
+                .child(
+                    row()
+                        .h(24.0)
+                        .px(theme::SPACE_3)
+                        .center()
+                        .radius(5.0)
+                        .border(1.0, l.accent)
+                        .fill(l.accent.alpha(0.22))
+                        .child(text("Allow").font(l.label).color(l.accent_ink)),
+                ),
+        )
+        .key("add-mac-firewall-art")
+}
+
 /// A browser page whose button a pointer clicks, which then shows a check.
 pub(super) fn browser_art(name: &str, button: &str, clock: f64, l: &Look) -> El {
     let t = phase(clock, APPROVE_LOOP);

@@ -1,18 +1,16 @@
 //! The Add Mac sheet: what to do on the new Mac, which Mac, its account, and the
 //! add as it happens, with looping illustrations of the operator's steps.
 
-use elsecall_fleet::add_mac::Approval;
 use rune::tok::TextStyle;
 use rune::{Color, El, Icon, col, icon, row, text};
-use rune_kit::{Button, ButtonVariant, Dialog, Kit, Spinner, TextInput};
+use rune_kit::{Button, ButtonVariant, Checkbox, Dialog, Kit, Spinner, TextInput};
 
 mod illustrations;
+mod progress;
 
-use self::illustrations::{browser_art, settings_art, wifi_art};
-use crate::add_mac_flow::{
-    MacStatus, Nearby, NearbyMacExt, Page, STEPS, StepState, Target, needs_new_target, step_label,
-    step_state,
-};
+use self::illustrations::{firewall_art, settings_art, wifi_art};
+use self::progress::adding;
+use crate::add_mac_flow::{MacStatus, Nearby, NearbyMacExt, Page, Target, needs_new_target};
 use crate::app::AppState;
 use crate::theme;
 use elsecall_contract::failure::Failure;
@@ -114,10 +112,10 @@ pub(crate) fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut
         Page::Adding {
             target,
             current,
-            approval,
+            action,
         } => (
             "Adding the Mac",
-            adding(&target.name, *current, approval.as_ref(), clock, k, &l),
+            adding(&target.name, *current, action.as_ref(), clock, k, &l),
             adding_buttons(k),
         ),
         Page::Done { report } => (
@@ -126,7 +124,16 @@ pub(crate) fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut
             done_buttons(k),
         ),
         Page::Failed { failure, .. } => (
-            "The Mac was not added",
+            match failure.code.as_str() {
+                "member_unverified" => "The Mac joined. Verification is pending.",
+                "member_configuration_sync_failed" => {
+                    "The Mac joined. Configuration needs attention."
+                }
+                "member_lid_closed_setup_failed" => {
+                    "The Mac joined. Lid-closed setup needs attention."
+                }
+                _ => "The Mac was not added",
+            },
             failed(failure, flow.has_credentials(), k, &l),
             failed_buttons(failure, flow.has_credentials(), k),
         ),
@@ -441,7 +448,7 @@ fn sign_in(state: &AppState, target: &Target, k: &Kit, l: &Look) -> El {
         .iter()
         .find(|mac| mac.host == target.host)
         .and_then(|mac| mac.addresses.first());
-    col()
+    let page = col()
         .w_full()
         .gap(theme::SPACE_4)
         .child(
@@ -467,128 +474,59 @@ fn sign_in(state: &AppState, target: &Target, k: &Kit, l: &Look) -> El {
                 .key("add-mac-target"),
         )
         .child(paragraph(
-            "Use an administrator account on that Mac. Elsecall keeps the password in memory for setup and retries.",
+            "Use an administrator account on the new Mac. The password stays in memory for retries.",
             l,
         ))
-        .child(field(
-            "Account",
-            TextInput::new(&flow.account)
-                .label("Account")
-                .placeholder("Its short name, such as devbox")
-                .on_edit(|state: &mut AppState| &mut state.add_mac_mut().account)
-                .build(k)
-                .key("add-mac-account"),
-            l,
-        ))
-        .child(field(
-            "Password",
-            TextInput::new(&flow.password)
-                .label("Password")
-                .secure()
-                .on_edit(|state: &mut AppState| &mut state.add_mac_mut().password)
-                .on_submit(|state: &mut AppState, _| state.start_add_mac())
-                .build(k)
-                .key("add-mac-password"),
-            l,
-        ))
-}
-
-fn adding(
-    name: &str,
-    current: Option<elsecall_fleet::add_mac::Step>,
-    approval: Option<&(elsecall_fleet::remote_mac::LoginLink, Approval)>,
-    clock: f64,
-    k: &Kit,
-    l: &Look,
-) -> El {
-    let mut steps = col().w(250.0).gap(theme::SPACE_2).key("add-mac-steps");
-    for step in STEPS {
-        let state = step_state(step, current);
-        let mark = match state {
-            StepState::Done => icon(&CHECK, 16.0).color(l.good),
-            StepState::Running => Spinner::new().size(14.0).build(k),
-            StepState::Pending => rune::el().size(6.0, 6.0).radius(3.0).fill(l.border),
-        };
-        steps = steps.child(
-            row()
-                .h(22.0)
-                .gap(theme::SPACE_2)
-                .center_y()
-                .child(row().size(16.0, 16.0).center().child(mark))
-                .child(text(step_label(step)).font(l.body).color(match state {
-                    StepState::Done => l.secondary,
-                    StepState::Running => l.text,
-                    StepState::Pending => l.subtle,
-                })),
-        );
-    }
-    let side = match approval {
-        Some((link, approval)) => approve(name, link, *approval, clock, k, l),
-        None if current.is_none() => col()
-            .grow(1.0)
-            .child(paragraph(&format!("Connecting to {name} over SSH…"), l)),
-        None => col()
-            .grow(1.0)
-            .gap(theme::SPACE_3)
-            .child(paragraph(
-                &format!("Elsecall is setting up {name} over SSH. This takes a minute or two."),
-                l,
-            ))
-            .child(paragraph(
-                "If Tailscale needs your approval, its page opens in your browser and this sheet shows what to click.",
-                l,
-            )),
-    };
-    row().w_full().gap(theme::SPACE_6).child(steps).child(side)
-}
-
-fn approve(
-    name: &str,
-    link: &elsecall_fleet::remote_mac::LoginLink,
-    approval: Approval,
-    clock: f64,
-    k: &Kit,
-    l: &Look,
-) -> El {
-    let (lead, button) = match approval {
-        Approval::Login => (
-            format!(
-                "Approve {name} in your browser: Tailscale's page is open there. Click Connect to let it join your tailnet."
-            ),
-            "Connect",
-        ),
-        Approval::Device => (
-            format!(
-                "Your tailnet approves new devices: in the admin console that opened, approve {name}."
-            ),
-            "Approve",
-        ),
-    };
-    let link = link.as_str().to_owned();
-    col()
-        .grow(1.0)
-        .gap(theme::SPACE_3)
-        .child(browser_art(name, button, clock, l))
-        .child(text(lead).wrap().w_full().font(l.body).color(l.text))
         .child(
-            row().child(
-                Button::new("Open the page again")
-                    .variant(ButtonVariant::Outline)
-                    .on_press_tx(move |_: &mut AppState, tx| {
-                        let _ = tx.open_url(&link);
-                    })
+            row()
+                .w_full()
+                .gap(theme::SPACE_4)
+                .child(field(
+                    "Account",
+                    TextInput::new(&flow.account)
+                        .label("Account")
+                        .placeholder("Its short name, such as devbox")
+                        .on_edit(|state: &mut AppState| &mut state.add_mac_mut().account)
+                        .build(k)
+                        .key("add-mac-account"),
+                    l,
+                ))
+                .child(field(
+                    "Password",
+                    TextInput::new(&flow.password)
+                        .label("Password")
+                        .secure()
+                        .on_edit(|state: &mut AppState| &mut state.add_mac_mut().password)
+                        .on_submit(|state: &mut AppState, _| state.start_add_mac())
+                        .build(k)
+                        .key("add-mac-password"),
+                    l,
+                )),
+        );
+    match flow.lid_closed_choice(target) {
+        Some(checked) => page.child(
+            col()
+                .w_full()
+                .gap(theme::SPACE_1)
+                .child(Checkbox::new(checked)
+                    .label("Keep this MacBook awake with its lid closed")
+                    .on_toggle(|state: &mut AppState| state.add_mac_mut().toggle_lid_closed())
                     .build(k)
-                    .key("add-mac-open-link"),
-            ),
-        )
-        .key("add-mac-approve")
+                    .key("add-mac-keep-awake"))
+                .child(paragraph(
+                    "Plug in the MacBook and leave its lid open until setup finishes. This option disables system sleep, including on battery.",
+                    l,
+                )),
+        ),
+        None => page,
+    }
 }
 
 fn done(report: &AddReport, l: &Look) -> El {
     let model = report.mac.model.as_deref().unwrap_or("Mac");
     let standing = match report.readiness {
         Readiness::AwaitingProvisioning => {
-            "It is a member awaiting provisioning: you can run work on it by name, and it takes no other work until its tools are installed."
+            "Automatic jobs wait for provisioning. Set up the projects and tools this Mac will run, including full Xcode for Xcode builds. You can still send jobs directly to this Mac."
         }
         Readiness::Ready => "It is a member and takes work; adding it again repaired it.",
     };
@@ -658,6 +596,9 @@ fn failed(failure: &Failure, has_credentials: bool, k: &Kit, l: &Look) -> El {
                 .font(l.small)
                 .color(l.secondary),
         );
+    if failure.code == "firewall_unchanged" {
+        card = card.child(firewall_art(l));
+    }
     // Still waiting for the approval: the page can be opened again from here.
     let pending = failure
         .details

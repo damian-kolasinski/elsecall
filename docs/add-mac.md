@@ -14,7 +14,10 @@ A change to anything here is a product decision and updates this document first.
    with "Allow access for" including the account used below (all users, the
    default, does). Join the master's Wi-Fi in System Settings › Wi-Fi, or connect
    both Macs to the same local network by Ethernet. The Add Mac sheet illustrates
-   both Remote Login and Wi-Fi.
+   both Remote Login and Wi-Fi. When signing in to a recognized MacBook, lid-closed
+   setup is selected by default. Connect power and leave the lid open until setup
+   finishes. This disables system sleep, including on battery. Clear the checkbox
+   if the MacBook should keep its usual sleep settings.
 2. **On the master:** Add Mac in the fleet window, or `elsecall fleet nearby` in the
    CLI. The master lists the Macs it finds on the local network. A Mac it does not
    find can be added by host name or address.
@@ -22,6 +25,9 @@ A change to anything here is a product decision and updates this document first.
 4. **Approve the Mac in Tailscale** when the Mac is not on the tailnet yet: the master
    opens Tailscale's login link in its browser, which is already signed in to the
    tailnet.
+5. **Allow incoming connections on the new Mac** if macOS prompts for Elsecall or
+   `tailscaled`. The Add Mac sheet shows what to click. If the automatic firewall
+   change needs approval, Add Mac waits up to a minute for the rule to take effect.
 
 The CLI form, for agents, is `elsecall fleet add <host> --user <account>` with the
 password on standard input. It prints one JSON document like every other command.
@@ -79,15 +85,24 @@ it without changing its readiness.
      and waits for the approval, then checks that the Mac's tailnet is the
      master's. A tailnet that approves devices gets its admin console opened
      instead. Only links on `login.tailscale.com` are opened.
-4. **Installs Elsecall** by copying the master's own executable, so the new member
+4. **Prepares the Mac.** If the active developer tools lack Git, it installs the newest compatible Apple
+   Command Line Tools package offered by Software Update and verifies Git.
+   If Apple offers no package, the sheet gives the local install command.
+5. **Installs Elsecall** by copying the master's own executable, so the new member
    runs the master's exact build, and running its `install`. The session follows
    the existing rule: desktop when the account has a desktop login, otherwise
    background.
-5. **Opens the Application Firewall** for Elsecall, and for Add Mac's `tailscaled` so
+6. **Opens the Application Firewall** for Elsecall, and for Add Mac's `tailscaled` so
    peers connect directly rather than through Tailscale's relays, when it is on,
    with sudo. This changes the rule that Elsecall only reports firewall rules
    ([fleet membership](fleet-membership.md)): during Add Mac the operator has
    granted administrator access for exactly this.
+
+   If the firewall still blocks a program, Add Mac tells the operator to click
+   **Allow** on the new Mac. It tries the new Mac's Elsecall listener over the
+   tailnet so macOS can bring up the prompt, and checks for the rule while it
+   waits. If the prompt is absent, use System Settings › Network › Firewall ›
+   Options. A managed firewall profile can preapprove the app for unattended setup.
 
    It also installs a root LaunchDaemon, `dev.elsecall.firewall-guard`, whether the
    firewall is on or off. The firewall can ask whoever sits at the Mac's console
@@ -101,7 +116,7 @@ it without changing its readiness.
    remove it on the Mac:
    `sudo launchctl bootout system/dev.elsecall.firewall-guard` and
    `sudo rm /Library/LaunchDaemons/dev.elsecall.firewall-guard.plist`.
-6. **Authorizes the master's SSH key.** The operator's public key on the master
+7. **Authorizes the master's SSH key.** The operator's public key on the master
    (`~/.ssh/id_ed25519.pub`, or the first of the other default keys) is added to the
    account's `authorized_keys`, limited to connections from the tailnet ranges and
    marked as Elsecall's. The master can then reach the Mac over the tailnet when
@@ -109,10 +124,15 @@ it without changing its readiness.
    marked lines. A master without a key is told how to create one; the step is
    skipped, not failed. Remote Login stays on, including password logins on the
    local network, as the operator turned it on.
-7. **Enrolls the Mac** with the code its `fleet identity` prints, marked awaiting
+8. **Enrolls the Mac** with the code its `fleet identity` prints, marked awaiting
    provisioning, then has it `fleet join`.
-8. **Verifies** that the Mac answers over the tailnet as a member, in sync with the
+9. **Verifies** that the Mac answers over the tailnet as a member, in sync with the
    master's roster, and reports when its Tailscale node key expires.
+10. **Syncs configuration** to the new member. If managed service settings require
+    a restart, Add Mac waits for them to be applied. If lid-closed setup was
+    selected, Add Mac checks AC power before installation and changes the sleep
+    settings after the other setup steps succeed. The member remains awaiting
+    provisioning for its project tools and automatic job placement.
 
 ## Decisions
 
@@ -152,7 +172,7 @@ it without changing its readiness.
   local service only for what it already does: the master's identity and enrolling.
 - **The password stays in memory.** The window keeps it for retries of the same
   add and wipes it when the add succeeds, sign-in is rejected, or the operator
-  goes back or closes the sheet. The CLI receives it on standard input. OpenSSH
+  goes back, stops the add or closes the sheet. The CLI receives it on standard input. OpenSSH
   gets it through an askpass helper from a private socket, and sudo receives it on
   standard input. Later work, such as provisioning, uses its own authorization.
 - **The SSH host key is trusted on first use on the local network.** The operator
@@ -201,4 +221,5 @@ it without changing its readiness.
 
 End-to-end evidence uses a Tart VM ([e2e-vm.md](e2e-vm.md)) as the new Mac. Its
 image already has Remote Login on and Homebrew installed; neither changes the flow,
-which needs Remote Login and does not use Homebrew.
+which needs Remote Login and does not use Homebrew. Enter the VM's address
+manually in the picker.

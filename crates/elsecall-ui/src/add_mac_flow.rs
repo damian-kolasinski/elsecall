@@ -2,7 +2,7 @@
 //! Macs found nearby and the add's progress. Pure; the view draws it and the
 //! source feeds it.
 
-use std::sync::Arc;
+use std::{collections::HashSet, net::IpAddr, sync::Arc};
 
 use elsecall_contract::failure::Failure;
 use elsecall_fleet::add_mac::{AddReport, Approval, Event, Step};
@@ -12,14 +12,16 @@ use rune::TextEdit;
 use zeroize::Zeroizing;
 
 /// The steps of an add, in the order the CLI runs them.
-pub(crate) const STEPS: [Step; 7] = [
+pub(crate) const STEPS: [Step; 9] = [
     Step::Check,
     Step::Tailnet,
+    Step::Tools,
     Step::Install,
     Step::Firewall,
     Step::SshKey,
     Step::Enroll,
     Step::Verify,
+    Step::Configuration,
 ];
 
 /// The Mac being added, as the operator picked it.
@@ -38,6 +40,7 @@ pub(crate) struct AddRequest {
     pub account: String,
     pub password: Arc<Zeroizing<String>>,
     pub ssh_host_key: Option<String>,
+    pub keep_awake_with_lid_closed: bool,
 }
 
 struct Credentials {
@@ -72,6 +75,11 @@ pub(crate) struct RunUpdate {
     pub update: AddUpdate,
 }
 
+pub(crate) enum Action {
+    Tailnet { link: LoginLink, approval: Approval },
+    Firewall,
+}
+
 pub(crate) enum Page {
     Closed,
     /// What to do on the new Mac.
@@ -89,7 +97,7 @@ pub(crate) enum Page {
         target: Target,
         /// The step running now; earlier ones are done.
         current: Option<Step>,
-        approval: Option<(LoginLink, Approval)>,
+        action: Option<Action>,
     },
     Done {
         report: AddReport,
@@ -108,6 +116,7 @@ pub(crate) struct AddMac {
     pub manual: TextEdit,
     pub account: TextEdit,
     pub password: TextEdit,
+    lid_closed_opt_out: HashSet<String>,
     /// Kept only for retrying the same target in this sheet.
     credentials: Option<Credentials>,
     ssh_host_key: Option<String>,
@@ -122,6 +131,7 @@ impl Default for AddMac {
             manual: TextEdit::default(),
             account: TextEdit::default(),
             password: TextEdit::default().secure(),
+            lid_closed_opt_out: HashSet::new(),
             credentials: None,
             ssh_host_key: None,
         }
@@ -278,10 +288,17 @@ impl AddMac {
     pub(crate) fn chosen(&self) -> Option<Target> {
         let typed = self.manual.text.as_str().trim();
         if !typed.is_empty() {
-            return valid_host(typed).then(|| Target {
-                host: typed.to_owned(),
-                name: typed.to_owned(),
-                model: None,
+            return valid_host(typed).then(|| {
+                let address = typed.parse::<IpAddr>().ok();
+                let advertised = self.found().iter().find(|mac| {
+                    mac.host.eq_ignore_ascii_case(typed.trim_end_matches('.'))
+                        || address.is_some_and(|address| mac.addresses.contains(&address))
+                });
+                Target {
+                    host: typed.to_owned(),
+                    name: advertised.map_or_else(|| typed.to_owned(), |mac| mac.name.clone()),
+                    model: advertised.and_then(|mac| mac.model.clone()),
+                }
             });
         }
         let Page::Choose {
@@ -303,6 +320,28 @@ impl AddMac {
     pub(crate) fn show_sign_in(&mut self) {
         if let Some(target) = self.chosen() {
             self.page = Page::SignIn { target };
+        }
+    }
+
+    pub(crate) fn lid_closed_choice(&self, target: &Target) -> Option<bool> {
+        target
+            .model
+            .as_deref()
+            .filter(|model| is_macbook(model))
+            .map(|_| !self.lid_closed_opt_out.contains(&target.host))
+    }
+
+    pub(crate) fn toggle_lid_closed(&mut self) {
+        if let Page::SignIn { target } = &self.page {
+            match self.lid_closed_choice(target) {
+                Some(true) => {
+                    self.lid_closed_opt_out.insert(target.host.clone());
+                }
+                Some(false) => {
+                    self.lid_closed_opt_out.remove(&target.host);
+                }
+                None => {}
+            }
         }
     }
 
@@ -352,12 +391,13 @@ impl AddMac {
             account: credentials.account.clone(),
             password: Arc::clone(&credentials.password),
             ssh_host_key: self.ssh_host_key.clone(),
+            keep_awake_with_lid_closed: self.lid_closed_choice(&target).unwrap_or(false),
         };
         self.credentials = Some(credentials);
         self.page = Page::Adding {
             target,
             current: None,
-            approval: None,
+            action: None,
         };
         request
     }
@@ -371,7 +411,7 @@ impl AddMac {
         let Page::Adding {
             target,
             current,
-            approval,
+            action,
         } = &mut self.page
         else {
             return None;
@@ -385,15 +425,19 @@ impl AddMac {
             }
             AddUpdate::Event(Event::Step { step }) => {
                 *current = Some(step);
-                *approval = None;
+                *action = None;
                 None
             }
-            AddUpdate::Event(Event::Approve {
-                link,
-                approval: kind,
-            }) => {
-                *approval = Some((link.clone(), kind));
+            AddUpdate::Event(Event::Approve { link, approval }) => {
+                *action = Some(Action::Tailnet {
+                    link: link.clone(),
+                    approval,
+                });
                 Some(link)
+            }
+            AddUpdate::Event(Event::FirewallApproval) => {
+                *action = Some(Action::Firewall);
+                None
             }
             AddUpdate::Finished(result) => {
                 let target = target.clone();
@@ -405,8 +449,13 @@ impl AddMac {
                     Err(failure) => {
                         if matches!(
                             failure.code.as_str(),
-                            "ssh_password_refused" | "sudo_refused" | "password_required"
+                            "ssh_password_refused"
+                                | "sudo_refused"
+                                | "password_required"
+                                | "not_administrator"
                         ) || needs_new_target(&failure)
+                            || (failure.code == "unexpected_response"
+                                && self.ssh_host_key.is_none())
                         {
                             self.credentials = None;
                         }
@@ -454,6 +503,46 @@ pub(crate) fn needs_new_target(failure: &Failure) -> bool {
     )
 }
 
+/// Apple uses generic model identifiers on newer Macs. Keep unknown hardware
+/// out of lid-closed setup until its model is known to be a MacBook.
+fn is_macbook(model: &str) -> bool {
+    model.starts_with("MacBook")
+        || matches!(
+            model,
+            "Mac14,2"
+                | "Mac14,5"
+                | "Mac14,6"
+                | "Mac14,7"
+                | "Mac14,9"
+                | "Mac14,10"
+                | "Mac14,15"
+                | "Mac15,3"
+                | "Mac15,6"
+                | "Mac15,7"
+                | "Mac15,8"
+                | "Mac15,9"
+                | "Mac15,10"
+                | "Mac15,11"
+                | "Mac15,12"
+                | "Mac15,13"
+                | "Mac16,1"
+                | "Mac16,5"
+                | "Mac16,6"
+                | "Mac16,7"
+                | "Mac16,8"
+                | "Mac16,12"
+                | "Mac16,13"
+                | "Mac17,2"
+                | "Mac17,3"
+                | "Mac17,4"
+                | "Mac17,5"
+                | "Mac17,6"
+                | "Mac17,7"
+                | "Mac17,8"
+                | "Mac17,9"
+        )
+}
+
 /// Whether `step` is done, running or still to come while `current` runs.
 pub(crate) fn step_state(step: Step, current: Option<Step>) -> StepState {
     let index = |s: Step| STEPS.iter().position(|x| *x == s).unwrap_or(0);
@@ -477,11 +566,13 @@ pub(crate) fn step_label(step: Step) -> &'static str {
     match step {
         Step::Check => "Check the Mac",
         Step::Tailnet => "Join your tailnet",
+        Step::Tools => "Prepare Git and Apple tools",
         Step::Install => "Install Elsecall",
-        Step::Firewall => "Open the firewall",
+        Step::Firewall => "Allow Elsecall in the firewall",
         Step::SshKey => "Authorize this Mac's SSH key",
         Step::Enroll => "Enroll in the fleet",
         Step::Verify => "Verify it answers",
+        Step::Configuration => "Sync fleet configuration",
     }
 }
 
@@ -587,13 +678,13 @@ mod tests {
         }));
         assert_eq!(opened, Some(link));
         let Page::Adding {
-            current, approval, ..
+            current, action, ..
         } = &flow.page
         else {
             panic!("adding");
         };
         assert_eq!(*current, Some(Step::Tailnet));
-        assert!(approval.is_some());
+        assert!(matches!(action, Some(Action::Tailnet { .. })));
         assert_eq!(step_state(Step::Check, *current), StepState::Done);
         assert_eq!(step_state(Step::Tailnet, *current), StepState::Running);
         assert_eq!(step_state(Step::Verify, *current), StepState::Pending);
@@ -601,7 +692,7 @@ mod tests {
         flow.apply_current(AddUpdate::Event(Event::Step {
             step: Step::Install,
         }));
-        assert!(matches!(&flow.page, Page::Adding { approval: None, .. }));
+        assert!(matches!(&flow.page, Page::Adding { action: None, .. }));
         flow.apply_current(AddUpdate::Event(Event::HostKey {
             public_key: "ssh-ed25519 ExampleKey".into(),
         }));
@@ -621,7 +712,7 @@ mod tests {
         assert!(flow.password.text.is_empty());
 
         flow.apply_current(AddUpdate::Finished(Err(Failure::new(
-            "ssh_password_refused",
+            "not_administrator",
             "m",
             "h",
         ))));
@@ -659,6 +750,26 @@ mod tests {
         flow.show_sign_in();
         flow.password.replace_text("another-example");
         assert!(flow.start().unwrap().ssh_host_key.is_none());
+    }
+
+    #[test]
+    fn lid_closed_setup_defaults_to_on_for_known_macbooks_and_keeps_an_opt_out() {
+        let mut flow = AddMac::default();
+        flow.show_choose();
+        let mut laptop = mac("MacBook Pro", true, None);
+        laptop.model = Some("Mac16,5".into());
+        let mini = mac("Mac mini", true, None);
+        flow.set_nearby(Ok(vec![laptop, mini]));
+        flow.select("mac-mini.local");
+        assert_eq!(flow.lid_closed_choice(&flow.chosen().unwrap()), None);
+        flow.select("macbook-pro.local");
+        assert_eq!(flow.lid_closed_choice(&flow.chosen().unwrap()), Some(true));
+        flow.show_sign_in();
+        flow.toggle_lid_closed();
+        flow.back();
+        assert_eq!(flow.lid_closed_choice(&flow.chosen().unwrap()), Some(false));
+        flow.manual.replace_text("unknown.local");
+        assert_eq!(flow.lid_closed_choice(&flow.chosen().unwrap()), None);
     }
 
     #[test]

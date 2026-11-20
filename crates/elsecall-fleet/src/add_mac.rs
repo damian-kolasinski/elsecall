@@ -5,6 +5,8 @@
 //! Everything that can refuse runs before anything changes, and every step checks
 //! before it acts, so running it again continues where an earlier run stopped,
 //! and running it on a member repairs it.
+mod firewall;
+
 use crate::fleet_local_api::EnrollRequest;
 use crate::{
     authorized_keys,
@@ -42,11 +44,13 @@ const APPROVAL_POLL: Duration = Duration::from_secs(2);
 pub enum Step {
     Check,
     Tailnet,
+    Tools,
     Install,
     Firewall,
     SshKey,
     Enroll,
     Verify,
+    Configuration,
 }
 
 impl Step {
@@ -55,11 +59,13 @@ impl Step {
         match self {
             Step::Check => "checking the Mac",
             Step::Tailnet => "putting it on the tailnet",
+            Step::Tools => "preparing Git and Apple command-line tools",
             Step::Install => "installing Elsecall",
             Step::Firewall => "opening the firewall for Elsecall",
             Step::SshKey => "authorizing the master's SSH key",
             Step::Enroll => "enrolling it",
             Step::Verify => "verifying it answers as a member",
+            Step::Configuration => "syncing fleet configuration to the Mac",
         }
     }
 }
@@ -76,6 +82,8 @@ pub enum Event {
     /// Tailscale on the Mac waits for the operator to approve it at `link`, in a
     /// browser signed in to the master's tailnet.
     Approve { link: LoginLink, approval: Approval },
+    /// The firewall rule needs an action on the new Mac before the add can finish.
+    FirewallApproval,
 }
 
 /// What the operator approves.
@@ -148,6 +156,8 @@ pub struct Master {
     pub ssh_public_key: Option<String>,
     /// How long to wait for the operator to approve the Mac in Tailscale.
     pub approval_wait: Duration,
+    /// The operator opted into persistent lid-closed mode for this MacBook.
+    pub keep_awake_with_lid_closed: bool,
 }
 
 /// The fleet as the master's service reports it, as far as adding needs it.
@@ -220,20 +230,16 @@ pub async fn add<M: RemoteMac>(
         .executable()
         .to_string_lossy()
         .into_owned();
-    let rule = mac.incoming(&executable).await?;
-    if rule == Rule::AllBlocked {
-        return Err(Failure::new(
-            "firewall_blocks_all",
-            format!(
-                "The firewall on {host} blocks all incoming connections, so other members could never reach Elsecall there."
-            ),
-            "On that Mac, turn off \"Block all incoming connections\" in System Settings > Network > Firewall > Options, then add it again.",
-        ));
+    if mac.incoming(&executable).await? == Rule::AllBlocked {
+        return Err(firewall::blocks_all(host));
     }
     let installed = mac.installed_build().await?;
     if installed.is_some() {
         let identity = mac.elsecall(&["fleet", "identity"]).await?;
         refuse_another_fleet(&identity, &fleet.members, host)?;
+    }
+    if master.keep_awake_with_lid_closed {
+        mac.check_lid_closed_power().await?;
     }
     record(Step::Check, Outcome::Done);
 
@@ -243,6 +249,14 @@ pub async fn add<M: RemoteMac>(
     let joined = join_tailnet(mac, &facts, master, host, &mut progress).await?;
     let node = joined.node;
     record(Step::Tailnet, joined.outcome);
+
+    progress(Event::Step { step: Step::Tools });
+    let tools = if mac.ensure_command_line_tools().await? {
+        Outcome::Done
+    } else {
+        Outcome::Already
+    };
+    record(Step::Tools, tools);
 
     progress(Event::Step {
         step: Step::Install,
@@ -262,45 +276,8 @@ pub async fn add<M: RemoteMac>(
     progress(Event::Step {
         step: Step::Firewall,
     });
-    // Elsecall's listener, and Add Mac's tailscaled so peers can connect directly
-    // rather than through Tailscale's relays.
-    let programs: Vec<String> = std::iter::once(executable.as_str())
-        .chain(joined.daemon)
-        .map(str::to_owned)
-        .collect();
-    let mut blocked = Vec::new();
-    for program in &programs {
-        let program = program.as_str();
-        let rule = if program == executable {
-            rule
-        } else {
-            mac.incoming(program).await?
-        };
-        if !matches!(rule, Rule::Unfiltered | Rule::Allowed) {
-            blocked.push(program.to_owned());
-        }
-    }
-    let opened = !blocked.is_empty();
-    if opened {
-        mac.allow_incoming(&blocked).await?;
-        for program in &blocked {
-            if mac.incoming(program).await? != Rule::Allowed {
-                return Err(Failure::new(
-                    "firewall_unchanged",
-                    format!("The firewall on {host} still does not allow {program}."),
-                    "Allow it in System Settings > Network > Firewall > Options on that Mac, then add it again.",
-                ));
-            }
-        }
-    }
-    // A console user who leaves the firewall's prompt unanswered and logs out
-    // turns an allowed program's rule to Block; the guard allows it again.
-    let guarded = mac.guard_incoming(&programs).await?;
-    let outcome = if opened || guarded {
-        Outcome::Done
-    } else {
-        Outcome::Already
-    };
+    let outcome =
+        firewall::configure(mac, host, &executable, joined.daemon, &node, &mut progress).await?;
     record(Step::Firewall, outcome);
 
     progress(Event::Step { step: Step::SshKey });
@@ -363,7 +340,7 @@ pub async fn add<M: RemoteMac>(
     Ok(AddReport {
         next_step: match readiness {
             Readiness::AwaitingProvisioning => format!(
-                "{member} is a member awaiting provisioning: run work there with elsecall run --member {member}, and mark it ready with elsecall fleet ready {member} once its tools are installed."
+                "{member} awaits provisioning. You can run work there with elsecall run --member {member}. After its project tools and configuration are ready, run elsecall fleet ready {member} to enable automatic placement."
             ),
             Readiness::Ready => format!("{member} is a member and takes placed work."),
         },
@@ -688,7 +665,7 @@ async fn verify(socket: &Path, member: &str) -> Result<Readiness> {
             return Err(Failure::new(
                 "member_unverified",
                 format!("{member} joined, but the master cannot reach it as a member: {why}"),
-                "Run elsecall doctor on that Mac (over SSH), then run Add Mac again.",
+                "If the new Mac asks about incoming connections for Elsecall, click Allow there and run Add Mac again. If it still cannot be reached, run elsecall doctor on that Mac.",
             ));
         }
         tokio::time::sleep(Duration::from_millis(500)).await;

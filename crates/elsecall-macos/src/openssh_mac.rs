@@ -8,6 +8,7 @@
 //! Commands run under `/bin/sh` on the Mac; sudo reads the password on standard
 //! input.
 mod connection;
+mod prerequisites;
 
 use self::connection::options;
 use crate::macos::application_firewall;
@@ -62,6 +63,15 @@ struct Ran {
 impl OpensshMac {
     /// Runs `script` with `/bin/sh` on the Mac, with `input` on its standard input.
     async fn run(&self, script: &str, input: Zeroizing<Vec<u8>>) -> Result<Ran> {
+        self.run_within(script, input, COMMAND_TIMEOUT).await
+    }
+
+    async fn run_within(
+        &self,
+        script: &str,
+        input: Zeroizing<Vec<u8>>,
+        timeout: Duration,
+    ) -> Result<Ran> {
         let wrapped = format!("PATH={SYSTEM_PATH}; export PATH; printf '%s\\n' {MARKER}; {script}");
         let mut child = Command::new(SSH)
             .args(["-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes"])
@@ -94,7 +104,7 @@ impl OpensshMac {
             let status = child.wait().await?;
             std::io::Result::Ok((status, out, err))
         };
-        let (status, stdout, stderr) = tokio::time::timeout(COMMAND_TIMEOUT, collected)
+        let (status, stdout, stderr) = tokio::time::timeout(timeout, collected)
             .await
             .map_err(|_| {
                 Failure::new(
@@ -124,15 +134,20 @@ impl OpensshMac {
     /// script gets no standard input and an environment of its own, with system
     /// directories only on its PATH.
     async fn sudo(&self, script: &str) -> Result<Ran> {
+        self.sudo_within(script, COMMAND_TIMEOUT).await
+    }
+
+    async fn sudo_within(&self, script: &str, timeout: Duration) -> Result<Ran> {
         let mut input = Zeroizing::new(self.password.as_bytes().to_vec());
         input.push(b'\n');
         let script = format!("exec </dev/null; {script}");
-        self.run(
+        self.run_within(
             &format!(
                 "/usr/bin/sudo -S -k -p '' -- /usr/bin/env -i PATH={SYSTEM_PATH} HOME=/var/root /bin/sh -c {}",
                 quote(&script)
             ),
             input,
+            timeout,
         )
         .await
     }
@@ -318,16 +333,29 @@ impl RemoteMac for OpensshMac {
             .iter()
             .map(|program| {
                 format!(
-                    "{tool} --add {0} >/dev/null && {tool} --unblockapp {0} >/dev/null",
+                    "{tool} --add {0} >/dev/null; {tool} --unblockapp {0} >/dev/null",
                     quote(program)
                 )
             })
             .collect();
-        let ran = self.sudo(&script.join(" && ")).await?;
-        if !ran.success {
-            return Err(remote_failure("Opening the firewall on the Mac", &ran));
-        }
+        // macOS can decline rule changes even as root. The caller reads the rules
+        // back and can wait for an approval on the new Mac's desktop.
+        self.sudo(&script.join("; ")).await?;
         Ok(())
+    }
+
+    async fn check_lid_closed_power(&mut self) -> Result<()> {
+        prerequisites::check_lid_closed_power(self)
+            .await
+            .map(|_| ())
+    }
+
+    async fn keep_awake_with_lid_closed(&mut self) -> Result<()> {
+        prerequisites::keep_awake_with_lid_closed(self).await
+    }
+
+    async fn ensure_command_line_tools(&mut self) -> Result<bool> {
+        prerequisites::ensure_command_line_tools(self).await
     }
 
     async fn guard_incoming(&mut self, programs: &[String]) -> Result<bool> {

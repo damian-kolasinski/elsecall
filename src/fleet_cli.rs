@@ -48,6 +48,10 @@ enum FleetCommand {
         /// The SSH host key previously observed by the Add Mac window
         #[arg(long, hide = true)]
         ssh_host_key: Option<String>,
+        /// Disable system sleep on a plugged-in MacBook so it stays awake with its lid closed.
+        /// This setting also applies on battery.
+        #[arg(long)]
+        keep_awake_with_lid_closed: bool,
     },
     /// List the Macs on the local network, whether Remote Login is on, and which are members
     Nearby {
@@ -144,6 +148,7 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
             approval_wait,
             progress,
             ssh_host_key,
+            keep_awake_with_lid_closed,
         }) => {
             return crate::add_mac_cli::run(
                 paths,
@@ -152,6 +157,7 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
                 approval_wait,
                 progress,
                 ssh_host_key,
+                keep_awake_with_lid_closed,
             )
             .await;
         }

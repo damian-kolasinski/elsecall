@@ -1671,7 +1671,7 @@ leaves that member out while placement continues with eligible responding member
 Sync and result streams keep their longer exchange/inactivity bounds. See the
 [harness peer-I/O contract](docs/tuning-harness.md#peer-io-diagnosis-and-bounds).
 
-**Finding Macs nearby.** `elsecall fleet nearby` lists the Macs on the local network,
+**Finding Macs nearby.** `elsecall fleet nearby` lists other Macs on the local network,
 the first step of [Adding a Mac](docs/add-mac.md). It browses Bonjour for `_ssh._tcp`
 (Remote Login on) and `_companion-link._tcp` (most Macs while Continuity is on), keeps
 the hosts whose `_device-info._tcp` model is a Mac model identifier (or SSH hosts that
@@ -1706,10 +1706,11 @@ offers a login link (a fresh daemon takes the Mac's Bonjour name): the command p
 it on standard error and opens it in the master's browser, where the operator
 approves the Mac; a tailnet that approves devices gets its admin console instead. It
 waits up to `--approval-wait` and then fails with `tailscale_login_pending`, the link in
-`details.url`; running it again continues. With `--progress json`, standard error has
-one event per line instead (`{"event":"step","step":"tailnet"}`, or
-`{"event":"approve","link":…,"approval":"login"|"device"}`) and the command opens no
-link itself; the fleet window's **Add Mac** sheet follows an add this way. Over
+`details.url`; running it again continues. If the firewall needs approval, the
+command asks the operator to click **Allow** on the new Mac and waits up to a minute.
+With `--progress json`, standard error has one event per line. The fleet window
+uses these events to show steps, open Tailscale approval links, guide firewall
+approval, and keep the SSH host key for retries. Over
 one SSH connection that ignores the operator's SSH configuration and keys and trusts
 the Mac's host key for the rest of the command, it:
 
@@ -1718,21 +1719,25 @@ the Mac's host key for the rest of the command, it:
    sudo accepts (`sudo_refused`), a firewall that does not block all incoming
    connections (`firewall_blocks_all`), and no membership in another fleet
    (`member_of_another_fleet`);
-2. copies the master's installed build (and its window, when it has one) and runs its
+2. checks that Git works and installs Apple Command Line Tools from Software Update
+   when needed;
+3. copies the master's installed build (and its window, when it has one) and runs its
    `install`, unless the Mac already runs that build;
-3. lets the Application Firewall pass Elsecall, and Add Mac's `tailscaled`, when it
+4. lets the Application Firewall pass Elsecall, and Add Mac's `tailscaled`, when it
    filters and has no rule for them, then checks that it does (`firewall_unchanged`
    otherwise), and installs a root LaunchDaemon, `dev.elsecall.firewall-guard`, that
    allows them again within 30 seconds whenever their rule turns to Block, as it does
    when a console user leaves the firewall's prompt unanswered and logs out (see
    [Adding a Mac](docs/add-mac.md)). The master, and Macs joined by hand, have no
    guard;
-4. adds the master's `~/.ssh/id_ed25519.pub` (or `id_ecdsa`, `id_rsa`) to the account's
+5. adds the master's `~/.ssh/id_ed25519.pub` (or `id_ecdsa`, `id_rsa`) to the account's
    `authorized_keys`, accepted only from tailnet addresses and marked
    `elsecall-master:<master>`; without a key this step is skipped and says how to make
    one. `fleet leave` and `uninstall` on the Mac remove the marked lines;
-5. enrolls the Mac awaiting provisioning and has it join, then waits until the master
-   reaches it as a member in sync.
+6. enrolls the Mac awaiting provisioning, verifies that the master can reach it,
+   and syncs the fleet's configuration to it. With `--keep-awake-with-lid-closed`,
+   it also requires the MacBook to be on AC power and disables system sleep after
+   the other setup steps finish. This setting applies on battery too.
 
 Progress lines go to standard error. The result names the `member`, the Mac's `model`,
 `serial_number`, `macos_version` and `ssh_host_key` fingerprint (to compare with
