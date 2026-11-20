@@ -58,6 +58,10 @@ runs without a desktop login, and installation on the second member.
   records exactly the same roster (`in_sync`). Machine state is relayed as each member
   reports it, a JSON object, so fields S1 adds (utilization, pressure, thermal state,
   core counts) pass through without this slice depending on them.
+- **What needs attention is one typed list.** `elsecall fleet` derives `attention` from
+  the members it shows: a member awaiting provisioning, a member on another build than
+  the master. Each item carries the commands that resolve it and says whether only a
+  person can; [fleet-attention.md](fleet-attention.md) has the model and its categories.
 - **Two LaunchAgent sessions.** `desktop` (`gui/<uid>`) is the existing installation and
   is updated in place. `background` (`user/<uid>`, `LimitLoadToSessionType`
   `Background`) runs without a desktop login, like the devbox's other agents. Both keep

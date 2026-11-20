@@ -286,7 +286,7 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall simulate --trace FILE [--set KEY=VALUE ...] [--seed N] [--fidelity] [--day YYYY-MM-DD]` | Offline deterministic fleet simulation through the real scheduler, with sensitivity and recorded-day fidelity results |
 | `elsecall replay [--since D] [--set KEY=VALUE ...]` | This member's recorded placement decisions scored again under changed parameters: which flip, and the estimated effect (see "Tuning scheduling") |
 | `elsecall report [--since D] [--member M] [--label PATTERN]` | How the fleet did over a period and how accurate estimates were, from every member's records and load history, with findings (see "Fleet reports") |
-| `elsecall fleet` | Every member's reachability, role and machine state, fetched over the authenticated tailnet channel |
+| `elsecall fleet` | Every member's reachability, role and machine state, fetched over the authenticated tailnet channel, and what needs attention (`attention`, see [Fleet attention](docs/fleet-attention.md)) |
 | `elsecall copies` | The copies of other members' workspaces this machine holds, their object stores and sizes, free space and recent removals (see "Housekeeping of copies") |
 | `elsecall copies prune [--dry-run]` | Run a housekeeping pass now, or report what it would remove |
 | `elsecall fleet identity` | This member's name, public key, tailnet endpoints and member code |
@@ -1835,6 +1835,13 @@ is `in_sync` with this member's roster) or `unreachable` (with an `error` such a
 `member_unavailable`, `member_rejected` or `member_unverified`). Machine state is
 passed through as each member reports it, so members on newer versions may add fields.
 
+`data.attention` lists what needs an agent or a person: each item names its member,
+a `category` and `code`, a message and hint, and `actions` with a ready-to-run
+`elsecall` command, the member to run it on, and whether only a person can complete
+it. Today a member awaiting provisioning and a member on another build than the
+master each get one; an item clears when its condition does. [Fleet
+attention](docs/fleet-attention.md) describes the model and its categories.
+
 A machine that has not joined a fleet is the master of a fleet of one only while it has
 a tailnet presence. Until then `data.roster_error` says why it has no roster, with the
 repair as its `hint`: `tailnet_unavailable` until Tailscale is running and logged in, or
@@ -2467,7 +2474,8 @@ member, [consumer-kit-slice.md](docs/consumer-kit-slice.md) for label rules,
 consumer controls and failure lines,
 [housekeeping-slice.md](docs/housekeeping-slice.md) for housekeeping of copies, and
 [config-sync-slice.md](docs/config-sync-slice.md) for configuration sync, and
-[fleet-upgrade-slice.md](docs/fleet-upgrade-slice.md) for upgrading the fleet. Review is
+[fleet-upgrade-slice.md](docs/fleet-upgrade-slice.md) for upgrading the fleet, and
+[fleet-attention.md](docs/fleet-attention.md) for what in the fleet needs attention. Review is
 submitted through the operator's Mergegate hub.
 
 Optional typed workload declarations and grant-bound terminal observations are described in [the workload metadata contract](docs/workload-metadata-contract.md). They preserve existing estimation and placement behavior.
