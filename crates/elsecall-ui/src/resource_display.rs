@@ -23,13 +23,18 @@ pub(crate) fn member_cell(member: &MemberRow, kit: &Kit) -> Cell {
     Cell::el(
         col()
             .items_start()
-            .center_y()
+            .justify_center()
             .child(
                 text(member.name.clone())
                     .font(theme::scale().mono)
                     .color(kit.c.text_base),
             )
-            .child(action),
+            .child(
+                row()
+                    .gap(2.0)
+                    .child(action)
+                    .child(crate::provisioning_view::setup_button(member, kit)),
+            ),
     )
 }
 pub(crate) fn cell(member: &MemberRow, metric: Metric, kit: &Kit) -> Cell {
