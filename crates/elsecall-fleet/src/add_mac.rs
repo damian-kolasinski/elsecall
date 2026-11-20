@@ -68,6 +68,9 @@ impl Step {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "event", rename_all = "snake_case")]
 pub enum Event {
+    /// The SSH host key first seen for this target. A retry can require this key
+    /// before handing over the password.
+    HostKey { public_key: String },
     /// A step starts.
     Step { step: Step },
     /// Tailscale on the Mac waits for the operator to approve it at `link`, in a

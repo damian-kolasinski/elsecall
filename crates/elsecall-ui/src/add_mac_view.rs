@@ -10,7 +10,8 @@ mod illustrations;
 
 use self::illustrations::{browser_art, settings_art, wifi_art};
 use crate::add_mac_flow::{
-    MacStatus, Nearby, NearbyMacExt, Page, STEPS, StepState, Target, step_label, step_state,
+    MacStatus, Nearby, NearbyMacExt, Page, STEPS, StepState, Target, needs_new_target, step_label,
+    step_state,
 };
 use crate::app::AppState;
 use crate::theme;
@@ -126,8 +127,8 @@ pub(crate) fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut
         ),
         Page::Failed { failure, .. } => (
             "The Mac was not added",
-            failed(failure, k, &l),
-            failed_buttons(k),
+            failed(failure, flow.has_credentials(), k, &l),
+            failed_buttons(failure, flow.has_credentials(), k),
         ),
     };
     let content = col()
@@ -466,7 +467,7 @@ fn sign_in(state: &AppState, target: &Target, k: &Kit, l: &Look) -> El {
                 .key("add-mac-target"),
         )
         .child(paragraph(
-            "An administrator account on that Mac. The password is used only while Elsecall sets it up, and is never stored.",
+            "Use an administrator account on that Mac. Elsecall keeps the password in memory for setup and retries.",
             l,
         ))
         .child(field(
@@ -523,6 +524,9 @@ fn adding(
     }
     let side = match approval {
         Some((link, approval)) => approve(name, link, *approval, clock, k, l),
+        None if current.is_none() => col()
+            .grow(1.0)
+            .child(paragraph(&format!("Connecting to {name} over SSH…"), l)),
         None => col()
             .grow(1.0)
             .gap(theme::SPACE_3)
@@ -633,7 +637,7 @@ fn done(report: &AddReport, l: &Look) -> El {
     page.key("add-mac-done")
 }
 
-fn failed(failure: &Failure, k: &Kit, l: &Look) -> El {
+fn failed(failure: &Failure, has_credentials: bool, k: &Kit, l: &Look) -> El {
     let mut card = col()
         .w_full()
         .gap(theme::SPACE_2)
@@ -675,14 +679,16 @@ fn failed(failure: &Failure, k: &Kit, l: &Look) -> El {
             ),
         );
     }
-    card.child(
-        text("Trying again continues where it stopped.")
-            .wrap()
-            .w_full()
-            .font(l.small)
-            .color(l.subtle),
-    )
-    .key("add-mac-failed")
+    if has_credentials {
+        card = card.child(
+            text("Trying again continues where it stopped.")
+                .wrap()
+                .w_full()
+                .font(l.small)
+                .color(l.subtle),
+        );
+    }
+    card.key("add-mac-failed")
 }
 
 fn prepare_buttons(k: &Kit) -> Vec<El> {
@@ -767,17 +773,26 @@ fn done_buttons(k: &Kit) -> Vec<El> {
     ]
 }
 
-fn failed_buttons(k: &Kit) -> Vec<El> {
-    vec![
+fn failed_buttons(failure: &Failure, has_credentials: bool, k: &Kit) -> Vec<El> {
+    let mut buttons = vec![
         Button::new("Back")
             .variant(ButtonVariant::Ghost)
             .on_press(|state: &mut AppState| state.add_mac_mut().back())
             .build(k)
             .key("add-mac-back"),
-        Button::new("Try again")
+    ];
+    if !needs_new_target(failure) {
+        buttons.push(
+            Button::new(if has_credentials {
+                "Try again"
+            } else {
+                "Edit sign-in"
+            })
             .variant(ButtonVariant::Contrast)
-            .on_press(|state: &mut AppState| state.add_mac_mut().retry())
+            .on_press(|state: &mut AppState| state.retry_add_mac())
             .build(k)
             .key("add-mac-retry"),
-    ]
+        );
+    }
+    buttons
 }

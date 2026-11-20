@@ -2,6 +2,8 @@
 //! Macs found nearby and the add's progress. Pure; the view draws it and the
 //! source feeds it.
 
+use std::sync::Arc;
+
 use elsecall_contract::failure::Failure;
 use elsecall_fleet::add_mac::{AddReport, Approval, Event, Step};
 use elsecall_fleet::nearby_macs::{Membership, NearbyMac, RemoteLogin};
@@ -28,13 +30,19 @@ pub(crate) struct Target {
     pub model: Option<String>,
 }
 
-/// What `fleet add` needs; the password leaves the sheet's state with it.
+/// What `fleet add` needs for one run.
 pub(crate) struct AddRequest {
     /// Which add this is, so updates from an earlier one are told apart.
     pub run: u64,
     pub host: String,
     pub account: String,
-    pub password: Zeroizing<String>,
+    pub password: Arc<Zeroizing<String>>,
+    pub ssh_host_key: Option<String>,
+}
+
+struct Credentials {
+    account: String,
+    password: Arc<Zeroizing<String>>,
 }
 
 /// The Macs on the local network, as the last look found them.
@@ -100,6 +108,9 @@ pub(crate) struct AddMac {
     pub manual: TextEdit,
     pub account: TextEdit,
     pub password: TextEdit,
+    /// Kept only for retrying the same target in this sheet.
+    credentials: Option<Credentials>,
+    ssh_host_key: Option<String>,
 }
 
 impl Default for AddMac {
@@ -111,6 +122,8 @@ impl Default for AddMac {
             manual: TextEdit::default(),
             account: TextEdit::default(),
             password: TextEdit::default().secure(),
+            credentials: None,
+            ssh_host_key: None,
         }
     }
 }
@@ -294,6 +307,7 @@ impl AddMac {
     }
 
     pub(crate) fn back(&mut self) {
+        self.forget_sign_in();
         self.page = match std::mem::replace(&mut self.page, Page::Closed) {
             Page::Network => Page::Prepare,
             Page::Choose { .. } => Page::Network,
@@ -304,14 +318,19 @@ impl AddMac {
         };
     }
 
+    pub(crate) fn forget_sign_in(&mut self) {
+        self.credentials = None;
+        self.ssh_host_key = None;
+        self.password = TextEdit::default().secure();
+    }
+
     pub(crate) fn can_add(&self) -> bool {
         matches!(self.page, Page::SignIn { .. })
             && valid_account(self.account.text.trim())
             && !self.password.text.is_empty()
     }
 
-    /// Starts adding the Mac: the password moves into the request and the
-    /// field is cleared.
+    /// Starts adding the Mac, moving the password out of the edit field.
     pub(crate) fn start(&mut self) -> Option<AddRequest> {
         if !self.can_add() {
             return None;
@@ -319,20 +338,28 @@ impl AddMac {
         let Page::SignIn { target } = std::mem::replace(&mut self.page, Page::Closed) else {
             unreachable!("can_add checked the page");
         };
+        let account = self.account.text.trim().to_owned();
+        let password = Arc::new(Zeroizing::new(std::mem::take(&mut self.password.text)));
+        self.password = TextEdit::default().secure();
+        Some(self.begin(target, Credentials { account, password }))
+    }
+
+    fn begin(&mut self, target: Target, credentials: Credentials) -> AddRequest {
         self.run += 1;
         let request = AddRequest {
             run: self.run,
             host: target.host.clone(),
-            account: self.account.text.as_str().trim().to_owned(),
-            password: Zeroizing::new(self.password.text.as_str().to_owned()),
+            account: credentials.account.clone(),
+            password: Arc::clone(&credentials.password),
+            ssh_host_key: self.ssh_host_key.clone(),
         };
-        self.password = TextEdit::default().secure();
+        self.credentials = Some(credentials);
         self.page = Page::Adding {
             target,
             current: None,
             approval: None,
         };
-        Some(request)
+        request
     }
 
     /// Applies what the add reported. Returns a link to open when one arrives.
@@ -350,6 +377,12 @@ impl AddMac {
             return None;
         };
         match update {
+            AddUpdate::Event(Event::HostKey { public_key }) => {
+                if self.ssh_host_key.is_none() {
+                    self.ssh_host_key = Some(public_key);
+                }
+                None
+            }
             AddUpdate::Event(Event::Step { step }) => {
                 *current = Some(step);
                 *approval = None;
@@ -365,8 +398,20 @@ impl AddMac {
             AddUpdate::Finished(result) => {
                 let target = target.clone();
                 self.page = match result {
-                    Ok(report) => Page::Done { report },
-                    Err(failure) => Page::Failed { target, failure },
+                    Ok(report) => {
+                        self.forget_sign_in();
+                        Page::Done { report }
+                    }
+                    Err(failure) => {
+                        if matches!(
+                            failure.code.as_str(),
+                            "ssh_password_refused" | "sudo_refused" | "password_required"
+                        ) || needs_new_target(&failure)
+                        {
+                            self.credentials = None;
+                        }
+                        Page::Failed { target, failure }
+                    }
                 };
                 None
             }
@@ -379,12 +424,34 @@ impl AddMac {
         self.apply(RunUpdate { run, update })
     }
 
-    /// A failed add starts again from signing in, with the same account.
-    pub(crate) fn retry(&mut self) {
-        if let Page::Failed { target, .. } = std::mem::replace(&mut self.page, Page::Closed) {
-            self.page = Page::SignIn { target };
+    pub(crate) fn has_credentials(&self) -> bool {
+        self.credentials.is_some()
+    }
+
+    /// Restart the same add, or let the operator correct rejected credentials.
+    pub(crate) fn retry(&mut self) -> Option<AddRequest> {
+        let Page::Failed { target, failure } = &self.page else {
+            return None;
+        };
+        if needs_new_target(failure) {
+            return None;
+        }
+        let target = target.clone();
+        match self.credentials.take() {
+            Some(credentials) => Some(self.begin(target, credentials)),
+            None => {
+                self.page = Page::SignIn { target };
+                None
+            }
         }
     }
+}
+
+pub(crate) fn needs_new_target(failure: &Failure) -> bool {
+    matches!(
+        failure.code.as_str(),
+        "host_key_changed" | "host_key_unreadable"
+    )
 }
 
 /// Whether `step` is done, running or still to come while `current` runs.
@@ -535,15 +602,63 @@ mod tests {
             step: Step::Install,
         }));
         assert!(matches!(&flow.page, Page::Adding { approval: None, .. }));
-        flow.apply_current(AddUpdate::Finished(Err(Failure::new("x", "m", "h"))));
+        flow.apply_current(AddUpdate::Event(Event::HostKey {
+            public_key: "ssh-ed25519 ExampleKey".into(),
+        }));
+        flow.apply_current(AddUpdate::Finished(Err(Failure::new(
+            "ssh_unreachable",
+            "m",
+            "h",
+        ))));
         assert!(matches!(flow.page, Page::Failed { .. }));
-        flow.retry();
+        let request = flow.retry().unwrap();
+        assert!(flow.adding());
+        assert_eq!(request.password.as_str(), "s3cret");
+        assert_eq!(
+            request.ssh_host_key.as_deref(),
+            Some("ssh-ed25519 ExampleKey")
+        );
+        assert!(flow.password.text.is_empty());
+
+        flow.apply_current(AddUpdate::Finished(Err(Failure::new(
+            "ssh_password_refused",
+            "m",
+            "h",
+        ))));
+        assert!(flow.retry().is_none());
         assert!(matches!(flow.page, Page::SignIn { .. }));
+        assert!(!flow.can_add(), "rejected credentials must be corrected");
         assert_eq!(
             flow.account.text.as_str(),
             "devbox",
             "the account stays for a retry"
         );
+    }
+
+    #[test]
+    fn a_changed_host_key_requires_choosing_the_target_again() {
+        let mut flow = AddMac::default();
+        flow.show_choose();
+        flow.set_nearby(Ok(vec![mac("MacBook Pro", true, None)]));
+        flow.show_sign_in();
+        flow.account.replace_text("devbox");
+        flow.password.replace_text("s3cret");
+        flow.start();
+        flow.apply_current(AddUpdate::Event(Event::HostKey {
+            public_key: "ssh-ed25519 ExampleKey".into(),
+        }));
+        flow.apply_current(AddUpdate::Finished(Err(Failure::new(
+            "host_key_changed",
+            "m",
+            "h",
+        ))));
+        assert!(!flow.has_credentials());
+        assert!(flow.retry().is_none());
+        assert!(matches!(flow.page, Page::Failed { .. }));
+        flow.back();
+        flow.show_sign_in();
+        flow.password.replace_text("another-example");
+        assert!(flow.start().unwrap().ssh_host_key.is_none());
     }
 
     #[test]

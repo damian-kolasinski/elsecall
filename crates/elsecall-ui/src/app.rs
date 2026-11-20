@@ -6,7 +6,7 @@ use std::sync::Arc;
 use rune::{App, AppSpec, Chrome, Latest, MenuItem, Tx, Waker, col};
 use rune_kit::{SegmentedControl, TableState, WindowTitlebar};
 
-use crate::add_mac_flow::{AddMac, AddUpdate, Page as AddMacPage, RunUpdate};
+use crate::add_mac_flow::{AddMac, AddRequest, AddUpdate, Page as AddMacPage, RunUpdate};
 use crate::add_mac_source::{self, AddMacSource, Inbox};
 use crate::configuration_view::{self, ConfigurationView, Tab};
 use crate::fleet_source::{
@@ -148,6 +148,7 @@ impl AppState {
     /// While an add runs, closing only stops it: the sheet stays to show how it
     /// ended.
     pub(crate) fn close_add_mac(&mut self) {
+        self.add_mac.forget_sign_in();
         if self.add_mac.adding() {
             self.add_source.stop(self.add_mac.run());
             return;
@@ -166,11 +167,20 @@ impl AppState {
         }
     }
 
-    /// Starts the add on a thread of its own; its updates arrive in the inbox.
     pub(crate) fn start_add_mac(&mut self) {
-        let Some(request) = self.add_mac.start() else {
-            return;
-        };
+        if let Some(request) = self.add_mac.start() {
+            self.run_add_mac(request);
+        }
+    }
+
+    pub(crate) fn retry_add_mac(&mut self) {
+        if let Some(request) = self.add_mac.retry() {
+            self.run_add_mac(request);
+        }
+    }
+
+    /// Starts the add on a thread of its own; its updates arrive in the inbox.
+    fn run_add_mac(&self, request: AddRequest) {
         let source = Arc::clone(&self.add_source);
         let inbox = Arc::clone(&self.add_inbox);
         let run = request.run;

@@ -95,15 +95,17 @@ under that banner.
    A host name or address can be typed instead. When looking fails, the sheet says
    why and what to do, with a way to the Local Network setting when macOS denies it.
 4. **Sign in**: the exact Mac again (name, model, host, address), then an
-   administrator account and its password in a secure field. The password leaves the
-   sheet's state when the add starts and the child's input right after it is written.
+   administrator account and its password in a secure field. The field clears when
+   the add starts. The sheet keeps the password in zeroized memory for retries on
+   the same Mac and clears it on success, Back, or close. When sign-in is refused,
+   **Edit sign-in** lets you correct the account or password.
 5. **Add**: each step of `fleet add` as it runs. When Tailscale waits for approval,
    the window opens its page in the browser and the sheet shows an illustration of
    clicking Connect, with **Open the page again**. **Stop**, the sheet's close button
    and Escape stop the add and keep the sheet to show how it ended; quitting the window
    stops it too. The end shows the new member with its readiness, serial number, host
-   key and Tailscale key expiry, or the failure with **Try again**, which keeps the
-   account (and **Open the page** while an approval is pending).
+   key and Tailscale key expiry, or the failure with **Try again**, which reuses the
+   sign-in and requires the same SSH host key once one has been seen.
 
 Add Mac shows only on the master, the Mac that adds others.
 

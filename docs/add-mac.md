@@ -45,7 +45,9 @@ it without changing its readiness.
    a virtual Mac or repair a fleet member.
    Discovery is a port; the production adapter uses the system's DNS-SD.
 2. **Connects over SSH** to the Mac by its host name or address, with the account and
-   password, and checks the Mac before changing anything. It refuses a Mac it cannot run the master's build
+   password, and briefly retries if the Mac is unreachable. After seeing an SSH host
+   key, the window requires that key before sending the password on a retry.
+   The master checks the Mac before changing anything. It refuses a Mac it cannot run the master's build
    on (the build is arm64 for macOS 14 or later), an account that is not an
    administrator, and a password sudo does not accept. It reports the Mac's model,
    serial number and SSH host key fingerprint, which the operator may compare with
@@ -148,17 +150,15 @@ it without changing its readiness.
   process (`elsecall fleet nearby`, `elsecall fleet add`), and the window runs that
   CLI as its child, so the permission is asked for as Elsecall's. The CLI uses the
   local service only for what it already does: the master's identity and enrolling.
-- **The password lives only in the add command's memory.** It never appears in
-  arguments, the environment, a file, a log, a diagnostic or the output. OpenSSH
-  gets it from an askpass helper that reads it once from a socket in a private
-  directory the command creates and removes; sudo gets it on standard input. SSH to
-  the Mac ignores the operator's SSH configuration, agent and keys. Running Add Mac
-  again asks for the password again. Later work, such as provisioning, asks for it
-  again too, or uses the master's key and the narrowly scoped sudo rules that work
-  installs.
+- **The password stays in memory.** The window keeps it for retries of the same
+  add and wipes it when the add succeeds, sign-in is rejected, or the operator
+  goes back or closes the sheet. The CLI receives it on standard input. OpenSSH
+  gets it through an askpass helper from a private socket, and sudo receives it on
+  standard input. Later work, such as provisioning, uses its own authorization.
 - **The SSH host key is trusted on first use on the local network.** The operator
   picked the Mac by name from the local network, and its host key must not change
-  for the rest of the command. A device on the same network that answers in its
+  for the rest of the command or while retrying in the same sheet. SSH ignores the
+  operator's configuration, agent and keys. A device on the same network that answers in its
   place learns the password, and the master would install Elsecall on it and enroll
   it. An enrolled member can change the roster and move the master role, so this is
   more than a leaked password. Comparing fingerprints by hand would break the

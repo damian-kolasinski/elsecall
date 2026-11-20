@@ -41,6 +41,7 @@ pub async fn run(
     account: String,
     approval_wait: Duration,
     format: Progress,
+    mut ssh_host_key: Option<String>,
 ) -> Result<(Value, bool)> {
     // Watched from the start, so stopping is graceful at any point.
     let mut interrupt =
@@ -61,7 +62,12 @@ pub async fn run(
         let fleet = add_mac::preflight(&master.socket).await?;
         let askpass = std::env::current_exe()
             .map_err(|error| Failure::io("Find this executable for SSH", error))?;
-        let mut mac = OpensshMac::connect(&host, &account, password, &askpass).await?;
+        let connected =
+            OpensshMac::connect(&host, &account, password, &askpass, &mut ssh_host_key).await;
+        if let Some(public_key) = ssh_host_key {
+            progress(Event::HostKey { public_key });
+        }
+        let mut mac = connected?;
         add_mac::add(&mut mac, &host, &master, &fleet, progress).await
     };
     let gone = async {
@@ -105,6 +111,7 @@ fn report_progress(format: Progress, host: &str, event: Event) {
         (Progress::Text, Event::Step { step }) => {
             let _ = writeln!(stderr, "elsecall fleet add {host}: {}", step.doing());
         }
+        (Progress::Text, Event::HostKey { .. }) => {}
         (Progress::Text, Event::Approve { link, approval }) => {
             let what = match approval {
                 Approval::Login => "approve the Mac in Tailscale",

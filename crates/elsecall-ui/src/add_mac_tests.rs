@@ -4,6 +4,7 @@
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
+use elsecall_contract::failure::Failure;
 use elsecall_fleet::add_mac::{AddReport, Approval, Event, Step};
 use elsecall_fleet::nearby_macs::NearbyMac;
 use elsecall_fleet::remote_mac::LoginLink;
@@ -20,6 +21,7 @@ const LINK: &str = "https://login.tailscale.com/a/example";
 struct FakeCli {
     added: Mutex<Option<(String, String, String)>>,
     stopped: Mutex<bool>,
+    fail_first: bool,
     /// Holds the add at its approval until the test lets it finish.
     approved: Mutex<mpsc::Receiver<()>>,
 }
@@ -32,23 +34,38 @@ impl AddMacSource for FakeCli {
         ])
     }
     fn add(&self, request: AddRequest, updates: &(dyn Fn(AddUpdate) + Sync)) {
-        *self.added.lock().unwrap() = Some((
+        let previous = self.added.lock().unwrap().replace((
             request.host.clone(),
             request.account.clone(),
             request.password.to_string(),
         ));
-        for step in [Step::Check, Step::Tailnet] {
-            updates(AddUpdate::Event(Event::Step { step }));
+        if previous.is_none() {
+            updates(AddUpdate::Event(Event::HostKey {
+                public_key: "ssh-ed25519 ExampleKey".into(),
+            }));
+            for step in [Step::Check, Step::Tailnet] {
+                updates(AddUpdate::Event(Event::Step { step }));
+            }
+            updates(AddUpdate::Event(Event::Approve {
+                link: LoginLink::parse(LINK).unwrap(),
+                approval: Approval::Login,
+            }));
+            let _ = self
+                .approved
+                .lock()
+                .unwrap()
+                .recv_timeout(Duration::from_secs(10));
+            if self.fail_first {
+                updates(AddUpdate::Finished(Err(Failure::unavailable())));
+                return;
+            }
+        } else {
+            assert_eq!(
+                request.ssh_host_key.as_deref(),
+                Some("ssh-ed25519 ExampleKey")
+            );
+            assert_eq!(request.password.as_str(), "s3cret");
         }
-        updates(AddUpdate::Event(Event::Approve {
-            link: LoginLink::parse(LINK).unwrap(),
-            approval: Approval::Login,
-        }));
-        let _ = self
-            .approved
-            .lock()
-            .unwrap()
-            .recv_timeout(Duration::from_secs(10));
         updates(AddUpdate::Event(Event::Step {
             step: Step::Install,
         }));
@@ -119,6 +136,7 @@ fn a_mac_is_added_from_the_header_through_every_page() {
     let cli = Arc::new(FakeCli {
         added: Mutex::new(None),
         stopped: Mutex::new(false),
+        fail_first: true,
         approved: Mutex::new(approved),
     });
     let mut rt = window(Arc::clone(&cli));
@@ -177,10 +195,20 @@ fn a_mac_is_added_from_the_header_through_every_page() {
     );
 
     approve.send(()).unwrap();
+    poll_until(&mut rt, "the retry", |state| {
+        matches!(state.add_mac().page, Page::Failed { .. })
+    });
+    click(&mut rt, "add-mac-retry");
+    assert!(
+        rt.state.add_mac().adding(),
+        "retry starts directly from the failure"
+    );
+    assert!(rt.state.add_mac().password.text.is_empty());
     poll_until(&mut rt, "the end", |state| {
         matches!(state.add_mac().page, Page::Done { .. })
     });
     assert!(rt.presented("add-mac-done").is_some());
+    assert!(!rt.state.add_mac().has_credentials());
     click(&mut rt, "add-mac-close");
     assert!(!rt.state.add_mac().is_open());
     assert!(!*cli.stopped.lock().unwrap());
@@ -193,6 +221,7 @@ fn closing_the_sheet_while_adding_stops_the_add_and_keeps_the_sheet() {
     let cli = Arc::new(FakeCli {
         added: Mutex::new(None),
         stopped: Mutex::new(false),
+        fail_first: false,
         approved: Mutex::new(approved),
     });
     let mut rt = window(Arc::clone(&cli));
@@ -214,6 +243,7 @@ fn closing_the_sheet_while_adding_stops_the_add_and_keeps_the_sheet() {
     click(&mut rt, "close");
     assert!(*cli.stopped.lock().unwrap());
     assert!(rt.state.add_mac().is_open());
+    assert!(!rt.state.add_mac().has_credentials());
     drop(approve);
 }
 

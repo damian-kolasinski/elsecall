@@ -45,6 +45,9 @@ enum FleetCommand {
         /// event per line for a program (which then opens approval links itself)
         #[arg(long, value_enum, default_value_t = crate::add_mac_cli::Progress::Text)]
         progress: crate::add_mac_cli::Progress,
+        /// The SSH host key previously observed by the Add Mac window
+        #[arg(long, hide = true)]
+        ssh_host_key: Option<String>,
     },
     /// List the Macs on the local network, whether Remote Login is on, and which are members
     Nearby {
@@ -140,8 +143,17 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
             user,
             approval_wait,
             progress,
+            ssh_host_key,
         }) => {
-            return crate::add_mac_cli::run(paths, host, user, approval_wait, progress).await;
+            return crate::add_mac_cli::run(
+                paths,
+                host,
+                user,
+                approval_wait,
+                progress,
+                ssh_host_key,
+            )
+            .await;
         }
         Some(FleetCommand::Nearby { browse }) => {
             return crate::nearby_cli::run(paths, browse.min(MAX_BROWSE)).await;
