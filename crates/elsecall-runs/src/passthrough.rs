@@ -4,6 +4,7 @@
 //! line of stderr.
 pub mod executor;
 pub mod local;
+mod missing_tool_lines;
 pub mod remote;
 mod signals;
 pub mod status_file;

@@ -321,6 +321,7 @@ pub mod tests {
             leftovers: None,
             leftovers_wait_ms: None,
             interrupted: None,
+            missing_tool: None,
         };
         let exited = Some(Outcome::Exited { exit_code: 1 });
         let mut unlabelled = record(99 * day, exited.clone(), None);

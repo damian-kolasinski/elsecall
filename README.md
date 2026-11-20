@@ -441,7 +441,7 @@ directly:
   that runs without admission because the service is unavailable.
 
 **Elsecall's own failures** (invalid options, a command that cannot be found,
-`service_unavailable`, `fleet_busy`, `request_too_large`, `deadline_skipped`,
+`command_not_found` when a placed run's member lacks it, `service_unavailable`, `fleet_busy`, `request_too_large`, `deadline_skipped`,
 `member_unavailable`, `config_sync_failed`) exit **125** and write two lines to stderr. The first is the
 **failure line** ("Failure lines" in `elsecall skill show integrate`), which says
 what happened and exactly what
@@ -1845,8 +1845,10 @@ passed through as each member reports it, so members on newer versions may add f
 `data.attention` lists what needs an agent or a person: each item names its member,
 a `category` and `code`, a message and hint, and `actions` with a ready-to-run
 `elsecall` command, the member to run it on, and whether only a person can complete
-it. Today a member awaiting provisioning and a member on another build than the
-master each get one; an item clears when its condition does. [Fleet
+it. Today a member awaiting provisioning, a member on another build than the
+master, and a placed run that failed because its member lacks a tool nothing pins
+(`missing_tool_pin`, on the member that placed it) each get one; an item clears
+when its condition does. [Fleet
 attention](docs/fleet-attention.md) describes the model and its categories.
 
 A machine that has not joined a fleet is the master of a fleet of one only while it has

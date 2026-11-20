@@ -64,6 +64,16 @@ impl Scheduler {
         }
     }
 
+    /// Missing tools that still stand among the latest records: runs this
+    /// member placed that failed for lack of a tool on their member.
+    pub fn missing_tools(&self) -> Vec<crate::missing_tool::Standing> {
+        let records = self
+            .records
+            .recent(crate::missing_tool::RECORDS_READ)
+            .unwrap_or_default();
+        crate::missing_tool::standing(&records, self.clock.now())
+    }
+
     /// What the caller of a placed run learned about it, for its record here.
     pub fn placed_report(&self, peer: u32, id: &RunId, report: PlacedReport) -> Result<()> {
         let mut book = self.book();
@@ -83,6 +93,7 @@ impl Scheduler {
         placed.sync = report.sync;
         placed.exit_code = report.exit_code;
         placed.signal = report.signal;
+        placed.missing_tool = report.missing_tool;
         if let Some(cpu_ms) = report.cpu_ms.filter(|ms| *ms < MAXIMUM_CPU_MS) {
             entry.record.cpu_ms = Some(cpu_ms);
         }

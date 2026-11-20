@@ -71,9 +71,35 @@ impl elsecall_reports::report_api::TrustEvidence for TuningTrust {
     }
 }
 
-/// The scheduler's latest placed run with each member, as the fleet view shows it.
-struct PlacedRunsOf(Arc<Scheduler>);
+/// The scheduler's placed runs, as the fleet view shows them: the latest with
+/// each member, and the missing tools no pin in the run's workspace (or the
+/// global mise config under `home`) covers yet.
+struct PlacedRunsOf(Arc<Scheduler>, std::path::PathBuf);
 impl elsecall_fleet::fleet_view::PlacedRuns for PlacedRunsOf {
+    fn unpinned_tools(&self) -> Vec<elsecall_fleet::fleet_view::UnpinnedTool> {
+        use elsecall_tools::pins::lookup;
+        let mut lookups = std::collections::BTreeMap::new();
+        self.0
+            .missing_tools()
+            .into_iter()
+            .filter_map(|standing| {
+                let workspace = standing.workspace.clone();
+                let read = lookups.entry(workspace.clone()).or_insert_with(|| {
+                    lookup::read(workspace.as_deref().map(std::path::Path::new), &self.1)
+                });
+                let manager = standing.missing.manager.as_str();
+                let pin_in = match read {
+                    Ok(pins) if pins.pins(manager, standing.missing.tool.as_str()) => return None,
+                    Ok(pins) => pins.file_for(manager),
+                    // A workspace that cannot be read (moved, or a file in it
+                    // malformed) leaves the item standing, naming the usual file.
+                    Err(_) => lookup::default_file(manager, workspace.is_some()),
+                };
+                Some(elsecall_fleet::fleet_view::UnpinnedTool { standing, pin_in })
+            })
+            .collect()
+    }
+
     fn latest_with(&self, member: &str) -> Option<elsecall_fleet::fleet_view::PlacedRunSummary> {
         self.0.latest_placed_with(member).map(|record| {
             elsecall_fleet::fleet_view::PlacedRunSummary {
@@ -483,7 +509,7 @@ pub async fn serve_with_updates(
                 ))
                 .merge(fleet_local_api::routes(
                     fleet,
-                    Arc::new(PlacedRunsOf(scheduler.clone())),
+                    Arc::new(PlacedRunsOf(scheduler.clone(), paths.home.clone())),
                 ))
         }
         Err(error) => {

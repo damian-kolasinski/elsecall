@@ -238,6 +238,10 @@ pub struct PlacedRecord {
     /// when the other member's side went silent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interrupted: Option<Interruption>,
+    /// On the caller: the tool the command failed for lack of on the member, as
+    /// the caller recognised it in the output that passed through.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub missing_tool: Option<crate::missing_tool::MissingTool>,
 }
 
 /// Why a member knows a placed run did not finish.
@@ -280,6 +284,9 @@ pub struct PlacedReport {
     /// CPU time the command used on the member, as the member measured it.
     #[serde(default)]
     pub cpu_ms: Option<u64>,
+    /// The tool the command failed for lack of, recognised in its output.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub missing_tool: Option<crate::missing_tool::MissingTool>,
 }
 
 /// What the caller needs to drive a placed run.

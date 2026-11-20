@@ -169,11 +169,72 @@ workspace files are relative to the workspace.
 
 ### When a job needs something unpinned
 
-It fails on a member that lacks the tool. Elsecall then attaches a "not pinned,
-pin it here" attention item to the run (delivery 5), naming the tool and the file to
-pin it in. The user either pins it (recommended: every member gets it) or
+It fails on a member that lacks the tool. Elsecall then raises a "not pinned, pin
+it here" attention item (delivery 5), naming the run, the member, the tool and the
+file to pin it in. The user either pins it (recommended: every member gets it) or
 installs it on that member by hand (not recommended: the next member fails the
 same way). A later agent hand-off offers the pin as a change to the repository.
+
+**Recognising it.** The caller of a placed run sees every byte of its output, since
+it passes the member's streams through to its own. As they pass, it watches for:
+
+- exit status 127 from the member failing to start the command at all, which the
+  member now reports as `command_not_found` (exit 125, as before);
+- a shell's `command not found` (zsh, bash, sh, make), `env` or `make` saying
+  `No such file or directory` for a program, as a `#!/usr/bin/env node` script
+  does;
+- the `xcode-select` and `xcrun` stubs saying a tool requires Xcode or is not a
+  developer tool, which names Xcode, pinned in `.xcode-version`;
+- mise's `No version is set for shim: X`, `X@1.2 is not installed` and `missing:
+  X@1.2`.
+
+A recognised line counts only when the command exits with a non-zero status; the
+last one before the exit wins. A program counts only if the caller's own `PATH`
+has it: a program the master lacks too is a typo, or missing everywhere, which no
+pin on the master would fix. Exit 127 without a recognised line names no tool, so
+it raises nothing.
+
+**Privacy and speed.** Each stream's current line is held up to 512 bytes; a
+longer line is skipped whole, and a line is dropped once examined. The bytes
+written to the caller's streams are the ones received, unchanged and in order,
+and the check is a scan for newlines plus a few substring tests per line. Nothing
+of the output is stored or logged. Only the tool's name is kept, on the run's
+record, after validation: letters, digits and `-_.+@:/`, at most 64 characters,
+and never the shape of a credential (a token prefix, or a long segment mixing
+letters and digits), so a script that runs an unquoted `$TOKEN` as a command never
+leaves the token behind.
+
+**Where the item lives (decided).** The fact, the tool and its manager, is kept on
+the caller's record of the run (`placed.missing_tool`). The item is derived from
+the latest records each time the fleet view is read, like every attention item,
+one per member and tool from the latest run that hit it. It clears when:
+
+- the tool is pinned: the run's workspace, or the master's global mise config, pins
+  it (a mise pin under a backend, such as `aqua:realm/SwiftLint`, counts for the
+  program `swiftlint`). The pins are read as `tools pins` reads them, from files
+  only, without resolving versions;
+- a later run of the same job (label and working tree) on that member exits 0: the
+  tool was installed by hand, or the job no longer needs it;
+- the run ages out: it ended more than 7 days ago, or is not among the latest 500
+  records.
+
+A run outside any working tree names the master's global mise config. The item
+appears in the fleet view of the member that placed the run, which is where the
+agent that ran it looks; placed runs start on the master.
+
+**Local runs (decided).** A local run raises nothing. Its command inherits the
+caller's terminal directly, which is what keeps `elsecall run` indistinguishable
+from running the command; Elsecall never sees that output, and passing it through
+a pipe to watch it would change what the command sees (a terminal, colours, line
+buffering). A local run's failure is printed in the terminal of whoever ran it,
+on the machine where the tools come from; a command missing there fails before
+admission, as it always has.
+
+**Actions.** The first pins the tool: the summary names the file, and its command
+(`elsecall tools pins <workspace>`, or `elsecall fleet` outside a workspace) shows
+the pin once written. The second, for mise tools only and `person_only`, installs
+it on that member alone (`elsecall run --member <member> -- mise use --global
+<tool>@latest`), which is not recommended.
 
 ### Two ports and a planner
 

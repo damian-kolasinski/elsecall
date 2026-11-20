@@ -45,6 +45,9 @@ pub enum Category {
     /// A member runs another build than the master: placement and the other work
     /// members exchange are refused between them.
     VersionSkew,
+    /// A run placed on a member failed because a tool it called is missing
+    /// there, and no pin asks for it: pin it, so every member installs it.
+    MissingToolPin,
     /// A category a newer build added, as this build reads it: shown, never
     /// accepted automatically. No producer makes it.
     #[serde(other)]
@@ -56,6 +59,7 @@ impl Category {
         match self {
             Self::AwaitingProvisioning => "awaiting_provisioning",
             Self::VersionSkew => "version_skew",
+            Self::MissingToolPin => "missing_tool_pin",
             Self::Unknown => "unknown",
         }
     }
@@ -145,7 +149,11 @@ mod tests {
             Item::id(Category::VersionSkew, "mac-mini", Some("xcode")),
             "version_skew:mac-mini:xcode"
         );
-        for category in [Category::AwaitingProvisioning, Category::VersionSkew] {
+        for category in [
+            Category::AwaitingProvisioning,
+            Category::VersionSkew,
+            Category::MissingToolPin,
+        ] {
             assert_eq!(
                 serde_json::to_value(category).unwrap(),
                 json!(category.as_str())

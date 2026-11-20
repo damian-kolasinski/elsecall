@@ -3,7 +3,7 @@
 pub mod fleet_tool_inventory;
 mod inventory_reader;
 pub mod mise_cli;
-mod pins;
+pub mod pins;
 pub mod tool_inventory;
 pub mod tools_api;
 pub mod tools_cli;
