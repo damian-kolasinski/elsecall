@@ -14,6 +14,7 @@ mod sync_gate;
 mod add_mac;
 mod admission;
 mod agent_skill;
+mod boot_start;
 mod busy_hour_calibration;
 mod channel_handshake;
 mod config_sync;

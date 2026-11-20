@@ -167,7 +167,7 @@ band = "entry"
 # The `elsecall` binary, src/main.rs, and subcommands of slices that may not
 # use clap themselves.
 binary = "src/main.rs"
-modules = ["workload_observation_cli", "state_sizes", "add_mac_cli", "nearby_cli", "fleet_cli", "uninstall", "simulate_cli", "rehearse_cli", "rehearsal_compare"]
+modules = ["workload_observation_cli", "state_sizes", "add_mac_cli", "boot_start_cli", "piped_password", "nearby_cli", "fleet_cli", "uninstall", "simulate_cli", "rehearse_cli", "rehearsal_compare"]
 
 [crates.ui]
 band = "entry"

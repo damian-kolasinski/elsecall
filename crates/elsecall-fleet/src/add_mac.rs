@@ -248,10 +248,18 @@ pub async fn add<M: RemoteMac>(
         .map_err(|error| Failure::io("Read the master's build", error))?
         .build_id()
         .to_string();
-    let outcome = if installed.as_deref() == Some(wanted.as_str()) {
+    let current = installed.as_deref() == Some(wanted.as_str());
+    if !current {
+        mac.install(&master.build).await?;
+    }
+    // launchd starts a background-session service at boot only through this
+    // root starter; a desktop-session one it leaves to the desktop login. Running
+    // Add Mac again installs it on a member added before it existed.
+    let agent = Paths::for_home(Path::new(&facts.home))?.agent;
+    let started = mac.start_at_boot(&facts.account, facts.uid, &agent).await?;
+    let outcome = if current && !started {
         Outcome::Already
     } else {
-        mac.install(&master.build).await?;
         Outcome::Done
     };
     record(Step::Install, outcome);
@@ -479,6 +487,15 @@ fn check(facts: &MacFacts) -> Result<()> {
             "Update macOS on that Mac, then add it again.",
         ));
     }
+    // Elsecall runs as a regular account, and launchd starts its service at
+    // boot as that account.
+    if facts.uid == 0 {
+        return Err(Failure::new(
+            "unsupported_account",
+            "Elsecall runs as a regular account, not root.",
+            "Use an administrator account other than root.",
+        ));
+    }
     if !facts.administrator {
         return Err(Failure::new(
             "not_administrator",
@@ -703,6 +720,7 @@ mod tests {
             model: Some("Mac16,10".into()),
             serial_number: None,
             account: "devbox".into(),
+            uid: 502,
             home: "/Users/devbox".into(),
             administrator: true,
             local_host_name: Some("macbook-pro".into()),
@@ -729,6 +747,12 @@ mod tests {
             ..facts()
         };
         assert_eq!(check(&user).unwrap_err().code, "not_administrator");
+        let root = MacFacts {
+            uid: 0,
+            account: "root".into(),
+            ..facts()
+        };
+        assert_eq!(check(&root).unwrap_err().code, "unsupported_account");
     }
 
     fn node(domain: Option<&str>) -> TailnetNode {
