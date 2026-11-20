@@ -453,6 +453,7 @@ impl AddMac {
                                 | "sudo_refused"
                                 | "password_required"
                                 | "not_administrator"
+                                | "unsupported_account"
                         ) || needs_new_target(&failure)
                             || (failure.code == "unexpected_response"
                                 && self.ssh_host_key.is_none())
@@ -711,19 +712,15 @@ mod tests {
         );
         assert!(flow.password.text.is_empty());
 
-        flow.apply_current(AddUpdate::Finished(Err(Failure::new(
-            "not_administrator",
-            "m",
-            "h",
-        ))));
-        assert!(flow.retry().is_none());
-        assert!(matches!(flow.page, Page::SignIn { .. }));
-        assert!(!flow.can_add(), "rejected credentials must be corrected");
-        assert_eq!(
-            flow.account.text.as_str(),
-            "devbox",
-            "the account stays for a retry"
-        );
+        for code in ["not_administrator", "unsupported_account"] {
+            flow.apply_current(AddUpdate::Finished(Err(Failure::new(code, "m", "h"))));
+            assert!(flow.retry().is_none(), "{code}");
+            assert!(matches!(flow.page, Page::SignIn { .. }));
+            assert!(!flow.can_add(), "rejected credentials must be corrected");
+            assert_eq!(flow.account.text.as_str(), "devbox");
+            flow.password.replace_text("s3cret");
+            assert!(flow.start().is_some());
+        }
     }
 
     #[test]

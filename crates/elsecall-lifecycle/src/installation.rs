@@ -19,7 +19,9 @@ pub enum Session {
     /// Starts at the user's desktop login and stops at logout.
     Desktop,
     /// Runs without a desktop login, across ssh disconnects, for accounts such as
-    /// agent accounts that never log in to the desktop.
+    /// agent accounts that never log in to the desktop. The service manager does
+    /// not start it at boot by itself: on macOS that takes a one-time root boot
+    /// starter, which Add Mac and `elsecall service start-at-boot` install.
     Background,
 }
 impl Session {

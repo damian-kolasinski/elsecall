@@ -60,6 +60,7 @@ pub(crate) struct MemberRow {
     pub memory: Option<MemoryUse>,
     pub load: Option<LoadAverages>,
     pub release: Release,
+    pub contributors: crate::resource_details::Contributors,
 }
 
 /// How a member's release compares with the master's. Work moves between members

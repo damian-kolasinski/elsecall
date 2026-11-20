@@ -92,6 +92,22 @@ it without changing its readiness.
    runs the master's exact build, and running its `install`. The session follows
    the existing rule: desktop when the account has a desktop login, otherwise
    background.
+
+   It also installs a root LaunchDaemon, `dev.elsecall.boot.<account>`, so a
+   background-session service comes back after the Mac restarts, before anyone
+   logs in (after a FileVault unlock). launchd loads `~/Library/LaunchAgents`
+   only into a desktop login, which skips an agent limited to the background
+   session, and nothing loads that agent into the account's `user/<uid>` domain at
+   boot: without the daemon the member stays unreachable after a restart until
+   someone runs `elsecall service restart` there. The daemon runs once at boot as
+   the account (`UserName`) and runs only
+   `/bin/launchctl bootstrap user/<uid> ~/Library/LaunchAgents/dev.elsecall.agent.plist`.
+   A desktop-session agent is refused there, so the daemon does nothing for one,
+   and after an uninstall it finds no agent. Running Add Mac again on a member
+   installs it with the current build. `elsecall service start-at-boot` on the Mac
+   can install the starter directly. To remove the starter, run
+   `sudo launchctl bootout system/dev.elsecall.boot.<account>` and
+   `sudo rm /Library/LaunchDaemons/dev.elsecall.boot.<account>.plist` on that Mac.
 6. **Opens the Application Firewall** for Elsecall, and for Add Mac's `tailscaled` so
    peers connect directly rather than through Tailscale's relays, when it is on,
    with sudo. This changes the rule that Elsecall only reports firewall rules
@@ -142,8 +158,23 @@ it without changing its readiness.
   could put its own `mkdir` or `shasum` first. Tailscale is downloaded, checked
   and installed by root in a directory root created, never from a path the
   account could change.
+- **The boot starter runs as the account, not as root.** A background-session
+  service has to start at boot without a login and still run as the account, in
+  the account's own launchd domain, where the commands it runs for other members
+  reach the account's per-user services. Making the service itself a system
+  LaunchDaemon with `UserName` would start it at boot, but it would run in the
+  system domain, and every install, update and restart would need root, which a
+  fleet upgrade does not have. So the service stays the LaunchAgent it was, and
+  the one root step is a daemon root only loads: launchd drops to the account
+  before it runs `/bin/launchctl`, which bootstraps the account's own agent into
+  the account's own domain, as the account could itself. Verified in a macOS VM
+  restarted with no one logged in: a background installation without the starter
+  stayed down, and with it the service answered 14 seconds after boot, launchd
+  recording the starter's bootstrap as successful. A desktop-session agent was
+  refused by that domain, and after an uninstall the starter found no agent;
+  neither started anything.
 - **A root guard acts on the account's executable, as data only.** The firewall
-  guard is the one root component that keeps running, and it acts on a path the
+  guard is the one root component that keeps running as root, and it acts on a path the
   account can change. It runs only `socketfilterfw` and `logger`, by absolute path
   and in launchd's empty environment, with the program paths as arguments, and never
   runs the programs. A firewall rule already follows the program's path from build to

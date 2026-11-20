@@ -157,7 +157,8 @@ enum ConfigCommand {
 enum SessionArg {
     /// Start at desktop login, stop at logout
     Desktop,
-    /// Run without a desktop login and across ssh disconnects
+    /// Run without a desktop login and across ssh disconnects; starting at boot
+    /// also needs `elsecall service start-at-boot` once
     Background,
 }
 
@@ -165,6 +166,12 @@ enum SessionArg {
 enum ServiceCommand {
     /// Stop and start the installed service, then wait until it is ready
     Restart,
+    /// Have launchd start a background-session service at boot, before anyone logs
+    /// in; installs a root LaunchDaemon once, so it needs an administrator's password
+    #[command(
+        after_help = "sudo asks on a terminal; a program pipes the password in on standard input. Add Mac does this for the Macs it adds."
+    )]
+    StartAtBoot,
 }
 
 #[tokio::main]
@@ -405,6 +412,12 @@ async fn run(cli: Cli) -> Result<bool> {
                 serde_json::to_value(ApplicationFirewall.inbound(&paths.executable()))
                     .expect("serializable firewall state");
             data["window"] = serde_json::to_value(window).expect("serializable window state");
+            let boot_start = elsecall::boot_start_cli::state(&paths);
+            data["boot_start"] = serde_json::to_value(boot_start).expect("serializable state");
+            if elsecall::boot_start_cli::missing(installation::session(&paths, manager), boot_start)
+            {
+                data["next_step"] = elsecall::boot_start_cli::NEXT_STEP.into();
+            }
             // Agents learn the installed build from its skill (README "Agent skill").
             data["agent_skill"] = elsecall_lifecycle::agent_skill::set_up_found(&paths.home);
             output(data);
@@ -427,6 +440,9 @@ async fn run(cli: Cli) -> Result<bool> {
             let (skills, removed) = elsecall_lifecycle::agent_skill::remove_all(&paths);
             complete &= removed;
             data["agent_skill"] = skills;
+            if let Some(kept) = elsecall::boot_start_cli::kept(&paths) {
+                data["boot_start_kept"] = kept;
+            }
             output(data);
             return Ok(complete);
         }
@@ -472,6 +488,8 @@ async fn run(cli: Cli) -> Result<bool> {
             let loaded = manager.loaded();
             let installed = installation::installed(&paths);
             let launch_agent_current = installation::launch_agent_current(&paths, manager);
+            let session = installation::session(&paths, manager);
+            let boot_start = elsecall::boot_start_cli::state(&paths);
             // Fleet problems make doctor unhealthy only for an enrolled member; on a solo
             // machine they are reported for information.
             let membership =
@@ -588,6 +606,10 @@ async fn run(cli: Cli) -> Result<bool> {
                 })
             {
                 "Service configuration needs attention: follow configuration_sync.next_step and each member's service state.".to_owned()
+            } else if elsecall::boot_start_cli::missing(session, boot_start) {
+                // After the remedies an agent can act on: this one needs an
+                // administrator, and the service runs until the next restart.
+                elsecall::boot_start_cli::NEXT_STEP.to_owned()
             } else if let Some(first) = warnings.first() {
                 elsecall_scheduling::outside_pressure::remedy::warning_step(
                     &first.member,
@@ -604,8 +626,9 @@ async fn run(cli: Cli) -> Result<bool> {
                 "installation_present": installed.as_ref().ok(),
                 "installation_error": installed.err(),
                 "launch_agent_loaded": loaded.as_ref().ok(),
-                "session": installation::session(&paths, manager),
+                "session": session,
                 "launch_agent_current": launch_agent_current,
+                "boot_start": boot_start,
                 "launch_agent_error": loaded.err(),
                 "service": health.as_ref().ok(),
                 "service_error": health.err(),
@@ -633,6 +656,9 @@ async fn run(cli: Cli) -> Result<bool> {
             let _restarting = installation::restart(&paths, manager)?;
             output(wait_ready(&paths).await?);
         }
+        Command::Service {
+            command: ServiceCommand::StartAtBoot,
+        } => output(elsecall::boot_start_cli::run(&paths, manager)?),
         Command::Serve => {
             // After an upgrade, the stubs an older build wrote point at this one.
             elsecall_lifecycle::agent_skill::refresh_if_installed(&paths);

@@ -105,6 +105,23 @@ async fn the_adapter_reads_installs_and_authorizes_on_a_real_mac() {
     let status = mac.elsecall(&["status"]).await.unwrap();
     assert_eq!(status["status"], "ready", "{status}");
 
+    // The boot starter, installed once; the Mac's doctor then finds it.
+    assert!(facts.uid > 0);
+    let agent = elsecall_host::paths::Paths::for_home(Path::new(&facts.home))
+        .unwrap()
+        .agent;
+    mac.start_at_boot(&facts.account, facts.uid, &agent)
+        .await
+        .unwrap();
+    assert!(
+        !mac.start_at_boot(&facts.account, facts.uid, &agent)
+            .await
+            .unwrap(),
+        "installed once"
+    );
+    let doctor = mac.elsecall(&["doctor"]).await.unwrap();
+    assert_eq!(doctor["boot_start"], "installed", "{doctor}");
+
     let executable = format!(
         "{}/Library/Application Support/Elsecall/elsecall",
         facts.home
@@ -155,5 +172,14 @@ async fn the_adapter_reads_installs_and_authorizes_on_a_real_mac() {
 
     let uninstalled = mac.elsecall(&["uninstall", "--force"]).await.unwrap();
     assert_eq!(uninstalled["status"], "uninstalled", "{uninstalled}");
+    // The starter needs root to remove, so it stays and is named.
+    assert_eq!(
+        uninstalled["boot_start_kept"]["commands"][0],
+        format!(
+            "sudo launchctl bootout system/dev.elsecall.boot.{}",
+            facts.account
+        ),
+        "{uninstalled}"
+    );
     assert_eq!(mac.installed_build().await.unwrap(), None);
 }

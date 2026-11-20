@@ -83,40 +83,12 @@ fn configuration_with(tool: &str, programs: &[String]) -> Result<Vec<u8>> {
 /// replacing an older one. It prints `installed` when it changed the guard and
 /// `unchanged` when the same guard was already loaded.
 pub fn install_script(configuration: &[u8]) -> String {
-    use base64::Engine;
-    let encoded = base64::engine::general_purpose::STANDARD.encode(configuration);
-    format!(
-        r#"set -e
-plist='{PLIST}'
-new=$(/usr/bin/mktemp /Library/LaunchDaemons/.elsecall-firewall-guard.XXXXXX)
-trap '/bin/rm -f "$new"' EXIT
-printf '%s' '{encoded}' | /usr/bin/base64 -D > "$new"
-if /usr/bin/cmp -s "$new" "$plist" && /bin/launchctl print system/{LABEL} >/dev/null 2>&1; then
-  echo unchanged
-  exit 0
-fi
-/usr/sbin/chown root:wheel "$new"
-/bin/chmod 644 "$new"
-/bin/mv -f "$new" "$plist"
-/bin/launchctl bootout system/{LABEL} >/dev/null 2>&1 || true
-waited=0
-while /bin/launchctl print system/{LABEL} >/dev/null 2>&1 && [ "$waited" -lt 100 ]; do
-  /bin/sleep 0.1
-  waited=$((waited + 1))
-done
-/bin/launchctl enable system/{LABEL}
-/bin/launchctl bootstrap system "$plist"
-echo installed"#
-    )
+    super::launch_daemon::install_script(LABEL, PLIST, configuration)
 }
 
 /// Whether `install_script`'s output says it changed the guard.
 pub fn installed(stdout: &[u8]) -> Option<bool> {
-    match String::from_utf8_lossy(stdout).trim() {
-        "installed" => Some(true),
-        "unchanged" => Some(false),
-        _ => None,
-    }
+    super::launch_daemon::installed(stdout)
 }
 
 #[cfg(test)]
@@ -151,30 +123,11 @@ mod tests {
     }
 
     #[test]
-    fn install_output_is_read_strictly() {
-        assert_eq!(installed(b"installed\n"), Some(true));
-        assert_eq!(installed(b"unchanged\n"), Some(false));
-        assert_eq!(installed(b"Password:\ninstalled"), None);
-    }
-
-    #[test]
-    fn install_script_carries_the_configuration_unchanged() {
-        use base64::Engine;
-        let configuration = configuration(&["/Users/me/a b".to_owned()]).unwrap();
-        let script = install_script(&configuration);
-        let encoded = script
-            .lines()
-            .find_map(|l| l.strip_prefix("printf '%s' '"))
-            .and_then(|l| l.split_once('\'').map(|(e, _)| e))
-            .unwrap();
-        assert_eq!(
-            base64::engine::general_purpose::STANDARD
-                .decode(encoded)
-                .unwrap(),
-            configuration
-        );
-        assert!(script.contains("bootstrap system \"$plist\""));
+    fn install_script_installs_the_guard() {
+        let script = install_script(&configuration(&["/Users/me/a b".to_owned()]).unwrap());
         assert!(script.contains(PLIST));
+        assert!(script.contains("bootstrap system"));
+        assert!(script.contains(&format!("system/{LABEL}")));
     }
 
     /// Runs the daemon's check as launchd would, against a fake `socketfilterfw`

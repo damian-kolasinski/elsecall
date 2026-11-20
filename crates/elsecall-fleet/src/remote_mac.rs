@@ -4,7 +4,7 @@ use crate::inbound_firewall::Rule;
 use elsecall_contract::failure::Result;
 use elsecall_peers::tailscale_bottle::Bottle;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// What the Mac is, read once before anything changes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -15,6 +15,8 @@ pub struct MacFacts {
     pub model: Option<String>,
     pub serial_number: Option<String>,
     pub account: String,
+    #[serde(skip)]
+    pub uid: u32,
     #[serde(skip)]
     pub home: String,
     pub administrator: bool,
@@ -168,6 +170,10 @@ pub trait RemoteMac {
     /// Keeps the Application Firewall passing incoming connections to `programs`
     /// from now on, whoever denies them later; true when that changed anything.
     async fn guard_incoming(&mut self, programs: &[String]) -> Result<bool>;
+    /// Has the Mac start the account's background-session service at boot from
+    /// now on, before anyone logs in, by bootstrapping the installation's
+    /// LaunchAgent at `agent`; true when that changed anything.
+    async fn start_at_boot(&mut self, account: &str, uid: u32, agent: &Path) -> Result<bool>;
     /// Adds `line` to the account's `authorized_keys` unless its key is there;
     /// true when it was added.
     async fn authorize_key(&mut self, line: &str) -> Result<bool>;

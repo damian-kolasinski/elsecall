@@ -18,7 +18,7 @@ use elsecall_peers::tailscale_bottle::Bottle;
 use members::{TestMember, free_port};
 use serde_json::Value;
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     process::Output,
     sync::{
         Arc,
@@ -67,6 +67,9 @@ struct FakeMac {
     opened: Vec<String>,
     /// The programs the root firewall guard keeps allowed, once installed.
     guarded: Option<Vec<String>>,
+    /// The boot starter's account, user ID and LaunchAgent, once installed.
+    starts_at_boot: Option<(String, u32, PathBuf)>,
+    installs: usize,
 }
 
 impl FakeMac {
@@ -84,6 +87,7 @@ impl FakeMac {
                 model: Some("Mac16,10".into()),
                 serial_number: Some("EXAMPLE0001".into()),
                 account: "devbox".into(),
+                uid: 502,
                 home: home.path().to_string_lossy().into_owned(),
                 administrator: true,
                 local_host_name: Some(name.into()),
@@ -101,6 +105,8 @@ impl FakeMac {
             desktop_approval_checks: 0,
             opened: Vec::new(),
             guarded: None,
+            starts_at_boot: None,
+            installs: 0,
         }
     }
 
@@ -239,6 +245,7 @@ impl RemoteMac for FakeMac {
             .and_then(|status| status["build"].as_str().map(str::to_owned)))
     }
     async fn install(&mut self, build: &Build) -> Result<Value> {
+        self.installs += 1;
         let staged = tempfile::tempdir().unwrap();
         let copy = staged.path().join("elsecall");
         std::fs::copy(&build.executable, &copy).unwrap();
@@ -281,6 +288,12 @@ impl RemoteMac for FakeMac {
     async fn guard_incoming(&mut self, programs: &[String]) -> Result<bool> {
         let changed = self.guarded.as_deref() != Some(programs);
         self.guarded = Some(programs.to_vec());
+        Ok(changed)
+    }
+    async fn start_at_boot(&mut self, account: &str, uid: u32, agent: &Path) -> Result<bool> {
+        let wanted = Some((account.to_owned(), uid, agent.to_owned()));
+        let changed = self.starts_at_boot != wanted;
+        self.starts_at_boot = wanted;
         Ok(changed)
     }
     async fn authorize_key(&mut self, line: &str) -> Result<bool> {
@@ -386,6 +399,12 @@ async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired(
     );
     // And a root guard keeps it allowed after a console user denies it.
     assert_eq!(mac.guarded.as_ref(), Some(&mac.opened));
+    // launchd starts its service at boot, as its account, through the
+    // installation's LaunchAgent.
+    assert_eq!(
+        mac.starts_at_boot,
+        Some(("devbox".to_owned(), 502, mac.paths().agent))
+    );
     let keys = mac.authorized_keys();
     assert!(
         keys.starts_with("from=\"100.64.0.0/10,fd7a:115c:a1e0::/48\" ssh-ed25519 "),
@@ -403,6 +422,15 @@ async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired(
     assert_eq!(steps[4], (Step::Firewall, Outcome::Already));
     assert_eq!(steps[5], (Step::SshKey, Outcome::Already));
     assert_eq!(mac.opened.len(), 1, "allowed once");
+
+    // A member added before the boot starter existed gets it from Add Mac,
+    // without reinstalling its build.
+    mac.starts_at_boot = None;
+    let installs = mac.installs;
+    let migrated = add(&mut mac, &master, |_| ()).await.unwrap();
+    assert!(outcomes(&migrated).contains(&(Step::Install, Outcome::Done)));
+    assert!(mac.starts_at_boot.is_some());
+    assert_eq!(mac.installs, installs);
 
     // A member added before the guard existed gets it from Add Mac, which
     // repairs a member: its rule is already allowed, so only the guard changes.
@@ -439,6 +467,7 @@ async fn a_mac_that_cannot_join_is_refused_before_anything_changes() {
     for mac in [&other, &intel] {
         assert!(!mac.paths().executable().exists(), "nothing was installed");
         assert!(mac.guarded.is_none(), "no guard either");
+        assert!(mac.starts_at_boot.is_none(), "nor a boot starter");
     }
     assert_eq!(alpha.fleet()["members"].as_array().unwrap().len(), 1);
 }

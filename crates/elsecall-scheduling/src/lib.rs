@@ -1,5 +1,6 @@
 //! Scheduling work on this member: admitting it, the records and estimates it
 //! learns from, the load log and outside pressure.
+pub mod active_grants;
 mod admission;
 mod binding;
 mod busy;

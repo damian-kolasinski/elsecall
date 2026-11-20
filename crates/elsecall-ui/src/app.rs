@@ -42,6 +42,7 @@ const SCENES: &[(&str, Scene)] = &[
     ("solo", scene_solo),
     ("no-tailnet", scene_no_tailnet),
     ("members", scene_members),
+    ("resource-load", scene_resource_load),
     ("members-selected", scene_members_selected),
     (
         "members-awaiting-provisioning",
@@ -90,6 +91,8 @@ pub(crate) enum Phase {
 }
 
 pub(crate) struct AppState {
+    pub(crate) snapshot_at: elsecall_contract::scheduling_model::timestamp::Timestamp,
+    pub(crate) load_member: Option<String>,
     pub(crate) configuration: ConfigurationView,
     phase: Phase,
     refreshed: Option<String>,
@@ -132,6 +135,7 @@ const ANIMATION_FRAME: std::time::Duration = std::time::Duration::from_millis(33
 impl AppState {
     fn open_configuration(&mut self, tx: &mut Tx) {
         if !self.add_mac.is_open() {
+            self.load_member = None;
             self.configuration.open();
             tx.instant();
         }
@@ -150,6 +154,7 @@ impl AppState {
     }
 
     pub(crate) fn open_add_mac(&mut self) {
+        self.load_member = None;
         self.add_mac.open();
         self.last_look = None;
     }
@@ -408,7 +413,16 @@ impl AppState {
     fn apply_refresh(&mut self, update: Update) {
         match update.result {
             Ok(snapshot) => {
+                self.snapshot_at = elsecall_contract::scheduling_model::timestamp::Timestamp::now();
                 self.refreshed = Some(update.refreshed_at);
+                if self.load_member.as_ref().is_some_and(|name| {
+                    !snapshot
+                        .members
+                        .iter()
+                        .any(|m| &m.name == name && m.reach == Reachability::Reachable)
+                }) {
+                    self.load_member = None;
+                }
                 self.phase = Phase::Ready(snapshot);
             }
             Err(failure) => {
@@ -509,6 +523,9 @@ fn render(state: &AppState, cx: &mut rune::Cx<AppState>) -> rune::El {
         .child(toolbar)
         .child(col().w_full().grow(1.0).min_h(0.0).child(page));
     let mut overlays = Vec::new();
+    if !state.configuration.visible() && !state.add_mac.is_open() {
+        crate::load_dialog::overlay(state, &kit, &mut overlays);
+    }
     crate::add_mac_view::sheet(state, &kit, cx.is_reduced_motion(), &mut overlays);
     rune_kit::root(base, overlays)
 }
@@ -527,6 +544,8 @@ fn spec() -> AppSpec<AppState> {
 
 fn init() -> AppState {
     AppState {
+        snapshot_at: elsecall_contract::scheduling_model::timestamp::Timestamp::now(),
+        load_member: None,
         configuration: ConfigurationView::default(),
         phase: Phase::Loading,
         refreshed: None,
@@ -752,6 +771,19 @@ fn scene_no_tailnet(state: &mut AppState) {
     state.follow_service = false;
     state.refreshed = Some("14:32:05".into());
     state.phase = Phase::Ready(no_tailnet_snapshot());
+}
+
+fn scene_resource_load(state: &mut AppState) {
+    state.snapshot_at = elsecall_contract::scheduling_model::timestamp::Timestamp::parse_rfc3339(
+        "2026-11-01T14:00:00Z",
+    )
+    .unwrap();
+    state.follow_service = false;
+    state.refreshed = Some("14:00:00".into());
+    let fixture = serde_json::from_str(include_str!("../tests/fixtures/resource-load.json"))
+        .expect("resource scene");
+    state.phase =
+        Phase::Ready(socket_source::snapshot_from_value(&fixture).expect("resource snapshot"));
 }
 
 fn scene_members(state: &mut AppState) {
@@ -1061,6 +1093,7 @@ fn member(
         reach,
         readiness: Readiness::Ready,
         gate,
+        contributors: Default::default(),
         cpu: cpu.map(|(utilization, _)| utilization),
         logical_cpus: cpu.and_then(|(_, count)| NonZeroU32::new(count)),
         memory,

@@ -14,13 +14,11 @@ use elsecall_macos::openssh_mac::OpensshMac;
 use elsecall_peers::tailnet::{Configured, Tailnet};
 use serde_json::Value;
 use std::{
-    io::{BufRead, IsTerminal, Read, Write},
+    io::{IsTerminal, Write},
     time::Duration,
 };
 use tokio::signal::unix::{SignalKind, signal};
-use zeroize::Zeroizing;
 
-const PASSWORD_LIMIT: u64 = 4096;
 /// The operator's default SSH keys, in the order OpenSSH offers them.
 const SSH_KEYS: [&str; 3] = [
     ".ssh/id_ed25519.pub",
@@ -53,7 +51,7 @@ pub async fn run(
         signal(SignalKind::terminate()).map_err(|error| Failure::io("Watch for SIGTERM", error))?;
     let stdin = std::io::stdin();
     let terminal = stdin.is_terminal();
-    let password = password(&mut stdin.lock(), terminal)?;
+    let password = crate::piped_password::read(&mut stdin.lock(), terminal)?;
     // A program following the add keeps standard input open: when it closes,
     // whoever started the add is gone, and the add stops.
     let closed = (format == Progress::Json).then(watch_stdin);
@@ -170,34 +168,6 @@ fn stopped() -> Failure {
     )
 }
 
-/// The account's password: the first line of `input`, read no further, so a
-/// program can keep the rest open. A terminal is refused, so the command never
-/// waits for typing or echoes the password.
-fn password(input: &mut impl BufRead, terminal: bool) -> Result<Zeroizing<String>> {
-    let refused = || {
-        Failure::new(
-            "password_required",
-            "The account's password must arrive on standard input.",
-            "Pipe it in, for example from your password manager's command-line tool.",
-        )
-    };
-    if terminal {
-        return Err(refused());
-    }
-    let mut bytes = Zeroizing::new(Vec::new());
-    input
-        .take(PASSWORD_LIMIT)
-        .read_until(b'\n', &mut bytes)
-        .map_err(|error| Failure::io("Read the password", error))?;
-    let text = std::str::from_utf8(&bytes).map_err(|_| refused())?;
-    let line = text.split('\n').next().unwrap_or_default();
-    let line = line.strip_suffix('\r').unwrap_or(line);
-    if line.is_empty() {
-        return Err(refused());
-    }
-    Ok(Zeroizing::new(line.to_owned()))
-}
-
 /// The master's build, tailnet and SSH key.
 fn master(
     paths: &Paths,
@@ -237,25 +207,4 @@ fn master(
         approval_wait,
         keep_awake_with_lid_closed,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_password_is_the_first_line_of_piped_input() {
-        let read =
-            |input: &[u8], terminal| password(&mut { input }, terminal).map(|p| p.to_string());
-        assert_eq!(read(b"s3cret pass\n", false).unwrap(), "s3cret pass");
-        assert_eq!(read(b"s3cret\r\nignored\n", false).unwrap(), "s3cret");
-        assert_eq!(read(b"no newline", false).unwrap(), "no newline");
-        for refused in [&b""[..], b"\n", b"\xff\xfe\n"] {
-            assert_eq!(read(refused, false).unwrap_err().code, "password_required");
-        }
-        assert_eq!(
-            read(b"typed\n", true).unwrap_err().code,
-            "password_required"
-        );
-    }
 }

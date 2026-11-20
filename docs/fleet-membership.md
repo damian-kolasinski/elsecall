@@ -168,7 +168,9 @@ release binary over ssh, which ran its own `install`.
 - The macOS firewall needs an administrator to allow Elsecall's executable once per
   machine. The rule survived an update in testing, but nothing guarantees that for
   unsigned executables, so check `doctor` after updates.
-- The background session's behaviour after a reboot with nobody logged in has not
-  been tested; rebooting the devbox would disturb its agent workloads. Background agents
-  load when the account's background session starts, as the devbox's existing agents
-  do.
+- A background-session agent does not come back after a reboot by itself: launchd
+  loads `~/Library/LaunchAgents` only into a desktop login, which skips it, and nothing
+  loads it into the account's `user/<uid>` domain at boot. A member found unreachable
+  after a restart showed this. The root boot starter `dev.elsecall.boot.<account>`
+  (README, "Build and install") bootstraps it at boot; Add Mac installs it, and
+  `elsecall service start-at-boot` does on a Mac joined by hand.

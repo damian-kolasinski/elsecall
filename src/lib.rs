@@ -1,6 +1,7 @@
 //! Local inspection, admission, installation and fleet membership, with platform and
 //! transport adapters.
 pub mod add_mac_cli;
+pub mod boot_start_cli;
 mod fleet_callers;
 pub mod fleet_cli;
 mod fleet_copies;
@@ -8,6 +9,7 @@ pub mod nearby_cli;
 pub mod outside_pressure_api;
 pub mod peer_api;
 pub mod peer_listener;
+mod piped_password;
 mod placement_config_sync;
 pub mod server;
 pub mod ui_app;

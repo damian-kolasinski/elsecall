@@ -131,6 +131,24 @@ capture the illustrations later in their loops and the approval
 page at the window's minimum size. Pointer-driven tests walk the sheet from the header
 to a member, and stop an add, with the CLI faked at its boundary.
 
+## Resource usage
+
+Each reachable machine has a **Load details** button under its name in the Member
+column. The dialog shows managed operations and their assigned weighted cores on
+the left, and unmanaged processes grouped by CPU and memory on the right.
+Those process readings come from pressure samples and early warnings. Each
+includes its measurement, owner, PID and sample age. An empty section means the
+member reported no contributors for that resource. Escape closes the dialog.
+
+The `resource-load` app scene uses a synthetic two-member fleet. Record the
+interaction from the built window using its native renderer:
+
+```sh
+target/debug/elsecall-ui --scene resource-load --size 1120x560 --scale 1 \
+  --theme light --script crates/elsecall-ui/tests/fixtures/load-details.json \
+  --video machine-load-details.mp4 --fps 30 --duration 10 --pointer
+```
+
 ## Golden tests
 
 `cargo test -p elsecall-ui --bin elsecall-ui fleet_scenes_match_goldens` renders each
