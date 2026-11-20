@@ -32,8 +32,8 @@ pub(crate) struct Inputs {
     pub(crate) reports: Vec<(MemberName, Result<WorkspaceReport, Failure>)>,
     pub(crate) inventories: FleetInventory,
     pub(crate) toolset: Toolset,
-    /// Plan only this member; every member's workspaces still count.
-    pub(crate) only: Option<MemberName>,
+    /// Plan only these members; every member's workspaces still count.
+    pub(crate) only: Option<Vec<MemberName>>,
 }
 
 pub(crate) fn build(inputs: Inputs) -> Document {
@@ -85,7 +85,7 @@ pub(crate) fn build(inputs: Inputs) -> Document {
             inputs
                 .only
                 .as_ref()
-                .is_none_or(|only| only == member_of(entry))
+                .is_none_or(|only| only.contains(member_of(entry)))
         })
         .map(|entry| match entry {
             MemberInventory::Read { member, inventory } => (
@@ -102,6 +102,7 @@ pub(crate) fn build(inputs: Inputs) -> Document {
         })
         .collect();
     Document {
+        master_xcodes: master.xcodes.clone(),
         master: inputs.master,
         global: inputs.global.map(|reading| reading.files),
         workspaces,

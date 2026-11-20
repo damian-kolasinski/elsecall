@@ -123,17 +123,17 @@ fn awaiting_provisioning(member: &MemberName, master: &MemberName) -> Item {
         subject: None,
         code: "member_awaiting_provisioning".into(),
         message: format!(
-            "{member} is awaiting provisioning: placement gives it no work until it is marked ready. Work required on it by name still runs there."
+            "{member} is awaiting provisioning: placement gives it no work until the tools the fleet's work pins are installed there. Work required on it by name still runs there."
         ),
         hint: format!(
-            "Install the tools the fleet's work pins on {member}, then run elsecall fleet ready {member} on {master}."
+            "The master, {master}, installs them and marks {member} ready by itself; elsecall tools provisioning --member {member} on {master} shows how far it got and what waits for a person."
         ),
         since: None,
         actions: vec![Action {
             summary: format!(
-                "Mark {member} ready once its tools are installed, so placement may give it work."
+                "Plan and install {member}'s tools now, instead of at the loop's next look; it becomes ready once nothing is left to install."
             ),
-            command: elsecall(&["fleet", "ready", member.as_str()]),
+            command: elsecall(&["tools", "provision", member.as_str()]),
             run_on: master.to_string(),
             person_only: false,
         }],
@@ -352,12 +352,12 @@ mod tests {
                     "category": "awaiting_provisioning",
                     "subject": null,
                     "code": "member_awaiting_provisioning",
-                    "message": "macbook-pro is awaiting provisioning: placement gives it no work until it is marked ready. Work required on it by name still runs there.",
-                    "hint": "Install the tools the fleet's work pins on macbook-pro, then run elsecall fleet ready macbook-pro on mac-mini.",
+                    "message": "macbook-pro is awaiting provisioning: placement gives it no work until the tools the fleet's work pins are installed there. Work required on it by name still runs there.",
+                    "hint": "The master, mac-mini, installs them and marks macbook-pro ready by itself; elsecall tools provisioning --member macbook-pro on mac-mini shows how far it got and what waits for a person.",
                     "since": null,
                     "actions": [{
-                        "summary": "Mark macbook-pro ready once its tools are installed, so placement may give it work.",
-                        "command": ["elsecall", "fleet", "ready", "macbook-pro"],
+                        "summary": "Plan and install macbook-pro's tools now, instead of at the loop's next look; it becomes ready once nothing is left to install.",
+                        "command": ["elsecall", "tools", "provision", "macbook-pro"],
                         "run_on": "mac-mini",
                         "person_only": false
                     }]

@@ -105,17 +105,66 @@ impl WireStep {
     }
 }
 
-/// What the master sends: the member's steps, in plan order. No steps is an
-/// apply too, which ends the last one's failures.
+/// What the master sends: the member's steps, in plan order, and the steps it
+/// holds back. No steps is an apply too, which ends the last one's failures.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ApplyRequest {
     pub(crate) steps: Vec<WireStep>,
+    /// Steps that failed before and are not run now, recorded failed again
+    /// with their own failure, so their attention item stands as it was.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) held: Vec<WireHeld>,
+}
+
+/// A step held back, with the failure it keeps.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct WireHeld {
+    pub(crate) manager: Manager,
+    pub(crate) tool: String,
+    pub(crate) version: String,
+    #[serde(default)]
+    pub(crate) options: BTreeMap<String, String>,
+    pub(crate) stage: String,
+    pub(crate) code: String,
+    pub(crate) failed_at: elsecall_contract::scheduling_model::timestamp::Timestamp,
+}
+
+/// A held step as the member keeps it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct HeldStep {
+    pub(crate) step: InstallStep,
+    pub(crate) stage: String,
+    pub(crate) code: String,
+    pub(crate) failed_at: elsecall_contract::scheduling_model::timestamp::Timestamp,
+}
+
+impl HeldStep {
+    pub(crate) fn wire(&self) -> WireHeld {
+        let step = WireStep::of(&self.step);
+        WireHeld {
+            manager: step.manager,
+            tool: step.tool,
+            version: step.version,
+            options: step.options,
+            stage: self.stage.clone(),
+            code: self.code.clone(),
+            failed_at: self.failed_at,
+        }
+    }
+}
+
+/// A stage or code: a lowercase word, as every failure names them.
+fn code_word(text: &str) -> bool {
+    !text.is_empty()
+        && text.len() <= 64
+        && text.bytes().all(|b| b.is_ascii_lowercase() || b == b'_')
 }
 
 impl ApplyRequest {
-    pub(crate) fn accept(self) -> Result<Vec<InstallStep>, &'static str> {
-        if self.steps.len() > MAXIMUM_STEPS {
+    pub(crate) fn accept(self) -> Result<(Vec<InstallStep>, Vec<HeldStep>), &'static str> {
+        if self.steps.len() + self.held.len() > MAXIMUM_STEPS {
             return Err("a request names at most 256 steps");
         }
         let steps = self
@@ -123,12 +172,34 @@ impl ApplyRequest {
             .into_iter()
             .map(WireStep::accept)
             .collect::<Result<Vec<_>, _>>()?;
-        for (index, step) in steps.iter().enumerate() {
-            if steps[..index].contains(step) {
+        let held = self
+            .held
+            .into_iter()
+            .map(|held| {
+                if !code_word(&held.stage) || !code_word(&held.code) {
+                    return Err("a held step's stage or code is not a code");
+                }
+                let step = WireStep {
+                    manager: held.manager,
+                    tool: held.tool,
+                    version: held.version,
+                    options: held.options,
+                };
+                Ok(HeldStep {
+                    step: step.accept()?,
+                    stage: held.stage,
+                    code: held.code,
+                    failed_at: held.failed_at,
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let all: Vec<&InstallStep> = held.iter().map(|held| &held.step).chain(&steps).collect();
+        for (index, step) in all.iter().enumerate() {
+            if all[..index].contains(step) {
                 return Err("a request names one step twice");
             }
         }
-        Ok(steps)
+        Ok((steps, held))
     }
 }
 
@@ -145,6 +216,36 @@ mod tests {
         serde_json::from_value::<ApplyRequest>(json!({ "steps": steps }))
             .unwrap()
             .accept()
+            .map(|(steps, _)| steps)
+    }
+
+    #[test]
+    fn held_steps_keep_their_failure_and_follow_the_same_rules() {
+        let held = |code: &str| {
+            json!({"manager": "xcodes", "tool": "xcode", "version": "26.2",
+                   "stage": "privileges", "code": code, "failed_at": "2026-11-20T09:00:00.000Z"})
+        };
+        let request = |held: Vec<serde_json::Value>, steps: Vec<serde_json::Value>| {
+            serde_json::from_value::<ApplyRequest>(json!({"steps": steps, "held": held}))
+                .unwrap()
+                .accept()
+        };
+        let (steps, kept) = request(
+            vec![held("xcode_privileges_missing")],
+            vec![step("mise", "node", "22.19.0")],
+        )
+        .unwrap();
+        assert_eq!(steps.len(), 1);
+        assert_eq!(kept[0].code, "xcode_privileges_missing");
+        assert_eq!(kept[0].step.version.as_str(), "26.2");
+        assert!(request(vec![held("Not A Code")], vec![]).is_err());
+        assert!(
+            request(vec![held("x")], vec![step("xcodes", "xcode", "26.2")]).is_err(),
+            "a step both held and run"
+        );
+        let mut outside = held("x");
+        outside["version"] = json!("--force");
+        assert!(request(vec![outside], vec![]).is_err());
     }
 
     #[test]

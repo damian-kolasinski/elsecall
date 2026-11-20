@@ -267,6 +267,8 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall tools inventory --member NAME` | That member's one entry from the fleet inventory |
 | `elsecall tools pins [PATH]` | The tool versions a workspace pins (mise project config, the global mise config, `.xcode-version`, `.elsecall-tools.toml`), each marked exact or not, read without running the workspace's code; PATH defaults to the current directory (see [Fleet provisioning](docs/fleet-provisioning.md)) |
 | `elsecall tools plan [--member NAME]` | On the master, each member's plan: the versions it lacks of what the workspaces runs started in, and the master's global mise config, pin, minus the exceptions; each step says which pins asked for it. Installs nothing (see [Fleet provisioning](docs/fleet-provisioning.md#delivery-2-a-plan-per-member)) |
+| `elsecall tools provisioning [--member NAME]` | On the master, what its provisioning loop knows of each member: in step with the pins, applying, waiting, behind, or needing a person, and the steps it holds back. The loop plans and installs each member's tools by itself when pins or installed tools change, and marks members awaiting provisioning ready (see [Fleet provisioning](docs/fleet-provisioning.md#delivery-6-keeping-members-in-step)) |
+| `elsecall tools provision NAME` | On the master, plan and install one member's tools now instead of at the loop's next look |
 | `elsecall tools exceptions [--member NAME]` | The exceptions to the pins in `fleet-tools.toml` that apply to every fleet member, or one (see [Fleet tool management](docs/fleet-tools.md#exceptions)) |
 | `elsecall tools leave-out TOOL [--member NAME]` | On the master, leave a tool's pins out on every member, or one. `TOOL` is `mise:<name>`, `xcode`, or `simulators:<platform>` |
 | `elsecall tools set TOOL VERSION --member NAME [--install-only]` | On the master, keep exact versions on one member instead of what the pins ask for |
@@ -1805,8 +1807,11 @@ does, is listed in the roster as awaiting provisioning, and `elsecall fleet` sho
 its `readiness` as `awaiting_provisioning` (every other member is `ready`). Placement
 leaves it out, naming it in the run's reason; work that names it with `--member`
 still runs there, and configuration sync and upgrades include it as any member. It
-cannot become master (`member_awaiting_provisioning`). `elsecall fleet ready <name>` marks it
-ready on every member; like other roster changes it refuses while a member is
+cannot become master (`member_awaiting_provisioning`). The master installs the tools
+the fleet's work pins on it and marks it ready by itself
+([Fleet provisioning](docs/fleet-provisioning.md), "Delivery 6");
+`elsecall tools provisioning` shows how far it got. `elsecall fleet ready <name>` marks it
+ready on every member by hand; like other roster changes it refuses while a member is
 unreachable unless given `--force`. Enrolling it again keeps its readiness.
 
 Removal also takes a step on each machine: `elsecall fleet remove <name>` on another

@@ -6,7 +6,7 @@
 //! never what a command printed. An apply that was running when the service
 //! stopped is read back with its unfinished steps failed as `apply_interrupted`:
 //! running work does not survive a restart.
-use crate::install::request::{InstallStep, WireStep};
+use crate::install::request::{HeldStep, InstallStep, WireStep};
 use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_fleet::provisioning_model::{ApplyState, FailedStep, ProvisioningSummary};
 use serde::{Deserialize, Serialize};
@@ -52,16 +52,26 @@ pub(crate) struct Failure {
 }
 
 impl Record {
-    pub(crate) fn new(steps: Vec<InstallStep>) -> Self {
+    /// A new apply: the held steps first, failed again with their own failure,
+    /// then the steps to run, queued.
+    pub(crate) fn new(steps: Vec<InstallStep>, held: Vec<HeldStep>) -> Self {
         Self {
             started_at: Timestamp::now(),
             finished_at: None,
-            entries: steps
+            entries: held
                 .into_iter()
-                .map(|step| Entry {
+                .map(|held| Entry {
+                    step: held.step,
+                    state: State::Failed(Failure {
+                        stage: held.stage,
+                        code: held.code,
+                        at: held.failed_at,
+                    }),
+                })
+                .chain(steps.into_iter().map(|step| Entry {
                     step,
                     state: State::Queued,
-                })
+                }))
                 .collect(),
         }
     }
@@ -261,8 +271,9 @@ mod tests {
         ]}))
         .unwrap()
         .accept()
-        .unwrap();
-        let mut record = Record::new(steps);
+        .unwrap()
+        .0;
+        let mut record = Record::new(steps, Vec::new());
         record.entries[0].state = State::Installed {
             at: Timestamp::now(),
         };

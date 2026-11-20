@@ -254,17 +254,29 @@ pub(crate) async fn gather(
     only: Option<&str>,
 ) -> Result<(Document, Vec<Reach>)> {
     let fleet = planning.fleet.clone()?;
-    let (master, members) = fleet_members(&fleet)?;
+    let (_, members) = fleet_members(&fleet)?;
     let only = match only {
         None => None,
-        Some(wanted) => Some(
+        Some(wanted) => Some(vec![
             members
                 .iter()
                 .find(|member| member.name.as_str() == wanted)
                 .map(|member| member.name.clone())
                 .ok_or_else(|| unknown_member(wanted, &members))?,
-        ),
+        ]),
     };
+    gather_for(planning, only).await
+}
+
+/// The plan of the members `only` names, or every member's; every member's
+/// workspaces count either way, and only their inventories and the master's
+/// are read.
+pub(crate) async fn gather_for(
+    planning: &Planning,
+    only: Option<Vec<MemberName>>,
+) -> Result<(Document, Vec<Reach>)> {
+    let fleet = planning.fleet.clone()?;
+    let (master, members) = fleet_members(&fleet)?;
     let path = planning.exceptions.clone();
     let toolset = tokio::task::spawn_blocking(move || Toolset::parse(&store::read(&path)?))
         .await
@@ -274,7 +286,7 @@ pub(crate) async fn gather(
     let inventory_sources: Vec<fleet_tool_inventory::Source> = members
         .iter()
         .filter(|member| {
-            member.peer.is_none() || only.as_ref().is_none_or(|only| *only == member.name)
+            member.peer.is_none() || only.as_ref().is_none_or(|only| only.contains(&member.name))
         })
         .map(|member| fleet_tool_inventory::Source {
             member: member.name.clone(),
@@ -352,7 +364,7 @@ pub(crate) fn members_to_read(fleet: &Arc<Fleet>, only: Option<&str>) -> Result<
 
 /// The master, whether it is this member, and every member, this one first. A
 /// machine that has not joined a fleet is the master of a fleet of one.
-fn roster_members(fleet: &Arc<Fleet>) -> Result<((MemberName, bool), Vec<Reach>)> {
+pub(crate) fn roster_members(fleet: &Arc<Fleet>) -> Result<((MemberName, bool), Vec<Reach>)> {
     let roster = match fleet.roster() {
         Ok(roster) => roster,
         Err(_) if matches!(fleet.membership(), Membership::Solo) => {
