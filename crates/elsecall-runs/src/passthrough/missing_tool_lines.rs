@@ -60,10 +60,15 @@ struct Found {
 impl Found {
     fn consider(&mut self, line: &[u8]) {
         let kept = match recognise(line) {
-            Some(Recognised::Managed(missing)) => Some(missing),
-            // A program the caller lacks too is a typo, or missing everywhere:
-            // nothing a pin on the master would fix.
-            Some(Recognised::Program(missing)) => {
+            // Xcode's stubs are macOS's own words, about Xcode itself.
+            Some(Recognised::Managed(missing)) if missing.manager == Manager::Xcodes => {
+                Some(missing)
+            }
+            // A program, or a tool mise named, that the caller lacks too is a
+            // typo, missing everywhere, or a name the job's own output made up
+            // (`npm:anything`): nothing a pin on the master would fix, and
+            // nothing to suggest installing.
+            Some(Recognised::Program(missing) | Recognised::Managed(missing)) => {
                 (self.exists_here)(missing.tool.as_str()).then_some(missing)
             }
             None => None,
@@ -385,6 +390,21 @@ mod tests {
         assert_eq!(
             recogniser.finish().map(|m| m.tool.to_string()),
             Some("bun".into())
+        );
+        // So is a mise tool the caller has no program for, such as a backend
+        // name the job printed.
+        let mut recogniser = Recogniser::new(|name| name == "bun");
+        recogniser.stderr(
+            b"mise WARN  missing: npm:lure@1 bun@1.3\nmise ERROR npm:lure@1 is not installed\n",
+        );
+        assert_eq!(recogniser.finish(), None);
+        let mut recogniser = Recogniser::new(|_| false);
+        recogniser.stderr(
+            b"xcrun: error: unable to find utility \"simctl\", not a developer tool or in PATH\n",
+        );
+        assert_eq!(
+            recogniser.finish().map(|m| m.tool.to_string()),
+            Some("xcode".into())
         );
         assert_eq!(missing_program("./x"), None);
         assert_eq!(

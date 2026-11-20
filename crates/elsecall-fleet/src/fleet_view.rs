@@ -100,9 +100,7 @@ pub trait PlacedRuns: Send + Sync {
     fn latest_with(&self, member: &str) -> Option<PlacedRunSummary>;
     /// Runs this member placed that still stand as failed for lack of a tool
     /// that no pin covers, the latest per member and tool.
-    fn unpinned_tools(&self) -> Vec<UnpinnedTool> {
-        Vec::new()
-    }
+    fn unpinned_tools(&self) -> Vec<UnpinnedTool>;
 }
 
 #[derive(Debug, Serialize)]

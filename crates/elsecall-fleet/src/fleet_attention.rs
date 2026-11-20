@@ -208,7 +208,8 @@ fn missing_tool_pin(unpinned: &UnpinnedTool, own: &MemberName) -> Item {
         run_on: own.to_string(),
         person_only: false,
     }];
-    if standing.missing.manager == Manager::Mise {
+    // A backend name (`npm:…`) is not offered for installing by hand.
+    if standing.missing.manager == Manager::Mise && !tool.contains(':') {
         actions.push(Action {
             summary: format!(
                 "Not recommended: install {tool} on {member} alone, outside any pin. The next member without it fails the same way."

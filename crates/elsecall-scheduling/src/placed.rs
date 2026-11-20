@@ -239,8 +239,14 @@ pub struct PlacedRecord {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interrupted: Option<Interruption>,
     /// On the caller: the tool the command failed for lack of on the member, as
-    /// the caller recognised it in the output that passed through.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// the caller recognised it in the output that passed through. Read
+    /// leniently: a name a later build no longer accepts is dropped, never a
+    /// reason the record cannot be read.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::missing_tool::lenient"
+    )]
     pub missing_tool: Option<crate::missing_tool::MissingTool>,
 }
 

@@ -92,6 +92,14 @@ pub struct MissingTool {
     pub called: Option<ToolName>,
 }
 
+/// A stored missing tool, or none when it no longer validates.
+pub fn lenient<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<MissingTool>, D::Error> {
+    let value = Option::<serde_json::Value>::deserialize(deserializer)?;
+    Ok(value.and_then(|value| serde_json::from_value(value).ok()))
+}
+
 /// A missing tool that still stands: the latest run that hit it on a member.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Standing {
@@ -105,60 +113,54 @@ pub struct Standing {
 
 /// The missing tools among `records` (any order) that still stand at `now`.
 ///
-/// Only runs this member placed on another one count. For each member and
-/// tool the latest such run stands, unless it ended more than `STANDS_FOR`
-/// ago, or a later run on that member from the same working tree and label
-/// exited 0: the tool was installed by hand, or the job no longer needs it. A
-/// pin clears it too; the fleet view checks pins, which live in files.
+/// Only runs this member placed on another one count. A run that hit a missing
+/// tool stands unless it ended more than `STANDS_FOR` ago, or a later run of
+/// the same job (same label, which an unlabelled run has none of) from the same
+/// working tree exited 0 on that member: the tool was installed by hand, or
+/// the job no longer needs it. For each member and tool, the latest run that
+/// still stands is named. A pin clears it too; the fleet view checks pins,
+/// which live in files.
 pub fn standing(records: &[Record], now: Timestamp) -> Vec<Standing> {
-    let caller_side = |record: &&Record| {
-        record
-            .placed
-            .as_ref()
-            .is_some_and(|placed| placed.side == Side::Caller)
-    };
-    let mut latest: BTreeMap<(String, Manager, ToolName), (&Record, &MissingTool)> =
-        BTreeMap::new();
-    for record in records.iter().filter(caller_side) {
-        let placed = record.placed.as_ref().expect("filtered on placed");
-        let (Some(missing), Some(ended_at)) = (&placed.missing_tool, record.ended_at) else {
-            continue;
-        };
-        if now.since(ended_at) > STANDS_FOR {
-            continue;
-        }
-        let key = (placed.member.clone(), missing.manager, missing.tool.clone());
-        let newer = latest
-            .get(&key)
-            .is_none_or(|(kept, _)| kept.ended_at < Some(ended_at));
-        if newer {
-            latest.insert(key, (record, missing));
-        }
-    }
-    latest
-        .into_values()
-        .filter(|(hit, _)| {
-            let placed = hit.placed.as_ref().expect("filtered on placed");
-            !records.iter().filter(caller_side).any(|later| {
-                let other = later.placed.as_ref().expect("filtered on placed");
+    let caller_side: Vec<(&Record, &crate::placed::PlacedRecord)> = records
+        .iter()
+        .filter_map(|record| {
+            let placed = record.placed.as_ref()?;
+            (placed.side == Side::Caller).then_some((record, placed))
+        })
+        .collect();
+    let passed_later = |hit: &Record, placed: &crate::placed::PlacedRecord| {
+        hit.label.is_some()
+            && caller_side.iter().any(|(later, other)| {
                 later.ended_at > hit.ended_at
                     && other.member == placed.member
                     && other.caller_workspace == placed.caller_workspace
                     && later.label == hit.label
                     && later.outcome == Some(Outcome::Exited { exit_code: 0 })
             })
-        })
-        .map(|(record, missing)| {
-            let placed = record.placed.as_ref().expect("filtered on placed");
-            Standing {
-                run_id: record.run_id.clone(),
-                member: placed.member.clone(),
-                missing: missing.clone(),
-                workspace: placed.caller_workspace.clone(),
-                ended_at: record.ended_at.expect("filtered on ended"),
-            }
-        })
-        .collect()
+    };
+    let mut latest: BTreeMap<(String, Manager, ToolName), Standing> = BTreeMap::new();
+    for (record, placed) in &caller_side {
+        let (Some(missing), Some(ended_at)) = (&placed.missing_tool, record.ended_at) else {
+            continue;
+        };
+        if now.since(ended_at) > STANDS_FOR || passed_later(record, placed) {
+            continue;
+        }
+        let key = (placed.member.clone(), missing.manager, missing.tool.clone());
+        if latest.get(&key).is_none_or(|kept| kept.ended_at < ended_at) {
+            latest.insert(
+                key,
+                Standing {
+                    run_id: record.run_id.clone(),
+                    member: placed.member.clone(),
+                    missing: missing.clone(),
+                    workspace: placed.caller_workspace.clone(),
+                    ended_at,
+                },
+            );
+        }
+    }
+    latest.into_values().collect()
 }
 
 #[cfg(test)]
@@ -241,5 +243,36 @@ mod tests {
 
         let a_week_on = now.after(STANDS_FOR + Duration::from_secs(60));
         assert!(standing(&records, a_week_on).is_empty(), "aged out");
+
+        // Another job that hit the same tool still stands when this one clears.
+        let mut both = vec![
+            run(1, "lint", 1, Some("bun")),
+            run(2, "test", 127, Some("bun")),
+        ];
+        both.push(run(3, "test", 0, None));
+        let left = standing(&both, now);
+        assert_eq!(left.len(), 1);
+        assert_eq!(left[0].run_id, both[0].run_id);
+
+        // An unlabelled run passing says nothing about an unlabelled one failing.
+        let mut unlabelled = vec![run(1, "x", 127, Some("tuist")), run(2, "x", 0, None)];
+        for record in &mut unlabelled {
+            record.label = None;
+        }
+        assert_eq!(standing(&unlabelled, now).len(), 1);
+    }
+
+    #[test]
+    fn a_stored_name_a_later_build_refuses_reads_as_none() {
+        let mut record = run(1, "test", 127, Some("bun"));
+        let mut value = serde_json::to_value(&record).unwrap();
+        value["placed"]["missing_tool"]["tool"] = "not a tool".into();
+        let read: Record = serde_json::from_value(value).unwrap();
+        assert_eq!(read.placed.unwrap().missing_tool, None);
+        record.placed.as_mut().unwrap().missing_tool = None;
+        let value = serde_json::to_value(&record).unwrap();
+        assert!(value["placed"].get("missing_tool").is_none());
+        let read: Record = serde_json::from_value(value).unwrap();
+        assert_eq!(read.placed.unwrap().missing_tool, None);
     }
 }
