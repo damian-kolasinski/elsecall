@@ -1,19 +1,16 @@
 //! A real service on a real socket, driven by the real CLI binary. Only the
 //! machine's load is faked, as an external observation boundary.
 #![allow(dead_code)]
-use elsecall::{
-    failure::Result,
-    inspection::{
-        CoreCounts, Inspection, LoadAverage, LoadSample, Machine, MachineInspector, Memory,
-        MemoryPressure, ThermalState,
-    },
-    macos::processes::MacProcesses,
-    paths::Paths,
-    peer_listener, private_files,
-    scheduling::service::Adapters,
-    server,
-    tailnet::{Presence, Tailnet},
+use elsecall::{peer_listener, server};
+use elsecall_contract::failure::Result;
+use elsecall_contract::inspection::{
+    CoreCounts, Inspection, LoadAverage, LoadSample, Machine, MachineInspector, Memory,
+    MemoryPressure, ThermalState,
 };
+use elsecall_host::os_processes::processes::MacProcesses;
+use elsecall_host::{paths::Paths, private_files};
+use elsecall_peers::tailnet::{Presence, Tailnet};
+use elsecall_scheduling::service::Adapters;
 use serde_json::Value;
 use std::{
     path::{Path, PathBuf},
@@ -27,11 +24,11 @@ use tokio::process::Child;
 struct NoTailnet;
 impl Tailnet for NoTailnet {
     fn discover(&self) -> Result<Presence> {
-        Err(elsecall::tailnet::unavailable("not connected"))
+        Err(elsecall_peers::tailnet::unavailable("not connected"))
     }
 }
 
-pub struct FakeMachine(pub Mutex<LoadSample>, pub std::sync::atomic::AtomicUsize);
+pub(crate) struct FakeMachine(pub Mutex<LoadSample>, pub std::sync::atomic::AtomicUsize);
 impl MachineInspector for FakeMachine {
     fn inspect(&self) -> Result<Machine> {
         Ok(Machine {
@@ -63,7 +60,7 @@ impl MachineInspector for FakeMachine {
     }
 }
 
-pub fn quiet(performance_cores: u32) -> LoadSample {
+pub(crate) fn quiet(performance_cores: u32) -> LoadSample {
     LoadSample {
         cores: CoreCounts {
             performance: performance_cores,
@@ -76,7 +73,7 @@ pub fn quiet(performance_cores: u32) -> LoadSample {
     }
 }
 
-pub struct Fixture {
+pub(crate) struct Fixture {
     pub home: tempfile::TempDir,
     pub paths: Paths,
     pub machine: Arc<FakeMachine>,
@@ -86,7 +83,7 @@ pub struct Fixture {
 
 impl Fixture {
     /// A service whose capacity is `cores` weighted cores.
-    pub async fn start(cores: u32) -> Self {
+    pub(crate) async fn start(cores: u32) -> Self {
         let home = tempfile::Builder::new()
             .prefix("ec-")
             .tempdir_in("/tmp")
@@ -107,23 +104,23 @@ impl Fixture {
         fixture
     }
 
-    pub async fn serve(&mut self) {
+    pub(crate) async fn serve(&mut self) {
         let (processes, exits) = MacProcesses::start().unwrap();
         self.server = Some(tokio::spawn(server::serve_with_updates(
             self.paths.clone(),
             Arc::new(Inspection::new(self.machine.clone())),
             Adapters {
                 machine: self.machine.clone(),
-                speed: Arc::new(elsecall::machine_script::FixedSpeed(1.0)),
+                speed: Arc::new(elsecall_host::machine_script::FixedSpeed(1.0)),
                 processes,
                 exits,
             },
-            Arc::new(elsecall::macos::process_sampler::MacProcessSampler),
+            Arc::new(elsecall_macos::macos::process_sampler::MacProcessSampler),
             peer_listener::Settings {
                 tailnet: Arc::new(NoTailnet),
                 port: 1,
             },
-            elsecall::release_update::service::UpdateAdapters::production(false).unwrap(),
+            elsecall_lifecycle::release_update::service::UpdateAdapters::production(false).unwrap(),
         )));
         let deadline = Instant::now() + crate::processes::WAIT;
         loop {
@@ -141,7 +138,7 @@ impl Fixture {
     }
 
     /// Stops the service abruptly, as a crash or an update would.
-    pub async fn stop(&mut self) {
+    pub(crate) async fn stop(&mut self) {
         let server = self.server.take().unwrap();
         server.abort();
         let _ = server.await;
@@ -165,7 +162,7 @@ impl Fixture {
     }
 
     /// Whether the service returned on its own within `limit`.
-    pub async fn stopped_within(&mut self, limit: Duration) -> bool {
+    pub(crate) async fn stopped_within(&mut self, limit: Duration) -> bool {
         let server = self.server.as_mut().unwrap();
         let stopped = tokio::time::timeout(limit, server).await.is_ok();
         if stopped {
@@ -174,13 +171,13 @@ impl Fixture {
         stopped
     }
 
-    pub fn set_load(&self, change: impl FnOnce(&mut LoadSample)) {
+    pub(crate) fn set_load(&self, change: impl FnOnce(&mut LoadSample)) {
         let mut load = self.machine.0.lock().unwrap();
         change(&mut load);
         self.machine.1.store(0, std::sync::atomic::Ordering::SeqCst);
     }
 
-    pub async fn wait_for_load_window(&self) {
+    pub(crate) async fn wait_for_load_window(&self) {
         let deadline = Instant::now() + crate::processes::WAIT;
         while self.machine.1.load(std::sync::atomic::Ordering::SeqCst) < 3 {
             assert!(Instant::now() < deadline, "load samples did not arrive");
@@ -188,12 +185,12 @@ impl Fixture {
         }
     }
 
-    pub fn path(&self, name: &str) -> PathBuf {
+    pub(crate) fn path(&self, name: &str) -> PathBuf {
         self.home.path().join(name)
     }
 
     /// Runs the CLI and returns its exit code and JSON output.
-    pub async fn cli(&self, args: &[&str]) -> (i32, Value) {
+    pub(crate) async fn cli(&self, args: &[&str]) -> (i32, Value) {
         let output = crate::processes::async_command(env!("CARGO_BIN_EXE_elsecall"))
             .env("HOME", self.home.path())
             .current_dir(self.home.path())
@@ -209,7 +206,7 @@ impl Fixture {
 
     /// Starts `sh -c body` with `$EC` naming the CLI and `$DIR` the test home.
     /// Its own process group lets cleanup stop everything it started.
-    pub fn script(&mut self, body: &str) -> u32 {
+    pub(crate) fn script(&mut self, body: &str) -> u32 {
         let child = crate::processes::async_command("/bin/sh")
             .arg("-c")
             .arg(body)
@@ -228,7 +225,7 @@ impl Fixture {
     }
 
     /// Waits for the script started with `pid` and returns its exit code.
-    pub async fn exit_code(&mut self, pid: u32) -> i32 {
+    pub(crate) async fn exit_code(&mut self, pid: u32) -> i32 {
         let child = self
             .children
             .iter_mut()
@@ -242,14 +239,14 @@ impl Fixture {
             .unwrap_or(-1)
     }
 
-    pub async fn runs(&self) -> Value {
+    pub(crate) async fn runs(&self) -> Value {
         let (code, json) = self.cli(&["runs", "--limit", "100"]).await;
         assert_eq!(code, 0, "{json}");
         json["data"].clone()
     }
 
     /// Polls `elsecall runs` until the predicate holds.
-    pub async fn until(&self, predicate: impl Fn(&Value) -> bool) -> Value {
+    pub(crate) async fn until(&self, predicate: impl Fn(&Value) -> bool) -> Value {
         let deadline = Instant::now() + crate::processes::WAIT;
         loop {
             let (code, json) = self.cli(&["runs", "--limit", "100"]).await;
@@ -261,7 +258,7 @@ impl Fixture {
         }
     }
 
-    pub async fn wait_for_file(&self, name: &str) -> String {
+    pub(crate) async fn wait_for_file(&self, name: &str) -> String {
         let path = self.path(name);
         let deadline = Instant::now() + crate::processes::WAIT;
         loop {
@@ -275,7 +272,7 @@ impl Fixture {
         }
     }
 
-    pub fn touch(&self, name: &str) {
+    pub(crate) fn touch(&self, name: &str) {
         std::fs::write(self.path(name), "go\n").unwrap();
     }
 }
@@ -294,13 +291,13 @@ impl Drop for Fixture {
     }
 }
 
-pub fn in_use(runs: &Value) -> f64 {
+pub(crate) fn in_use(runs: &Value) -> f64 {
     runs["member"]["in_use"].as_f64().unwrap()
 }
-pub fn queued(runs: &Value, class: &str) -> u64 {
+pub(crate) fn queued(runs: &Value, class: &str) -> u64 {
     runs["member"]["queued"][class].as_u64().unwrap()
 }
-pub fn record<'a>(runs: &'a Value, label: &str) -> &'a Value {
+pub(crate) fn record<'a>(runs: &'a Value, label: &str) -> &'a Value {
     runs["runs"]
         .as_array()
         .unwrap()
@@ -309,7 +306,7 @@ pub fn record<'a>(runs: &'a Value, label: &str) -> &'a Value {
         .unwrap_or_else(|| panic!("no record labelled {label}: {runs}"))
 }
 
-pub fn read_all(paths: &[&Path]) -> Vec<u8> {
+pub(crate) fn read_all(paths: &[&Path]) -> Vec<u8> {
     paths
         .iter()
         .filter_map(|p| std::fs::read(p).ok())

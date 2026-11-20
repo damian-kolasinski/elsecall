@@ -1,9 +1,10 @@
 #![cfg(target_os = "macos")]
 //! Real fleet services and normal run clients, with only discovery/load scripted.
-mod diagnostics;
-mod members;
-mod processes;
-use elsecall::{scheduling::timestamp::Timestamp, workload::trace::Trace};
+use crate::diagnostics;
+use crate::members;
+use crate::processes;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
+use elsecall_reports::workload::trace::Trace;
 use members::{TestMember, enrol};
 use serde_json::{Value, json};
 use std::{
@@ -83,7 +84,7 @@ fn fixture(directory: &Path, offsets: &[u64]) -> std::path::PathBuf {
     let demand:Vec<_>=["alpha","bravo"].into_iter().map(|m|json!({"member":m,"family":"build *","runs":10,"fitted_runs":10,"declared_cores":0.5,"process_tree_cores":0.25,"effective_cores":0.25,"interval_cores":[0.15,0.35],"fitted_minutes":10,"idle_minutes":3,"outside_baseline_cores":0.0,"residual_rmse_cores":0.01,"status":"identified"})).collect();
     let document = json!({"trace_version":1,"incomplete":false,"since":Timestamp::from_millis(start),"until":Timestamp::from_millis(start+offsets.iter().max().unwrap()+2000),"master":"alpha","members":[{"member":"alpha","load":[],"errors":[],"scheduler_settings":[]},{"member":"bravo","load":[],"errors":[],"scheduler_settings":[]}],"requests":requests,"leftovers":[],"demand":demand,"contention":[],"limits":[]});
     let trace: Trace = serde_json::from_value(document.clone()).unwrap();
-    elsecall::simulation::validate_trace(&trace).unwrap();
+    elsecall_tuning::simulation::validate_trace(&trace).unwrap();
     let path = directory.join("input.json");
     fs::write(&path, document.to_string()).unwrap();
     path
@@ -333,10 +334,9 @@ fn perf_rehearses_timing_members_outcomes_real_cold_warm_copies_and_own_fidelity
     );
     let report = alpha.ok(&["report", "--since", "1h"]);
     assert_eq!(report["fleet"]["requests"]["total"], 0, "{report}");
-    let records = elsecall::scheduling::records::Records::open_read_only(
-        &alpha.data().join("records.sqlite"),
-    )
-    .unwrap();
+    let records =
+        elsecall_scheduling::records::Records::open_read_only(&alpha.data().join("records.sqlite"))
+            .unwrap();
     assert!(
         records
             .labelled_since(Timestamp::from_millis(0), 2000)
@@ -432,10 +432,9 @@ probe = ["/bin/sh", "-c", "touch \"$HOME/personal-policy-probe\"; printf stable"
         ]);
         assert!(run.status.success(), "{run:?}");
     }
-    let records = elsecall::scheduling::records::Records::open_read_only(
-        &alpha.data().join("records.sqlite"),
-    )
-    .unwrap();
+    let records =
+        elsecall_scheduling::records::Records::open_read_only(&alpha.data().join("records.sqlite"))
+            .unwrap();
     let history = records
         .labelled_since(Timestamp::from_millis(0), 2000)
         .unwrap();
@@ -621,15 +620,15 @@ fn repeated_cleanup_of_a_rehearsal_with_a_remote_copy_is_successful() {
         .build()
         .unwrap();
     for member in [&alpha, &bravo] {
-        let reply: elsecall::rehearsal::protocol::Reply = runtime
-            .block_on(elsecall::client::post_large(
-                &elsecall::paths::Paths::for_home(alpha.home.path())
+        let reply: elsecall_tuning::rehearsal::protocol::Reply = runtime
+            .block_on(elsecall_host::client::post_large(
+                &elsecall_host::paths::Paths::for_home(alpha.home.path())
                     .unwrap()
                     .socket(),
                 "/v1/rehearsal",
-                &elsecall::rehearsal::protocol::Call {
+                &elsecall_tuning::rehearsal::protocol::Call {
                     member: member.name.into(),
-                    operation: elsecall::rehearsal::protocol::Action::Clean {
+                    operation: elsecall_tuning::rehearsal::protocol::Action::Clean {
                         session: session.into(),
                     },
                 },
@@ -746,10 +745,9 @@ fn service_restart_cleans_workers_even_after_their_caller_was_killed() {
         serde_json::from_slice(&fs::read(alpha.data().join("rehearsal-session.json")).unwrap())
             .unwrap();
     let session = journal["session"].as_str().unwrap().to_owned();
-    let records = elsecall::scheduling::records::Records::open_read_only(
-        &alpha.data().join("records.sqlite"),
-    )
-    .unwrap();
+    let records =
+        elsecall_scheduling::records::Records::open_read_only(&alpha.data().join("records.sqlite"))
+            .unwrap();
     let mut workers = Vec::new();
     let until = Instant::now() + processes::WAIT;
     while workers.is_empty() {
@@ -785,7 +783,8 @@ fn service_restart_cleans_workers_even_after_their_caller_was_killed() {
     }
     for worker in workers {
         assert!(
-            !elsecall::macos::processes::describe(worker.pid).is_some_and(|p| p.identity == worker),
+            !elsecall_host::os_processes::processes::describe(worker.pid)
+                .is_some_and(|p| p.identity == worker),
             "surviving synthetic worker {worker:?}"
         );
     }
@@ -887,10 +886,9 @@ fn live_cleanup_stops_a_worker_after_only_its_caller_is_killed() {
     ]);
     let replay = Controller::spawn(command, temp.path());
     wait_running(&alpha, "rehearsal:build fixture");
-    let records = elsecall::scheduling::records::Records::open_read_only(
-        &alpha.data().join("records.sqlite"),
-    )
-    .unwrap();
+    let records =
+        elsecall_scheduling::records::Records::open_read_only(&alpha.data().join("records.sqlite"))
+            .unwrap();
     let until = Instant::now() + processes::WAIT;
     let record = loop {
         if let Some(r) = records
@@ -912,7 +910,8 @@ fn live_cleanup_stops_a_worker_after_only_its_caller_is_killed() {
     let result = members::json(&result)["data"].clone();
     for worker in record.processes {
         assert!(
-            !elsecall::macos::processes::describe(worker.pid).is_some_and(|p| p.identity == worker)
+            !elsecall_host::os_processes::processes::describe(worker.pid)
+                .is_some_and(|p| p.identity == worker)
         );
     }
     assert_clean(&alpha, &bravo, result["session"].as_str().unwrap());
@@ -1032,7 +1031,7 @@ fn service_snapshots(alpha: &TestMember) -> std::collections::BTreeMap<String, V
     }
 }
 fn sealed_service(member: &TestMember) -> Vec<u8> {
-    use elsecall::config_sync::{
+    use elsecall_sync::config_sync::{
         state::State,
         store::{FileStore, ReplicaStore},
     };
@@ -1063,7 +1062,7 @@ fn assert_restored_snapshots(
     }
 }
 fn latest_margin(member: &TestMember) -> Option<f64> {
-    elsecall::scheduling::records::Records::open_read_only(&member.data().join("records.sqlite"))
+    elsecall_scheduling::records::Records::open_read_only(&member.data().join("records.sqlite"))
         .unwrap()
         .scheduler_settings(
             Timestamp::from_millis(0),
@@ -1146,7 +1145,7 @@ fn compare_reports_live_metrics_uses_synthetic_sizes_and_restores_synced_setting
     );
     // A missing noise floor prevents acceptance. A known hard violation may
     // still reject the proposal, including slowdown caused by host contention.
-    let expected = elsecall::tuning_objective::compare(
+    let expected = elsecall_tuning::tuning_objective::compare(
         &data["baseline"]["metrics"]["scheduling_objective"],
         &data["proposal"]["metrics"]["scheduling_objective"],
         None,
@@ -1378,17 +1377,13 @@ fn compare_restores_after_forced_controller_loss_without_contacting_installed_se
 
 fn seed_recorded_day(
     member: &TestMember,
-    template: &elsecall::scheduling::record::Record,
+    template: &elsecall_scheduling::record::Record,
     day: Timestamp,
     complete: bool,
 ) {
-    use elsecall::{
-        load_log::{minute::Minute, store::LoadStore},
-        scheduling::{
-            capacity::Cores,
-            records::{Records, SchedulerSettings},
-        },
-    };
+    use elsecall_contract::scheduling_model::capacity::Cores;
+    use elsecall_scheduling::load_log::{minute::Minute, store::LoadStore};
+    use elsecall_scheduling::records::{Records, SchedulerSettings};
     let records = Records::open(&member.data().join("records.sqlite")).unwrap();
     let current = records
         .scheduler_settings(
@@ -1413,7 +1408,7 @@ fn seed_recorded_day(
         load.append(&row).unwrap();
         if active {
             let mut record = template.clone();
-            record.run_id = elsecall::scheduling::run_id::RunId::parse(&format!(
+            record.run_id = elsecall_contract::scheduling_model::run_id::RunId::parse(&format!(
                 "r-{:012x}",
                 day.millis() / 1000 + minute
             ))
@@ -1461,15 +1456,14 @@ fn automatically_monitored_failing_day_revokes_trust_and_incomplete_day_is_not_c
             .status
             .success()
     );
-    let template = elsecall::scheduling::records::Records::open_read_only(
-        &alpha.data().join("records.sqlite"),
-    )
-    .unwrap()
-    .recent(10)
-    .unwrap()
-    .into_iter()
-    .find(|r| r.label.as_deref() == Some("drift fixture"))
-    .unwrap();
+    let template =
+        elsecall_scheduling::records::Records::open_read_only(&alpha.data().join("records.sqlite"))
+            .unwrap()
+            .recent(10)
+            .unwrap()
+            .into_iter()
+            .find(|r| r.label.as_deref() == Some("drift fixture"))
+            .unwrap();
     let today = Timestamp::now().millis() / 86_400_000 * 86_400_000;
     alpha.stop();
     bravo.stop();
@@ -1715,7 +1709,7 @@ fn aa_noise_file_freezes_work_and_compare_applies_the_overhead_acceptance_rule()
     assert!(aa.status.success(), "{aa:?}");
     let aa = members::json(&aa)["data"].clone();
     assert_eq!(aa["comparison"]["status"], "compared", "{aa}");
-    let noise = elsecall::tuning_objective::Noise::read(&noise_path).unwrap();
+    let noise = elsecall_tuning::tuning_objective::Noise::read(&noise_path).unwrap();
     assert!(noise.valid());
     assert_eq!(serde_json::to_value(&noise).unwrap(), aa["noise_floor"]);
     use std::os::unix::fs::PermissionsExt;
@@ -1751,7 +1745,7 @@ fn aa_noise_file_freezes_work_and_compare_applies_the_overhead_acceptance_rule()
     }
     let a = &ab["baseline"]["metrics"]["scheduling_objective"];
     let b = &ab["proposal"]["metrics"]["scheduling_objective"];
-    let expected = elsecall::tuning_objective::compare(a, b, Some(&noise));
+    let expected = elsecall_tuning::tuning_objective::compare(a, b, Some(&noise));
     assert_eq!(ab["comparison"]["accepted"], expected["accepted"]);
     assert_eq!(ab["comparison"]["deltas"], expected["deltas"]);
     assert!(ab["comparison"]["accepted"].is_boolean(), "{ab}");
@@ -1816,10 +1810,9 @@ fn cpu_contention_in_a_real_rehearsal_reports_overhead_slowdown_and_zero_admissi
             "20s",
         ]);
     let replay = Controller::spawn(command, temp.path());
-    let records = elsecall::scheduling::records::Records::open_read_only(
-        &alpha.data().join("records.sqlite"),
-    )
-    .unwrap();
+    let records =
+        elsecall_scheduling::records::Records::open_read_only(&alpha.data().join("records.sqlite"))
+            .unwrap();
     let deadline = Instant::now() + processes::WAIT;
     let command = loop {
         let found = records
@@ -1830,7 +1823,7 @@ fn cpu_contention_in_a_real_rehearsal_reports_overhead_slowdown_and_zero_admissi
             .find_map(|r| {
                 r.processes.iter().copied().find(|p| {
                     p.pid != r.requested_by.pid
-                        && elsecall::macos::processes::describe(p.pid)
+                        && elsecall_host::os_processes::processes::describe(p.pid)
                             .is_some_and(|p| p.parent == r.requested_by.pid)
                 })
             });

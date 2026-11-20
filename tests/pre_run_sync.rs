@@ -2,13 +2,11 @@
 //! Configuration sync before placed runs, between real member services in
 //! separate temporary homes with loopback standing in for the tailnet: the master
 //! brings the member up to date with its synced paths before the run starts there.
-mod diagnostics;
-mod file_gate;
-mod members;
-mod processes;
-mod sync_gate;
+use crate::file_gate;
+use crate::members;
+use crate::sync_gate;
 
-use elsecall::paths::Paths;
+use elsecall_host::paths::Paths;
 use members::{TestMember, enrol};
 use serde_json::Value;
 use std::{

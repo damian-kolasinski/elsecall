@@ -1,13 +1,10 @@
 //! Exercise real bundle publication with only macOS signing/launching replaced.
 #![cfg(target_os = "macos")]
-use elsecall::{
-    build_identity::Digest,
-    failure::{Failure, Result},
-    paths::Paths,
-    private_files,
-    window_app::{self, WindowLauncher},
-    window_release,
-};
+use elsecall_contract::build_identity::Digest;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_host::{paths::Paths, private_files};
+use elsecall_lifecycle::window_app::{self, WindowLauncher};
+use elsecall_lifecycle::window_release;
 use std::{fs, os::unix::fs::symlink, path::Path, sync::Mutex};
 
 #[derive(Default)]
@@ -195,7 +192,7 @@ fn the_actual_macos_signer_keeps_the_release_identity_readable() {
     struct SignOnly;
     impl WindowLauncher for SignOnly {
         fn sign(&self, app: &Path) -> Result<()> {
-            elsecall::macos::window_launcher::MacWindowLauncher.sign(app)
+            elsecall_macos::macos::window_launcher::MacWindowLauncher.sign(app)
         }
         fn open(&self, _: &Path) -> Result<()> {
             Ok(())

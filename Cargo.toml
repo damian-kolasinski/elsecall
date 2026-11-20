@@ -1,25 +1,20 @@
 [workspace]
 resolver = "3"
-members = [".", "crates/elsecall-ui"]
+members = [".", "crates/*"]
 # `mise run build` stays the service binary. The desktop crate is built by
 # `--workspace` checks and `cargo run -p elsecall-ui`.
 default-members = ["."]
 
-[package]
-name = "elsecall"
+# Every crate is one release: they share its version, which the binaries report.
+[workspace.package]
 version = "0.3.0"
 edition = "2024"
 rust-version = "1.99"
-description = "Inspect and maintain your development machines"
 license = "MIT"
 
-[features]
-# Follow a local release channel instead of the published releases, for testing
-# the update path against local builds. scripts/local-release.sh builds with it;
-# the release workflow never does. See src/release_update/channel.rs.
-local-release-channel = []
-
-[dependencies]
+# One version and one feature set per dependency, for every crate, so building
+# one crate never compiles a dependency differently from the whole workspace.
+[workspace.dependencies]
 axum = "0.8.9"
 base64 = "0.22"
 chacha20poly1305 = "0.10"
@@ -34,6 +29,11 @@ hyper = { version = "1", features = ["client", "http1", "server"] }
 hyper-util = { version = "0.1", features = ["tokio", "server", "service"] }
 libc = "0.2"
 plist = "1.10"
+png = "0.18"
+# rune dev ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c (2026-11-12).
+# Bump: change these revs and the four patch revs below together.
+rune = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }
+rune-kit = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }
 rusqlite = { version = "0.40", features = ["bundled"] }
 semver = "1"
 serde = { version = "1", features = ["derive"] }
@@ -41,6 +41,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip", "raw_value"] }
 sha2 = "0.10"
 sysinfo = { version = "0.37", default-features = false, features = ["system"] }
+# test-util is not only for tests: the simulator runs the real scheduler on a
+# paused clock (`elsecall simulate`, `elsecall tune`).
 tokio = { version = "1", features = ["io-util", "macros", "process", "rt-multi-thread", "net", "signal", "sync", "time", "test-util"] }
 tempfile = "3"
 toml = "1.1"
@@ -48,20 +50,128 @@ toml_edit = "0.25.19"
 tower = { version = "0.5", features = ["util"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 zeroize = "1"
+# The workspace's own crates.
+elsecall-api-response = { path = "crates/elsecall-api-response" }
+elsecall-contract = { path = "crates/elsecall-contract" }
+elsecall-fleet = { path = "crates/elsecall-fleet" }
+elsecall-host = { path = "crates/elsecall-host" }
+elsecall-lifecycle = { path = "crates/elsecall-lifecycle" }
+elsecall-macos = { path = "crates/elsecall-macos" }
+elsecall-peers = { path = "crates/elsecall-peers" }
+elsecall-reports = { path = "crates/elsecall-reports" }
+elsecall-runs = { path = "crates/elsecall-runs" }
+elsecall-scheduling = { path = "crates/elsecall-scheduling" }
+elsecall-sync = { path = "crates/elsecall-sync" }
+elsecall-tools = { path = "crates/elsecall-tools" }
+elsecall-tuning = { path = "crates/elsecall-tuning" }
+elsecall-workload-config = { path = "crates/elsecall-workload-config" }
+elsecall-workspace = { path = "crates/elsecall-workspace" }
 
-[dev-dependencies]
-tokio = { version = "1", features = ["process", "test-util"] }
+# Every crate inherits these with `[lints] workspace = true`.
+[workspace.lints.rust]
+# `pub` claims another crate uses the item; inside a crate, say `pub(crate)`.
+unreachable_pub = "warn"
+
+[package]
+name = "elsecall"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Inspect and maintain your development machines"
+license.workspace = true
+# The files in tests/ are modules of one test binary, declared below.
+autotests = false
+
+[lints]
+workspace = true
+
+[lib]
+# The library has no Rust doctests; skip rustdoc's pass over it.
+doctest = false
+
+[[bin]]
+name = "elsecall"
+path = "src/main.rs"
+# main.rs has no unit tests; integration tests run the built binary.
+test = false
+
+# Every integration test, in one binary: a change relinks it once, not once per
+# file, and the shared test modules build once. A new test file is a `mod` in
+# tests/main.rs.
+[[test]]
+name = "integration"
+path = "tests/main.rs"
+
+[features]
+# Follow a local release channel instead of the published releases, for testing
+# the update path against local builds. scripts/local-release.sh builds with it;
+# the release workflow never does. See crates/elsecall-lifecycle/src/release_update/channel.rs.
+local-release-channel = ["elsecall-lifecycle/local-release-channel"]
+
+[dependencies]
+axum.workspace = true
+base64.workspace = true
+clap.workspace = true
+elsecall-api-response.workspace = true
+elsecall-contract.workspace = true
+elsecall-fleet.workspace = true
+elsecall-host.workspace = true
+elsecall-lifecycle.workspace = true
+elsecall-macos.workspace = true
+elsecall-peers.workspace = true
+elsecall-reports.workspace = true
+elsecall-runs.workspace = true
+elsecall-scheduling.workspace = true
+elsecall-sync.workspace = true
+elsecall-tools.workspace = true
+elsecall-tuning.workspace = true
+elsecall-workload-config.workspace = true
+elsecall-workspace.workspace = true
+futures-util.workspace = true
+getrandom.workspace = true
+http-body-util.workspace = true
+humantime.workspace = true
+hyper-util.workspace = true
+hyper.workspace = true
+libc.workspace = true
+plist.workspace = true
+rusqlite.workspace = true
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+toml.workspace = true
+tower.workspace = true
+zeroize.workspace = true
 
 [profile.release]
 lto = "thin"
 strip = true
+
+# Backtraces keep file and line; full debug info is opt-in (`--profile debugging`).
+[profile.dev]
+debug = "line-tables-only"
+# The workspace's crates in 16 parts, not the 256 Cargo gives incremental
+# builds: an edit rebuilds the crates above it, and each rebuild rewrites every
+# part of the crate's library and incremental state even when little changed.
+# Fewer, larger parts cut edits low in the graph by about a third. Dependencies
+# build without incremental state, in 16 parts already.
+codegen-units = 16
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.debugging]
+inherits = "dev"
+debug = true
 
 # Digests dominate sync time; keep them fast in test builds too.
 [profile.dev.package.sha2]
 opt-level = 3
 
 # rune ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c (2026-11-12).
-# Bump this rev together with the rune and rune-kit revs in crates/elsecall-ui.
+# Bump this rev together with the rune and rune-kit revs in [workspace.dependencies].
 [patch.crates-io]
 winit = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }
 wgpu-hal = { git = "https://github.com/anomalyco/rune", rev = "ea6ddf8f2c3cd476a3797caad7d77cbe04641d9c" }

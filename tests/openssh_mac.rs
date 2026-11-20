@@ -2,10 +2,8 @@
 //! changes that Mac, so it runs only when `ELSECALL_E2E_SSH` names one as
 //! `account@host` and `ELSECALL_E2E_SSH_PASSWORD_FILE` holds the password.
 #![cfg(target_os = "macos")]
-use elsecall::{
-    openssh_mac::OpensshMac,
-    remote_mac::{Build, RemoteMac},
-};
+use elsecall_fleet::remote_mac::{Build, RemoteMac};
+use elsecall_macos::openssh_mac::OpensshMac;
 use std::path::Path;
 use zeroize::Zeroizing;
 
@@ -53,7 +51,7 @@ async fn the_adapter_reads_installs_and_authorizes_on_a_real_mac() {
     };
     let installed = mac.install(&build).await.unwrap();
     eprintln!("installed: {installed}");
-    let wanted = elsecall::build_identity::Digest::of_file(elsecall)
+    let wanted = elsecall_contract::build_identity::Digest::of_file(elsecall)
         .unwrap()
         .build_id()
         .to_string();
@@ -70,11 +68,11 @@ async fn the_adapter_reads_installs_and_authorizes_on_a_real_mac() {
     );
     let before = mac.incoming(&executable).await.unwrap();
     eprintln!("firewall: {before:?}");
-    assert_ne!(before, elsecall::inbound_firewall::Rule::Unknown);
+    assert_ne!(before, elsecall_fleet::inbound_firewall::Rule::Unknown);
     mac.allow_incoming(std::slice::from_ref(&executable))
         .await
         .unwrap();
-    let line = elsecall::authorized_keys::line(
+    let line = elsecall_fleet::authorized_keys::line(
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleMasterKey me@example.com",
         "mac-mini",
     )
@@ -84,13 +82,14 @@ async fn the_adapter_reads_installs_and_authorizes_on_a_real_mac() {
 
     // Tailscale, when asked to: it stays installed and waiting for a login.
     if std::env::var_os("ELSECALL_E2E_TAILSCALE").is_some() {
-        assert_eq!(tailnet, elsecall::remote_mac::RemoteTailnet::Absent);
-        let bottle = elsecall::tailscale_bottle::for_macos(facts.macos_major().unwrap()).unwrap();
+        assert_eq!(tailnet, elsecall_fleet::remote_mac::RemoteTailnet::Absent);
+        let bottle =
+            elsecall_peers::tailscale_bottle::for_macos(facts.macos_major().unwrap()).unwrap();
         mac.install_tailscale(&bottle).await.unwrap();
         assert_eq!(
             mac.tailnet().await.unwrap(),
-            elsecall::remote_mac::RemoteTailnet::LoggedOut {
-                variant: elsecall::remote_mac::TailscaleVariant::AddMacDaemon,
+            elsecall_fleet::remote_mac::RemoteTailnet::LoggedOut {
+                variant: elsecall_fleet::remote_mac::TailscaleVariant::AddMacDaemon,
                 domain: None,
             }
         );
@@ -99,13 +98,13 @@ async fn the_adapter_reads_installs_and_authorizes_on_a_real_mac() {
             .await
             .unwrap();
         assert!(
-            matches!(&login, elsecall::remote_mac::Login::Approve(link) if link.as_str().starts_with("https://login.tailscale.com/")),
+            matches!(&login, elsecall_fleet::remote_mac::Login::Approve(link) if link.as_str().starts_with("https://login.tailscale.com/")),
             "{login:?}"
         );
         // Asking again offers a link again rather than failing.
         assert!(matches!(
             mac.start_tailscale_login(None).await.unwrap(),
-            elsecall::remote_mac::Login::Approve(_)
+            elsecall_fleet::remote_mac::Login::Approve(_)
         ));
         // Installing again repairs rather than failing.
         mac.install_tailscale(&bottle).await.unwrap();

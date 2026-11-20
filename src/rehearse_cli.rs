@@ -1,18 +1,16 @@
 //! Time-compressed replay orchestration. Trace parsing and model validation
 //! happen before the first fleet mutation; every exit path tears down sessions.
-use crate::{
-    client,
-    failure::{Failure, Result},
-    paths::Paths,
-    rehearsal::{
-        invalid,
-        plan::{Arrival, Plan},
-        protocol::{Action, Call, Job, Reply},
-    },
-    scheduling::{request::Urgency, timestamp::Timestamp},
-    trace_api::Members,
-};
 use clap::Args;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::scheduling_model::{request::Urgency, timestamp::Timestamp};
+use elsecall_host::client;
+use elsecall_host::paths::Paths;
+use elsecall_tuning::rehearsal::{
+    invalid,
+    plan::{Arrival, Plan},
+    protocol::{Action, Call, Job, Reply},
+};
+use elsecall_tuning::trace_api::Members;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 use tokio::time::Instant;
@@ -20,10 +18,10 @@ use tokio::time::Instant;
 #[derive(Args, Debug, Clone)]
 pub struct RehearseArgs {
     #[command(flatten)]
-    pub replay_placement: crate::replay_placement::ReplayPlacement,
+    pub replay_placement: elsecall_tuning::replay_placement::ReplayPlacement,
     /// Replay arrivals F times closer, on top of compression (1–32)
     #[arg(long, default_value = "1")]
-    pub load_factor: crate::replay_load::LoadFactor,
+    pub load_factor: elsecall_tuning::replay_load::LoadFactor,
     #[arg(long)]
     pub trace: PathBuf,
     /// Explicit RFC 3339 arrival bounds inside the trace
@@ -95,9 +93,9 @@ pub async fn run(paths: &Paths, args: RehearseArgs) -> Result<Value> {
         ));
     }
     if args.compare.is_some() || args.aa {
-        return crate::rehearsal::compare::run(paths, args).await;
+        return crate::rehearsal_compare::run(paths, args).await;
     }
-    let mut signals = crate::rehearsal::cancellation::Signals::register()?;
+    let mut signals = elsecall_tuning::rehearsal::cancellation::Signals::register()?;
     let source = source(&args)?;
     single(
         paths,
@@ -114,17 +112,18 @@ pub(crate) async fn single(
     paths: &Paths,
     args: RehearseArgs,
     settings: &BTreeMap<String, String>,
-    signals: &mut crate::rehearsal::cancellation::Signals,
-    source: &crate::workload::trace::Trace,
-    frozen_calibration: Option<&BTreeMap<String, crate::rehearsal::worker::Calibration>>,
+    signals: &mut elsecall_tuning::rehearsal::cancellation::Signals,
+    source: &elsecall_reports::workload::trace::Trace,
+    frozen_calibration: Option<&BTreeMap<String, elsecall_tuning::rehearsal::worker::Calibration>>,
     frozen_ideals: Option<&BTreeMap<String, Option<f64>>>,
 ) -> Result<Value> {
     if args.limit.is_zero() || args.limit > Duration::from_secs(3600) {
         return Err(invalid("--limit must be positive and at most 1h."));
     }
-    let source_digest =
-        crate::build_identity::Digest::of(&serde_json::to_vec(&source).expect("trace serializes"));
-    let candidate = crate::simulation::CandidateSettings::parse(
+    let source_digest = elsecall_contract::build_identity::Digest::of(
+        &serde_json::to_vec(&source).expect("trace serializes"),
+    );
+    let candidate = elsecall_tuning::simulation::CandidateSettings::parse(
         source,
         &settings
             .iter()
@@ -185,7 +184,7 @@ pub(crate) async fn single(
                 .find(|r| &r.member == member)
                 .and_then(|r| r.cores)
                 .ok_or_else(|| invalid("Execution-member core counts are unavailable."))?;
-            let logical = crate::rehearsal::worker::logical_demand(*demand, cores);
+            let logical = elsecall_tuning::rehearsal::worker::logical_demand(*demand, cores);
             if !logical.is_finite() || logical > 256.0 {
                 return Err(invalid(
                     "Synthetic logical CPU duty exceeds the 256-core worker bound.",
@@ -203,12 +202,12 @@ pub(crate) async fn single(
     for arrival in &mut plan.arrivals {
         arrival.request.label = format!(
             "{}{}:{}",
-            crate::rehearsal::PREFIX,
+            elsecall_contract::labels::rules::PREFIX,
             session,
             arrival
                 .request
                 .label
-                .strip_prefix(crate::rehearsal::PREFIX)
+                .strip_prefix(elsecall_contract::labels::rules::PREFIX)
                 .expect("planned namespace")
         );
     }
@@ -266,7 +265,7 @@ pub(crate) async fn single(
             .map(|r| {
                 Ok((
                     r.member.clone(),
-                    crate::rehearsal::work::Member {
+                    elsecall_tuning::rehearsal::work::Member {
                         calibration: calibration
                             .get(&r.member)
                             .cloned()
@@ -298,7 +297,7 @@ pub(crate) async fn single(
                         .ok_or_else(|| invalid("Frozen ideal evidence lacks a planned request."))
                 })
                 .transpose()?;
-            arrival.request.work = Some(crate::rehearsal::work::Work::freeze(
+            arrival.request.work = Some(elsecall_tuning::rehearsal::work::Work::freeze(
                 arrival.request.duration_ms,
                 &arrival.request.demand,
                 &arrival.reference_member,
@@ -366,7 +365,8 @@ pub(crate) async fn single(
                             .ok_or_else(|| {
                                 invalid("Execution-member core counts are unavailable.")
                             })?;
-                        *demand = crate::rehearsal::worker::logical_demand(*demand, cores);
+                        *demand =
+                            elsecall_tuning::rehearsal::worker::logical_demand(*demand, cores);
                     }
                     ready.push((arrival.member.clone(), request));
                     // A lost response is an attempted submission too: its
@@ -508,7 +508,7 @@ pub(crate) async fn single(
         },
     )
     .await;
-    let mut trace = crate::trace_cli::collect(paths, epoch, until).await?;
+    let mut trace = elsecall_tuning::trace_cli::collect(paths, epoch, until).await?;
     let mut load_complete = BTreeMap::new();
     for (member, result) in members.iter().zip(recorded_load) {
         let recording = result.ok().and_then(|r| r.recorded_load);
@@ -524,7 +524,7 @@ pub(crate) async fn single(
     }
     trace
         .requests
-        .retain(|r| crate::rehearsal::belongs(&session, r.fact.label.as_deref()));
+        .retain(|r| elsecall_contract::labels::rules::belongs(&session, r.fact.label.as_deref()));
     let ids: std::collections::BTreeSet<_> = trace
         .requests
         .iter()
@@ -533,10 +533,10 @@ pub(crate) async fn single(
     trace.leftovers.retain(|r| ids.contains(r.run_id.as_str()));
     trace
         .demand
-        .retain(|d| crate::rehearsal::synthetic(Some(&d.family)));
+        .retain(|d| elsecall_contract::labels::rules::synthetic(Some(&d.family)));
     trace
         .contention
-        .retain(|d| crate::rehearsal::synthetic(Some(&d.family)));
+        .retain(|d| elsecall_contract::labels::rules::synthetic(Some(&d.family)));
     if inspections.iter().any(|r| r.production_active > 0) {
         trace.incomplete = true;
         trace.limits.push("Forced overlap: pre-existing production grants are outside this rehearsal's request population".into());
@@ -608,7 +608,7 @@ pub(crate) async fn single(
     if inspections.iter().any(|r| r.production_active > 0) {
         unfinished.push("production work was active on a member".to_owned());
     }
-    trace.rehearsal = Some(crate::rehearsal::recording::Recording {
+    trace.rehearsal = Some(elsecall_tuning::rehearsal::recording::Recording {
         calibration: calibration.clone(),
         ideal_ms: submitted
             .iter()
@@ -639,7 +639,7 @@ pub(crate) async fn single(
             .collect(),
         session: session.clone(),
         source_digest,
-        build: crate::build_identity::this_build()?,
+        build: elsecall_contract::build_identity::this_build()?,
         compress: args.compress,
         load_factor: args.load_factor,
         seed: args.seed,
@@ -661,9 +661,9 @@ pub(crate) async fn single(
     let replay_trace = trace.clone();
     let seed = args.seed;
     let simulation = tokio::task::spawn_blocking(move || {
-        crate::simulation::simulate(
+        elsecall_tuning::simulation::simulate(
             replay_trace,
-            crate::simulation::Options {
+            elsecall_tuning::simulation::Options {
                 seed,
                 fidelity: true,
                 ..Default::default()
@@ -672,7 +672,8 @@ pub(crate) async fn single(
     })
     .await
     .map_err(|_| invalid("Rehearsal fidelity task failed."))??;
-    let certificate = crate::tuning_trust::Certificate::from_rehearsal(&trace, &simulation);
+    let certificate =
+        elsecall_tuning::tuning_trust::Certificate::from_rehearsal(&trace, &simulation);
     artifact["fidelity"] = simulation["fidelity"].clone();
     artifact["certificate"] = json!(certificate);
     use std::io::Seek;
@@ -697,13 +698,13 @@ pub(crate) async fn single(
         )?;
     }
     Ok(
-        json!({"placement_replay":{"mode":args.replay_placement.placement,"split":crate::replay_placement::split(source)},"calibration":calibration,"measured_calibration":measured_calibration,"recording_complete":trace.rehearsal.as_ref().is_some_and(|r|r.complete_for(&trace)),"recording_missing":unfinished.iter().cloned().chain(trace.rehearsal.as_ref().map(|r|r.missing_evidence(&trace)).unwrap_or_default()).collect::<Vec<_>>(),"certificate":certificate,"session":session,"compress":args.compress,"load_factor":args.load_factor,"seed":seed,"limit_ms":args.limit.as_millis(),"stop_reason":stop_reason,"rehearsal_error":rehearsal_error,"submitted":submitted.len(),"planned":plan.arrivals.len(),"aggregated_nested":plan.aggregated_nested,"elapsed_ms":started.elapsed().as_millis(),"trace":output,"cleanup_complete":cleanup_errors.is_empty(),"cleanup_errors":cleanup_errors,"requests":request_mapping,"metrics":crate::simulation::observed_metrics(&trace),"simulation":simulation}),
+        json!({"placement_replay":{"mode":args.replay_placement.placement,"split":elsecall_tuning::replay_placement::split(source)},"calibration":calibration,"measured_calibration":measured_calibration,"recording_complete":trace.rehearsal.as_ref().is_some_and(|r|r.complete_for(&trace)),"recording_missing":unfinished.iter().cloned().chain(trace.rehearsal.as_ref().map(|r|r.missing_evidence(&trace)).unwrap_or_default()).collect::<Vec<_>>(),"certificate":certificate,"session":session,"compress":args.compress,"load_factor":args.load_factor,"seed":seed,"limit_ms":args.limit.as_millis(),"stop_reason":stop_reason,"rehearsal_error":rehearsal_error,"submitted":submitted.len(),"planned":plan.arrivals.len(),"aggregated_nested":plan.aggregated_nested,"elapsed_ms":started.elapsed().as_millis(),"trace":output,"cleanup_complete":cleanup_errors.is_empty(),"cleanup_errors":cleanup_errors,"requests":request_mapping,"metrics":elsecall_tuning::simulation::observed_metrics(&trace),"simulation":simulation}),
     )
 }
 fn mapping(
     submitted: &[Arrival],
     collected: &BTreeMap<usize, Job>,
-    trace: &crate::workload::trace::Trace,
+    trace: &elsecall_reports::workload::trace::Trace,
     epoch: Timestamp,
 ) -> Vec<Value> {
     submitted.iter().map(|a|{
@@ -714,10 +715,13 @@ fn mapping(
     }).collect()
 }
 
-pub(crate) fn source(args: &RehearseArgs) -> Result<crate::workload::trace::Trace> {
-    let mut trace = crate::workload::input::read(&args.trace)?;
+pub(crate) fn source(args: &RehearseArgs) -> Result<elsecall_reports::workload::trace::Trace> {
+    let mut trace = elsecall_tuning::workload_input::read(&args.trace)?;
     args.replay_placement.apply(&mut trace)?;
-    let (since, until) =
-        crate::workload::bounds::within(&trace, args.since.as_deref(), args.until.as_deref())?;
-    crate::rehearsal::window::bound(&trace, since, until)
+    let (since, until) = elsecall_reports::workload::bounds::within(
+        &trace,
+        args.since.as_deref(),
+        args.until.as_deref(),
+    )?;
+    elsecall_tuning::rehearsal::window::bound(&trace, since, until)
 }

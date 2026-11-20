@@ -4,9 +4,9 @@
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
-use elsecall::add_mac::{AddReport, Approval, Event, Step};
-use elsecall::nearby_macs::NearbyMac;
-use elsecall::remote_mac::LoginLink;
+use elsecall_fleet::add_mac::{AddReport, Approval, Event, Step};
+use elsecall_fleet::nearby_macs::NearbyMac;
+use elsecall_fleet::remote_mac::LoginLink;
 use rune::Tx;
 
 use super::{AppState, init, poll, render, scene_members};
@@ -25,7 +25,7 @@ struct FakeCli {
 }
 
 impl AddMacSource for FakeCli {
-    fn nearby(&self) -> Result<Vec<NearbyMac>, elsecall::failure::Failure> {
+    fn nearby(&self) -> Result<Vec<NearbyMac>, elsecall_contract::failure::Failure> {
         Ok(vec![
             mac("MacBook Pro", true, None),
             mac("Studio", false, None),

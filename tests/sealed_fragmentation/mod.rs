@@ -14,7 +14,7 @@ use tokio::{
 };
 
 #[derive(Clone, Copy)]
-pub enum Fault {
+pub(crate) enum Fault {
     Pass,
     StopUpstream,
     StopDownstream,
@@ -27,7 +27,7 @@ pub enum Fault {
     Mac,
     Header,
 }
-pub struct Proxy {
+pub(crate) struct Proxy {
     _runtime: tokio::runtime::Runtime,
     address: SocketAddr,
     pub selected: Arc<AtomicBool>,
@@ -38,7 +38,7 @@ pub struct Proxy {
     pub prefix_plaintext: Arc<AtomicUsize>,
 }
 impl Proxy {
-    pub fn start(member: &crate::members::TestMember, fault: Fault) -> Self {
+    pub(crate) fn start(member: &crate::members::TestMember, fault: Fault) -> Self {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .enable_all()
@@ -84,13 +84,17 @@ impl Proxy {
             prefix_plaintext,
         }
     }
-    pub fn enroll(&self, master: &crate::members::TestMember, member: &crate::members::TestMember) {
+    pub(crate) fn enroll(
+        &self,
+        master: &crate::members::TestMember,
+        member: &crate::members::TestMember,
+    ) {
         let mut advertised = member.as_member();
         advertised.endpoints = vec![self.address];
         master.ok(&[
             "fleet",
             "enroll",
-            &elsecall::member_code::encode(&advertised),
+            &elsecall_peers::member_code::encode(&advertised),
         ]);
     }
 }

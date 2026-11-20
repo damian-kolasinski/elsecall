@@ -1,16 +1,13 @@
 #![cfg(target_os = "macos")]
 use axum::{Json, Router, routing::get};
-use elsecall::{
-    client,
-    failure::{Failure, Result},
-    inspection::{Inspection, LoadSample, Machine, MachineInspector},
-    macos::processes::MacProcesses,
-    paths::Paths,
-    peer_listener, private_files,
-    scheduling::service::Adapters,
-    server,
-    tailnet::{Presence, Tailnet},
-};
+use elsecall::{peer_listener, server};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::inspection::{Inspection, LoadSample, Machine, MachineInspector};
+use elsecall_host::client;
+use elsecall_host::os_processes::processes::MacProcesses;
+use elsecall_host::{paths::Paths, private_files};
+use elsecall_peers::tailnet::{Presence, Tailnet};
+use elsecall_scheduling::service::Adapters;
 use std::{future::IntoFuture, sync::Arc};
 
 struct UnavailableMachine;
@@ -33,7 +30,7 @@ impl MachineInspector for UnavailableMachine {
 struct NoTailnet;
 impl Tailnet for NoTailnet {
     fn discover(&self) -> Result<Presence> {
-        Err(elsecall::tailnet::unavailable("not connected"))
+        Err(elsecall_peers::tailnet::unavailable("not connected"))
     }
 }
 fn fixture() -> (tempfile::TempDir, Paths) {
@@ -59,20 +56,20 @@ async fn inspection_failure_crosses_real_api_without_becoming_false_health_failu
         Arc::new(Inspection::new(machine.clone())),
         Adapters {
             machine,
-            speed: Arc::new(elsecall::machine_script::FixedSpeed(1.0)),
+            speed: Arc::new(elsecall_host::machine_script::FixedSpeed(1.0)),
             processes,
             exits,
         },
-        Arc::new(elsecall::macos::process_sampler::MacProcessSampler),
+        Arc::new(elsecall_macos::macos::process_sampler::MacProcessSampler),
         peer_listener::Settings {
             tailnet: Arc::new(NoTailnet),
             port: 1,
         },
-        elsecall::release_update::service::UpdateAdapters::production(false).unwrap(),
+        elsecall_lifecycle::release_update::service::UpdateAdapters::production(false).unwrap(),
     ));
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(120);
     loop {
-        if client::get::<elsecall::inspection::Health>(&paths.socket(), "/v1/health")
+        if client::get::<elsecall_contract::inspection::Health>(&paths.socket(), "/v1/health")
             .await
             .is_ok()
         {
@@ -157,13 +154,13 @@ async fn fleet_reads_accept_large_diagnostics_with_size_schema_and_timeout_bound
             "/v1/fleet",
             get(move || {
                 let fleet = served_fleet.clone();
-                async move { Json(elsecall::api::Response::new(fleet)) }
+                async move { Json(elsecall_contract::api::Response::new(fleet)) }
             }),
         )
         .route(
             "/oversized",
             get(|| async {
-                Json(elsecall::api::Response::new(
+                Json(elsecall_contract::api::Response::new(
                     "x".repeat(client::LARGE_RESPONSE),
                 ))
             }),

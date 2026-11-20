@@ -3,29 +3,25 @@
 //! separate temporary homes, with loopback standing in for the tailnet. Only
 //! tailnet discovery, machine load, the housekeeping clock and, where disk pressure
 //! is the subject, the volume's size are replaced.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
-use elsecall::{
-    housekeeping::{
-        caller_state::CallerState,
-        callers::Nobody,
-        catalog::Catalog,
-        clock::{Clock, FileClock},
-        pass::{Housekeeper, Parts},
-        settings::Settings,
-        volumes::Statfs,
-    },
-    scheduling::timestamp::Timestamp,
-    workspace::{
-        copies::Copies,
-        framed_link::FramedLink,
-        location::{Locations, Setting},
-        object_sources::ObjectSources,
-        push_cache::CacheFiles,
-        snapshot, sync,
-    },
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
+use elsecall_workspace::housekeeping::{
+    caller_state::CallerState,
+    callers::Nobody,
+    catalog::Catalog,
+    clock::{Clock, FileClock},
+    pass::{Housekeeper, Parts},
+    settings::Settings,
+    volumes::Statfs,
+};
+use elsecall_workspace::{
+    copies::Copies,
+    framed_link::FramedLink,
+    location::{Locations, Setting},
+    object_sources::ObjectSources,
+    push_cache::CacheFiles,
+    snapshot, sync,
 };
 use members::{TestMember, enrol};
 use serde_json::Value;
@@ -375,7 +371,7 @@ fn disk_pressure_evicts_the_least_recently_used_idle_copies_until_it_recovers() 
     let threshold: u64 = 1_000_000_000;
     // Free space 3 MB short of the threshold: one copy and its store are not
     // enough, two are.
-    let held = elsecall::housekeeping::measure::allocated(&root).unwrap();
+    let held = elsecall_workspace::housekeeping::measure::allocated(&root).unwrap();
     let simulate = |short: u64| {
         std::fs::write(
             &volume,
@@ -588,13 +584,13 @@ struct Gated<L> {
     gate: Option<(Arc<tokio::sync::Notify>, Arc<tokio::sync::Notify>)>,
 }
 impl<L: sync::Link> sync::Link for Gated<L> {
-    async fn send(&mut self, message: sync::SyncMessage) -> elsecall::failure::Result<()> {
+    async fn send(&mut self, message: sync::SyncMessage) -> elsecall_contract::failure::Result<()> {
         self.inner.send(message).await
     }
-    async fn send_content(&mut self, chunk: Vec<u8>) -> elsecall::failure::Result<()> {
+    async fn send_content(&mut self, chunk: Vec<u8>) -> elsecall_contract::failure::Result<()> {
         self.inner.send_content(chunk).await
     }
-    async fn receive(&mut self) -> elsecall::failure::Result<sync::Received> {
+    async fn receive(&mut self) -> elsecall_contract::failure::Result<sync::Received> {
         let received = self.inner.receive().await?;
         if let Some((release, reached)) = self.gate.take() {
             reached.notify_one();

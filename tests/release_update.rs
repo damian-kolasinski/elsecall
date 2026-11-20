@@ -1,29 +1,29 @@
 #![cfg(target_os = "macos")]
 //! Update policy exercised with a real scheduler/API and fakes only at provider boundaries.
-use elsecall::{
-    build_identity::Digest,
-    configuration::ServiceConfiguration,
-    failure::Result,
-    inspection::{CoreCounts, LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState},
-    load_log::LoadLog,
-    paths::Paths,
-    private_files,
-    release_update::{
-        self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
-        service::{HelperLauncher, UpdateService},
-        store::Store,
-    },
-    scheduling::{
-        capacity::Cores,
-        clock::SystemClock,
-        placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},
-        pre_run_sync::{PreRunSync, Synced},
-        processes::{ProcessIdentity, ProcessInfo, ProcessTable},
-        request::{AdmissionRequest, Kind, Placement, Urgency},
-        run_id::{RandomRunIds, RunId},
-        service::{Adapters, Driving, HostedEnd, Runtime, Scheduler},
-        speed::SpeedMeter,
-    },
+use elsecall_contract::build_identity::Digest;
+use elsecall_contract::failure::Result;
+use elsecall_contract::inspection::{
+    CoreCounts, LoadSample, Machine, MachineInspector, MemoryPressure, ThermalState,
+};
+use elsecall_contract::scheduling_model::{
+    capacity::Cores,
+    request::{AdmissionRequest, Kind, Placement, Urgency},
+    run_id::{RandomRunIds, RunId},
+    speed::SpeedMeter,
+};
+use elsecall_host::processes::{ProcessIdentity, ProcessInfo, ProcessTable};
+use elsecall_host::{paths::Paths, private_files};
+use elsecall_lifecycle::release_update::{
+    self, Job, JobId, Phase, Release, ReleaseCatalog, ReleaseVersion, Status,
+    service::{HelperLauncher, UpdateService},
+    store::Store,
+};
+use elsecall_scheduling::load_log::LoadLog;
+use elsecall_scheduling::{
+    clock::SystemClock,
+    placed::{Alone, OfferReply, PlacementOffer, Warmth, WorkspaceRef},
+    pre_run_sync::{PreRunSync, Synced},
+    service::{Adapters, Driving, HostedEnd, Runtime, Scheduler, SchedulerConfiguration},
 };
 use std::{
     future::IntoFuture,
@@ -114,7 +114,7 @@ fn fixture() -> (tempfile::TempDir, Paths, Arc<Scheduler>) {
     let (_, exits) = tokio::sync::mpsc::unbounded_channel();
     let (scheduler, _tasks) = Scheduler::start_with_runtime(
         &paths.data.join("records.sqlite"),
-        ServiceConfiguration::default(),
+        SchedulerConfiguration::default(),
         Adapters {
             machine: Arc::new(MachineBoundary),
             speed: Arc::new(Speed),
@@ -255,7 +255,7 @@ async fn api_and_real_cli_check_start_and_follow_the_same_durable_job() {
     let task = tokio::spawn(
         axum::serve(
             listener,
-            elsecall::release_update_api::routes(service.clone()),
+            elsecall_lifecycle::release_update_api::routes(service.clone()),
         )
         .into_future(),
     );
@@ -288,7 +288,7 @@ async fn api_and_real_cli_check_start_and_follow_the_same_durable_job() {
     Store::new(&paths)
         .advance(&mut done, Phase::Succeeded)
         .unwrap();
-    let status: Status = elsecall::client::get(&paths.socket(), "/v1/update")
+    let status: Status = elsecall_host::client::get(&paths.socket(), "/v1/update")
         .await
         .unwrap();
     assert!(matches!(status.job.unwrap().phase, Phase::Succeeded));

@@ -1,9 +1,7 @@
 //! Real filesystem and SQLite boundaries, including writers in separate processes.
-mod processes;
-use elsecall::{
-    scheduling::{records::Records, timestamp::Timestamp},
-    service_log::{Log, Settings},
-};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
+use elsecall_host::service_log::{Log, Settings};
+use elsecall_scheduling::records::Records;
 use std::{fs, process::Stdio};
 
 #[test]
@@ -30,7 +28,7 @@ fn concurrent_processes_reopen_the_current_file_and_keep_every_line() {
     let mut children: Vec<_> = (0..4)
         .map(|n| {
             crate::processes::command(std::env::current_exe().unwrap())
-                .args(["--exact", "log_writer_child", "--ignored"])
+                .args(["--exact", "state_retention::log_writer_child", "--ignored"])
                 .env("LOG_TEST_PATH", &path)
                 .env("LOG_TEST_WRITER", n.to_string())
                 .stdout(Stdio::null())
@@ -109,15 +107,13 @@ fn expired_records_return_substantial_slack_and_wal_to_disk() {
 
 #[test]
 fn backup_retention_removes_content_and_empty_directories_and_applies_lowered_limits_on_open() {
-    use elsecall::{
-        config_sync::{
-            compare::Change,
-            replica::{Layout, Replica},
-            state::{Backup, State},
-            store::FileStore,
-            synced_path::SyncedPath,
-        },
-        private_files,
+    use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
+    use elsecall_host::private_files;
+    use elsecall_sync::config_sync::{
+        compare::Change,
+        replica::{Layout, Replica},
+        state::{Backup, State},
+        store::FileStore,
     };
     let home = tempfile::tempdir().unwrap();
     let data = home.path().join("state");
@@ -179,15 +175,13 @@ fn backup_retention_removes_content_and_empty_directories_and_applies_lowered_li
 
 #[test]
 fn retention_removes_recorded_cross_volume_backup_without_removing_its_neighbors() {
-    use elsecall::{
-        config_sync::{
-            compare::Change,
-            replica::{Layout, Replica},
-            state::{Backup, State},
-            store::FileStore,
-            synced_path::SyncedPath,
-        },
-        private_files,
+    use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
+    use elsecall_host::private_files;
+    use elsecall_sync::config_sync::{
+        compare::Change,
+        replica::{Layout, Replica},
+        state::{Backup, State},
+        store::FileStore,
     };
     let home = tempfile::tempdir().unwrap();
     let data = home.path().join("state");

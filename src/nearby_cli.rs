@@ -2,13 +2,13 @@
 //!
 //! It browses in the CLI's own process, which macOS lets use the local network
 //! when run from a terminal, over SSH or by an app the user allowed.
-use crate::{
-    client,
-    failure::Result,
-    macos::dns_sd::Bonjour,
-    nearby_macs::{KnownMember, LocalNetwork, Membership, NearbyMac, RemoteLogin, nearby},
-    paths::Paths,
+use elsecall_contract::failure::Result;
+use elsecall_fleet::nearby_macs::{
+    KnownMember, LocalNetwork, Membership, NearbyMac, RemoteLogin, nearby,
 };
+use elsecall_host::client;
+use elsecall_host::paths::Paths;
+use elsecall_macos::macos::dns_sd::Bonjour;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{net::IpAddr, time::Duration};
@@ -100,7 +100,7 @@ fn next_step(macs: &[NearbyMac]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::inspection::Machine;
+    use elsecall_contract::inspection::Machine;
 
     fn mac(name: &str, remote_login: RemoteLogin, membership: Membership) -> NearbyMac {
         NearbyMac {

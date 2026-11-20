@@ -1,8 +1,6 @@
 #![cfg(target_os = "macos")]
 //! Real services and records; fake only machine observation and the tailnet.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 use members::{TestMember, enrol};
 use serde_json::Value;
 use std::{fs, os::unix::fs::PermissionsExt, path::Path};
@@ -181,11 +179,9 @@ fn exports_paginated_fleet_history_without_commands_or_environment() {
 
 #[test]
 fn exports_real_overrun_shape_across_load_pages_without_losing_history() {
-    use elsecall::{
-        load_log::{minute::Minute, store::LoadStore},
-        paths::Paths,
-        scheduling::timestamp::Timestamp,
-    };
+    use elsecall_contract::scheduling_model::timestamp::Timestamp;
+    use elsecall_host::paths::Paths;
+    use elsecall_scheduling::load_log::{minute::Minute, store::LoadStore};
     let alpha = TestMember::start("alpha");
     let paths = Paths::for_home(alpha.home.path()).unwrap();
     let store = LoadStore::open(&paths.load_history()).unwrap();
@@ -215,7 +211,7 @@ fn exports_real_overrun_shape_across_load_pages_without_losing_history() {
         output.to_str().unwrap(),
     ]);
     assert_eq!(summary["incomplete"], false, "{summary}");
-    let trace: elsecall::workload::trace::Trace =
+    let trace: elsecall_reports::workload::trace::Trace =
         serde_json::from_slice(&fs::read(output).unwrap()).unwrap();
     for at in times {
         assert_eq!(
@@ -228,17 +224,16 @@ fn exports_real_overrun_shape_across_load_pages_without_losing_history() {
             61
         );
     }
-    elsecall::simulation::validate_trace(&trace).unwrap();
+    elsecall_tuning::simulation::validate_trace(&trace).unwrap();
 }
 
 #[test]
 fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
-    use elsecall::{
-        load_log::{minute::Minute, store::LoadStore},
-        paths::Paths,
-        scheduling::{record::Record, records::Records, run_id::RunId, timestamp::Timestamp},
-        workload::trace::Trace,
-    };
+    use elsecall_contract::scheduling_model::{run_id::RunId, timestamp::Timestamp};
+    use elsecall_host::paths::Paths;
+    use elsecall_reports::workload::trace::Trace;
+    use elsecall_scheduling::load_log::{minute::Minute, store::LoadStore};
+    use elsecall_scheduling::{record::Record, records::Records};
     use std::time::Duration;
     // Twelve scripted cores: overlapping runs record up to 6 cores in use.
     let load_dir = tempfile::tempdir().unwrap();
@@ -366,7 +361,7 @@ fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
     );
     let selected: Trace = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     assert_eq!(selected.since.millis(), start + 19 * 60_000 + 1);
-    elsecall::rehearsal::plan::Plan::new(&selected, 6.0).unwrap();
+    elsecall_tuning::rehearsal::plan::Plan::new(&selected, 6.0).unwrap();
     // Older arrivals stay as history, while no root crosses the chosen start.
     assert!(
         selected
@@ -441,7 +436,7 @@ fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
                 .iter()
                 .any(|s| s.at == tail_settings.at)
         );
-        elsecall::simulation::validate_trace(&exported).unwrap();
+        elsecall_tuning::simulation::validate_trace(&exported).unwrap();
     }
     let before = records.recent(100).unwrap().len();
     let response = alpha.run(&[
@@ -483,7 +478,7 @@ fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
     assert!(legacy.synthetic_workspace);
     assert!(!legacy.workspace_recorded);
     assert!(legacy.workspace.is_some());
-    elsecall::rehearsal::plan::Plan::new(&selected, 6.0).unwrap();
+    elsecall_tuning::rehearsal::plan::Plan::new(&selected, 6.0).unwrap();
 
     history[7].workspace_recorded = true;
     history[4].ended_at = Some(Timestamp::from_millis(start + 26 * 60_000));
@@ -506,7 +501,7 @@ fn selected_export_is_a_rehearsable_workload_and_explains_rejections() {
     for r in &mut history {
         r.workspace = None;
         r.workspace_recorded = false;
-        r.outcome = Some(elsecall::scheduling::record::Outcome::Signaled { signal: 9 });
+        r.outcome = Some(elsecall_scheduling::record::Outcome::Signaled { signal: 9 });
     }
     write_history(&history);
     let (response, path) = export("no-window.json");

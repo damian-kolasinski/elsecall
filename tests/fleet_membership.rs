@@ -1,9 +1,9 @@
 #![cfg(target_os = "macos")]
 //! Enrolment, removal and authentication between real member services.
-mod diagnostics;
-mod members;
-mod processes;
-use elsecall::{fleet::PeerStatus, member_key::MemberKey, peer_auth, peer_client, roster::Member};
+use crate::members;
+use elsecall_fleet::fleet::PeerStatus;
+use elsecall_peers::peer_client;
+use elsecall_peers::{member_key::MemberKey, peer_auth, roster::Member};
 use hyper::Method;
 use members::{TestMember, enrol, enrol_awaiting};
 use std::time::Duration;
@@ -230,7 +230,7 @@ async fn responses_not_signed_by_the_enrolled_key_are_rejected() {
     // Something else answers at an enrolled member's address with valid-looking data.
     // Its loopback endpoint is valid only once this process lets loopback stand in
     // for the tailnet, which no other test may be relied on to have done first.
-    elsecall::tailnet::allow_loopback_members();
+    elsecall_peers::tailnet::allow_loopback_members();
     let impostor = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = impostor.local_addr().unwrap().port();
     let app = axum::Router::new().fallback(|| async {
@@ -245,7 +245,7 @@ async fn responses_not_signed_by_the_enrolled_key_are_rejected() {
     .unwrap();
     let a = TestMember::start("alpha");
     let b = TestMember::start("bravo");
-    let code = elsecall::member_code::encode(&claimed);
+    let code = elsecall_peers::member_code::encode(&claimed);
     assert_eq!(b.fails(&["fleet", "join", &code]), "member_unverified");
     // Enrolling it succeeds locally, but the fleet view never trusts its answers.
     a.ok(&["fleet", "enroll", &code]);
@@ -379,7 +379,7 @@ fn broken_fleet_state_keeps_the_local_service_and_explains_the_repair() {
     let a = TestMember::start("alpha");
     let mut b = TestMember::start("bravo");
     enrol(&a, &b);
-    let paths = elsecall::paths::Paths::for_home(b.home.path()).unwrap();
+    let paths = elsecall_host::paths::Paths::for_home(b.home.path()).unwrap();
     // The key changes after enrolment: the roster no longer lists this member.
     std::fs::remove_file(paths.member_key()).unwrap();
     b.restart_without_fleet();

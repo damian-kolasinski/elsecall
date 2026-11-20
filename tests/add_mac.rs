@@ -2,20 +2,19 @@
 //! runs the real Elsecall CLI in its own temporary home on this machine, with
 //! loopback standing in for the tailnet, as the other fleet tests do.
 #![cfg(target_os = "macos")]
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
+use crate::processes;
 
-use elsecall::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_fleet::{
     add_mac::{self, Approval, Event, Master, Outcome, Step},
-    failure::{Failure, Result},
     inbound_firewall::Rule,
-    paths::Paths,
     remote_mac::{
         Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailnetNode, TailscaleVariant,
     },
-    tailscale_bottle::Bottle,
 };
+use elsecall_host::paths::Paths;
+use elsecall_peers::tailscale_bottle::Bottle;
 use members::{TestMember, free_port};
 use serde_json::Value;
 use std::{path::Path, process::Output, time::Duration};
@@ -247,7 +246,7 @@ impl RemoteMac for FakeMac {
     }
     async fn authorize_key(&mut self, line: &str) -> Result<bool> {
         let existing = self.authorized_keys();
-        let key = elsecall::authorized_keys::key_of(line).unwrap();
+        let key = elsecall_fleet::authorized_keys::key_of(line).unwrap();
         if existing.contains(key) {
             return Ok(false);
         }

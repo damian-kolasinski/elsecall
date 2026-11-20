@@ -1,9 +1,7 @@
 #![cfg(target_os = "macos")]
-use elsecall::{
-    failure::{Failure, Result},
-    installation::{self, ServiceManager, Session},
-    paths::Paths,
-};
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_host::paths::Paths;
+use elsecall_lifecycle::installation::{self, ServiceManager, Session};
 use std::{cell::RefCell, fs, path::Path};
 
 #[derive(Default)]
@@ -208,7 +206,7 @@ fn restart_waits_for_previous_process_to_release_the_socket() {
     let (_home, paths, source) = fixture();
     let manager = Manager::default();
     installation::install(&paths, &source, &manager, None).unwrap();
-    let lock = elsecall::private_files::try_lock(&paths.data.join("service.lock"))
+    let lock = elsecall_host::private_files::try_lock(&paths.data.join("service.lock"))
         .unwrap()
         .unwrap();
     let started = std::time::Instant::now();
@@ -254,7 +252,7 @@ fn uninstall_after_deleted_state_directory_stops_service_and_removes_links() {
 fn files_without_receipt_or_links_are_a_conflict() {
     let (_home, paths, source) = fixture();
     let manager = Manager::default();
-    elsecall::private_files::directory(&paths.data).unwrap();
+    elsecall_host::private_files::directory(&paths.data).unwrap();
     fs::write(paths.executable(), "unknown").unwrap();
     assert_eq!(
         installation::install(&paths, &source, &manager, None)
@@ -271,7 +269,7 @@ fn concurrent_lifecycle_operations_are_refused() {
     let (_home, paths, source) = fixture();
     let manager = Manager::default();
     installation::install(&paths, &source, &manager, None).unwrap();
-    let _held = elsecall::private_files::try_lock(&paths.data.join("installation.lock"))
+    let _held = elsecall_host::private_files::try_lock(&paths.data.join("installation.lock"))
         .unwrap()
         .unwrap();
     for error in [
@@ -402,10 +400,10 @@ fn session_follows_desktop_availability_then_sticks_unless_requested() {
 
 #[test]
 fn launch_agent_leaves_logging_to_the_service() {
-    use elsecall::installation::{ServiceManager, Session};
+    use elsecall_lifecycle::installation::{ServiceManager, Session};
     let home = tempfile::tempdir_in("/tmp").unwrap();
     let paths = Paths::for_home(home.path()).unwrap();
-    let bytes = elsecall::macos::launch_agent::LaunchAgent
+    let bytes = elsecall_macos::macos::launch_agent::LaunchAgent
         .configuration(&paths, Session::Desktop)
         .unwrap();
     let plist = plist::Value::from_reader(std::io::Cursor::new(bytes)).unwrap();
@@ -416,7 +414,7 @@ fn launch_agent_leaves_logging_to_the_service() {
 
 #[test]
 fn launch_agent_written_by_an_earlier_build_is_reported_stale() {
-    use elsecall::macos::launch_agent::LaunchAgent;
+    use elsecall_macos::macos::launch_agent::LaunchAgent;
     let (_home, paths, _) = fixture();
     assert_eq!(
         installation::launch_agent_current(&paths, &LaunchAgent),

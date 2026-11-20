@@ -2,15 +2,6 @@
 //! whether its workspaces still exist, and tells it which copies it removed.
 //! Authentication names the asking member; the owner answers only about
 //! workspaces it pushed to that member.
-use crate::{
-    failure::Failure,
-    fleet::{AuthenticatedPeer, Fleet},
-    housekeeping::{
-        caller_state::CallerState,
-        exchange::{Question, ROUTE},
-    },
-    peer_api::failure,
-};
 use axum::{
     Extension, Json, Router,
     body::Bytes,
@@ -19,9 +10,16 @@ use axum::{
     response::{IntoResponse, Response},
     routing::post,
 };
+use elsecall_api_response::failure;
+use elsecall_contract::failure::Failure;
+use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet};
+use elsecall_workspace::housekeeping::{
+    caller_state::CallerState,
+    exchange::{Question, ROUTE},
+};
 use std::sync::Arc;
 
-pub fn routes(state: Arc<CallerState>) -> Router<Arc<Fleet>> {
+pub(crate) fn routes(state: Arc<CallerState>) -> Router<Arc<Fleet>> {
     Router::new()
         .route(ROUTE, post(check))
         .layer(Extension(state))
@@ -57,5 +55,5 @@ async fn check(
     let answer = tokio::task::spawn_blocking(move || state.answer(&asker, &question))
         .await
         .expect("answers do not panic");
-    Json(crate::api::Response::new(answer)).into_response()
+    Json(elsecall_contract::api::Response::new(answer)).into_response()
 }

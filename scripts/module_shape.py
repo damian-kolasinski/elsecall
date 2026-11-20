@@ -146,16 +146,22 @@ TEST_ATTRIBUTE = re.compile(r"#\[cfg\((?:test|all\(\s*test\b.*?\))\)\]")
 
 def source_lines(text: str) -> int:
     """Lines of a Rust source outside test-only items."""
+    return len(production_lines(text))
+
+
+def production_lines(text: str) -> list[tuple[int, str]]:
+    """The lines of a Rust source outside test-only items, with their 1-based
+    line numbers, in order."""
     lexer = Lexer()
-    production = 0
+    production: list[tuple[int, str]] = []
     # code | attribute (test cfg seen, item not yet open) | item (inside it)
     phase, depth, parens = "code", 0, 0
-    for line in text.splitlines():
+    for number, line in enumerate(text.splitlines(), 1):
         stripped = line.strip()
         if phase == "code":
             attribute = TEST_ATTRIBUTE.match(stripped) if lexer.in_code() else None
             if attribute is None:
-                production += 1
+                production.append((number, line))
                 scan(line, lexer)
                 continue
             phase, parens = "attribute", 0
@@ -173,7 +179,7 @@ def source_lines(text: str) -> int:
             elif delta < 0:
                 # The test-only item was the last field or variant: this line
                 # closes the enclosing production item.
-                production += 1
+                production.append((number, line))
                 phase = "code"
             elif parens <= 0 and last in (";", ",", "}"):
                 # A statement, a field or variant, or a one-line item ended.

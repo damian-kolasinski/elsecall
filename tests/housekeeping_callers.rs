@@ -3,30 +3,26 @@
 //! services in separate temporary homes on loopback: the member learns it from the
 //! copy's owner alone, over the authenticated member channel, and both sides clean
 //! up their state.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
-use elsecall::{
-    failure::Result,
-    housekeeping::{
-        caller_state::CallerState,
-        callers::Callers,
-        catalog::Catalog,
-        clock::SystemClock,
-        exchange::{Answer, Question, ROUTE, RemovedCopy, WorkspaceAnswer, WorkspaceState},
-        pass::{Housekeeper, Parts},
-        settings::Settings,
-        volumes::Statfs,
-    },
-    paths::Paths,
-    peer_client,
-    scheduling::timestamp::Timestamp,
-    workspace::{
-        copies::Copies,
-        location::{CopyLocation, Locations, Setting},
-        push_cache::CacheFiles,
-    },
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
+use elsecall_host::paths::Paths;
+use elsecall_peers::peer_client;
+use elsecall_workspace::housekeeping::{
+    caller_state::CallerState,
+    callers::Callers,
+    catalog::Catalog,
+    clock::SystemClock,
+    exchange::{Answer, Question, ROUTE, RemovedCopy, WorkspaceAnswer, WorkspaceState},
+    pass::{Housekeeper, Parts},
+    settings::Settings,
+    volumes::Statfs,
+};
+use elsecall_workspace::{
+    copies::Copies,
+    location::{CopyLocation, Locations, Setting},
+    push_cache::CacheFiles,
 };
 use futures_util::future::BoxFuture;
 use members::{TestMember, enrol};

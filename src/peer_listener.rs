@@ -1,11 +1,9 @@
 //! TCP transport for the member API: binds only this machine's tailnet addresses and
 //! bounds what an unauthenticated connection can cost.
-use crate::{
-    fleet::Fleet,
-    roster::MemberName,
-    tailnet::{Tailnet, is_member_address},
-};
 use axum::Router;
+use elsecall_fleet::fleet::Fleet;
+use elsecall_peers::roster::MemberName;
+use elsecall_peers::tailnet::{Tailnet, is_member_address};
 use hyper_util::{
     rt::{TokioIo, TokioTimer},
     service::TowerToHyperService,
@@ -132,7 +130,7 @@ async fn attempt(
         match TcpListener::bind(endpoint).await {
             Ok(listener) => {
                 bound.insert(address);
-                crate::service_log!(
+                elsecall_host::service_log!(
                     "{{\"event\":\"member_listener_bound\",\"endpoint\":\"{endpoint}\"}}"
                 );
                 tokio::spawn(accept(listener, app.clone(), limit.clone()));
@@ -155,7 +153,9 @@ async fn attempt(
 /// Logs a listener problem once per change, so retries do not flood the log.
 fn note(last: &mut Option<String>, problem: &str) {
     if last.as_deref() != Some(problem) {
-        crate::service_log!("{{\"event\":\"member_listener_unavailable\",\"reason\":{problem:?}}}");
+        elsecall_host::service_log!(
+            "{{\"event\":\"member_listener_unavailable\",\"reason\":{problem:?}}}"
+        );
         *last = Some(problem.to_owned());
     }
 }
@@ -187,9 +187,9 @@ async fn accept(listener: TcpListener, app: Router, limit: Arc<Semaphore>) {
             // their runner. `drive` bounds the exchange itself.
             let connection = builder
                 .serve_connection(
-                    TokioIo::new(crate::socket_io::Socket::new(
+                    TokioIo::new(elsecall_peers::socket_io::Socket::new(
                         stream,
-                        crate::remote_run::link::GRACE,
+                        elsecall_runs::remote_run::link::GRACE,
                     )),
                     service,
                 )

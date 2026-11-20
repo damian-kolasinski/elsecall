@@ -1,12 +1,11 @@
 //! A wrapper's one terminal assertion, posted from inside its admitted command.
-use crate::{
-    client::{self, Wait},
-    failure::Result,
-    paths::Paths,
-    scheduling::{request::invalid, run_id::RunId},
-    workload_metadata::parse_observation,
-};
 use clap::{Args, Subcommand};
+use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::{
+    request::invalid, run_id::RunId, workload_metadata::parse_observation,
+};
+use elsecall_host::client::{self as client, Wait};
+use elsecall_host::paths::Paths;
 
 #[derive(Args, Debug)]
 pub struct WorkloadArgs {
@@ -29,7 +28,7 @@ pub async fn run(args: WorkloadArgs, paths: &Paths) -> Result<serde_json::Value>
     // This is an opt-out/context check only. PID/grant authorization is always
     // enforced by the server; an inherited outer ID is unsafe in bypass modes.
     if !matches!(
-        std::env::var(crate::run_admission::VARIABLE).as_deref(),
+        std::env::var(elsecall_contract::run_admission::VARIABLE).as_deref(),
         Ok("granted" | "nested")
     ) {
         return Err(invalid(
@@ -49,7 +48,7 @@ pub async fn run(args: WorkloadArgs, paths: &Paths) -> Result<serde_json::Value>
     loop {
         let result = tokio::time::timeout_at(deadline,
             client::post::<(), _>(&paths.socket(), &route, &observation, Wait::Bounded)
-        ).await.map_err(|_| crate::failure::Failure::new(
+        ).await.map_err(|_| elsecall_contract::failure::Failure::new(
             "observation_timeout", "The observation acknowledgement did not arrive within one second.",
             "Inspect the run record; an unacknowledged assertion may already have been recorded."
         ))?;

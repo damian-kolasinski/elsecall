@@ -84,11 +84,13 @@ mod tests {
 
 
 class SelectionTest(unittest.TestCase):
+    FILES = FILES
+
     @classmethod
     def setUpClass(cls):
         cls.directory = tempfile.TemporaryDirectory()
         cls.root = Path(cls.directory.name)
-        for name, content in FILES.items():
+        for name, content in cls.FILES.items():
             path = cls.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content)
@@ -179,6 +181,26 @@ class SelectionTest(unittest.TestCase):
         self.assertRuns(["crates/tool/src/lib.rs"], rust={"package(acme-tool)"})
         self.assertRuns(["crates/desk/src/main.rs"], rust={"package(acme-desk)"})
 
+    def test_a_crate_others_depend_on_selects_them_too(self):
+        files = dict(FILES)
+        files["crates/tool/Cargo.toml"] = '[package]\nname = "acme-tool"\n[dependencies]\nacme-base.workspace = true\n'
+        files["crates/base/Cargo.toml"] = '[package]\nname = "acme-base"\n'
+        files["crates/base/src/lib.rs"] = ""
+        files["Cargo.toml"] = (
+            '[workspace]\nmembers = [".", "crates/*"]\n'
+            '[workspace.dependencies]\nacme-base = { path = "crates/base" }\n'
+            '[package]\nname = "acme"\n'
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name, content in files.items():
+                (root / name).parent.mkdir(parents=True, exist_ok=True)
+                (root / name).write_text(content)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            selection = check_selection.select(root, ["crates/base/src/lib.rs"])
+        self.assertIsNone(selection.everything, selection.reasons)
+        self.assertEqual(selection.targets.rust, {"rdeps(acme-base)"})
+
     def test_library_sources_and_workspace_inputs_select_everything(self):
         for path in [
             "src/reader.rs",
@@ -212,6 +234,59 @@ class RepositoryTest(unittest.TestCase):
         # test_check_selection.py names orphan.toml in its fixture repository.
         selection = check_selection.select(self.root, ["tests/fixtures/orphan.toml"])
         self.assertIsNotNone(selection.everything, selection.reasons)
+
+
+COMBINED = {
+    **{name: text for name, text in FILES.items() if not name.startswith("tests/")},
+    "Cargo.toml": """
+[workspace]
+members = [".", "crates/desk", "crates/tool"]
+[package]
+name = "acme"
+autotests = false
+[[test]]
+name = "integration"
+path = "tests/main.rs"
+""",
+    "tests/main.rs": "mod clock;\nmod members;\n\nmod fleet;\nmod install;\nmod report;\nmod trace;\n",
+    "tests/members/mod.rs": "pub(crate) struct Member;\n",
+    "tests/clock/mod.rs": "pub(crate) fn tick(_: &crate::members::Member) {}\n",
+    "tests/fleet.rs": "use crate::members;\n",
+    "tests/report.rs": "fn report() {\n    crate::clock::tick(&crate::members::Member);\n}\n",
+    "tests/trace.rs": "// Not a use: crate::members\nuse crate::clock;\n",
+    "tests/install.rs": 'const FIXTURE: &str = include_str!("fixtures/install.toml");\n',
+    "tests/fixtures/install.toml": "",
+}
+
+
+class CombinedTests(unittest.TestCase):
+    """A package whose files in tests/ are modules of one test binary."""
+
+    FILES = COMBINED
+    setUpClass = SelectionTest.__dict__["setUpClass"]
+    tearDownClass = SelectionTest.__dict__["tearDownClass"]
+    select = SelectionTest.select
+    assertRuns = SelectionTest.assertRuns
+
+    @staticmethod
+    def module(name: str) -> str:
+        return f"(binary_id(acme::integration) & test(/^{name}::/))"
+
+    def test_a_test_file_selects_its_module(self):
+        self.assertRuns(["tests/fleet.rs"], rust={self.module("fleet")})
+
+    def test_the_root_selects_the_binary(self):
+        self.assertRuns(["tests/main.rs"], rust={"binary_id(acme::integration)"})
+
+    def test_a_shared_module_selects_its_users_through_other_shared_modules(self):
+        self.assertRuns(
+            ["tests/members/mod.rs"],
+            rust={self.module(m) for m in ("members", "clock", "fleet", "report", "trace")},
+        )
+        self.assertRuns(["tests/clock/mod.rs"], rust={self.module(m) for m in ("clock", "report", "trace")})
+
+    def test_a_fixture_selects_the_module_naming_it(self):
+        self.assertRuns(["tests/fixtures/install.toml"], rust={self.module("install")})
 
 
 if __name__ == "__main__":

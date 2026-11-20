@@ -2,7 +2,8 @@
 //! machine observations and tailnet discovery are controlled: each member
 //! "discovers" loopback and its own port, with scripted load and speed.
 #![allow(dead_code)]
-use elsecall::{member_key::MemberKey, paths::Paths, roster::Member};
+use elsecall_host::paths::Paths;
+use elsecall_peers::{member_key::MemberKey, roster::Member};
 use serde_json::Value;
 use std::{
     io::{Read, Write},
@@ -13,7 +14,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub struct TestMember {
+pub(crate) struct TestMember {
     pub name: &'static str,
     pub port: u16,
     pub home: tempfile::TempDir,
@@ -49,7 +50,7 @@ fn installed_environment(member: &TestMember) -> Vec<(String, String)> {
 /// The port stays reserved for the rest of this test process, across a member's
 /// stop and restart: a lock file per port keeps other test processes, which a
 /// per-test runner starts concurrently, from choosing it while it is unbound.
-pub fn free_port() -> u16 {
+pub(crate) fn free_port() -> u16 {
     use std::os::{fd::AsRawFd, unix::fs::OpenOptionsExt};
     use std::sync::{
         Mutex,
@@ -84,7 +85,7 @@ pub fn free_port() -> u16 {
     panic!("no member port is free in {}", directory.display());
 }
 
-pub fn cli(home: &Path, args: &[&str]) -> Output {
+pub(crate) fn cli(home: &Path, args: &[&str]) -> Output {
     crate::processes::command(env!("CARGO_BIN_EXE_elsecall"))
         .env("HOME", home)
         .current_dir(home)
@@ -118,18 +119,18 @@ fn note(name: &str, args: &[&str], output: &Output, took: Duration) {
     crate::diagnostics::note_timed(format!("{name} {args:?} -> {outcome}"), took);
 }
 
-pub fn json(output: &Output) -> Value {
+pub(crate) fn json(output: &Output) -> Value {
     serde_json::from_slice(&output.stdout).unwrap_or_else(|_| panic!("not JSON: {output:?}"))
 }
 
 impl TestMember {
-    pub fn start(name: &'static str) -> Self {
+    pub(crate) fn start(name: &'static str) -> Self {
         Self::start_with(name, "", &[])
     }
 
     /// Starts a member whose service has `configuration` as its config.toml and
     /// `environment` added to its own.
-    pub fn start_with(
+    pub(crate) fn start_with(
         name: &'static str,
         configuration: &str,
         environment: &[(&str, &str)],
@@ -140,7 +141,7 @@ impl TestMember {
     /// Starts a solo service with no `ELSECALL_TAILNET_NAME` or
     /// `ELSECALL_TAILNET_ADDRESSES`. Readiness is the local status route,
     /// because `fleet identity` needs a tailnet presence.
-    pub fn start_without_tailnet(name: &'static str, environment: &[(&str, &str)]) -> Self {
+    pub(crate) fn start_without_tailnet(name: &'static str, environment: &[(&str, &str)]) -> Self {
         Self::launch(name, "", environment, false)
     }
 
@@ -151,13 +152,13 @@ impl TestMember {
         tailnet: bool,
     ) -> Self {
         // This process talks to members over loopback too.
-        elsecall::tailnet::allow_loopback_members();
+        elsecall_peers::tailnet::allow_loopback_members();
         let home = tempfile::Builder::new()
             .prefix("ec-")
             .tempdir_in("/tmp")
             .unwrap();
         let data = Paths::for_home(home.path()).unwrap().data;
-        elsecall::private_files::directory(&data).unwrap();
+        elsecall_host::private_files::directory(&data).unwrap();
         std::fs::write(data.join("config.toml"), configuration).unwrap();
         let _diagnostics = diagnostics(name, home.path());
         let mut member = Self {
@@ -186,26 +187,26 @@ impl TestMember {
 
     /// Installs a member with `executable`'s own `install` command, as an operator
     /// would, so its service runs the installed copy and can be upgraded.
-    pub fn install(name: &'static str, executable: &Path) -> Self {
+    pub(crate) fn install(name: &'static str, executable: &Path) -> Self {
         Self::install_with(name, executable, "", &[])
     }
 
     /// Installs a member as `install` does, whose service has `configuration` as its
     /// config.toml and `environment` added to its own.
-    pub fn install_with(
+    pub(crate) fn install_with(
         name: &'static str,
         executable: &Path,
         configuration: &str,
         environment: &[(&str, &str)],
     ) -> Self {
-        elsecall::tailnet::allow_loopback_members();
+        elsecall_peers::tailnet::allow_loopback_members();
         let home = tempfile::Builder::new()
             .prefix("ec-")
             .tempdir_in("/tmp")
             .unwrap();
         if !configuration.is_empty() {
             let data = Paths::for_home(home.path()).unwrap().data;
-            elsecall::private_files::directory(&data).unwrap();
+            elsecall_host::private_files::directory(&data).unwrap();
             std::fs::write(data.join("config.toml"), configuration).unwrap();
         }
         let _diagnostics = diagnostics(name, home.path());
@@ -232,12 +233,12 @@ impl TestMember {
     }
 
     /// The installed service's state directory.
-    pub fn data(&self) -> std::path::PathBuf {
+    pub(crate) fn data(&self) -> std::path::PathBuf {
         Paths::for_home(self.home.path()).unwrap().data
     }
 
     /// The installed service's process ID, from the process service manager.
-    pub fn installed_pid(&self) -> Option<i32> {
+    pub(crate) fn installed_pid(&self) -> Option<i32> {
         std::fs::read_to_string(self.data().join("process-service.pid"))
             .ok()?
             .trim()
@@ -245,7 +246,7 @@ impl TestMember {
             .ok()
     }
 
-    pub fn restart(&mut self) {
+    pub(crate) fn restart(&mut self) {
         assert!(
             self.try_restart(),
             "{} did not start: {}",
@@ -291,7 +292,7 @@ impl TestMember {
     }
 
     /// Restarts a member whose fleet state is broken: only the local API comes up.
-    pub fn restart_without_fleet(&mut self) {
+    pub(crate) fn restart_without_fleet(&mut self) {
         self.spawn();
         let deadline = Instant::now() + crate::processes::WAIT;
         while !self.run(&["status"]).status.success() {
@@ -327,7 +328,7 @@ impl TestMember {
         }
         // Foreground fixtures historically expose only this launch's records.
         // Do not let an earlier port collision poison a later startup retry.
-        elsecall::private_files::write(&self.data().join("service.log"), b"", 0o600).unwrap();
+        elsecall_host::private_files::write(&self.data().join("service.log"), b"", 0o600).unwrap();
         // A service that cannot start prints its error envelope on stdout.
         let log = std::fs::File::create(self.home.path().join("serve.log")).unwrap();
         let mut command = crate::processes::command(
@@ -363,13 +364,13 @@ impl TestMember {
     }
 
     /// The service's process ID.
-    pub fn service_pid(&self) -> u32 {
+    pub(crate) fn service_pid(&self) -> u32 {
         self.service.as_ref().expect("running").id()
     }
 
     /// Asks the service to stop, as launchd does, and says whether it exited
     /// within `limit`.
-    pub fn terminate_within(&mut self, limit: Duration) -> bool {
+    pub(crate) fn terminate_within(&mut self, limit: Duration) -> bool {
         let child = self.service.as_mut().expect("running");
         // SAFETY: kill has no memory-safety preconditions.
         unsafe { libc::kill(child.id() as i32, libc::SIGTERM) };
@@ -385,7 +386,7 @@ impl TestMember {
     }
 
     /// Kills the service abruptly, as a crash or a powered-off machine would.
-    pub fn stop(&mut self) {
+    pub(crate) fn stop(&mut self) {
         if let Some(mut child) = self.service.take() {
             let _ = child.kill();
             let _ = child.wait();
@@ -400,7 +401,7 @@ impl TestMember {
     }
 
     /// The service's lifecycle log, for diagnosing a failed start.
-    pub fn log(&self) -> String {
+    pub(crate) fn log(&self) -> String {
         let mut log = std::fs::read_to_string(self.data().join("service.log")).unwrap_or_default();
         // Early failures can precede initialization of the service-owned log.
         log.push_str(
@@ -409,7 +410,7 @@ impl TestMember {
         log
     }
 
-    pub fn run(&self, args: &[&str]) -> Output {
+    pub(crate) fn run(&self, args: &[&str]) -> Output {
         let started = Instant::now();
         let output = if self.installed_from.is_none() {
             cli(self.home.path(), args)
@@ -427,7 +428,7 @@ impl TestMember {
     }
 
     /// Runs a command that must succeed and returns its data.
-    pub fn ok(&self, args: &[&str]) -> Value {
+    pub(crate) fn ok(&self, args: &[&str]) -> Value {
         let output = self.run(args);
         let value = json(&output);
         assert!(output.status.success(), "{} {args:?}: {value}", self.name);
@@ -437,7 +438,7 @@ impl TestMember {
     /// For polling loops: a command's data, or None while the service cannot answer,
     /// as while it relaunches itself for new service settings. Any other failure
     /// fails the test.
-    pub fn poll(&self, args: &[&str]) -> Option<Value> {
+    pub(crate) fn poll(&self, args: &[&str]) -> Option<Value> {
         let output = self.run(args);
         let value = json(&output);
         if output.status.success() {
@@ -453,7 +454,7 @@ impl TestMember {
     }
 
     /// Runs a command that must fail and returns its error code.
-    pub fn fails(&self, args: &[&str]) -> String {
+    pub(crate) fn fails(&self, args: &[&str]) -> String {
         let output = self.run(args);
         let value = json(&output);
         assert_eq!(
@@ -468,7 +469,7 @@ impl TestMember {
             .to_owned()
     }
 
-    pub fn code(&self) -> String {
+    pub(crate) fn code(&self) -> String {
         self.ok(&["fleet", "identity"])["code"]
             .as_str()
             .unwrap()
@@ -476,20 +477,20 @@ impl TestMember {
     }
 
     /// The member's private key, read the way only its own account could.
-    pub fn key(&self) -> MemberKey {
+    pub(crate) fn key(&self) -> MemberKey {
         MemberKey::load_or_create(&Paths::for_home(self.home.path()).unwrap().member_key()).unwrap()
     }
 
-    pub fn as_member(&self) -> Member {
-        elsecall::member_code::decode(&self.code()).unwrap()
+    pub(crate) fn as_member(&self) -> Member {
+        elsecall_peers::member_code::decode(&self.code()).unwrap()
     }
 
     /// The fleet as this member sees it, keyed by member name.
-    pub fn fleet(&self) -> Value {
+    pub(crate) fn fleet(&self) -> Value {
         self.ok(&["fleet"])
     }
 
-    pub fn view_of(&self, other: &str) -> Value {
+    pub(crate) fn view_of(&self, other: &str) -> Value {
         self.fleet()["members"]
             .as_array()
             .unwrap()
@@ -500,7 +501,7 @@ impl TestMember {
     }
 
     /// Sends raw HTTP to the member listener and returns the status code and body.
-    pub fn raw(&self, request: &str) -> (u16, String) {
+    pub(crate) fn raw(&self, request: &str) -> (u16, String) {
         let mut stream = TcpStream::connect(("127.0.0.1", self.port)).unwrap();
         stream.write_all(request.as_bytes()).unwrap();
         let mut response = String::new();
@@ -517,13 +518,13 @@ impl Drop for TestMember {
 }
 
 /// Enrols `joining` on `sponsor` and completes the join on `joining`.
-pub fn enrol(sponsor: &TestMember, joining: &TestMember) {
+pub(crate) fn enrol(sponsor: &TestMember, joining: &TestMember) {
     enrol_with(sponsor, joining, &[]);
 }
 
 /// Enrols `joining` as awaiting provisioning, as Add Mac does.
 #[allow(dead_code)]
-pub fn enrol_awaiting(sponsor: &TestMember, joining: &TestMember) {
+pub(crate) fn enrol_awaiting(sponsor: &TestMember, joining: &TestMember) {
     enrol_with(sponsor, joining, &["--awaiting-provisioning"]);
 }
 

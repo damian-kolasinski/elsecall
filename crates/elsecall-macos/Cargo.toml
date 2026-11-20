@@ -1,0 +1,30 @@
+[package]
+name = "elsecall-macos"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+base64.workspace = true
+elsecall-contract.workspace = true
+elsecall-fleet.workspace = true
+elsecall-host.workspace = true
+elsecall-lifecycle.workspace = true
+elsecall-peers.workspace = true
+elsecall-scheduling.workspace = true
+libc.workspace = true
+plist.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sysinfo.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+zeroize.workspace = true

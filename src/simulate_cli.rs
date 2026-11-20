@@ -1,22 +1,22 @@
 //! Offline simulation never connects to, installs or changes an Elsecall service.
-use crate::{
-    evaluation_day::day,
-    failure::Result,
-    simulation::{self, Options},
-    workload::input::read as read_trace,
-};
 use clap::Args;
+use elsecall_contract::failure::Result;
+use elsecall_tuning::{
+    evaluation_day::day,
+    simulation::{self, Options},
+    workload_input::read as read_trace,
+};
 use std::path::PathBuf;
 #[derive(Args, Debug)]
 pub struct SimulateArgs {
     #[command(flatten)]
-    pub replay_placement: crate::replay_placement::ReplayPlacement,
+    pub replay_placement: elsecall_tuning::replay_placement::ReplayPlacement,
     /// Diagnose a recorded rehearsal using measured CPU costs; never grants tuning trust
     #[arg(long, conflicts_with_all = ["fidelity", "settings", "load_factor", "day"])]
     pub rehearsal_cpu_replay: bool,
     /// Replay arrivals F times closer; preserve all command work (1–32)
     #[arg(long, default_value = "1")]
-    pub load_factor: crate::replay_load::LoadFactor,
+    pub load_factor: elsecall_tuning::replay_load::LoadFactor,
     #[arg(long)]
     pub trace: PathBuf,
     /// Override recorded scheduling parameters; repeat for multiple settings
@@ -33,10 +33,10 @@ pub struct SimulateArgs {
 }
 pub fn run(args: SimulateArgs) -> Result<serde_json::Value> {
     let mut trace = read_trace(&args.trace)?;
-    if args.replay_placement.placement == crate::replay_placement::Mode::Current
+    if args.replay_placement.placement == elsecall_tuning::replay_placement::Mode::Current
         && (args.fidelity || args.rehearsal_cpu_replay)
     {
-        return Err(crate::tuning::invalid(
+        return Err(elsecall_tuning::tuning::invalid(
             "Current placement is a counterfactual; historical fidelity and CPU diagnosis require historical placement.",
         ));
     }
@@ -55,7 +55,7 @@ pub fn run(args: SimulateArgs) -> Result<serde_json::Value> {
             day,
         },
     )?;
-    if args.replay_placement.placement == crate::replay_placement::Mode::Current {
+    if args.replay_placement.placement == elsecall_tuning::replay_placement::Mode::Current {
         result["placement_replay"] = placement;
     }
     Ok(result)

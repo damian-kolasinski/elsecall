@@ -1,22 +1,22 @@
 //! Window upgrade and process handoff boundary.
 
-pub trait WindowUpgrade: Send + Sync {
+pub(crate) trait WindowUpgrade: Send + Sync {
     fn replace_and_reopen(&self) -> Result<(), String>;
-    fn start_release(&self) -> Result<elsecall::release_update::Job, String>;
+    fn start_release(&self) -> Result<elsecall_lifecycle::release_update::Job, String>;
     /// Called only after a fresh instance has been launched successfully.
     fn close_old_window(&self);
 }
 
-pub enum UpgradeState {
+pub(crate) enum UpgradeState {
     Idle,
     Installing,
     StartingRelease,
     Retiring,
-    Release(elsecall::release_update::JobId),
+    Release(elsecall_lifecycle::release_update::JobId),
     Failed(String),
 }
 
-pub fn available(installed: Option<&str>, running: Option<&str>) -> bool {
+pub(crate) fn available(installed: Option<&str>, running: Option<&str>) -> bool {
     matches!((installed, running), (Some(installed), Some(running)) if installed != running)
 }
 

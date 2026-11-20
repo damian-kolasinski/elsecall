@@ -1,8 +1,6 @@
 //! The public run link against external byte streams, without a peer service.
-use elsecall::{
-    remote_run::link::{GRACE, Link},
-    wire::{self, Frame},
-};
+use elsecall_contract::wire::{self, Frame};
+use elsecall_runs::remote_run::link::{GRACE, Link};
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 
@@ -122,7 +120,7 @@ async fn bounded_delivery_backpressure_does_not_spend_the_next_read_budget() {
 
 #[tokio::test]
 async fn a_read_failure_wakes_blocked_producers_without_receiving_and_keeps_its_origin() {
-    use elsecall::secure_channel::{Ephemeral, SecureStream};
+    use elsecall_peers::secure_channel::{Ephemeral, SecureStream};
     for kind in ["protocol", "authentication", "receive"] {
         let (stream, mut peer) = tokio::io::duplex(64);
         let link = if kind == "authentication" {

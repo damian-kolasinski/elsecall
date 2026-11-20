@@ -1,6 +1,7 @@
 //! Read-only disk diagnosis. Measure metadata only, without following links or
 //! opening state contents (some files intentionally contain secrets).
-use crate::{paths::Paths, service_log::Settings};
+use elsecall_host::paths::Paths;
+use elsecall_host::service_log::Settings;
 use serde::Serialize;
 use std::{fs, io, os::unix::fs::MetadataExt, path::Path};
 

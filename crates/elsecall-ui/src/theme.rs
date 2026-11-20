@@ -51,34 +51,34 @@ use rune::tok::{Family, TextStyle};
 use rune_kit::{Kit, StateColors, TableStyle};
 
 /// DM Sans variable font (mergegate `ios/Resources/DMSans.ttf`) and its family name.
-pub const DM_SANS: &[u8] = include_bytes!("../assets/fonts/DMSans.ttf");
-pub const FONTS: &[&[u8]] = &[DM_SANS];
-pub const FAMILIES: (&str, &str) = ("DM Sans", "ui-monospace");
+pub(crate) const DM_SANS: &[u8] = include_bytes!("../assets/fonts/DMSans.ttf");
+pub(crate) const FONTS: &[&[u8]] = &[DM_SANS];
+pub(crate) const FAMILIES: (&str, &str) = ("DM Sans", "ui-monospace");
 
 /// `--space-1` in `ui/design-system/tokens.css`.
-pub const SPACE_1: f32 = 4.0;
+pub(crate) const SPACE_1: f32 = 4.0;
 /// `--space-2`.
-pub const SPACE_2: f32 = 8.0;
+pub(crate) const SPACE_2: f32 = 8.0;
 /// `--space-3`.
-pub const SPACE_3: f32 = 12.0;
+pub(crate) const SPACE_3: f32 = 12.0;
 /// `--space-4`.
-pub const SPACE_4: f32 = 16.0;
+pub(crate) const SPACE_4: f32 = 16.0;
 /// `--space-6`.
-pub const SPACE_6: f32 = 24.0;
+pub(crate) const SPACE_6: f32 = 24.0;
 /// `--space-8`.
-pub const SPACE_8: f32 = 32.0;
+pub(crate) const SPACE_8: f32 = 32.0;
 /// `--radius-small` in `appearance.css`.
-pub const RADIUS_SMALL: f32 = 4.0;
+pub(crate) const RADIUS_SMALL: f32 = 4.0;
 /// `--radius-pill` in `tokens.css`.
-pub const RADIUS_PILL: f32 = 999.0;
+pub(crate) const RADIUS_PILL: f32 = 999.0;
 /// `--control-height` in `tokens.css`.
-pub const CONTROL_HEIGHT: f32 = 32.0;
+pub(crate) const CONTROL_HEIGHT: f32 = 32.0;
 
 const HEADING_TRACKING: f32 = -0.03;
 const LABEL_TRACKING: f32 = 0.03;
 
 #[derive(Clone, Copy, Debug)]
-pub struct TypeScale {
+pub(crate) struct TypeScale {
     pub h3: TextStyle,
     pub h4: TextStyle,
     pub h5: TextStyle,
@@ -183,7 +183,7 @@ const DARK: Ink = Ink {
     danger_border: "#732222",
 };
 
-pub fn scale() -> TypeScale {
+pub(crate) fn scale() -> TypeScale {
     let sans = |size, weight, line, tracking_em| {
         TextStyle::new(size, weight)
             .lh(line)
@@ -204,7 +204,7 @@ pub fn scale() -> TypeScale {
     }
 }
 
-pub fn kit(dark: bool) -> Kit {
+pub(crate) fn kit(dark: bool) -> Kit {
     let mut kit = Kit::neutral(dark);
     apply(&mut kit, if dark { &DARK } else { &LIGHT });
     let fonts = scale();
@@ -225,7 +225,7 @@ pub fn kit(dark: bool) -> Kit {
     kit
 }
 
-pub fn table_style(dark: bool) -> TableStyle {
+pub(crate) fn table_style(dark: bool) -> TableStyle {
     let ink = if dark { &DARK } else { &LIGHT };
     let fonts = scale();
     TableStyle {

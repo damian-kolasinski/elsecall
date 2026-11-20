@@ -2,7 +2,7 @@
 //! add as it happens, with looping illustrations of the two things a person does:
 //! turning on Remote Login there, and approving it in the browser here.
 
-use elsecall::add_mac::Approval;
+use elsecall_fleet::add_mac::Approval;
 use rune::tok::TextStyle;
 use rune::{Color, El, Icon, col, icon, row, text};
 use rune_kit::{Button, ButtonVariant, Dialog, Kit, Spinner, TextInput};
@@ -12,11 +12,11 @@ use crate::add_mac_flow::{
 };
 use crate::app::AppState;
 use crate::theme;
-use elsecall::add_mac::AddReport;
-use elsecall::failure::Failure;
-use elsecall::nearby_macs::NearbyMac;
-use elsecall::remote_mac::LoginLink;
-use elsecall::roster::Readiness;
+use elsecall_contract::failure::Failure;
+use elsecall_fleet::add_mac::AddReport;
+use elsecall_fleet::nearby_macs::NearbyMac;
+use elsecall_fleet::remote_mac::LoginLink;
+use elsecall_peers::roster::Readiness;
 
 const SHEET_WIDTH: f32 = 680.0;
 const ART_WIDTH: f32 = 300.0;
@@ -90,7 +90,7 @@ fn look(k: &Kit) -> Look {
 }
 
 /// Adds the sheet to `layer` while it is open.
-pub fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut Vec<El>) {
+pub(crate) fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut Vec<El>) {
     let flow = state.add_mac();
     if !flow.is_open() {
         return;
@@ -603,8 +603,8 @@ fn sign_in(state: &AppState, target: &Target, k: &Kit, l: &Look) -> El {
 
 fn adding(
     name: &str,
-    current: Option<elsecall::add_mac::Step>,
-    approval: Option<&(elsecall::remote_mac::LoginLink, Approval)>,
+    current: Option<elsecall_fleet::add_mac::Step>,
+    approval: Option<&(elsecall_fleet::remote_mac::LoginLink, Approval)>,
     clock: f64,
     k: &Kit,
     l: &Look,
@@ -649,7 +649,7 @@ fn adding(
 
 fn approve(
     name: &str,
-    link: &elsecall::remote_mac::LoginLink,
+    link: &elsecall_fleet::remote_mac::LoginLink,
     approval: Approval,
     clock: f64,
     k: &Kit,

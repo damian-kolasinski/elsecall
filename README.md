@@ -172,6 +172,11 @@ edit to a crate there compiles that crate in full once; later edits are incremen
 `target` becomes a link to a build directory in that cache, which mbx removes when
 its checkout is gone, after 30 days unused, over the disk budget, or when the disk
 runs low. Elsecall admits the builds itself, so mbx's own build scheduler is off.
+That directory keeps the outputs of every crate layout, feature set and profile
+setting it has built, and every compilation searches them: once a checkout has
+built many such variants (switching between branches that move crates, or
+trying build settings), run `mbx clean` there. Its next build is a full one;
+warm edits after it are often twice as fast as before it.
 `MBX_DISABLE=1` runs one command with plain Cargo, as CI does; release packaging
 always uses plain Cargo.
 
@@ -1693,7 +1698,7 @@ command ([Adding a Mac](docs/add-mac.md)). A Mac on another tailnet is refused
 (`tailscale_offline`). A Mac without Tailscale gets Tailscale's open-source
 `tailscale` and `tailscaled` in `/usr/local/bin`, with the daemon as a root
 LaunchDaemon: Homebrew's bottle for its macOS, downloaded by root on the Mac and
-checked against the SHA-256 pinned in this build (`src/tailscale_bottle.rs`); Homebrew
+checked against the SHA-256 pinned in this build (`crates/elsecall-peers/src/tailscale_bottle.rs`); Homebrew
 itself is not installed. A Tailscale that remembers another tailnet is refused
 (`tailnet_mismatch`), another daemon that does not run is refused
 (`tailscale_stopped`), and Add Mac's own is installed again. There is no bottle for macOS 14 (`tailscale_unavailable`). Tailscale then
@@ -2325,15 +2330,25 @@ cannot rely on another test having run first, and ports for member services are
 reserved across test processes. nextest does not run doctests, so the check runs
 them after it with `cargo test --doc`.
 
+The files in `tests/` are modules of one test binary, `integration`, rooted at
+`tests/main.rs`: a change to the library relinks one binary instead of one per
+file, and the modules the tests share (`tests/processes/`, `tests/members/`, ...)
+build once. A new test file needs its `mod` line in `tests/main.rs`, and reaches
+a shared module as `crate::processes`. Test names start with their file's module
+(`placement::...`), so
+`cargo nextest run -E 'binary_id(elsecall::integration) & test(/^placement::/)'`
+runs one file's tests.
+
 `mise run check:affected` compares the branch with its merge base on
 `mergegate/main` (or `--base REF`), including uncommitted and untracked files, and
 runs formatting, Clippy and the module shape check (`scripts/module_shape.py`) for
 the whole workspace, then only the tests those
 paths can affect. `--dry-run` prints each changed path, what it selects and the
 commands. A change to the `elsecall` library or executable, a manifest, the lock
-file, the toolchain or the test environment runs every test. A test binary runs
-for itself; a shared test module runs the binaries declaring it; another crate
-runs its own tests; `distribution/` and `scripts/` run their Python tests. Other
+file, the toolchain or the test environment runs every test. A test file runs
+its own tests; a shared test module runs its own and those of every test file
+using it; a crate's file runs that crate's tests and those of every package
+depending on it; `distribution/` and `scripts/` run their Python tests. Other
 files are followed through the Rust, Python and shell sources naming them, down
 to one file's unit tests when only its `#[cfg(test)]` modules include them. A
 test that reads a file must name it, as `include_str!` does; one that builds the

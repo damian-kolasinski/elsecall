@@ -1,20 +1,16 @@
 //! Configuration sync between real member services in separate temporary homes,
 //! with loopback standing in for the tailnet. Tests that need a misbehaving master
 //! act as one with a member's own key, as only that member's account could.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
-use elsecall::{
-    config_sync::{
-        manifest::{FileNode, Manifest, Node, Tree},
-        protocol::{self, Message, Purpose},
-        state::State,
-    },
-    paths::Paths,
-    peer_client,
-    workspace::path::WorkspacePath,
+use elsecall_host::paths::Paths;
+use elsecall_peers::peer_client;
+use elsecall_sync::config_sync::{
+    manifest::{FileNode, Manifest, Node, Tree},
+    protocol::{self, Message, Purpose},
+    state::State,
 };
+use elsecall_workspace::path::WorkspacePath;
 use members::{TestMember, enrol};
 use serde_json::Value;
 use std::{
@@ -413,7 +409,7 @@ fn plan_enable_push_overrides_and_local_edits() {
 async fn channel(
     from: &TestMember,
     to: &TestMember,
-) -> elsecall::failure::Result<peer_client::RunChannel> {
+) -> elsecall_contract::failure::Result<peer_client::RunChannel> {
     peer_client::channel(
         &from.key(),
         &to.as_member(),
@@ -469,9 +465,9 @@ async fn interrupted_pushes_change_nothing_and_only_the_master_pushes() {
         panic!("expected need")
     };
     assert_eq!(fingerprints.len(), 1, "only the content beta lacks");
-    elsecall::wire::write(
+    elsecall_contract::wire::write(
         &mut sealed,
-        &elsecall::wire::Frame::Content(content[..5].to_vec()),
+        &elsecall_contract::wire::Frame::Content(content[..5].to_vec()),
     )
     .await
     .unwrap();

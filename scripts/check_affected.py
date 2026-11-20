@@ -1,8 +1,9 @@
 """Run the checks a branch's changes can affect, a faster loop than the full check.
 
-Formatting, Clippy and module_shape.py cover the whole workspace, as in the full
-check: the first two are incremental and catch compile errors anywhere, and the
-shape check takes about a second. Tests run only where
+Formatting, Clippy, module_shape.py and crate_graph.py cover the whole
+workspace, as in the full check: the first two are incremental and catch compile
+errors anywhere, and the shape and graph checks take about a second each. Tests
+run only where
 check_selection.py says the changed paths can be observed, or all of them when
 it is unsure. Passing this is not a substitute for `mise run check`, which must
 pass before work is submitted.
@@ -28,6 +29,7 @@ FULL_CHECK = "mise run check"
 ALWAYS = [
     ["cargo", "fmt", "--all", "--", "--check"],
     ["python3", "scripts/module_shape.py"],
+    ["python3", "scripts/crate_graph.py"],
     ["cargo", "clippy", "--workspace", "--locked", "--all-targets", "--", "-D", "warnings"],
 ]
 

@@ -4,9 +4,7 @@
 //! the real CLI, and real member services where admission is involved. Each mode
 //! must run the script's body exactly once, run its pre-admission check once, and
 //! let a signal to the script's original PID stop it.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
 use members::{TestMember, enrol};
 use serde_json::Value;
@@ -409,6 +407,12 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
             "scripts/module_shape.py",
             include_str!("../scripts/module_shape.py"),
         ),
+        (
+            "scripts/crate_graph.py",
+            include_str!("../scripts/crate_graph.py"),
+        ),
+        // The consumer plans no crates of its own.
+        ("scripts/crate-graph.toml", "bands = [\"entry\"]\n"),
         ("scripts/build.sh", include_str!("../scripts/build.sh")),
         ("scripts/perf.sh", include_str!("../scripts/perf.sh")),
         (
@@ -462,12 +466,12 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
     for (task, expected) in [
         (
             "check",
-            "granted:0:fmt --all -- --check\nmodule shape: 0 errors, 0 warnings\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\ngranted:0:clippy -p elsecall --locked --all-targets --features local-release-channel -- -D warnings\ngranted:0:nextest run -p elsecall --locked --lib --features local-release-channel release_update::\nclean:0:nextest run --workspace --locked\nclean:0:test --doc --workspace --locked\n",
+            "granted:0:fmt --all -- --check\nmodule shape: 0 errors, 0 warnings\ncrate graph: 0 errors · 0 crates\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\ngranted:0:clippy -p elsecall-lifecycle --locked --all-targets --features local-release-channel -- -D warnings\ngranted:0:nextest run -p elsecall-lifecycle --locked --lib --features local-release-channel release_update::\nclean:0:nextest run --workspace --locked\nclean:0:test --doc --workspace --locked\n",
         ),
         ("build", "granted:0:build --locked --release\n"),
         (
             "perf",
-            "clean:1:test --locked --test workspace_copy --test placement --test pre_run_sync --test remote_run --test rehearse perf_ -- --test-threads=1 --nocapture\n",
+            "clean:1:test --locked --test integration ::perf_ -- --test-threads=1 --nocapture\n",
         ),
     ] {
         let output = invoke(task, member.home.path(), None, "0");
@@ -512,7 +516,7 @@ fn development_tasks_admit_once_and_preserve_tool_failure() {
     // A failing lint stops the check before any test runs.
     assert_eq!(
         String::from_utf8(output.stdout).unwrap(),
-        "granted:0:fmt --all -- --check\nmodule shape: 0 errors, 0 warnings\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\n"
+        "granted:0:fmt --all -- --check\nmodule shape: 0 errors, 0 warnings\ncrate graph: 0 errors · 0 crates\ngranted:0:clippy --workspace --locked --all-targets -- -D warnings\n"
     );
     let home = empty_home();
     crate::processes::workload_policy(home.path(), None, "[admission]\nwhen_unavailable = 'run'\n");

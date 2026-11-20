@@ -1,16 +1,16 @@
 #![cfg(target_os = "macos")]
 //! Public CLI/socket lifecycle. Only machine observation is faked.
-mod processes;
-mod support;
-use elsecall::{
-    client::{self, Wait},
-    scheduling::{
-        messages::{CommandStarted, Grant, RunEnded},
-        record::Record,
-        request::{AdmissionRequest, Kind, Placement, Urgency},
-        timestamp::Timestamp,
-    },
+use crate::processes;
+use crate::support;
+use elsecall_contract::scheduling_model::{
+    request::{AdmissionRequest, Kind, Placement, Urgency},
+    timestamp::Timestamp,
     workload_metadata::{Observation, Workload},
+};
+use elsecall_host::client::{self as client, Wait};
+use elsecall_scheduling::{
+    messages::{CommandStarted, Grant, RunEnded},
+    record::Record,
 };
 use serde_json::{Value, json};
 use std::os::unix::process::ExitStatusExt;
@@ -148,7 +148,7 @@ async fn declared_operations_round_trip_without_replacing_process_outcomes() {
             }
         );
         assert!(record["run_phases"]["execution_ms"].is_number());
-        let fact = elsecall::reporting::facts::Fact::of(&typed).unwrap();
+        let fact = elsecall_reports::report_facts::facts::Fact::of(&typed).unwrap();
         assert_eq!(fact.workload, typed.workload);
         assert_eq!(fact.plan_observation, typed.plan_observation);
         assert!(fact.believable());
@@ -395,8 +395,8 @@ async fn observation_binding_grace_includes_slow_request_time() {
         .prefix("ec-observe-")
         .tempdir_in("/tmp")
         .unwrap();
-    let paths = elsecall::paths::Paths::for_home(home.path()).unwrap();
-    elsecall::private_files::directory(&paths.data).unwrap();
+    let paths = elsecall_host::paths::Paths::for_home(home.path()).unwrap();
+    elsecall_host::private_files::directory(&paths.data).unwrap();
     let listener = UnixListener::bind(paths.socket()).unwrap();
     let (seen, received) = tokio::sync::oneshot::channel();
     let peer = tokio::spawn(async move {

@@ -1,16 +1,19 @@
 //! Release offers and install progress, read separately from slower fleet snapshots.
-use elsecall::release_update::Status;
+use elsecall_lifecycle::release_update::Status;
 use rune::Latest;
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
-pub struct ReleaseSnapshot {
+pub(crate) struct ReleaseSnapshot {
     pub installed_window: Option<String>,
     pub release: Option<Status>,
 }
-pub trait ReleaseSource: Send + Sync {
+pub(crate) trait ReleaseSource: Send + Sync {
     fn snapshot(&self) -> Result<ReleaseSnapshot, String>;
 }
-pub fn start(feed: Arc<Latest<Result<ReleaseSnapshot, String>>>, source: Arc<dyn ReleaseSource>) {
+pub(crate) fn start(
+    feed: Arc<Latest<Result<ReleaseSnapshot, String>>>,
+    source: Arc<dyn ReleaseSource>,
+) {
     std::thread::Builder::new()
         .name("elsecall-ui-updates".into())
         .spawn(move || {
@@ -22,12 +25,12 @@ pub fn start(feed: Arc<Latest<Result<ReleaseSnapshot, String>>>, source: Arc<dyn
         })
         .expect("start update polling");
 }
-pub struct SocketReleases {
+pub(crate) struct SocketReleases {
     socket: PathBuf,
     runtime: tokio::runtime::Runtime,
 }
 impl SocketReleases {
-    pub fn open(socket: PathBuf) -> Self {
+    pub(crate) fn open(socket: PathBuf) -> Self {
         Self {
             socket,
             runtime: tokio::runtime::Builder::new_current_thread()
@@ -39,19 +42,22 @@ impl SocketReleases {
 }
 #[derive(serde::Deserialize)]
 struct WindowOffer {
-    build: Option<elsecall::build_identity::BuildId>,
+    build: Option<elsecall_contract::build_identity::BuildId>,
 }
 impl ReleaseSource for SocketReleases {
     fn snapshot(&self) -> Result<ReleaseSnapshot, String> {
         let window = self
             .runtime
-            .block_on(elsecall::client::get::<WindowOffer>(&self.socket, "/v1/ui"))
+            .block_on(elsecall_host::client::get::<WindowOffer>(
+                &self.socket,
+                "/v1/ui",
+            ))
             .map_err(|error| error.message)?;
         // Older services still support staged-window updates without the release routes.
-        let release = match self
-            .runtime
-            .block_on(elsecall::client::get::<Status>(&self.socket, "/v1/update"))
-        {
+        let release = match self.runtime.block_on(elsecall_host::client::get::<Status>(
+            &self.socket,
+            "/v1/update",
+        )) {
             Ok(status) => Some(status),
             Err(error) if error.code == "not_found" => None,
             Err(error) => return Err(error.message),
@@ -62,14 +68,14 @@ impl ReleaseSource for SocketReleases {
         })
     }
 }
-pub fn production() -> Arc<dyn ReleaseSource> {
+pub(crate) fn production() -> Arc<dyn ReleaseSource> {
     struct Lazy {
         source: std::sync::OnceLock<Result<SocketReleases, String>>,
     }
     impl ReleaseSource for Lazy {
         fn snapshot(&self) -> Result<ReleaseSnapshot, String> {
             match self.source.get_or_init(|| {
-                elsecall::paths::Paths::current()
+                elsecall_host::paths::Paths::current()
                     .map(|paths| SocketReleases::open(paths.socket()))
                     .map_err(|error| error.message)
             }) {
@@ -155,7 +161,7 @@ mod tests {
                 if future {
                     assert!(matches!(
                         release.job.unwrap().phase,
-                        elsecall::release_update::Phase::Unknown
+                        elsecall_lifecycle::release_update::Phase::Unknown
                     ));
                 }
             }

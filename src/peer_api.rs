@@ -1,14 +1,6 @@
 //! The member-to-member API served on the tailnet. Every route requires a request
 //! signed by an enrolled member; everything else gets an empty 401. Every
 //! authenticated response is signed by this member.
-use crate::{
-    api,
-    failure::Failure,
-    fleet::{AuthenticatedPeer, Fleet},
-    peer_auth::{RequestProof, SIGNATURE_HEADER},
-    peer_client::RESPONSE_LIMIT,
-    roster::Roster,
-};
 use axum::{
     Extension, Json, Router,
     body::{Body, Bytes, to_bytes},
@@ -18,9 +10,17 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+use elsecall_contract::api;
+use elsecall_contract::failure::Failure;
+use elsecall_fleet::fleet::{AuthenticatedPeer, Fleet};
+use elsecall_peers::peer_client::RESPONSE_LIMIT;
+use elsecall_peers::{
+    peer_auth::{RequestProof, SIGNATURE_HEADER},
+    roster::Roster,
+};
 use std::{sync::Arc, time::Duration};
 
-pub const REQUEST_LIMIT: usize = 64 * 1024;
+pub use elsecall_peers::peer_transport::REQUEST_LIMIT;
 /// How long a request body may take to arrive once its headers named an enrolled member.
 const BODY_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -31,7 +31,7 @@ pub fn routes(fleet: Arc<Fleet>, placement: Router<Arc<Fleet>>) -> Router {
         .route("/peer/v1/roster", get(roster).put(offer))
         .route(
             "/peer/v1/placement/probe",
-            post(crate::placement_authority::probe),
+            post(elsecall_runs::placement_authority::probe),
         )
         .merge(placement)
         .fallback(|| async {
@@ -48,9 +48,7 @@ pub fn routes(fleet: Arc<Fleet>, placement: Router<Arc<Fleet>>) -> Router {
         .with_state(fleet)
 }
 
-pub fn failure(status: StatusCode, error: Failure) -> Response {
-    (status, Json(api::ErrorResponse::new(error))).into_response()
-}
+pub use elsecall_api_response::failure;
 
 fn data<T: serde::Serialize>(value: T) -> Response {
     Json(api::Response::new(value)).into_response()
@@ -81,20 +79,20 @@ async fn authenticate(State(fleet): State<Arc<Fleet>>, request: Request, next: N
     let Some(peer) = fleet.authenticate(&proof, parts.method.as_str(), path, &bytes) else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
-    let skew = crate::version_skew::refusal(
+    let skew = elsecall_contract::version_skew::refusal(
         parts.uri.path(),
-        crate::build_identity::announced().as_ref(),
-        header(crate::version_skew::BUILD_HEADER).as_deref(),
+        elsecall_contract::build_identity::announced().as_ref(),
+        header(elsecall_contract::version_skew::BUILD_HEADER).as_deref(),
     );
     let response = match skew {
         Some(error) => failure(StatusCode::CONFLICT, error),
         None => {
-            if parts.uri.path() == crate::fleet_tool_inventory::PEER_ROUTE
+            if parts.uri.path() == elsecall_tools::fleet_tool_inventory::PEER_ROUTE
                 && let Some(budget) = &budget
             {
                 budget.extend(
-                    crate::fleet_tool_inventory::member_timeout()
-                        + crate::fleet_tool_inventory::EXCHANGE_MARGIN,
+                    elsecall_tools::fleet_tool_inventory::member_timeout()
+                        + elsecall_tools::fleet_tool_inventory::EXCHANGE_MARGIN,
                 );
             }
             let mut request = Request::from_parts(parts, Body::from(bytes));

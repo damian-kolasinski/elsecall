@@ -1,7 +1,8 @@
 # The module shape check (scripts/module_shape.py): file size, folder breadth
-# and catch-all names, with ceilings that only go down. A second or two on
-# Linux, so it runs on every pull request and on main. It needs only Python and
-# git, never a Rust build.
+# and catch-all names, with ceilings that only go down; and the crate graph
+# (scripts/crate_graph.py): bands, dependency direction and manifests. A second
+# or two on Linux, so they run on every pull request and on main. They need only
+# Python and git, never a Rust build.
 name: Module shape
 on:
   push:
@@ -25,3 +26,5 @@ jobs:
         env:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
         run: python3 scripts/module_shape.py --base "$BASE"
+      - name: Check the crate graph
+        run: python3 scripts/crate_graph.py

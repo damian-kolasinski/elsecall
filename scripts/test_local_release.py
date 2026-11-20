@@ -29,16 +29,23 @@ class LocalRelease(unittest.TestCase):
             with self.assertRaises(argparse.ArgumentTypeError, msg=value):
                 local_release.channel_url(value, home="/Users/me")
 
-    def test_version_is_set_in_the_manifest_and_lock_only_for_elsecall(self):
+    def test_version_is_set_in_the_manifest_and_lock_only_for_the_workspace(self):
         manifest = (local_release.ROOT / "Cargo.toml").read_text()
         lock = (local_release.ROOT / "Cargo.lock").read_text()
-        new_manifest, new_lock = local_release.with_version(manifest, lock, "9.8.7")
-        self.assertEqual(tomllib.loads(new_manifest)["package"]["version"], "9.8.7")
+        packages = 1 + len(list((local_release.ROOT / "crates").glob("*/Cargo.toml")))
+        new_manifest, new_lock = local_release.with_version(manifest, lock, "9.8.7", packages)
+        self.assertEqual(tomllib.loads(new_manifest)["workspace"]["package"]["version"], "9.8.7")
+        with self.assertRaises(ValueError):
+            local_release.with_version(manifest, lock, "9.8.7", packages + 1)
+        members = {"elsecall", "elsecall-ui"} | {
+            tomllib.loads(path.read_text())["package"]["name"]
+            for path in (local_release.ROOT / "crates").glob("*/Cargo.toml")
+        }
         packages = {item["name"]: item["version"] for item in tomllib.loads(new_lock)["package"]}
-        self.assertEqual(packages["elsecall"], "9.8.7")
+        self.assertEqual({name: packages[name] for name in members}, {name: "9.8.7" for name in members})
         old = {item["name"]: item["version"] for item in tomllib.loads(lock)["package"]}
-        self.assertEqual({k: v for k, v in packages.items() if k != "elsecall"},
-                         {k: v for k, v in old.items() if k != "elsecall"})
+        self.assertEqual({k: v for k, v in packages.items() if k not in members},
+                         {k: v for k, v in old.items() if k not in members})
 
     def test_listing_is_the_release_list_the_updater_reads(self):
         self.assertEqual(local_release.listing(["0.2.10", "0.2.9"]), ["0.2.9", "0.2.10"])
@@ -59,7 +66,7 @@ class LocalRelease(unittest.TestCase):
     def test_installer_pins_the_packslip_the_service_verifies_with(self):
         template = (local_release.ROOT / "scripts" / "local-release-install.sh").read_text()
         self.assertIn(f'packslip="{local_release.PACKSLIP}"', template)
-        channel = (local_release.ROOT / "src/release_update/local_channel/mod.rs").read_text()
+        channel = (local_release.ROOT / "crates/elsecall-lifecycle/src/release_update/local_channel/mod.rs").read_text()
         self.assertIn(f'pub const PACKSLIP: &str = "{local_release.PACKSLIP}";', channel)
         self.assertIn(f'pub const PROJECT: &str = "{local_release.PROJECT}";', channel)
 

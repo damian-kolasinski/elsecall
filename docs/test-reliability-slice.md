@@ -639,7 +639,7 @@ after build did not fail.
   applied. Two of them also showed a bravo-required request returning
   `fleet_busy` after its 2-second hold. A recording is complete only if
   each member's 1-second load sampler leaves no gap over 2 seconds
-  (`src/rehearsal/load_recording.rs`). These failures have not reproduced
+  (`crates/elsecall-scheduling/src/load_log/session.rs`). These failures have not reproduced
   locally. A local probe timed every member's sampler tick over six rehearsal
   runs at 42 CPU hogs plus a concurrent rehearsal run. Over 5,128 ticks the
   longest gap was 1,055 ms. Sampling, the scheduler lock and the load-log

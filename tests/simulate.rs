@@ -1,11 +1,9 @@
 #![cfg(target_os = "macos")]
 //! Record decisions from real services, then replay them with the production
 //! scheduler and virtual adapters. Only machine observation and tailnet are fake.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
-use elsecall::scheduling::timestamp::Timestamp;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use members::{TestMember, enrol};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, fs, path::Path, process::Output};
@@ -234,7 +232,8 @@ fn real_service_decisions_replay_without_installing_or_contacting_services() {
 
     // Exercise the CLI's arrival boundary using records from the real fixture
     // services. The last command still owes a result after admission closes.
-    let mut cut: elsecall::workload::trace::Trace = serde_json::from_value(recorded).unwrap();
+    let mut cut: elsecall_reports::workload::trace::Trace =
+        serde_json::from_value(recorded).unwrap();
     let last = cut
         .requests
         .iter()

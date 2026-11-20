@@ -1,8 +1,6 @@
 #![cfg(target_os = "macos")]
 //! Each member's tool inventory, read through real member services.
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
 use members::{TestMember, enrol, json};
 use serde_json::Value;

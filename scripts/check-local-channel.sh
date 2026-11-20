@@ -5,5 +5,5 @@
 set -eu
 export ELSECALL_LOCAL_RELEASE_CHANNEL=file:///nonexistent/elsecall-channel
 export ELSECALL_LOCAL_RELEASE_KEY=RWQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-cargo clippy -p elsecall --locked --all-targets --features local-release-channel -- -D warnings
-exec cargo nextest run -p elsecall --locked --lib --features local-release-channel release_update::
+cargo clippy -p elsecall-lifecycle --locked --all-targets --features local-release-channel -- -D warnings
+exec cargo nextest run -p elsecall-lifecycle --locked --lib --features local-release-channel release_update::

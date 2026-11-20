@@ -7,13 +7,10 @@ use axum::{
     response::IntoResponse,
     routing::any,
 };
-use elsecall::{
-    member_key::MemberKey,
-    peer_auth, peer_client,
-    peer_diagnostics::{self, Kind, Phase},
-    roster::Member,
-    scheduling::timestamp::Timestamp,
-};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
+use elsecall_peers::peer_client;
+use elsecall_peers::peer_diagnostics::{self as peer_diagnostics, Kind, Phase};
+use elsecall_peers::{member_key::MemberKey, peer_auth, roster::Member};
 use hyper::Method;
 use serde_json::{Value, json};
 use std::{
@@ -95,7 +92,7 @@ async fn answer(
     (status, [(peer_auth::SIGNATURE_HEADER, signature)], bytes).into_response()
 }
 async fn server(fault: &'static str) -> (Member, Peer, tokio::task::JoinHandle<()>) {
-    elsecall::tailnet::allow_loopback_members();
+    elsecall_peers::tailnet::allow_loopback_members();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let peer = Peer {
         key: Arc::new(MemberKey::generate().unwrap()),
@@ -120,7 +117,7 @@ async fn call(
     member: &Member,
     path: &str,
     timeout: Duration,
-) -> elsecall::failure::Result<Value> {
+) -> elsecall_contract::failure::Result<Value> {
     peer_client::call(key, member, Method::GET, path, None::<&Value>, timeout).await
 }
 #[tokio::test]
@@ -129,8 +126,8 @@ async fn failures_are_typed_bounded_retained_and_only_idempotent_requests_retry(
         .prefix("ec-peer-")
         .tempdir_in("/tmp")
         .unwrap();
-    let paths = elsecall::paths::Paths::for_home(home.path()).unwrap();
-    elsecall::private_files::directory(&paths.data).unwrap();
+    let paths = elsecall_host::paths::Paths::for_home(home.path()).unwrap();
+    elsecall_host::private_files::directory(&paths.data).unwrap();
     peer_diagnostics::initialize(&paths).unwrap();
     let key = MemberKey::generate().unwrap();
     let start = Timestamp::now();
@@ -312,7 +309,7 @@ async fn failures_are_typed_bounded_retained_and_only_idempotent_requests_retry(
         } else {
             Method::POST
         };
-        let result: elsecall::failure::Result<Value> = if read_only {
+        let result: elsecall_contract::failure::Result<Value> = if read_only {
             peer_client::call_with_retry(
                 &key,
                 &member,
@@ -381,7 +378,7 @@ async fn dropping_member(
     reset: bool,
 ) -> (Member, Arc<AtomicUsize>, tokio::task::JoinHandle<()>) {
     use tokio::io::AsyncReadExt;
-    elsecall::tailnet::allow_loopback_members();
+    elsecall_peers::tailnet::allow_loopback_members();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let member = Member::new(
         "macbook-pro".parse().unwrap(),
@@ -409,7 +406,7 @@ async fn dropping_member(
     (member, accepted, task)
 }
 
-fn assert_points_at_firewall(error: &elsecall::failure::Failure, case: &str) {
+fn assert_points_at_firewall(error: &elsecall_contract::failure::Failure, case: &str) {
     assert_eq!(error.code, "member_unavailable", "{case}");
     assert!(peer_client::is_closed_without_answer(error), "{case}");
     assert_eq!(

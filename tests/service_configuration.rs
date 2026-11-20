@@ -1,16 +1,12 @@
 //! Full service configuration lifecycle with real temporary member services.
-mod diagnostics;
-mod file_gate;
-mod members;
-mod processes;
-mod sync_gate;
-use elsecall::{
-    config_sync::{
-        manifest::{FileNode, Manifest},
-        protocol::{self, Message, Purpose},
-        state::State,
-    },
-    peer_client,
+use crate::file_gate;
+use crate::members;
+use crate::sync_gate;
+use elsecall_peers::peer_client;
+use elsecall_sync::config_sync::{
+    manifest::{FileNode, Manifest},
+    protocol::{self, Message, Purpose},
+    state::State,
 };
 use members::{TestMember, enrol};
 use serde_json::Value;
@@ -105,9 +101,9 @@ fn enable(member: &TestMember) -> Value {
 
 #[test]
 fn removing_a_lease_retries_partial_delivery_without_another_generation() {
-    use elsecall::{
-        paths::Paths, scheduling::timestamp::Timestamp, service_configuration::RehearsalSettings,
-    };
+    use elsecall_contract::scheduling_model::timestamp::Timestamp;
+    use elsecall_host::paths::Paths;
+    use elsecall_sync::service_configuration::RehearsalSettings;
     let alpha = TestMember::start("alpha");
     let beta = TestMember::start("beta");
     enrol(&alpha, &beta);
@@ -126,7 +122,7 @@ fn removing_a_lease_retries_partial_delivery_without_another_generation() {
     let socket = Paths::for_home(alpha.home.path()).unwrap().socket();
     let call = |until, settings| {
         runtime
-            .block_on(elsecall::client::post_large::<Value, _>(
+            .block_on(elsecall_host::client::post_large::<Value, _>(
                 &socket,
                 "/v1/sync/rehearsal",
                 &RehearsalSettings {
@@ -601,7 +597,7 @@ fn corrupt_unmanaged_sync_state_does_not_take_down_local_diagnostics() {
 
 #[test]
 fn startup_uses_the_generation_finished_during_master_recovery() {
-    use elsecall::config_sync::store::{FileStore, ReplicaStore};
+    use elsecall_sync::config_sync::store::{FileStore, ReplicaStore};
     let mut alpha = TestMember::start("alpha");
     let beta = TestMember::start("beta");
     enrol(&alpha, &beta);

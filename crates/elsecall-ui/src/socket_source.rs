@@ -21,14 +21,14 @@ use crate::fleet_source::{
 /// How long `elsecall fleet` waits for `GET /v1/fleet`.
 const FLEET_WAIT: Duration = Duration::from_secs(15);
 
-pub struct SocketSource {
+pub(crate) struct SocketSource {
     socket: Result<PathBuf, SourceFailure>,
     runtime: tokio::runtime::Runtime,
 }
 
 impl SocketSource {
-    pub fn open() -> Self {
-        let socket = elsecall::paths::Paths::current()
+    pub(crate) fn open() -> Self {
+        let socket = elsecall_host::paths::Paths::current()
             .map(|paths| paths.socket())
             .map_err(classify);
         let runtime = tokio::runtime::Builder::new_current_thread()
@@ -45,7 +45,7 @@ impl SocketSource {
         };
         let value = self
             .runtime
-            .block_on(elsecall::client::get_large_within::<Value>(
+            .block_on(elsecall_host::client::get_large_within::<Value>(
                 socket,
                 "/v1/fleet",
                 FLEET_WAIT,
@@ -61,16 +61,17 @@ impl FleetSource for SocketSource {
     }
 }
 
-pub struct SocketWindowUpgrade;
+pub(crate) struct SocketWindowUpgrade;
 
 impl crate::window_upgrade::WindowUpgrade for SocketWindowUpgrade {
     fn replace_and_reopen(&self) -> Result<(), String> {
-        let paths = elsecall::paths::Paths::current().map_err(|error| error.message.clone())?;
+        let paths =
+            elsecall_host::paths::Paths::current().map_err(|error| error.message.clone())?;
         replace_window_at(&paths.socket())
     }
 
-    fn start_release(&self) -> Result<elsecall::release_update::Job, String> {
-        let paths = elsecall::paths::Paths::current().map_err(|error| error.message)?;
+    fn start_release(&self) -> Result<elsecall_lifecycle::release_update::Job, String> {
+        let paths = elsecall_host::paths::Paths::current().map_err(|error| error.message)?;
         start_release_at(&paths.socket())
     }
     fn close_old_window(&self) {
@@ -78,13 +79,15 @@ impl crate::window_upgrade::WindowUpgrade for SocketWindowUpgrade {
     }
 }
 
-fn start_release_at(socket: &std::path::Path) -> Result<elsecall::release_update::Job, String> {
+fn start_release_at(
+    socket: &std::path::Path,
+) -> Result<elsecall_lifecycle::release_update::Job, String> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .map_err(|error| error.to_string())?;
     runtime
-        .block_on(elsecall::client::post_within(
+        .block_on(elsecall_host::client::post_within(
             socket,
             "/v1/update/install",
             serde_json::json!({"reopen":true,"wait_seconds":300}),
@@ -103,7 +106,7 @@ fn replace_window_at(socket: &std::path::Path) -> Result<(), String> {
         .build()
         .map_err(|error| error.to_string())?;
     let result = runtime
-        .block_on(elsecall::client::post_within::<Launched>(
+        .block_on(elsecall_host::client::post_within::<Launched>(
             socket,
             "/v1/ui/update",
             serde_json::json!({}),
@@ -118,7 +121,7 @@ fn replace_window_at(socket: &std::path::Path) -> Result<(), String> {
 }
 
 /// Opens the socket on the first read, which the refresh thread performs.
-pub fn shared() -> Arc<dyn FleetSource> {
+pub(crate) fn shared() -> Arc<dyn FleetSource> {
     Arc::new(LazySocket {
         source: OnceLock::new(),
     })
@@ -134,8 +137,8 @@ impl FleetSource for LazySocket {
     }
 }
 
-pub(crate) fn classify(failure: elsecall::failure::Failure) -> SourceFailure {
-    let elsecall::failure::Failure {
+pub(crate) fn classify(failure: elsecall_contract::failure::Failure) -> SourceFailure {
+    let elsecall_contract::failure::Failure {
         code,
         message,
         hint,
@@ -707,7 +710,8 @@ mod tests {
     #[test]
     fn classifies_the_service_unavailable_envelope() {
         let fixture = include_str!("../tests/fixtures/error.json");
-        let response: elsecall::api::ErrorResponse = serde_json::from_str(fixture).unwrap();
+        let response: elsecall_contract::api::ErrorResponse =
+            serde_json::from_str(fixture).unwrap();
         let failure = classify(response.error);
         match failure {
             SourceFailure::ServiceUnavailable { hint, .. } => {

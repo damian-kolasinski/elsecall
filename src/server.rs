@@ -1,30 +1,5 @@
-use crate::{
-    api,
-    failure::{Failure, Result},
-    fleet::Fleet,
-    fleet_local_api,
-    fleet_placement::FleetMembers,
-    inspection::Inspection,
-    local_access,
-    member_key::MemberKey,
-    membership_store::MembershipStore,
-    paths::Paths,
-    peer_api, peer_listener, placement_api,
-    placement_host::PlacementHost,
-    private_files, run_relay,
-    scheduling::service::{Adapters, Scheduler},
-    workspace::{copies::Copies, location::Locations, object_sources::ObjectSources},
-};
-use crate::{
-    fleet_callers::FleetCallers,
-    housekeeping::{
-        self,
-        caller_state::CallerState,
-        callers::{Callers, Nobody},
-        catalog::Catalog,
-        pass::{Housekeeper, Parts},
-    },
-};
+use crate::fleet_callers::FleetCallers;
+use crate::{peer_api, peer_listener};
 use axum::{
     Json, Router,
     extract::State,
@@ -32,6 +7,23 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
+use elsecall_contract::api;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::inspection::Inspection;
+use elsecall_fleet::{fleet::Fleet, fleet_local_api, fleet_placement::FleetMembers};
+use elsecall_host::{local_access, paths::Paths, private_files};
+use elsecall_peers::{member_key::MemberKey, membership_store::MembershipStore};
+use elsecall_runs::run_relay;
+use elsecall_runs::{placement_api, placement_host::PlacementHost};
+use elsecall_scheduling::service::{Adapters, Scheduler};
+use elsecall_workspace::housekeeping::{
+    self,
+    caller_state::CallerState,
+    callers::{Callers, Nobody},
+    catalog::Catalog,
+    pass::{Housekeeper, Parts},
+};
+use elsecall_workspace::{copies::Copies, location::Locations, object_sources::ObjectSources};
 use std::{
     fs,
     os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},
@@ -52,6 +44,47 @@ impl axum::extract::connect_info::Connected<axum::serve::IncomingStream<'_, Loca
     }
 }
 
+/// Hands every local request the process that made it, for the slices that
+/// identify their caller.
+async fn identify_caller(
+    axum::extract::ConnectInfo(peer): axum::extract::ConnectInfo<Peer>,
+    mut request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
+    request
+        .extensions_mut()
+        .insert(elsecall_host::local_access::LocalCaller { pid: peer.pid });
+    next.run(request).await
+}
+
+/// Tuning trust evidence for reports, from rehearsal's certificates.
+struct TuningTrust;
+impl elsecall_reports::report_api::TrustEvidence for TuningTrust {
+    fn fleet_status<'a>(
+        &'a self,
+        paths: &'a elsecall_host::paths::Paths,
+        fleet: &'a std::result::Result<Arc<elsecall_fleet::fleet::Fleet>, Failure>,
+    ) -> futures_util::future::BoxFuture<'a, serde_json::Value> {
+        Box::pin(elsecall_tuning::tuning_trust_api::fleet_status(
+            paths, fleet,
+        ))
+    }
+}
+
+/// The scheduler's latest placed run with each member, as the fleet view shows it.
+struct PlacedRunsOf(Arc<Scheduler>);
+impl elsecall_fleet::fleet_view::PlacedRuns for PlacedRunsOf {
+    fn latest_with(&self, member: &str) -> Option<elsecall_fleet::fleet_view::PlacedRunSummary> {
+        self.0.latest_placed_with(member).map(|record| {
+            elsecall_fleet::fleet_view::PlacedRunSummary {
+                run_id: record.run_id.to_string(),
+                started_at: record.started_at,
+                warnings: record.warnings,
+            }
+        })
+    }
+}
+
 /// Where same-path copies go: the caller's path itself, unless
 /// `ELSECALL_SAME_PATH_BASE` moves them under another directory, as tests on one
 /// machine do so a member's copy never lands on the caller's own working tree.
@@ -66,12 +99,12 @@ pub async fn serve(
     paths: Paths,
     inspection: Arc<Inspection>,
     scheduling: Adapters,
-    process_sampler: Arc<dyn crate::outside_pressure::ProcessSampler>,
+    process_sampler: Arc<dyn elsecall_scheduling::outside_pressure::ProcessSampler>,
     members_listener: peer_listener::Settings,
 ) -> Result<()> {
-    crate::release_update::rehearsal::startup()?;
-    let updates = crate::release_update::service::UpdateAdapters::production(
-        !crate::process_service::requested()?,
+    elsecall_lifecycle::release_update::rehearsal::startup()?;
+    let updates = elsecall_lifecycle::release_update::service::UpdateAdapters::production(
+        !elsecall_macos::process_service::requested()?,
     )?;
     serve_with_updates(
         paths,
@@ -88,9 +121,9 @@ pub async fn serve_with_updates(
     paths: Paths,
     inspection: Arc<Inspection>,
     scheduling: Adapters,
-    process_sampler: Arc<dyn crate::outside_pressure::ProcessSampler>,
+    process_sampler: Arc<dyn elsecall_scheduling::outside_pressure::ProcessSampler>,
     members_listener: peer_listener::Settings,
-    updates: crate::release_update::service::UpdateAdapters,
+    updates: elsecall_lifecycle::release_update::service::UpdateAdapters,
 ) -> Result<()> {
     private_files::owned_tree(&paths.home, &paths.data)?;
     private_files::directory(&paths.data)?;
@@ -101,17 +134,17 @@ pub async fn serve_with_updates(
             "Use elsecall service restart for the installed service, or stop the other foreground serve process.",
         ));
     };
-    crate::peer_diagnostics::initialize(&paths)?;
-    if let Err(error) = crate::state_temps::prune(&paths) {
+    elsecall_peers::peer_diagnostics::initialize(&paths)?;
+    if let Err(error) = elsecall_host::state_temps::prune(&paths) {
         // Optional sync/upgrade state must not take down local admission.
-        crate::service_log!(
+        elsecall_host::service_log!(
             "{}",
             serde_json::json!({"event":"state_scratch_cleanup_failed", "code":error.code})
         );
     }
     // Identify the build before anything could replace this executable, and name
     // it on every member request from now on.
-    let build = crate::build_identity::announce()?;
+    let build = elsecall_contract::build_identity::announce()?;
     // Fail before binding, so an invalid setting is never silently ignored.
     // Broken fleet state must not take down the local API: status, machine and the
     // fleet commands' diagnosis keep working, and the member listener stays closed.
@@ -128,9 +161,11 @@ pub async fn serve_with_updates(
         .as_ref()
         .ok()
         .and_then(|f| f.roster().ok().map(|r| f.name_in(&r)));
-    let mut configuration = crate::service_configuration::load(&paths, name.as_ref())?;
+    let mut configuration = elsecall_sync::service_configuration::load(&paths, name.as_ref())?;
     let members = Arc::new(FleetMembers::new(fleet.as_ref().ok().cloned()));
-    let load_log = Arc::new(crate::load_log::LoadLog::open(&paths.load_history())?);
+    let load_log = Arc::new(elsecall_scheduling::load_log::LoadLog::open(
+        &paths.load_history(),
+    )?);
     let mut locations = configured_locations(&paths, &configuration);
     // Configuration sync needs fleet state; broken sync state degrades only sync.
     let mut config_sync = match &fleet {
@@ -160,23 +195,23 @@ pub async fn serve_with_updates(
             _ => (),
         }
     }
-    crate::service_log::configure(configuration.logs.clone());
+    elsecall_host::service_log::configure(configuration.logs.clone());
     if let (Ok(fleet), Ok(sync)) = (&fleet, &config_sync) {
         fleet.report_sync(sync.clone());
         fleet.hand_over_with(sync.clone());
-        fleet.observe_role_with(Arc::new(crate::config_sync::service::RoleChanges(
+        fleet.observe_role_with(Arc::new(elsecall_sync::config_sync::service::RoleChanges(
             sync.clone(),
         )));
     }
     if let (Ok(fleet), Err(error)) = (&fleet, &config_sync) {
-        crate::service_log!(
+        elsecall_host::service_log!(
             "{{\"event\":\"config_sync_unavailable\",\"code\":{:?}}}",
             error.code
         );
         // A move must not skip the handover because sync is broken here.
-        fleet.hand_over_with(Arc::new(crate::config_sync::service::UnavailableHandover(
-            error.clone(),
-        )));
+        fleet.hand_over_with(Arc::new(
+            elsecall_sync::config_sync::service::UnavailableHandover(error.clone()),
+        ));
     }
     // Placed runs bring their member's synced configuration up to date first.
     let pre_run = Arc::new(crate::placement_config_sync::PlacementConfigSync::new(
@@ -184,7 +219,7 @@ pub async fn serve_with_updates(
     ));
     let (scheduler, _scheduling) = Scheduler::start(
         &paths.records(),
-        configuration.clone(),
+        (&configuration).into(),
         scheduling,
         members,
         pre_run,
@@ -194,14 +229,16 @@ pub async fn serve_with_updates(
         sync.report_effective_settings(scheduler.effective_settings_fingerprint());
     }
     // Broken outside pressure history must not take down admission.
-    let outside_pressure =
-        crate::outside_pressure::Detector::open(&paths.outside_pressure(), process_sampler.clone())
-            .map(Arc::new);
+    let outside_pressure = elsecall_scheduling::outside_pressure::Detector::open(
+        &paths.outside_pressure(),
+        process_sampler.clone(),
+    )
+    .map(Arc::new);
     // Nor must broken early warnings; they are shares of physical memory.
     let outside_processes = inspection
         .machine()
         .and_then(|machine| {
-            crate::outside_pressure::Watcher::open(
+            elsecall_scheduling::outside_pressure::Watcher::open(
                 &paths.outside_processes(),
                 process_sampler,
                 machine.memory.total_bytes,
@@ -210,16 +247,16 @@ pub async fn serve_with_updates(
         .map(Arc::new);
     let _outside_processes = match &outside_processes {
         Ok(watcher) => Some(AbortOnDrop(
-            tokio::spawn(crate::outside_pressure::watcher::follow(
+            tokio::spawn(elsecall_scheduling::outside_pressure::watcher::follow(
                 watcher.clone(),
-                Arc::new(crate::outside_pressure_gate::SchedulerGate(
+                Arc::new(elsecall_scheduling::outside_pressure_gate::SchedulerGate(
                     scheduler.clone(),
                 )),
             ))
             .abort_handle(),
         )),
         Err(error) => {
-            crate::service_log!(
+            elsecall_host::service_log!(
                 "{}",
                 serde_json::json!({"event":"outside_processes_unavailable", "code":error.code})
             );
@@ -228,24 +265,26 @@ pub async fn serve_with_updates(
     };
     let warnings = outside_processes
         .as_ref()
-        .map(|watcher| watcher.clone() as Arc<dyn crate::outside_pressure::WarningReport>)
+        .map(|watcher| {
+            watcher.clone() as Arc<dyn elsecall_scheduling::outside_pressure::WarningReport>
+        })
         .map_err(Clone::clone);
     if let (Ok(fleet), Ok(warnings)) = (&fleet, &warnings) {
         fleet.report_warnings(warnings.clone());
     }
     let _outside_pressure = match &outside_pressure {
         Ok(detector) => Some(AbortOnDrop(
-            tokio::spawn(crate::outside_pressure::detector::follow(
+            tokio::spawn(elsecall_scheduling::outside_pressure::detector::follow(
                 detector.clone(),
-                Arc::new(crate::outside_pressure_gate::SchedulerGate(
+                Arc::new(elsecall_scheduling::outside_pressure_gate::SchedulerGate(
                     scheduler.clone(),
                 )),
-                crate::scheduling::service::SAMPLE_INTERVAL,
+                elsecall_scheduling::service::SAMPLE_INTERVAL,
             ))
             .abort_handle(),
         )),
         Err(error) => {
-            crate::service_log!(
+            elsecall_host::service_log!(
                 "{}",
                 serde_json::json!({"event":"outside_pressure_unavailable", "code":error.code})
             );
@@ -269,12 +308,14 @@ pub async fn serve_with_updates(
     };
     // Upgrades need fleet state; a broken upgrade record refuses only upgrades.
     let upgrades = match &fleet {
-        Ok(fleet) => crate::fleet_upgrade::member::Upgrades::open(
-            crate::fleet_upgrade::journal::Journal::new(&paths.data),
+        Ok(fleet) => elsecall_lifecycle::fleet_upgrade::member::Upgrades::open(
+            elsecall_lifecycle::fleet_upgrade::journal::Journal::new(&paths.data),
             paths.executable(),
             fleet.clone(),
-            Arc::new(crate::upgrade_drain::SchedulerWork(scheduler.clone())),
-            Arc::new(crate::upgrade_helper_process::HelperProcess),
+            Arc::new(elsecall_lifecycle::upgrade_drain::SchedulerWork(
+                scheduler.clone(),
+            )),
+            Arc::new(elsecall_lifecycle::upgrade_helper_process::HelperProcess),
             build.clone(),
         )
         .map(Arc::new),
@@ -283,11 +324,14 @@ pub async fn serve_with_updates(
     let automatic_updates = updates.automatic;
     // The CLI's `fleet upgrade` and a release update's fleet half share one distributor.
     let distributor = fleet.as_ref().ok().map(|fleet| {
-        crate::fleet_upgrade::distributor::Distributor::new(fleet.clone(), paths.executable())
+        elsecall_lifecycle::fleet_upgrade::distributor::Distributor::new(
+            fleet.clone(),
+            paths.executable(),
+        )
     });
-    let updates = crate::release_update::service::UpdateService::open(
+    let updates = elsecall_lifecycle::release_update::service::UpdateService::open(
         paths.clone(),
-        crate::release_update::ReleaseVersion::running(),
+        elsecall_lifecycle::release_update::ReleaseVersion::running(),
         build.build.clone(),
         updates.catalog,
         updates.launcher,
@@ -312,8 +356,8 @@ pub async fn serve_with_updates(
             )
         });
     let update_routes = match updates {
-        Ok(updates) => crate::release_update_api::routes(updates),
-        Err(error) => crate::release_update_api::unavailable(error),
+        Ok(updates) => elsecall_lifecycle::release_update_api::routes(updates),
+        Err(error) => elsecall_lifecycle::release_update_api::unavailable(error),
     };
     let catalog = Arc::new(Catalog::open(
         &paths.data.join("copies.sqlite"),
@@ -348,7 +392,7 @@ pub async fn serve_with_updates(
         housekeeper.clone(),
         Arc::new(scheduler.clone()),
     ));
-    let rehearsal = crate::rehearsal::member::Member::new(
+    let rehearsal = elsecall_tuning::rehearsal::member::Member::new(
         paths.clone(),
         scheduler.clone(),
         housekeeper.clone(),
@@ -387,62 +431,72 @@ pub async fn serve_with_updates(
         .map_err(|e| Failure::io("Inspect local socket", e))?
         .ino();
     let relay = run_relay::routes(scheduler.clone(), fleet.as_ref().ok().cloned());
-    let reporter = crate::report_api::Reporter {
+    let reporter = elsecall_reports::report_api::Reporter {
         paths: paths.clone(),
-        own: crate::own_history::OwnHistory {
+        own: elsecall_reports::own_history::OwnHistory {
             scheduler: scheduler.clone(),
             load: load_log.clone(),
             outside: outside_detector,
             warnings: warnings.ok(),
         },
         fleet: fleet.clone(),
+        evidence: Arc::new(TuningTrust),
     };
     let sync_routes = match &config_sync {
-        Ok(sync) => crate::config_sync_local_api::routes(sync.clone()),
-        Err(error) => crate::config_sync_local_api::unavailable(error.clone()),
+        Ok(sync) => elsecall_sync::config_sync_local_api::routes(sync.clone()),
+        Err(error) => elsecall_sync::config_sync_local_api::unavailable(error.clone()),
     };
-    let tools_routes = crate::tools_api::routes(fleet.clone());
-    let desired_routes = crate::toolset_api::routes(fleet.clone(), &paths);
+    let tools_routes = elsecall_tools::tools_api::routes(fleet.clone());
+    let desired_routes = elsecall_tools::toolset_api::routes(fleet.clone(), &paths);
     let fleet_routes = match fleet {
         Ok(fleet) => {
             let mut member_routes = placement_api::routes(host)
                 .merge(crate::workspace_check_api::routes(caller_state))
-                .merge(crate::report_api::peer_routes(reporter.clone()))
-                .merge(crate::trace_api::peer_routes(reporter.clone()))
-                .merge(crate::rehearsal_api::peer_routes(rehearsal.clone()))
-                .merge(crate::tuning_trust_api::peer_routes(paths.clone()))
-                .merge(crate::tools_api::peer_routes());
+                .merge(elsecall_reports::report_api::peer_routes(reporter.clone()))
+                .merge(elsecall_tuning::trace_api::peer_routes(reporter.clone()))
+                .merge(elsecall_tuning::rehearsal_api::peer_routes(
+                    rehearsal.clone(),
+                ))
+                .merge(elsecall_tuning::tuning_trust_api::peer_routes(
+                    paths.clone(),
+                ))
+                .merge(elsecall_tools::tools_api::peer_routes());
             if let Ok(sync) = &config_sync {
-                member_routes = member_routes.merge(crate::config_sync_api::routes(sync.clone()));
+                member_routes =
+                    member_routes.merge(elsecall_sync::config_sync_api::routes(sync.clone()));
             }
             member_routes = member_routes.merge(match &upgrades {
-                Ok(upgrades) => crate::fleet_upgrade_api::routes(upgrades.clone()),
-                Err(error) => crate::fleet_upgrade_api::unavailable(error.clone()),
+                Ok(upgrades) => elsecall_lifecycle::fleet_upgrade_api::routes(upgrades.clone()),
+                Err(error) => elsecall_lifecycle::fleet_upgrade_api::unavailable(error.clone()),
             });
             let peer_routes = peer_api::routes(fleet.clone(), member_routes);
             peer_listener::start(fleet.clone(), members_listener, peer_routes).await;
-            crate::rehearsal_api::routes(fleet.clone(), rehearsal)
-                .merge(crate::fleet_upgrade_local_api::routes(
+            elsecall_tuning::rehearsal_api::routes(fleet.clone(), rehearsal)
+                .merge(elsecall_lifecycle::fleet_upgrade_local_api::routes(
                     distributor
                         .clone()
                         .expect("a readable fleet has a distributor"),
                 ))
-                .merge(fleet_local_api::routes(fleet, scheduler.clone()))
+                .merge(fleet_local_api::routes(
+                    fleet,
+                    Arc::new(PlacedRunsOf(scheduler.clone())),
+                ))
         }
         Err(error) => {
-            crate::service_log!(
+            elsecall_host::service_log!(
                 "{{\"event\":\"fleet_unavailable\",\"code\":{:?}}}",
                 error.code
             );
             fleet_local_api::unavailable(error)
         }
     };
-    let _drift = AbortOnDrop(crate::tuning_drift::start(
+    let _drift = AbortOnDrop(elsecall_tuning::tuning_drift::start(
         paths.clone(),
         scheduler.clone(),
         configuration.housekeeping.interval,
     ));
-    let trust_routes = crate::tuning_trust_api::routes(paths.clone(), reporter.fleet.clone());
+    let trust_routes =
+        elsecall_tuning::tuning_trust_api::routes(paths.clone(), reporter.fleet.clone());
     let app = Router::new()
         .route("/v1/health", get(health))
         .route("/v1/machine", get(machine))
@@ -458,15 +512,15 @@ pub async fn serve_with_updates(
         })
         .with_state(inspection)
         .merge(trust_routes)
-        .merge(crate::replay_api::routes(scheduler.clone()))
-        .merge(crate::admission_api::routes(scheduler))
-        .merge(crate::copies_api::routes(housekeeper))
+        .merge(elsecall_tuning::replay_api::routes(scheduler.clone()))
+        .merge(elsecall_runs::admission_api::routes(scheduler))
+        .merge(elsecall_workspace::copies_api::routes(housekeeper))
         .merge(tools_routes)
         .merge(desired_routes)
         .merge(crate::ui_app::routes(paths.clone()))
         .merge(update_routes)
-        .merge(crate::trace_api::routes(reporter.clone()))
-        .merge(crate::report_api::routes(reporter))
+        .merge(elsecall_tuning::trace_api::routes(reporter.clone()))
+        .merge(elsecall_reports::report_api::routes(reporter))
         .merge(relay)
         .merge(sync_routes)
         .merge(outside_pressure_routes)
@@ -474,20 +528,21 @@ pub async fn serve_with_updates(
     // Register handlers before signaling readiness, and release the socket on shutdown.
     let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
         .map_err(|e| Failure::io("Register shutdown handler", e))?;
-    crate::service_log!(
+    elsecall_host::service_log!(
         "{{\"event\":\"service_ready\",\"version\":\"{}\",\"build\":\"{}\"}}",
         build.version,
         build.build
     );
     let result = axum::serve(
         LocalListener(listener),
-        app.into_make_service_with_connect_info::<Peer>(),
+        app.layer(axum::middleware::from_fn(identify_caller))
+            .into_make_service_with_connect_info::<Peer>(),
     )
     .with_graceful_shutdown(async move {
         tokio::select! {
             _ = terminate.recv() => (),
             _ = tokio::signal::ctrl_c() => (),
-            _ = crate::service_relaunch::when_idle(restart_sync, restart_scheduler) => {
+            _ = elsecall_sync::service_relaunch::when_idle(restart_sync, restart_scheduler) => {
                 restarting.store(true, std::sync::atomic::Ordering::SeqCst);
             }
         }
@@ -503,15 +558,15 @@ pub async fn serve_with_updates(
     }
     result?;
     if relaunch.load(std::sync::atomic::Ordering::SeqCst) {
-        crate::service_log!("{{\"event\":\"service_configuration_relaunch\"}}");
-        return crate::service_relaunch::execute(&service_lock);
+        elsecall_host::service_log!("{{\"event\":\"service_configuration_relaunch\"}}");
+        return elsecall_sync::service_relaunch::execute(&service_lock);
     }
     Ok(())
 }
 
 async fn health(
     State(inspection): State<Arc<Inspection>>,
-) -> Json<api::Response<crate::inspection::Health>> {
+) -> Json<api::Response<elsecall_contract::inspection::Health>> {
     Json(api::Response::new(inspection.health()))
 }
 async fn machine(State(inspection): State<Arc<Inspection>>) -> Response {
@@ -536,7 +591,7 @@ async fn machine(State(inspection): State<Arc<Inspection>>) -> Response {
 
 fn configured_locations(
     paths: &Paths,
-    configuration: &crate::configuration::ServiceConfiguration,
+    configuration: &elsecall_sync::configuration::ServiceConfiguration,
 ) -> Locations {
     Locations {
         setting: configuration.location,
@@ -554,8 +609,8 @@ fn open_config_sync(
     locations: &Locations,
     fleet: &Arc<Fleet>,
     backup_limit: usize,
-) -> Result<Arc<crate::config_sync::service::ConfigSync>> {
-    use crate::config_sync::{
+) -> Result<Arc<elsecall_sync::config_sync::service::ConfigSync>> {
+    use elsecall_sync::config_sync::{
         replica::{Layout, Replica},
         service::ConfigSync,
         store::FileStore,

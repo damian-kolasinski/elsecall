@@ -2,8 +2,7 @@
 //! The workspace copy engine against real git repositories: a caller's dirty working
 //! tree is synced into a member's copy over the real sync protocol, and the copy must
 //! then look the same to git and to the file system.
-mod processes;
-use elsecall::workspace::{
+use elsecall_workspace::{
     carried_refs::RefPattern,
     framed_link::FramedLink,
     location::{CopyLocation, Locations, Setting},
@@ -199,8 +198,8 @@ async fn sync_carrying(
     bytes_per_second: Option<u64>,
     declared: &[&str],
 ) -> (
-    elsecall::failure::Result<SyncStats>,
-    elsecall::failure::Result<MemberStats>,
+    elsecall_contract::failure::Result<SyncStats>,
+    elsecall_contract::failure::Result<MemberStats>,
 ) {
     let declared: Vec<RefPattern> = declared
         .iter()
@@ -280,7 +279,7 @@ fn appearance(root: &Path) -> Vec<String> {
             Ok(meta) => seen.push(format!(
                 "{path} {:o} {:x?}",
                 meta.permissions().mode() & 0o777,
-                elsecall::workspace::digest::Digest::of(&std::fs::read(&full).unwrap())
+                elsecall_workspace::digest::Digest::of(&std::fs::read(&full).unwrap())
             )),
             Err(_) => seen.push(format!("{path} absent")),
         }
@@ -581,7 +580,7 @@ async fn refused_sync(
     located: &Located,
     caches: &Path,
     location: &CopyLocation,
-) -> elsecall::failure::Failure {
+) -> elsecall_contract::failure::Failure {
     let (a, b) = tokio::io::duplex(1 << 20);
     let (ar, aw) = tokio::io::split(a);
     let (br, bw) = tokio::io::split(b);
@@ -968,7 +967,7 @@ async fn perf_a_first_sync_with_an_object_source_sends_only_local_work() {
     // fraction of receiving it, and the whole sync must be faster.
     if performance_budgets() {
         let history =
-            |phases: &elsecall::workspace::sync::MemberPhases| phases.sources + phases.pack;
+            |phases: &elsecall_workspace::sync::MemberPhases| phases.sources + phases.pack;
         assert!(
             history(&with.phases) * 3 < history(&without.phases),
             "history {:?} against {:?} without a source",

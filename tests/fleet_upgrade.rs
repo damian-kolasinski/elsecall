@@ -5,24 +5,19 @@
 //! another identifier (a different build ID), and `/usr/bin/false`, a build that
 //! never becomes ready.
 #![cfg(target_os = "macos")]
-mod diagnostics;
-mod members;
-mod processes;
+use crate::members;
 
-use elsecall::{
-    build_identity::Digest,
-    executable_format::Architecture,
-    fleet_upgrade::{
-        member::UpgradeStatus,
-        protocol::{self, Manifest, Message, Os, UpgradeId},
-    },
-    paths::Paths,
-    peer_client,
-    scheduling::{
-        capacity::Cores,
-        request::{AdmissionRequest, Kind, Placement, Urgency},
-    },
+use elsecall_contract::scheduling_model::{
+    capacity::Cores,
+    request::{AdmissionRequest, Kind, Placement, Urgency},
 };
+use elsecall_contract::{build_identity::Digest, executable_format::Architecture};
+use elsecall_host::paths::Paths;
+use elsecall_lifecycle::fleet_upgrade::{
+    member::UpgradeStatus,
+    protocol::{self, Manifest, Message, Os, UpgradeId},
+};
+use elsecall_peers::peer_client;
 use members::{TestMember, enrol, json};
 use serde_json::Value;
 use std::{
@@ -269,7 +264,7 @@ fn manifest(member: &TestMember, content: &[u8]) -> Manifest {
         os: Os::Macos,
         architectures: vec![Architecture::this().unwrap()],
         wait_seconds: 0,
-        issued_at: elsecall::peer_auth::now(),
+        issued_at: elsecall_peers::peer_auth::now(),
     }
 }
 
@@ -768,7 +763,7 @@ fn an_attempt_that_cannot_finish_is_closed_and_the_member_keeps_working() {
     // An install refused before anything stopped (another install holds the
     // installation lock) leaves the service running and the member upgradable.
     let pid = bravo.installed_pid().unwrap();
-    let lock = elsecall::private_files::try_lock(&bravo.data().join("installation.lock"))
+    let lock = elsecall_host::private_files::try_lock(&bravo.data().join("installation.lock"))
         .unwrap()
         .expect("no install runs");
     let (code, report) = upgrade(&alpha, &[]);

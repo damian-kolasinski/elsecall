@@ -1,4 +1,5 @@
-use elsecall::{simulation, workload::trace::Trace};
+use elsecall_reports::workload::trace::Trace;
+use elsecall_tuning::simulation;
 use serde_json::Value;
 
 fn recording() -> Trace {
@@ -125,4 +126,25 @@ fn diagnostic_replay_rejects_inconsistent_or_overflowing_core_counts() {
     cores.efficiency = 1;
     assert!(simulation::validate_trace(&trace).is_ok());
     assert!(simulation::rehearsal_cpu::replay(trace).is_err());
+}
+
+/// Traces are digested byte for byte when simulated, so their serialized form,
+/// including field order, must not change when their types move.
+#[test]
+fn traces_keep_their_exact_bytes() {
+    for (source, expected) in [
+        (
+            include_str!("fixtures/run8-aa-rehearsal.json"),
+            "Digest(c6ccddfab09f013f6564de405f5f319c1e8eba60de434fd691488dae353b65de)",
+        ),
+        (
+            include_str!("fixtures/run5-rehearsal.json"),
+            "Digest(6535f9b034496226a6330a389436312ca40d6dc0f7a1be51f3447bdb9b9482bf)",
+        ),
+    ] {
+        let trace: Trace = serde_json::from_str(source).unwrap();
+        let digest =
+            elsecall_contract::build_identity::Digest::of(&serde_json::to_vec(&trace).unwrap());
+        assert_eq!(format!("{digest:?}"), expected);
+    }
 }

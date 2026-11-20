@@ -1062,12 +1062,24 @@ version = "0.3.0"
 dependencies = [
  "axum",
  "base64 0.22.1",
- "chacha20poly1305",
  "clap",
- "ed25519-dalek",
+ "elsecall-api-response",
+ "elsecall-contract",
+ "elsecall-fleet",
+ "elsecall-host",
+ "elsecall-lifecycle",
+ "elsecall-macos",
+ "elsecall-peers",
+ "elsecall-reports",
+ "elsecall-runs",
+ "elsecall-scheduling",
+ "elsecall-sync",
+ "elsecall-tools",
+ "elsecall-tuning",
+ "elsecall-workload-config",
+ "elsecall-workspace",
  "futures-util",
  "getrandom 0.3.4",
- "hkdf",
  "http-body-util",
  "humantime",
  "hyper",
@@ -1078,22 +1090,308 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
+ "tempfile",
+ "tokio",
+ "toml",
+ "tower",
+ "zeroize",
+]
+
+[[package]]
+name = "elsecall-api-response"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "elsecall-contract",
+]
+
+[[package]]
+name = "elsecall-contract"
+version = "0.3.0"
+dependencies = [
+ "base64 0.22.1",
+ "humantime",
+ "libc",
+ "serde",
+ "serde_json",
  "sha2",
+ "tokio",
+]
+
+[[package]]
+name = "elsecall-fleet"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "elsecall-api-response",
+ "elsecall-contract",
+ "elsecall-host",
+ "elsecall-peers",
+ "elsecall-scheduling",
+ "futures-util",
+ "hyper",
+ "libc",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "zeroize",
+]
+
+[[package]]
+name = "elsecall-host"
+version = "0.3.0"
+dependencies = [
+ "elsecall-contract",
+ "getrandom 0.3.4",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "libc",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "elsecall-lifecycle"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "clap",
+ "elsecall-api-response",
+ "elsecall-contract",
+ "elsecall-fleet",
+ "elsecall-host",
+ "elsecall-peers",
+ "elsecall-scheduling",
+ "futures-util",
+ "getrandom 0.3.4",
+ "humantime",
+ "hyper",
+ "hyper-util",
+ "libc",
+ "plist",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "toml",
+ "toml_edit",
+]
+
+[[package]]
+name = "elsecall-macos"
+version = "0.3.0"
+dependencies = [
+ "base64 0.22.1",
+ "elsecall-contract",
+ "elsecall-fleet",
+ "elsecall-host",
+ "elsecall-lifecycle",
+ "elsecall-peers",
+ "elsecall-scheduling",
+ "libc",
+ "plist",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "tempfile",
+ "tokio",
+ "zeroize",
+]
+
+[[package]]
+name = "elsecall-peers"
+version = "0.3.0"
+dependencies = [
+ "base64 0.22.1",
+ "chacha20poly1305",
+ "ed25519-dalek",
+ "elsecall-contract",
+ "elsecall-host",
+ "futures-util",
+ "getrandom 0.3.4",
+ "hkdf",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "libc",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "x25519-dalek",
+ "zeroize",
+]
+
+[[package]]
+name = "elsecall-reports"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "clap",
+ "elsecall-api-response",
+ "elsecall-contract",
+ "elsecall-fleet",
+ "elsecall-host",
+ "elsecall-peers",
+ "elsecall-scheduling",
+ "futures-util",
+ "humantime",
+ "hyper",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "elsecall-runs"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "clap",
+ "elsecall-api-response",
+ "elsecall-contract",
+ "elsecall-fleet",
+ "elsecall-host",
+ "elsecall-peers",
+ "elsecall-scheduling",
+ "elsecall-workload-config",
+ "elsecall-workspace",
+ "futures-util",
+ "getrandom 0.3.4",
+ "http-body-util",
+ "humantime",
+ "hyper",
+ "hyper-util",
+ "libc",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "toml",
+]
+
+[[package]]
+name = "elsecall-scheduling"
+version = "0.3.0"
+dependencies = [
+ "elsecall-contract",
+ "elsecall-host",
+ "elsecall-peers",
+ "futures-util",
+ "humantime",
+ "libc",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "toml",
+]
+
+[[package]]
+name = "elsecall-sync"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "clap",
+ "elsecall-api-response",
+ "elsecall-contract",
+ "elsecall-fleet",
+ "elsecall-host",
+ "elsecall-peers",
+ "elsecall-scheduling",
+ "elsecall-workspace",
+ "futures-util",
+ "getrandom 0.3.4",
+ "humantime",
+ "hyper",
+ "hyper-util",
+ "libc",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "toml",
+ "zeroize",
+]
+
+[[package]]
+name = "elsecall-tools"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "clap",
+ "elsecall-api-response",
+ "elsecall-contract",
+ "elsecall-fleet",
+ "elsecall-host",
+ "elsecall-peers",
+ "elsecall-scheduling",
+ "futures-util",
+ "hyper",
+ "plist",
+ "serde",
+ "serde_json",
  "sysinfo",
  "tempfile",
  "tokio",
  "toml",
  "toml_edit",
- "tower",
- "x25519-dalek",
- "zeroize",
+]
+
+[[package]]
+name = "elsecall-tuning"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "clap",
+ "elsecall-contract",
+ "elsecall-fleet",
+ "elsecall-host",
+ "elsecall-peers",
+ "elsecall-reports",
+ "elsecall-scheduling",
+ "elsecall-sync",
+ "elsecall-workload-config",
+ "elsecall-workspace",
+ "futures-util",
+ "humantime",
+ "hyper",
+ "libc",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "toml",
 ]
 
 [[package]]
 name = "elsecall-ui"
 version = "0.3.0"
 dependencies = [
- "elsecall",
+ "elsecall-contract",
+ "elsecall-fleet",
+ "elsecall-host",
+ "elsecall-lifecycle",
+ "elsecall-peers",
+ "elsecall-workload-config",
  "libc",
  "png 0.18.1",
  "rune",
@@ -1104,6 +1402,42 @@ dependencies = [
  "tempfile",
  "tokio",
  "zeroize",
+]
+
+[[package]]
+name = "elsecall-workload-config"
+version = "0.3.0"
+dependencies = [
+ "elsecall-contract",
+ "elsecall-host",
+ "elsecall-workspace",
+ "humantime",
+ "libc",
+ "serde",
+ "tempfile",
+ "toml",
+ "toml_edit",
+]
+
+[[package]]
+name = "elsecall-workspace"
+version = "0.3.0"
+dependencies = [
+ "axum",
+ "clap",
+ "elsecall-contract",
+ "elsecall-host",
+ "elsecall-peers",
+ "elsecall-scheduling",
+ "futures-util",
+ "getrandom 0.3.4",
+ "libc",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

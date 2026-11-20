@@ -1,15 +1,15 @@
 //! `elsecall fleet add`: adds a Mac from the master over SSH. It runs in the CLI's
 //! own process, which macOS lets reach the local network, unlike the service.
-use crate::{
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_fleet::{
     add_mac::{self, Approval, Event, Master},
     authorized_keys,
-    failure::{Failure, Result},
-    macos::tailscale::TailscaleCli,
-    openssh_mac::OpensshMac,
-    paths::Paths,
     remote_mac::Build,
-    tailnet::{Configured, Tailnet},
 };
+use elsecall_host::paths::Paths;
+use elsecall_macos::macos::tailscale::TailscaleCli;
+use elsecall_macos::openssh_mac::OpensshMac;
+use elsecall_peers::tailnet::{Configured, Tailnet};
 use serde_json::Value;
 use std::{
     io::{BufRead, IsTerminal, Read, Write},

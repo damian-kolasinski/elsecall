@@ -1,13 +1,13 @@
 //! `elsecall fleet` commands: thin requests to the local service, which holds the
 //! member key and talks to the other members.
-use crate::{
-    client,
-    failure::Result,
-    fleet_local_api::{CodeRequest, EnrollRequest, ForceRequest, MemberRequest, SyncRequest},
-    paths::Paths,
-    roster::{MemberName, Readiness},
-};
 use clap::{Args, Subcommand};
+use elsecall_contract::failure::Result;
+use elsecall_fleet::fleet_local_api::{
+    CodeRequest, EnrollRequest, ForceRequest, MemberRequest, SyncRequest,
+};
+use elsecall_host::client;
+use elsecall_host::paths::Paths;
+use elsecall_peers::roster::{MemberName, Readiness};
 use hyper::Method;
 use serde_json::Value;
 use std::time::Duration;
@@ -211,7 +211,7 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
     let mut data: Value = client::send(&socket, method, route, body, TIMEOUT).await?;
     if left {
         // The master that added this Mac may no longer reach it over SSH.
-        if let Err(error) = crate::authorized_keys::remove_ours(&paths.home) {
+        if let Err(error) = elsecall_fleet::authorized_keys::remove_ours(&paths.home) {
             data["master_ssh_key_error"] = serde_json::to_value(error).expect("serializable");
             return Ok((data, false));
         }
@@ -234,7 +234,7 @@ async fn upgrade(
     let executable = executable
         .map(|path| {
             std::fs::canonicalize(&path).map_err(|e| {
-                crate::failure::Failure::new(
+                elsecall_contract::failure::Failure::new(
                     "build_unreadable",
                     format!("The build at {} could not be read: {e}", path.display()),
                     "Pass the path of a built elsecall executable.",
@@ -242,7 +242,7 @@ async fn upgrade(
             })
         })
         .transpose()?;
-    let request = crate::fleet_upgrade::master::UpgradeRequest {
+    let request = elsecall_lifecycle::fleet_upgrade::master::UpgradeRequest {
         member,
         wait_seconds: wait.as_secs(),
         executable,

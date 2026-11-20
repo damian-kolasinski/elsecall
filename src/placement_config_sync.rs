@@ -1,27 +1,25 @@
 //! Placement's way to bring a member's synced configuration up to date before a
 //! run starts there: the adapter of `scheduling::pre_run_sync::PreRunSync` over
 //! configuration sync.
-use crate::{
-    config_sync::{
-        compare::Change,
-        report::Applied,
-        service::{ConfigSync, MemberSync},
-    },
-    failure::{Failure, Result},
-    roster::MemberName,
-    scheduling::pre_run_sync::{PreRunSync, PushedPath, Synced},
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_peers::roster::MemberName;
+use elsecall_scheduling::pre_run_sync::{PreRunSync, PushedPath, Synced};
+use elsecall_sync::config_sync::{
+    compare::Change,
+    report::Applied,
+    service::{ConfigSync, MemberSync},
 };
 use futures_util::future::BoxFuture;
 use std::sync::Arc;
 
-pub struct PlacementConfigSync {
+pub(crate) struct PlacementConfigSync {
     /// The member's configuration sync, or why it could not be opened; then no
     /// run is placed elsewhere, since its configuration could not be ensured.
     sync: std::result::Result<Arc<ConfigSync>, Failure>,
 }
 
 impl PlacementConfigSync {
-    pub fn new(sync: std::result::Result<Arc<ConfigSync>, Failure>) -> Self {
+    pub(crate) fn new(sync: std::result::Result<Arc<ConfigSync>, Failure>) -> Self {
         Self { sync }
     }
 }
@@ -34,7 +32,7 @@ impl PreRunSync for PlacementConfigSync {
             let sync = sync?;
             let name: MemberName = member
                 .parse()
-                .map_err(|_| crate::scheduling::placed::not_in_fleet(&member))?;
+                .map_err(|_| elsecall_scheduling::placed::not_in_fleet(&member))?;
             Ok(synced(sync.bring_up_to_date(&name).await?))
         })
     }
@@ -77,11 +75,9 @@ fn pushed(applied: &Applied) -> Vec<PushedPath> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::config_sync::{
-        history::{FileRecord, PathRecord},
-        synced_path::SyncedPath,
-    };
+    use crate::placement_config_sync::*;
+    use elsecall_fleet::config_sync_model::synced_path::SyncedPath;
+    use elsecall_sync::config_sync::history::{FileRecord, PathRecord};
 
     fn file(change: Change, size: Option<u64>) -> FileRecord {
         FileRecord {
@@ -126,6 +122,9 @@ mod tests {
                 }],
             }
         );
-        assert_eq!(super::synced(None), Synced::NothingSynced);
+        assert_eq!(
+            crate::placement_config_sync::synced(None),
+            Synced::NothingSynced
+        );
     }
 }

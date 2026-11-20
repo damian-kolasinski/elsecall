@@ -1,11 +1,6 @@
 //! Whether outside pressure blocks this member, and which outside processes it
 //! warns about, on the local socket, for doctor on a member that is not in a
 //! fleet and for agents asking this member alone.
-use crate::{
-    api,
-    failure::Failure,
-    outside_pressure::{BlockedReport, Warning, WarningReport},
-};
 use axum::{
     Json, Router,
     extract::State,
@@ -13,6 +8,9 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
+use elsecall_contract::api;
+use elsecall_contract::failure::Failure;
+use elsecall_scheduling::outside_pressure::{BlockedReport, Warning, WarningReport};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -25,14 +23,14 @@ pub struct ThisMember {
     pub member: String,
     #[serde(
         default,
-        deserialize_with = "crate::outside_pressure::blocked::lenient"
+        deserialize_with = "elsecall_scheduling::outside_pressure::blocked::lenient"
     )]
-    pub blocked: Option<crate::outside_pressure::Blocked>,
+    pub blocked: Option<elsecall_scheduling::outside_pressure::Blocked>,
     /// Early warnings about outside processes, the longest-standing first;
     /// empty from services that predate them.
     #[serde(
         default,
-        deserialize_with = "crate::outside_pressure::blocked::lenient_list"
+        deserialize_with = "elsecall_scheduling::outside_pressure::blocked::lenient_list"
     )]
     pub warnings: Vec<Warning>,
 }

@@ -1,8 +1,7 @@
 #![cfg(target_os = "macos")]
 //! `elsecall run` through the real CLI and service: the command must behave as if
 //! run directly, and Elsecall's own failures must be distinguishable.
-mod processes;
-mod support;
+use crate::support;
 
 use serde_json::Value;
 use std::{

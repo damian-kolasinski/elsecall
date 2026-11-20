@@ -21,7 +21,7 @@ use crate::uninstalled::{self, Bundle};
 use crate::view;
 use crate::window_upgrade::{self, UpgradeState, WindowUpgrade};
 use crate::workload_policy::{Policy, ReadError};
-use elsecall::release_update::{Job, Phase as ReleasePhase, Status as ReleaseStatus};
+use elsecall_lifecycle::release_update::{Job, Phase as ReleasePhase, Status as ReleaseStatus};
 
 const CHROME: Chrome = Chrome {
     full_size_content: false,
@@ -78,7 +78,7 @@ pub(crate) enum Phase {
     Ready(FleetSnapshot),
 }
 
-pub struct AppState {
+pub(crate) struct AppState {
     pub(crate) configuration: ConfigurationView,
     phase: Phase,
     refreshed: Option<String>,
@@ -98,8 +98,14 @@ pub struct AppState {
     bundle: Arc<dyn Bundle>,
     add_mac: AddMac,
     add_source: Arc<dyn AddMacSource>,
-    nearby_feed:
-        Arc<Latest<Result<Vec<elsecall::nearby_macs::NearbyMac>, elsecall::failure::Failure>>>,
+    nearby_feed: Arc<
+        Latest<
+            Result<
+                Vec<elsecall_fleet::nearby_macs::NearbyMac>,
+                elsecall_contract::failure::Failure,
+            >,
+        >,
+    >,
     add_inbox: Arc<Inbox<RunUpdate>>,
     /// When the sheet last asked for the Macs nearby, on the window's clock.
     last_look: Option<f64>,
@@ -273,7 +279,7 @@ impl AppState {
             && job.release.version == status.current_version
             && matches!(
                 fleet.state,
-                elsecall::release_update::FollowUpState::Distributing { .. }
+                elsecall_lifecycle::release_update::FollowUpState::Distributing { .. }
             )
     }
     pub(crate) fn release_notice(&self) -> Option<String> {
@@ -399,11 +405,11 @@ impl AppState {
     }
 }
 
-pub fn run() {
+pub(crate) fn run() {
     let mut args = std::env::args().skip(1).collect::<Vec<_>>();
     let mut ready = if args
         .first()
-        .is_some_and(|arg| arg == elsecall::window_startup::READY_ARGUMENT)
+        .is_some_and(|arg| arg == elsecall_lifecycle::window_startup::READY_ARGUMENT)
     {
         if args.len() < 2 {
             eprintln!("elsecall-ui: missing startup socket");
@@ -420,7 +426,7 @@ pub fn run() {
         .args(args)
         .on_ready(move |_| {
             if let Some(socket) = ready.take()
-                && elsecall::window_startup::acknowledge(&socket).is_err()
+                && elsecall_lifecycle::window_startup::acknowledge(&socket).is_err()
             {
                 // The launcher timed out and restored the previous bundle.
                 std::process::exit(1);
@@ -513,7 +519,7 @@ fn init() -> AppState {
         release_status: None,
         release_feed: Arc::new(Latest::default()),
         release_start: Latest::default(),
-        opened_at_ms: elsecall::release_update::now_millis(),
+        opened_at_ms: elsecall_lifecycle::release_update::now_millis(),
         release_disconnected: false,
         bundle: Arc::new(uninstalled::RunningBundle::current()),
         add_mac: AddMac::default(),
@@ -527,7 +533,7 @@ fn init() -> AppState {
 
 fn own_build() -> Option<String> {
     let path = std::env::current_exe().ok()?;
-    elsecall::window_app::running_build(&path)
+    elsecall_lifecycle::window_app::running_build(&path)
         .ok()
         .map(|build| build.to_string())
 }
@@ -797,7 +803,7 @@ fn scene_upgrade_failed(state: &mut AppState) {
 }
 
 fn release_fixture(phase: Option<ReleasePhase>) -> ReleaseSnapshot {
-    use elsecall::release_update::{JobId, Release, ReleaseVersion};
+    use elsecall_lifecycle::release_update::{JobId, Release, ReleaseVersion};
     let release = Release {
         version: ReleaseVersion::try_from("0.1.1".to_owned()).expect("fixture version"),
     };
@@ -827,7 +833,9 @@ fn release_fixture(phase: Option<ReleasePhase>) -> ReleaseSnapshot {
 /// The master updated itself and now gives its build to the members, which still
 /// run the previous release.
 fn scene_release_fleet(state: &mut AppState) {
-    use elsecall::release_update::{FleetFollowUp, FollowUpState, JobId, Release, ReleaseVersion};
+    use elsecall_lifecycle::release_update::{
+        FleetFollowUp, FollowUpState, JobId, Release, ReleaseVersion,
+    };
     scene_outdated_member(state);
     let current = ReleaseVersion::try_from("0.2.2".to_owned()).expect("fixture current");
     let id = JobId::try_from("a".repeat(32)).expect("fixture job");
@@ -891,7 +899,7 @@ fn scene_release_failed(state: &mut AppState) {
     scene_release_phase(
         state,
         ReleasePhase::Failed {
-            error: elsecall::failure::Failure::new(
+            error: elsecall_contract::failure::Failure::new(
                 "release_tool_failed",
                 "The release could not be verified.",
                 "Check connectivity and retry the update.",
@@ -906,7 +914,7 @@ fn scene_release_offline(state: &mut AppState) {
         .release_status
         .as_mut()
         .expect("release scene")
-        .check_error = Some(elsecall::failure::Failure::new(
+        .check_error = Some(elsecall_contract::failure::Failure::new(
         "release_tool_failed",
         "The release server could not be reached.",
         "The cached offer remains available.",
@@ -944,13 +952,15 @@ fn scene_add_mac_adding(state: &mut AppState) {
     scene_add_mac_sign_in(state);
     state.add_mac.start();
     for step in [
-        elsecall::add_mac::Step::Check,
-        elsecall::add_mac::Step::Tailnet,
-        elsecall::add_mac::Step::Install,
+        elsecall_fleet::add_mac::Step::Check,
+        elsecall_fleet::add_mac::Step::Tailnet,
+        elsecall_fleet::add_mac::Step::Install,
     ] {
         state
             .add_mac
-            .apply_current(AddUpdate::Event(elsecall::add_mac::Event::Step { step }));
+            .apply_current(AddUpdate::Event(elsecall_fleet::add_mac::Event::Step {
+                step,
+            }));
     }
 }
 
@@ -958,16 +968,18 @@ fn scene_add_mac_approve(state: &mut AppState) {
     scene_add_mac_sign_in(state);
     state.add_mac.start();
     for event in [
-        elsecall::add_mac::Event::Step {
-            step: elsecall::add_mac::Step::Check,
+        elsecall_fleet::add_mac::Event::Step {
+            step: elsecall_fleet::add_mac::Step::Check,
         },
-        elsecall::add_mac::Event::Step {
-            step: elsecall::add_mac::Step::Tailnet,
+        elsecall_fleet::add_mac::Event::Step {
+            step: elsecall_fleet::add_mac::Step::Tailnet,
         },
-        elsecall::add_mac::Event::Approve {
-            link: elsecall::remote_mac::LoginLink::parse("https://login.tailscale.com/a/example")
-                .expect("a Tailscale link"),
-            approval: elsecall::add_mac::Approval::Login,
+        elsecall_fleet::add_mac::Event::Approve {
+            link: elsecall_fleet::remote_mac::LoginLink::parse(
+                "https://login.tailscale.com/a/example",
+            )
+            .expect("a Tailscale link"),
+            approval: elsecall_fleet::add_mac::Approval::Login,
         },
     ] {
         state.add_mac.apply_current(AddUpdate::Event(event));
@@ -998,7 +1010,7 @@ fn scene_add_mac_done(state: &mut AppState) {
 fn scene_add_mac_failed(state: &mut AppState) {
     scene_add_mac_sign_in(state);
     state.add_mac.start();
-    state.add_mac.apply_current(AddUpdate::Finished(Err(elsecall::failure::Failure::new(
+    state.add_mac.apply_current(AddUpdate::Finished(Err(elsecall_contract::failure::Failure::new(
         "ssh_password_refused",
         "macbook-pro.local refused the password for devbox.",
         "Check the account's short name and password on that Mac, and that Remote Login allows that account.",
@@ -1322,7 +1334,9 @@ mod tests {
         assert_eq!(rt.state.rows().len(), 3);
         rt.state
             .apply_release(Ok(release_fixture(Some(ReleasePhase::Failed {
-                error: elsecall::release_update::invalid("The release could not be verified."),
+                error: elsecall_lifecycle::release_update::invalid(
+                    "The release could not be verified.",
+                ),
                 rolled_back: false,
             }))));
         assert!(!rt.state.updating());
@@ -1337,7 +1351,7 @@ mod tests {
         rt.frame(0.0);
         click_upgrade(&mut rt);
         let mut second = first.clone();
-        second.id = elsecall::release_update::JobId::try_from("b".repeat(32)).unwrap();
+        second.id = elsecall_lifecycle::release_update::JobId::try_from("b".repeat(32)).unwrap();
         second.started_at_ms = 30;
         reply.send(Ok(second.clone())).unwrap();
         ready
@@ -1348,7 +1362,7 @@ mod tests {
         // An old poll arriving after the new request cannot put the previous failure back.
         rt.state
             .apply_release(Ok(release_fixture(Some(ReleasePhase::Failed {
-                error: elsecall::release_update::invalid("old failure"),
+                error: elsecall_lifecycle::release_update::invalid("old failure"),
                 rolled_back: false,
             }))));
         assert!(rt.state.updating());

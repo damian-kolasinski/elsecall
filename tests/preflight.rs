@@ -1,9 +1,7 @@
 //! Offline readiness over the production planner, simulator and tuner.
-use elsecall::{
-    scheduling::timestamp::Timestamp,
-    tuning_preflight::{self, Options},
-    workload::trace::Trace,
-};
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
+use elsecall_reports::workload::trace::Trace;
+use elsecall_tuning::tuning_preflight::{self, Options};
 use serde_json::{Value, json};
 use std::{num::NonZeroUsize, time::Duration};
 fn fixture() -> Trace {
@@ -86,7 +84,7 @@ fn run3_arrivals_keep_post_window_drain_load_and_reject_genuine_holes() {
     request.fact.waited_ms = Some(0);
     request.fact.resources.as_mut().unwrap().started_at = Some(request.fact.requested_at);
     request.fact.resources.as_mut().unwrap().ended_at = Some(start.after(Duration::from_secs(120)));
-    let (selected, _) = elsecall::rehearsal::window::explicit(
+    let (selected, _) = elsecall_tuning::rehearsal::window::explicit(
         &source,
         start,
         start.after(Duration::from_secs(60)),
@@ -95,9 +93,9 @@ fn run3_arrivals_keep_post_window_drain_load_and_reject_genuine_holes() {
     .unwrap();
     assert_eq!(selected.members[0].load.len(), 3);
     assert_eq!(selected.until, start.after(Duration::from_secs(60)));
-    elsecall::simulation::validate_trace(&selected).unwrap();
+    elsecall_tuning::simulation::validate_trace(&selected).unwrap();
     source.members[0].load.remove(1);
-    let error = elsecall::rehearsal::window::explicit(
+    let error = elsecall_tuning::rehearsal::window::explicit(
         &source,
         start,
         start.after(Duration::from_secs(60)),
@@ -118,7 +116,7 @@ fn run4_housekeeping_is_background_without_demand_but_history_is_unchanged() {
     source.requests.push(internal);
     source.members[0].load[0].cpu_mean = Some(0.5);
     source.members[0].load[0].cpu_max = Some(0.5);
-    let (selected, _) = elsecall::rehearsal::window::explicit(
+    let (selected, _) = elsecall_tuning::rehearsal::window::explicit(
         &source,
         source.since,
         source.until,
@@ -127,7 +125,8 @@ fn run4_housekeeping_is_background_without_demand_but_history_is_unchanged() {
     .unwrap();
     assert_eq!(selected.requests.len(), 4);
     assert_eq!(source.requests.len(), 5);
-    let modeled = elsecall::simulation::simulate(selected.clone(), Default::default()).unwrap();
+    let modeled =
+        elsecall_tuning::simulation::simulate(selected.clone(), Default::default()).unwrap();
     // Measured CPU stays in the modeled minute after the unidentifiable internal
     // grant is removed: active replay plus inferred background totals 90 core-s.
     assert!(
@@ -154,7 +153,9 @@ fn explicit_bounds_reject_empty_reversed_outside_and_malformed_windows() {
         ("2026-11-03T00:00:11Z", "2026-11-03T00:00:10Z"),
         ("2026-11-02T00:00:00Z", "2026-11-03T00:00:10Z"),
     ] {
-        assert!(elsecall::workload::bounds::within(&source, Some(since), Some(until)).is_err());
+        assert!(
+            elsecall_reports::workload::bounds::within(&source, Some(since), Some(until)).is_err()
+        );
     }
 }
 #[test]
@@ -196,7 +197,7 @@ fn same_request_reports_terminal_reference_demand_and_hold_problems_together() {
     r.fact.resources.as_mut().unwrap().ended_at = None;
     r.outcome = None;
     r.hold_limit = None;
-    r.urgency = elsecall::scheduling::request::Urgency::Interactive {
+    r.urgency = elsecall_contract::scheduling_model::request::Urgency::Interactive {
         hold_limit_ms: None,
     };
     let result = tuning_preflight::check(source, options()).unwrap();
@@ -256,9 +257,12 @@ fn calibration_cannot_select_a_factor_without_observed_rehearsals() {
     let mut source = fixture();
     source.members[0].load[0].in_use_mean = 2.0 * 4.0 / 60.0;
     source.members[0].load[0].queued_max = 3;
-    let target =
-        elsecall::busy_hour_calibration::Target::observed(&source, source.since, source.until)
-            .unwrap();
+    let target = elsecall_tuning::busy_hour_calibration::Target::observed(
+        &source,
+        source.since,
+        source.until,
+    )
+    .unwrap();
     let mut args = options();
     args.busy_hours = Some(target);
     let result = tuning_preflight::check(source, args).unwrap();
@@ -286,10 +290,10 @@ fn load_factor_replays_closer_arrivals_through_the_production_scheduler() {
         r.fact.resources.as_mut().unwrap().ended_at =
             Some(r.fact.requested_at.after(Duration::from_secs(1)));
     }
-    let idle = elsecall::simulation::simulate(source.clone(), Default::default()).unwrap();
-    let busy = elsecall::simulation::simulate(
+    let idle = elsecall_tuning::simulation::simulate(source.clone(), Default::default()).unwrap();
+    let busy = elsecall_tuning::simulation::simulate(
         source,
-        elsecall::simulation::Options {
+        elsecall_tuning::simulation::Options {
             load_factor: "4".parse().unwrap(),
             ..Default::default()
         },
@@ -318,7 +322,7 @@ fn load_factor_replays_closer_arrivals_through_the_production_scheduler() {
 fn busy_reference_requires_minute_bounds_and_observed_coverage() {
     let mut source = fixture();
     assert!(
-        elsecall::busy_hour_calibration::Target::observed(
+        elsecall_tuning::busy_hour_calibration::Target::observed(
             &source,
             source.since,
             source.since.after(Duration::from_secs(1))
@@ -327,8 +331,12 @@ fn busy_reference_requires_minute_bounds_and_observed_coverage() {
     );
     source.members[0].load[0].cpu_mean = None;
     assert!(
-        elsecall::busy_hour_calibration::Target::observed(&source, source.since, source.until)
-            .is_err()
+        elsecall_tuning::busy_hour_calibration::Target::observed(
+            &source,
+            source.since,
+            source.until
+        )
+        .is_err()
     );
 }
 

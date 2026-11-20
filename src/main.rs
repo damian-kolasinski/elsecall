@@ -1,21 +1,21 @@
 use clap::{Parser, Subcommand};
-use elsecall::{
-    admission_cli::{self, LeaseCommand},
-    api, client,
-    failure::{Failure, Result},
-    fleet_cli,
-    inbound_firewall::{Inbound, InboundFirewall},
-    inspection::{Health, Inspection, Machine},
-    install_window,
-    installation::{self, ServiceManager},
-    local_access,
-    macos::{
-        application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
-        processes::MacProcesses, tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
-    },
-    paths::Paths,
-    peer_listener, scheduling, tailnet,
+use elsecall::{fleet_cli, peer_listener};
+use elsecall_contract::api;
+use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::inspection::{Health, Inspection, Machine};
+use elsecall_fleet::inbound_firewall::{Inbound, InboundFirewall};
+use elsecall_host::client;
+use elsecall_host::os_processes::processes::MacProcesses;
+use elsecall_host::{local_access, paths::Paths};
+use elsecall_lifecycle::install_window;
+use elsecall_lifecycle::installation::{self, ServiceManager};
+use elsecall_macos::macos::{
+    application_firewall::ApplicationFirewall, launch_agent::LaunchAgent, machine::MacMachine,
+    tailscale::TailscaleCli, window_launcher::MacWindowLauncher,
 };
+use elsecall_peers::tailnet;
+use elsecall_runs::admission_cli::{self, LeaseCommand};
+use elsecall_scheduling as scheduling;
 use serde::Serialize;
 use std::{process::ExitCode, sync::Arc, time::Duration};
 
@@ -55,7 +55,7 @@ enum Command {
     /// Open the fleet window installed with this CLI release
     Ui,
     /// Check for and install signed Elsecall releases
-    Update(elsecall::release_update_cli::UpdateArgs),
+    Update(elsecall_lifecycle::release_update_cli::UpdateArgs),
     #[command(hide = true)]
     UpdateHelper {
         #[arg(long)]
@@ -71,7 +71,7 @@ enum Command {
     /// Read basic machine facts, memory and load averages
     Machine,
     /// Report installed tools, or show and edit the fleet's desired versions
-    Tools(elsecall::tools_cli::ToolsArgs),
+    Tools(elsecall_tools::tools_cli::ToolsArgs),
     /// Diagnose installation and API connectivity (works while the service is down)
     Doctor,
     /// Show every fleet member's reachability, role and machine state, or change membership
@@ -81,7 +81,7 @@ enum Command {
     #[command(
         after_help = "Output names files and shows short keyed fingerprints only, never their content. README \"Configuration sync\" describes the rules."
     )]
-    Sync(elsecall::config_sync_cli::SyncArgs),
+    Sync(elsecall_sync::config_sync_cli::SyncArgs),
     /// Manage the installed background service
     Service {
         #[command(subcommand)]
@@ -94,7 +94,7 @@ enum Command {
     #[command(
         after_help = "Prints nothing of its own unless Elsecall fails; then the last stderr line is the JSON error envelope. Use --status-file to tell the command's own exit 125 from Elsecall's."
     )]
-    Run(elsecall::passthrough::RunArgs),
+    Run(elsecall_runs::passthrough::RunArgs),
     /// Hold capacity on this machine for a section of a script's own work
     Lease {
         #[command(subcommand)]
@@ -115,10 +115,10 @@ enum Command {
     },
     /// List the copies of other members' workspaces kept on this machine, their
     /// object stores and recent removals, or run housekeeping now
-    Copies(elsecall::copies_cli::CopiesArgs),
+    Copies(elsecall_workspace::copies_cli::CopiesArgs),
     /// Score this member's recorded placement decisions again under changed
     /// parameters, to see which would flip before changing config.toml
-    Replay(elsecall::replay_cli::ReplayArgs),
+    Replay(elsecall_tuning::replay_cli::ReplayArgs),
     /// Installs a build the master distributed; the service starts this itself
     #[command(hide = true)]
     UpgradeHelper {
@@ -130,19 +130,19 @@ enum Command {
     #[command(
         after_help = "Asks every member for its requests and load history over the member channel; a member that cannot answer is named and the rest of the report stands. README \"Fleet reports\" defines every metric."
     )]
-    Report(elsecall::report_cli::ReportArgs),
+    Report(elsecall_reports::report_cli::ReportArgs),
     /// Export a versioned workload trace and empirical resource models
-    Trace(elsecall::trace_cli::TraceArgs),
+    Trace(elsecall_tuning::trace_cli::TraceArgs),
     /// Replay workload traces through the real scheduler on a virtual fleet
     Simulate(elsecall::simulate_cli::SimulateArgs),
     /// Replay a workload as bounded synthetic work on the enrolled fleet
     Rehearse(elsecall::rehearse_cli::RehearseArgs),
 
     /// Search scheduling settings offline and print proposals only
-    Tune(elsecall::tune_cli::TuneArgs),
+    Tune(elsecall_tuning::tune_cli::TuneArgs),
     /// Print the agent guide matching this build, or install it as a skill for the
     /// coding agents on this machine
-    Skill(elsecall::agent_skill::cli::SkillArgs),
+    Skill(elsecall_lifecycle::agent_skill::cli::SkillArgs),
 }
 #[derive(Subcommand)]
 enum ConfigCommand {
@@ -171,31 +171,35 @@ enum ServiceCommand {
 async fn main() -> ExitCode {
     // As OpenSSH's askpass program, for `fleet add`; it gets the prompt as its
     // only argument, so this comes before any parsing.
-    if let Some(socket) = std::env::var_os(elsecall::askpass::SOCKET_VARIABLE) {
-        return ExitCode::from(elsecall::askpass::answer(std::path::Path::new(&socket)));
+    if let Some(socket) = std::env::var_os(elsecall_fleet::askpass::SOCKET_VARIABLE) {
+        return ExitCode::from(elsecall_fleet::askpass::answer(std::path::Path::new(
+            &socket,
+        )));
     }
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(error) if error.use_stderr() => {
             let arguments: Vec<_> = std::env::args_os().skip(1).take(2).collect();
             if arguments.first().is_some_and(|command| command == "run") {
-                return elsecall::passthrough::usage_failure();
+                return elsecall_runs::passthrough::usage_failure();
             }
             // Do not echo argument values: callers may accidentally pass secrets.
             let failure = if arguments == ["lease", "acquire"] {
                 // A run ID file named among the options must not keep a stale ID.
                 let all: Vec<_> = std::env::args_os().collect();
                 if let Some(path) =
-                    elsecall::passthrough::option_argument(&all, "acquire", "--run-id-file")
+                    elsecall_runs::passthrough::option_argument(&all, "acquire", "--run-id-file")
                 {
-                    let _ = elsecall::run_id_file::RunIdFile::at(path).record(None);
+                    let _ = elsecall_host::run_id_file::RunIdFile::at(path).record(None);
                 }
                 let failure = Failure::new(
                     "invalid_arguments",
                     "Invalid lease acquire options.",
                     "Run elsecall lease acquire --help for valid options, then rerun the corrected command.",
                 );
-                elsecall::guidance::write(&elsecall::guidance::failure_line(&failure));
+                elsecall_contract::guidance::write(&elsecall_contract::guidance::failure_line(
+                    &failure,
+                ));
                 failure
             } else {
                 Failure::new(
@@ -214,9 +218,10 @@ async fn main() -> ExitCode {
     };
     let cli = match cli.command {
         Command::Tune(mut args) => {
-            if let Some(elsecall::tune_cli::TuneCommand::Preflight(preflight)) = args.command.take()
+            if let Some(elsecall_tuning::tune_cli::TuneCommand::Preflight(preflight)) =
+                args.command.take()
             {
-                return match elsecall::tuning_preflight_cli::run(preflight).await {
+                return match elsecall_tuning::tuning_preflight_cli::run(preflight).await {
                     Ok(data) => {
                         let passed = data["passed"] == true;
                         output(data);
@@ -229,9 +234,11 @@ async fn main() -> ExitCode {
                     Err(error) => fail(error),
                 };
             }
-            return match tokio::task::spawn_blocking(move || elsecall::tune_cli::run(args)).await {
+            return match tokio::task::spawn_blocking(move || elsecall_tuning::tune_cli::run(args))
+                .await
+            {
                 Ok(Ok(data)) => {
-                    output(elsecall::tune_cli::current_trust(data).await);
+                    output(elsecall_tuning::tune_cli::current_trust(data).await);
                     ExitCode::SUCCESS
                 }
                 Ok(Err(error)) => fail(error),
@@ -260,12 +267,12 @@ async fn main() -> ExitCode {
         }
         // The guide is text unless --json; nothing here needs the service.
         Command::Skill(args) => {
-            return match elsecall::agent_skill::cli::run(args) {
-                Ok(elsecall::agent_skill::cli::Printed::Text(text)) => {
+            return match elsecall_lifecycle::agent_skill::cli::run(args) {
+                Ok(elsecall_lifecycle::agent_skill::cli::Printed::Text(text)) => {
                     print!("{text}");
                     ExitCode::SUCCESS
                 }
-                Ok(elsecall::agent_skill::cli::Printed::Json(data, complete)) => {
+                Ok(elsecall_lifecycle::agent_skill::cli::Printed::Json(data, complete)) => {
                     output(data);
                     if complete {
                         ExitCode::SUCCESS
@@ -277,7 +284,7 @@ async fn main() -> ExitCode {
             };
         }
         // Run passes the command's output through rather than printing JSON.
-        Command::Run(args) => return elsecall::passthrough::main(args).await,
+        Command::Run(args) => return elsecall_runs::passthrough::main(args).await,
         // Leases check the platform and user themselves, so ELSECALL=off needs neither.
         Command::Lease { command } => {
             let acquire = matches!(command, LeaseCommand::Acquire { .. });
@@ -288,7 +295,9 @@ async fn main() -> ExitCode {
                 }
                 Err(error) => {
                     if acquire {
-                        elsecall::guidance::write(&elsecall::guidance::failure_line(&error));
+                        elsecall_contract::guidance::write(
+                            &elsecall_contract::guidance::failure_line(&error),
+                        );
                     }
                     fail(error)
                 }
@@ -326,8 +335,8 @@ fn output<T: Serialize>(data: T) {
     );
 }
 fn print_error(error: Failure) {
-    if elsecall::service_log::active() {
-        elsecall::service_log!(
+    if elsecall_host::service_log::active() {
+        elsecall_host::service_log!(
             "{}",
             serde_json::json!({"event":"service_failed", "code":error.code})
         );
@@ -352,10 +361,12 @@ async fn run(cli: Cli) -> Result<bool> {
         &cli.command,
         Command::Serve | Command::UpgradeHelper { .. } | Command::UpdateHelper { .. }
     ) {
-        elsecall::service_log::initialize(&paths)?;
+        elsecall_host::service_log::initialize(&paths, || {
+            elsecall_sync::service_configuration::load(&paths, None).map(|c| c.logs)
+        })?;
     }
-    let manager: Box<dyn ServiceManager> = if elsecall::process_service::requested()? {
-        Box::new(elsecall::process_service::ProcessService::new(
+    let manager: Box<dyn ServiceManager> = if elsecall_macos::process_service::requested()? {
+        Box::new(elsecall_macos::process_service::ProcessService::new(
             paths.clone(),
         ))
     } else {
@@ -366,7 +377,9 @@ async fn run(cli: Cli) -> Result<bool> {
         Command::Config {
             command: ConfigCommand::Migrate { sources },
         } => {
-            output(elsecall::workload_migration::migrate(&paths, &sources)?);
+            output(elsecall_workload_config::workload_migration::migrate(
+                &paths, &sources,
+            )?);
         }
         Command::Install { session, open } => {
             let source =
@@ -393,7 +406,7 @@ async fn run(cli: Cli) -> Result<bool> {
                     .expect("serializable firewall state");
             data["window"] = serde_json::to_value(window).expect("serializable window state");
             // Agents learn the installed build from its skill (README "Agent skill").
-            data["agent_skill"] = elsecall::agent_skill::set_up_found(&paths.home);
+            data["agent_skill"] = elsecall_lifecycle::agent_skill::set_up_found(&paths.home);
             output(data);
             return Ok(complete);
         }
@@ -401,17 +414,17 @@ async fn run(cli: Cli) -> Result<bool> {
             let uninstalled = elsecall::uninstall::uninstall(
                 &paths,
                 manager,
-                &elsecall::release_update::helper::production_selection(&paths),
+                &elsecall_lifecycle::release_update::helper::production_selection(&paths),
                 force,
                 if keep_mise {
-                    elsecall::uninstall::Request::Keep
+                    elsecall_lifecycle::installation::cli_request::Request::Keep
                 } else {
-                    elsecall::uninstall::Request::Remove
+                    elsecall_lifecycle::installation::cli_request::Request::Remove
                 },
             )?;
             let mut complete = uninstalled.complete();
             let mut data = serde_json::to_value(uninstalled).expect("serializable uninstall");
-            let (skills, removed) = elsecall::agent_skill::remove_all(&paths);
+            let (skills, removed) = elsecall_lifecycle::agent_skill::remove_all(&paths);
             complete &= removed;
             data["agent_skill"] = skills;
             output(data);
@@ -428,27 +441,28 @@ async fn run(cli: Cli) -> Result<bool> {
             output(launched);
         }
         Command::Update(args) => {
-            let (data, complete) = elsecall::release_update_cli::run(&paths, args).await?;
+            let (data, complete) =
+                elsecall_lifecycle::release_update_cli::run(&paths, args).await?;
             output(data);
             return Ok(complete);
         }
         Command::UpdateHelper { id } => {
-            let id = elsecall::release_update::JobId::try_from(id)?;
-            elsecall::release_update::helper::run(
+            let id = elsecall_lifecycle::release_update::JobId::try_from(id)?;
+            elsecall_lifecycle::release_update::helper::run(
                 &paths,
                 &id,
-                &*elsecall::release_update::helper::production_download(&paths)?,
-                &elsecall::release_update::helper::production_selection(&paths),
+                &*elsecall_lifecycle::release_update::helper::production_download(&paths)?,
+                &elsecall_lifecycle::release_update::helper::production_selection(&paths),
                 manager,
-                &elsecall::macos::window_launcher::MacWindowLauncher,
+                &elsecall_macos::macos::window_launcher::MacWindowLauncher,
             )
             .await?;
         }
         Command::Status => output(client::get::<Health>(&paths.socket(), "/v1/health").await?),
         Command::Machine => output(client::get::<Machine>(&paths.socket(), "/v1/machine").await?),
-        Command::Tools(args) => output(elsecall::tools_cli::run(&paths, args).await?),
+        Command::Tools(args) => output(elsecall_tools::tools_cli::run(&paths, args).await?),
         Command::Doctor => {
-            let configuration = elsecall::service_configuration::load(&paths, None);
+            let configuration = elsecall_sync::service_configuration::load(&paths, None);
             let log_settings = configuration
                 .as_ref()
                 .map(|c| c.logs.clone())
@@ -474,7 +488,7 @@ async fn run(cli: Cli) -> Result<bool> {
             // flagged with its repair, and doctor's verdict stays about this machine.
             let fleet = if enrolled && health.is_ok() {
                 Some(
-                    client::get::<elsecall::fleet_view::FleetBuilds>(
+                    client::get::<elsecall_fleet::fleet_view::FleetBuilds>(
                         &paths.socket(),
                         "/v1/fleet/builds",
                     )
@@ -511,7 +525,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 Some(Ok(this)) => {
                     if !warnings.iter().any(|w| w.member == this.member) {
                         warnings.extend(this.warnings.into_iter().map(|warning| {
-                            elsecall::fleet_view::MemberWarning {
+                            elsecall_fleet::fleet_view::MemberWarning {
                                 member: this.member.clone(),
                                 warning,
                             }
@@ -520,7 +534,7 @@ async fn run(cli: Cli) -> Result<bool> {
                     if let Some(own) = this.blocked
                         && !blocked.iter().any(|b| b.member == this.member)
                     {
-                        blocked.push(elsecall::fleet_view::BlockedMember {
+                        blocked.push(elsecall_fleet::fleet_view::BlockedMember {
                             member: this.member,
                             blocked: own,
                         });
@@ -536,7 +550,7 @@ async fn run(cli: Cli) -> Result<bool> {
             blocked.sort_by_key(|b| b.blocked.since);
             warnings.sort_by_key(|w| w.warning.since);
             let service_configurations = if health.is_ok() {
-                elsecall::client::post_large::<serde_json::Value, _>(
+                elsecall_host::client::post_large::<serde_json::Value, _>(
                     &paths.socket(),
                     "/v1/sync",
                     &serde_json::json!({}),
@@ -558,10 +572,10 @@ async fn run(cli: Cli) -> Result<bool> {
             } else if launch_agent_current == Some(false) {
                 "The LaunchAgent predates this build (a fleet upgrade installs through the build it replaces): run elsecall install here to apply it; it restarts the service.".to_owned()
             } else if let Some(first) = blocked.first() {
-                elsecall::outside_pressure::remedy::next_step(
+                elsecall_scheduling::outside_pressure::remedy::next_step(
                     &first.member,
                     &first.blocked,
-                    elsecall::scheduling::timestamp::Timestamp::now(),
+                    elsecall_contract::scheduling_model::timestamp::Timestamp::now(),
                 )
             } else if service_configurations
                 .as_ref()
@@ -575,10 +589,10 @@ async fn run(cli: Cli) -> Result<bool> {
             {
                 "Service configuration needs attention: follow configuration_sync.next_step and each member's service state.".to_owned()
             } else if let Some(first) = warnings.first() {
-                elsecall::outside_pressure::remedy::warning_step(
+                elsecall_scheduling::outside_pressure::remedy::warning_step(
                     &first.member,
                     &first.warning,
-                    elsecall::scheduling::timestamp::Timestamp::now(),
+                    elsecall_contract::scheduling_model::timestamp::Timestamp::now(),
                 )
             } else {
                 "No action needed.".to_owned()
@@ -608,7 +622,7 @@ async fn run(cli: Cli) -> Result<bool> {
                 "configuration_sync": service_configurations,
                 "paths": {"executable": paths.bin, "launch_agent": paths.agent, "socket": paths.socket(), "log": paths.log()},
                 "next_step": next_step,
-                "agent_skill": elsecall::agent_skill::health(&paths.home),
+                "agent_skill": elsecall_lifecycle::agent_skill::health(&paths.home),
             }));
             return Ok(healthy);
         }
@@ -621,22 +635,22 @@ async fn run(cli: Cli) -> Result<bool> {
         }
         Command::Serve => {
             // After an upgrade, the stubs an older build wrote point at this one.
-            elsecall::agent_skill::refresh_if_installed(&paths);
-            let machine: Arc<dyn elsecall::inspection::MachineInspector> =
-                if let Some(file) = elsecall::machine_script::load_file() {
-                    Arc::new(elsecall::machine_script::ScriptedLoad {
+            elsecall_lifecycle::agent_skill::refresh_if_installed(&paths);
+            let machine: Arc<dyn elsecall_contract::inspection::MachineInspector> =
+                if let Some(file) = elsecall_host::machine_script::load_file() {
+                    Arc::new(elsecall_host::machine_script::ScriptedLoad {
                         machine: MacMachine::default(),
                         file,
                     })
-                } else if elsecall::idle_load::requested() {
-                    Arc::new(elsecall::idle_load::IdleLoad(MacMachine::default()))
+                } else if elsecall_contract::idle_load::requested() {
+                    Arc::new(elsecall_contract::idle_load::IdleLoad(MacMachine::default()))
                 } else {
                     Arc::new(MacMachine::default())
                 };
-            let speed: Arc<dyn elsecall::scheduling::speed::SpeedMeter> =
-                match elsecall::machine_script::speed() {
+            let speed: Arc<dyn elsecall_contract::scheduling_model::speed::SpeedMeter> =
+                match elsecall_host::machine_script::speed() {
                     Some(fixed) => Arc::new(fixed),
-                    None => Arc::new(elsecall::macos::core_benchmark::CoreBenchmark),
+                    None => Arc::new(elsecall_macos::macos::core_benchmark::CoreBenchmark),
                 };
             let (processes, exits) = MacProcesses::start()?;
             elsecall::server::serve(
@@ -648,7 +662,7 @@ async fn run(cli: Cli) -> Result<bool> {
                     processes,
                     exits,
                 },
-                Arc::new(elsecall::macos::process_sampler::MacProcessSampler),
+                Arc::new(elsecall_macos::macos::process_sampler::MacProcessSampler),
                 member_listener()?,
             )
             .await?;
@@ -659,7 +673,7 @@ async fn run(cli: Cli) -> Result<bool> {
             return Ok(complete);
         }
         Command::Sync(args) => {
-            let (data, complete) = elsecall::config_sync_cli::run(&paths, args).await?;
+            let (data, complete) = elsecall_sync::config_sync_cli::run(&paths, args).await?;
             output(data);
             return Ok(complete);
         }
@@ -671,8 +685,8 @@ async fn run(cli: Cli) -> Result<bool> {
         }
         Command::Runs { limit } => output(admission_cli::runs(&paths, limit).await?),
         Command::Explain { run_id } => output(admission_cli::explain(&paths, &run_id).await?),
-        Command::Report(args) => output(elsecall::report_cli::run(&paths, args).await?),
-        Command::Trace(args) => output(elsecall::trace_cli::run(&paths, args).await?),
+        Command::Report(args) => output(elsecall_reports::report_cli::run(&paths, args).await?),
+        Command::Trace(args) => output(elsecall_tuning::trace_cli::run(&paths, args).await?),
         Command::Rehearse(args) => {
             let result = elsecall::rehearse_cli::run(&paths, args).await?;
             let complete =
@@ -685,11 +699,11 @@ async fn run(cli: Cli) -> Result<bool> {
         Command::Simulate(_) => unreachable!("handled before platform and service checks"),
         Command::Skill(_) => unreachable!("handled before platform and service checks"),
         Command::Copies(args) => {
-            let (data, clean) = elsecall::copies_cli::run(&paths, args).await?;
+            let (data, clean) = elsecall_workspace::copies_cli::run(&paths, args).await?;
             output(data);
             return Ok(clean);
         }
-        Command::Replay(args) => output(elsecall::replay_cli::run(&paths, args).await?),
+        Command::Replay(args) => output(elsecall_tuning::replay_cli::run(&paths, args).await?),
         Command::UpgradeHelper { id } => {
             let id = serde_json::from_value(serde_json::Value::String(id)).map_err(|_| {
                 Failure::new(
@@ -698,7 +712,8 @@ async fn run(cli: Cli) -> Result<bool> {
                     "The service starts this helper itself; run elsecall fleet upgrade on the master.",
                 )
             })?;
-            let phase = elsecall::fleet_upgrade::helper::run(&paths, manager, &id).await?;
+            let phase =
+                elsecall_lifecycle::fleet_upgrade::helper::run(&paths, manager, &id).await?;
             output(phase);
         }
     }
@@ -709,7 +724,7 @@ async fn wait_ready(paths: &Paths) -> Result<Health> {
     let ready = async {
         loop {
             if let Ok(health) = client::get::<Health>(&paths.socket(), "/v1/health").await
-                && health.version == env!("CARGO_PKG_VERSION")
+                && health.version == elsecall_contract::build_identity::VERSION
             {
                 return health;
             }

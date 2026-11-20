@@ -21,12 +21,12 @@ SEMVER = re.compile(
 )
 # Builds made with the local-release-channel feature carry this. They follow a
 # developer's own release channel and must never be published; see
-# src/release_update/channel.rs.
+# crates/elsecall-lifecycle/src/release_update/channel.rs.
 LOCAL_CHANNEL_MARKER = b"ELSECALL-LOCAL-RELEASE-CHANNEL-BUILD"
 
 
 def version(root=ROOT):
-    value = tomllib.loads((Path(root) / "Cargo.toml").read_text())["package"]["version"]
+    value = tomllib.loads((Path(root) / "Cargo.toml").read_text())["workspace"]["package"]["version"]
     if not isinstance(value, str) or not SEMVER.fullmatch(value):
         raise ValueError("invalid release version")
     return value
