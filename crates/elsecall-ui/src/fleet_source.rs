@@ -6,6 +6,8 @@
 use std::fmt;
 use std::num::NonZeroU32;
 
+use elsecall_peers::roster::Readiness;
+
 /// A point-in-time fleet, as the window lists it.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct FleetSnapshot {
@@ -50,6 +52,7 @@ pub(crate) struct MemberRow {
     pub this_member: bool,
     pub role: Role,
     pub reach: Reachability,
+    pub readiness: Readiness,
     pub gate: Gate,
     /// Busy fraction of logical CPUs, from 0 to 1. Absent when the member did not report it.
     pub cpu: Option<f64>,

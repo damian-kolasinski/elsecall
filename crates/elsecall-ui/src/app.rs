@@ -3,6 +3,7 @@
 use std::num::NonZeroU32;
 use std::sync::Arc;
 
+use elsecall_peers::roster::Readiness;
 use rune::{App, AppSpec, Chrome, Latest, MenuItem, Tx, Waker, col};
 use rune_kit::{SegmentedControl, TableState, WindowTitlebar};
 
@@ -39,6 +40,7 @@ const SCENES: &[(&str, Scene)] = &[
     ("no-tailnet", scene_no_tailnet),
     ("members", scene_members),
     ("members-selected", scene_members_selected),
+    ("members-awaiting-provisioning", scene_members_awaiting_provisioning),
     ("outdated-member", scene_outdated_member),
     ("upgrade", scene_upgrade),
     ("upgrading", scene_upgrading),
@@ -755,6 +757,23 @@ fn scene_members_selected(state: &mut AppState) {
     state.table.select("macbook-pro");
 }
 
+fn scene_members_awaiting_provisioning(state: &mut AppState) {
+    let mut snapshot = members_snapshot();
+    snapshot.members[0].release = Release::Matching {
+        version: "0.4.0".into(),
+    };
+    let mac = &mut snapshot.members[2];
+    mac.readiness = Readiness::AwaitingProvisioning;
+    mac.reach = Reachability::Reachable;
+    mac.gate = Gate::Open;
+    mac.release = Release::Matching {
+        version: "0.4.0".into(),
+    };
+    state.follow_service = false;
+    state.refreshed = Some("14:32:05".into());
+    state.phase = Phase::Ready(snapshot);
+}
+
 /// A member the master's last update left behind, as `elsecall fleet upgrade`
 /// would still have to bring it forward.
 fn scene_outdated_member(state: &mut AppState) {
@@ -1132,6 +1151,7 @@ fn member(
         this_member: role == Role::Master,
         role,
         reach,
+        readiness: Readiness::Ready,
         gate,
         cpu: cpu.map(|(utilization, _)| utilization),
         logical_cpus: cpu.and_then(|(_, count)| NonZeroU32::new(count)),

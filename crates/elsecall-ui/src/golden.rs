@@ -18,6 +18,7 @@ const SCENES: &[&str] = &[
     "no-tailnet",
     "members",
     "members-selected",
+    "members-awaiting-provisioning",
     "outdated-member",
     "upgrade",
     "upgrading",
@@ -93,6 +94,25 @@ fn fleet_scenes_match_goldens() {
                 hover.path().to_str().unwrap(),
                 "--at",
                 "2",
+            ],
+        );
+    }
+    let provision = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(
+        provision.path(),
+        r#"[{"t":0.1,"type":"move","x":360,"y":267}]"#,
+    )
+    .unwrap();
+    for appearance in APPEARANCES {
+        compare(
+            "members-awaiting-provisioning",
+            appearance,
+            "-hover",
+            &[
+                "--script",
+                provision.path().to_str().unwrap(),
+                "--at",
+                "1.5",
             ],
         );
     }

@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
+use elsecall_peers::roster::Readiness;
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -254,6 +255,7 @@ fn map_member(member: WireMember, master: Option<&str>) -> Result<MemberRow, Sou
         this_member: member.this_member,
         role,
         reach,
+        readiness: member.readiness,
         gate,
         cpu,
         logical_cpus,
@@ -286,6 +288,8 @@ struct WireMember {
     #[serde(default)]
     this_member: bool,
     reachability: String,
+    #[serde(default)]
+    readiness: Readiness,
     #[serde(default)]
     status: Option<WireStatus>,
     #[serde(default)]
@@ -598,6 +602,19 @@ mod tests {
         assert!(snap.members[1].memory.is_none());
         assert!(snap.members[1].load.is_none());
         assert!(matches!(snap.members[1].gate, Gate::Open));
+    }
+
+    #[test]
+    fn readiness_is_independent_of_reachability_and_defaults_to_ready() {
+        let mut raw = data(include_str!("../tests/fixtures/unreachable.json"));
+        raw["members"][1]["readiness"] = "awaiting_provisioning".into();
+        let snapshot = snapshot_from_value(&raw).unwrap();
+        assert_eq!(snapshot.members[0].readiness, Readiness::Ready);
+        assert_eq!(
+            snapshot.members[1].readiness,
+            Readiness::AwaitingProvisioning
+        );
+        assert_eq!(snapshot.members[1].reach, Reachability::Unreachable);
     }
 
     #[test]

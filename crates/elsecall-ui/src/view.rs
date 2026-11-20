@@ -3,9 +3,10 @@
 use std::borrow::Cow;
 use std::num::NonZeroU32;
 
+use elsecall_peers::roster::Readiness;
 use rune::tok::TextStyle;
 use rune::{Align, Color, El, HelpLook, Span, col, rich, row, text};
-use rune_kit::{Button, Cell, Table, TableColumn};
+use rune_kit::{Button, ButtonVariant, Cell, ControlSize, Table, TableColumn};
 
 use crate::app::AppState;
 use crate::fleet_source::{
@@ -312,15 +313,15 @@ fn members_table(state: &AppState, dark: bool, paints: Paints) -> El {
                 .align(Align::End)
                 .resizable(false),
         )
-        .cell(move |state, index, column| cell(&state.rows()[index], column, paints))
+        .cell(move |state, index, column| cell(&state.rows()[index], column, paints, dark))
         .build(state, &theme::kit(dark))
 }
 
-fn cell(member: &MemberRow, column: &str, paints: Paints) -> Cell {
+fn cell(member: &MemberRow, column: &str, paints: Paints, dark: bool) -> Cell {
     match column {
         "member" => Cell::text(member.name.clone()).mono(),
         "role" => role_cell(member, paints),
-        "status" => status_cell(member, paints),
+        "status" => status_cell(member, paints, dark),
         "release" => release_cell(&member.release, paints),
         "cpu" => cpu_cell(member.cpu, member.logical_cpus, paints),
         "memory" => Cell::text(memory_label(member.memory.as_ref())).mono(),
@@ -346,7 +347,7 @@ fn role_cell(member: &MemberRow, paints: Paints) -> Cell {
     }
 }
 
-fn status_cell(member: &MemberRow, paints: Paints) -> Cell {
+fn status_cell(member: &MemberRow, paints: Paints, dark: bool) -> Cell {
     let (label, fill, ink, detail) = match (&member.reach, &member.gate) {
         (Reachability::Unreachable, _) => {
             ("offline", paints.offline_fill, paints.offline_ink, None)
@@ -361,6 +362,31 @@ fn status_cell(member: &MemberRow, paints: Paints) -> Cell {
             ("online", paints.online_fill, paints.online_ink, None)
         }
     };
+    if member.readiness == Readiness::AwaitingProvisioning {
+        const EXPLANATION: &str =
+            "Automatic job placement skips this Mac until provisioning is complete.";
+        let connection = match (&member.reach, &member.gate) {
+            (Reachability::Unreachable, _) => "This Mac is offline.".to_owned(),
+            (Reachability::Reachable, Gate::Blocked { leading_process }) => match leading_process {
+                Some(process) => format!("Online. Outside work by {process} holds admission."),
+                None => "Online. Outside work holds admission.".to_owned(),
+            },
+            (Reachability::Reachable, Gate::Open) => "This Mac is online.".to_owned(),
+        };
+        return Cell::el(
+            Button::new("Provision")
+                .variant(ButtonVariant::Outline)
+                .control_size(ControlSize::Small)
+                .build(&theme::kit(dark))
+                .px(theme::SPACE_2)
+                .description(EXPLANATION)
+                .help("Awaiting provisioning")
+                .help_row(EXPLANATION)
+                .help_row("You can still target this Mac by name.")
+                .help_row(connection)
+                .key(format!("provision-{}", member.name)),
+        );
+    }
     let mut line = row()
         .center_y()
         .gap(theme::SPACE_2)
@@ -601,6 +627,7 @@ mod tests {
                     this_member: false,
                     role: Role::Member,
                     reach: Reachability::Reachable,
+                    readiness: Readiness::Ready,
                     gate: Gate::Open,
                     cpu: None,
                     logical_cpus: None,
