@@ -150,6 +150,9 @@ pub fn stream_timeout(protocol: &str) -> StreamTimeout {
     match protocol {
         "elsecall-run/1" => StreamTimeout::Inactivity(Duration::from_secs(10)),
         "elsecall-sync/1" => StreamTimeout::Whole(Duration::from_secs(120)),
+        // An artifact streams without pause while its source reads; a minute
+        // of silence is a member that stopped.
+        "elsecall-artifact/1" => StreamTimeout::Inactivity(Duration::from_secs(60)),
         _ => StreamTimeout::Caller,
     }
 }

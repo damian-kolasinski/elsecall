@@ -157,6 +157,40 @@ fn step_failure(member: &MemberName, failed: &FailedStep) -> (&'static str, Stri
             "mise is not installed there",
             format!("Install mise on {member}, {retry}."),
         ),
+        "artifact_on_master" => (
+            "it is the master, which has no other member to copy mise from",
+            format!("Install mise on {member} (curl https://mise.run | sh), {retry}."),
+        ),
+        "artifact_unavailable" => (
+            "the master has no mise to copy",
+            format!("Install mise on the master, {retry}."),
+        ),
+        "artifact_unreachable" => (
+            "the master could not be reached to copy mise, or it has no fleet",
+            format!("Check the master and {member} with elsecall fleet, {retry}."),
+        ),
+        "artifact_busy" => (
+            "the master was already sending as many copies as it sends at once",
+            format!("Wait for the other members' copies, {retry}."),
+        ),
+        "artifact_unsupported" => (
+            "the master runs another build, which cannot send mise",
+            format!("Run elsecall fleet upgrade on the master, {retry}."),
+        ),
+        "artifact_cut" => (
+            "the copy of the master's mise did not arrive whole",
+            format!("Nothing partial was kept; {retry}."),
+        ),
+        "mise_copy_failed" => (
+            "the copy of the master's mise could not be put in place",
+            format!(
+                "Check that {member} can write the folder mise goes in (~/.local/bin, or ELSECALL_MISE's), {retry}."
+            ),
+        ),
+        "mise_copy_unusable" => (
+            "the master's mise does not run there",
+            format!("Install mise on {member} (curl https://mise.run | sh), {retry}."),
+        ),
         "mise_unusable" => (
             "mise could not be started there",
             format!("Run mise --version on {member} and reinstall mise if it fails, {retry}."),

@@ -662,7 +662,14 @@ never reaches a record, a status, an item or a log. The codes so far:
 | Stage | Code | When |
 | --- | --- | --- |
 | `admission` | `install_not_admitted` | The member's scheduler refused the step, as while it stops. |
-| `install` | `mise_missing` | The member has no mise. |
+| `bootstrap` | `artifact_on_master` | The member without mise is the master, which has nothing to copy it from. |
+| `bootstrap` | `artifact_unavailable` | The master has no mise to copy. |
+| `bootstrap` | `artifact_unreachable` | The master could not be reached, or this member has no roster. |
+| `bootstrap` | `artifact_busy` | The master was already sending two copies. |
+| `bootstrap` | `artifact_unsupported` | The master runs another build. |
+| `bootstrap` | `artifact_cut` | The copy did not arrive whole. |
+| `bootstrap` | `mise_copy_failed` | The copy could not be written or moved into place. |
+| `bootstrap` | `mise_copy_unusable` | The copied mise did not say its version. |
 | `install` | `mise_unusable` | mise could not be started, or `HOME` is not set. |
 | `install` | `tool_install_failed` | `mise install` exited with an error. |
 | `install` | `tool_install_timeout` | It ran for 30 minutes. |
@@ -717,6 +724,38 @@ values cannot end. mise runs as the inventory runs it: the executable the
 inventory finds (`ELSECALL_MISE` or the usual places), in the home folder, with
 `MISE` and `MISE_*` removed and `MISE_YES=1` set, for up to 30 minutes. A tool a
 mise plugin backs needs the plugin on the member, as on the master.
+
+**A member without mise**, as a bare Mac is, first copies the master's: the
+executable the master's inventory runs, after following links, over the
+members' channel (below), within 10 minutes. The copy is written as `mise` in a
+new private folder beside where the member's inventory looks first
+(`ELSECALL_MISE` when set, otherwise `~/.local/bin/mise`), since mise behaves as a
+shim under any other name (a copy named otherwise refuses `--version`, checked
+with mise 2026.10). It is moved into place only once it arrived whole and
+`mise --version` runs within 30 seconds, as part of the step's admitted run; the
+folder is removed however it ends. This is the first mise step's `bootstrap`
+stage, and the steps after it find mise in place; when it fails, the apply's
+later mise steps fail with the same stage and code without copying again. Copying, not
+downloading, needs no network and gives the member the master's own version.
+Both mise builds Elsecall has seen, mise's own and Homebrew's, link only
+system libraries, so the master's runs on a member. The copy is held in memory
+until it is written, up to 1 GiB; Homebrew's mise 2026.11 is 237 MB. In a macOS
+VM, a member without mise copied Homebrew's from the master, checked it and
+installed a tool with it within one 133-second step.
+
+**Copying between members.** A member copies an installed tool from another
+over `POST /peer/v1/tools/artifact/<artifact>` (now `mise`), upgraded to
+`elsecall-artifact/1`. Both members sign the channel for the artifact it carries
+(`tools-artifact:mise`), so a channel opened for one cannot carry another. The
+source answers 404 `artifact_unavailable` before upgrading when it has none, and
+503 `artifact_busy` while it already sends two. After the upgrade it streams the
+bytes as they are read, as content frames, then an empty frame, then a trailer
+with their count and SHA-256, sent only once the whole file was read; the
+receiver writes them as they arrive and keeps them only when both match. A
+minute without a frame ends the copy, and the source drops one that has not
+ended within 10 minutes.
+Any enrolled member may ask: what travels is installed software, not a
+secret.
 
 ### Attention: a failed step
 

@@ -57,7 +57,7 @@ pub fn routes(planning: Planning, applier: Arc<Applier>) -> Router {
 /// The member routes, behind the member API's authentication.
 pub fn peer_routes(applier: Arc<Applier>) -> Router<Arc<Fleet>> {
     let reading = Arc::clone(&applier);
-    Router::new().route(
+    crate::artifact_api::peer_routes().route(
         PEER_ROUTE,
         post(
             move |_master: ProvisioningAuthority,
