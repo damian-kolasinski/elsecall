@@ -734,6 +734,21 @@ no longer needs it. The text is written by the reading member from the code;
 another member's report is read leniently, and a failed step it cannot read is
 left out.
 
+### Evidence: mise tools
+
+In a macOS VM (`docs/e2e-vm.md`), a fleet of one named `mac-mini` running this
+build, with mise 2026.11.3: a workspace pinning `github:nextest-rs/nextest` with
+`version_prefix = "cargo-nextest-"` and a `postinstall`, and an exception giving
+the VM 0.9.149 so its plan has a step. `tools plan` listed the step with
+`options: {version_prefix: "cargo-nextest-"}`; `tools apply --wait` installed it
+in 5 seconds, mise recorded the option in the install's own `.mise.backend.toml`,
+the `postinstall` did not run, `elsecall runs` showed one `elsecall tools
+install` run that exited 0, and the next `tools apply` had nothing to install.
+On the host, `tests/tools_apply.rs` covers two enrolled members with a fake mise:
+the dry run equals the plan, steps run in the home folder with `MISE_*` removed,
+a failed step becomes a `provisioning_step_failed` item in the master's fleet
+view, and a retry that fails again keeps it.
+
 ## Open questions for later deliveries
 
 - **Exceptions through config sync.** `fleet-tools.toml` lives on the master
