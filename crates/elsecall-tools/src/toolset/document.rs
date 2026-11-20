@@ -3,7 +3,7 @@
 //! Parsing validates untrusted bytes. [`Toolset::resolve`] applies one member's
 //! overlay. A member tool entry replaces the whole default for that tool, and an
 //! entry that wants nothing is dropped from the resolved map.
-use crate::tool_inventory::{Manager, ToolName, ToolVersion};
+use crate::tool_inventory::{Manager, ToolName, ToolVersion, version_selector};
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_peers::roster::MemberName;
 use serde::Serialize;
@@ -26,13 +26,8 @@ pub(crate) fn version_rule(tool: &str) -> String {
 
 /// An exact version. Symbolic requests and mise selectors are rejected.
 pub(crate) fn exact_version(path: &str, tool: &str, value: &str) -> Result<ToolVersion> {
-    let symbolic = matches!(value, "latest" | "lts" | "system")
-        || value.starts_with("ref:")
-        || value.starts_with("path:")
-        || value.starts_with("prefix:")
-        || value.starts_with("sub-");
     match ToolVersion::new(value) {
-        Some(version) if !symbolic => Ok(version),
+        Some(version) if !version_selector(value) => Ok(version),
         _ => Err(invalid(path, &version_rule(tool))),
     }
 }

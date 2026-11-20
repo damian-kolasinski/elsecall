@@ -59,6 +59,15 @@ impl ToolVersion {
     }
 }
 
+/// Whether a requested version is a mise selector rather than a version: `latest`,
+/// `lts`, `system`, or a `ref:`, `path:`, `prefix:` or `sub-` request.
+pub(crate) fn version_selector(value: &str) -> bool {
+    matches!(value, "latest" | "lts" | "system")
+        || ["ref:", "path:", "prefix:", "sub-"]
+            .iter()
+            .any(|prefix| value.starts_with(prefix))
+}
+
 fn plain_token(value: &str) -> bool {
     !value.is_empty() && value.chars().all(|c| !c.is_whitespace() && !c.is_control())
 }
@@ -121,6 +130,19 @@ pub fn compare_versions(left: &str, right: &str) -> std::cmp::Ordering {
         }
     }
     left.len().cmp(&right.len())
+}
+
+/// Whether `version` matches every segment of `prefix` and then continues, by the
+/// same segment rules as [`compare_versions`]: `22.19.0` extends `22` and `22.19`,
+/// `zulu-17.54.21` extends `zulu-17`, and nothing extends itself.
+pub(crate) fn version_extends(version: &str, prefix: &str) -> bool {
+    let version: Vec<&str> = version_segments(version).collect();
+    let prefix: Vec<&str> = version_segments(prefix).collect();
+    version.len() > prefix.len()
+        && prefix
+            .iter()
+            .zip(&version)
+            .all(|(left, right)| compare_segments(left, right) == std::cmp::Ordering::Equal)
 }
 
 fn version_segments(version: &str) -> impl Iterator<Item = &str> {
@@ -627,6 +649,36 @@ mod tests {
         assert_eq!(error.code(), "tool_manager_output_invalid");
         assert!(!error.message().contains("SECRET"));
         assert!(version_token(b" \n", "xcodes version").is_err());
+    }
+
+    #[test]
+    fn a_version_extends_a_shorter_one_segment_by_segment() {
+        assert!(version_extends("22.19.0", "22"));
+        assert!(version_extends("22.19.0", "22.19"));
+        assert!(version_extends("22.19.0", "022.19"));
+        assert!(version_extends("zulu-17.54.21", "zulu-17"));
+        assert!(!version_extends("22.19.0", "22.19.0"));
+        assert!(!version_extends("22.19.0", "22.1"));
+        assert!(!version_extends("221.0", "22"));
+        assert!(!version_extends("22", "22.19"));
+    }
+
+    #[test]
+    fn selectors_are_not_versions() {
+        for selector in [
+            "latest",
+            "lts",
+            "system",
+            "ref:main",
+            "path:/x",
+            "prefix:1.2",
+            "sub-1:latest",
+        ] {
+            assert!(version_selector(selector), "{selector}");
+        }
+        for version in ["22", "22.19.0", "zulu-17", "1.0.0-rc.1"] {
+            assert!(!version_selector(version), "{version}");
+        }
     }
 
     #[test]

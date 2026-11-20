@@ -1,6 +1,7 @@
-//! `elsecall tools`: inventory and the fleet's desired versions, through the local service.
+//! `elsecall tools`: inventory and the fleet's desired versions, through the local service,
+//! and a workspace's pins, read here without the service.
 //!
-//! Without flags this is this machine. `--fleet` is every member. `--member`
+//! Without flags inventory is this machine. `--fleet` is every member. `--member`
 //! is one member's entry from that same fleet document.
 use crate::{
     tool_inventory::{Manager, ToolName},
@@ -14,7 +15,7 @@ use elsecall_host::paths::Paths;
 use elsecall_peers::roster::MemberName;
 use hyper::Method;
 use serde_json::Value;
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 /// Three mise commands and `xcodes version` each get 30 seconds, and
 /// `xcode-select` gets 10. This waits longer than that, so a manager timeout is
@@ -41,6 +42,11 @@ enum ToolsCommand {
         /// One member's inventory, by its fleet name
         #[arg(long, value_name = "NAME")]
         member: Option<String>,
+    },
+    /// List the tool versions a workspace pins, read without running its code
+    Pins {
+        /// The workspace, usually a repository's root. Defaults to the current directory
+        path: Option<PathBuf>,
     },
     /// Show desired tool versions for every member, or one
     Desired {
@@ -110,6 +116,19 @@ pub async fn run(paths: &Paths, args: ToolsArgs) -> Result<Value> {
                 LOCAL_TIMEOUT,
             )
             .await
+        }
+        ToolsCommand::Pins { path } => {
+            let path = path.unwrap_or_else(|| PathBuf::from("."));
+            let report = tokio::task::spawn_blocking(move || crate::pins::read_workspace(&path))
+                .await
+                .map_err(|_| {
+                    Failure::new(
+                        "internal_error",
+                        "Reading the workspace's pins stopped unexpectedly.",
+                        "Run the command again.",
+                    )
+                })??;
+            Ok(serde_json::to_value(report).expect("serializable pins"))
         }
         ToolsCommand::Desired { member } => {
             let route = match &member {
