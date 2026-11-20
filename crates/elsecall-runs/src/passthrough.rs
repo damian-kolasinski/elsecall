@@ -335,6 +335,7 @@ async fn run(args: RunArgs, reports: &Reports) -> Result<Exit> {
                 start_by: placed.start_by,
                 calling_member: placed.calling_member.clone(),
                 synced_paths: placed.synced_paths.clone(),
+                placement_warnings: placed.warnings.clone(),
             };
             execute(&remote, &command, &grant, &socket, status, requested_at).await
         }

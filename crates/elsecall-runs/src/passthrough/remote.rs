@@ -69,6 +69,8 @@ pub struct RemoteExecutor {
     pub calling_member: String,
     /// Synced paths the member was brought up to date with before the run.
     pub synced_paths: Vec<String>,
+    /// What placement warned about, such as tools the member lacks.
+    pub placement_warnings: Vec<String>,
 }
 
 fn hold_limit_passed(origin: &Origin) -> Failure {
@@ -192,7 +194,7 @@ impl Executor for RemoteExecutor {
             })
         });
         let remaining = self.start_by.since(Timestamp::now());
-        let mut warnings = Vec::new();
+        let mut warnings = self.placement_warnings.clone();
         let started = tokio::time::timeout(remaining, async {
             if let Some((located, caches)) = tree {
                 let stats = sync::push(
@@ -229,8 +231,9 @@ impl Executor for RemoteExecutor {
                                 let own = own.await.unwrap_or_default();
                                 let member = fingerprints.unwrap_or_default();
                                 let mismatches = consistency::compare(&declared, &own, &member);
-                                warnings =
-                                    mismatches.warnings(&self.calling_member, &context.member);
+                                warnings.extend(
+                                    mismatches.warnings(&self.calling_member, &context.member),
+                                );
                                 if !mismatches.is_empty() {
                                     link.message(&RunMessage::Mismatched { mismatches }).await?;
                                 }
@@ -264,6 +267,8 @@ impl Executor for RemoteExecutor {
                 } else {
                     RemoteFailurePhase::WorkspaceSync
                 };
+                // A placement warning foretells exactly this kind of failure.
+                report.data.warnings = warnings.clone();
                 report.send().await;
                 return Err(RunFailure::remote(failure, phase));
             }

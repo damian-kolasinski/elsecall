@@ -592,6 +592,9 @@ pub struct Scored {
 pub struct Verdict {
     pub candidates: Vec<Scored>,
     pub unreachable: Vec<Unreachable>,
+    /// Members that answered but were not scored, because they lack what the
+    /// workspace pins (`crate::pin_fit`).
+    pub passed_over: Vec<Unreachable>,
     /// The winning member, if any member can take the request in time.
     pub winner: Option<String>,
     pub reason: String,
@@ -902,6 +905,7 @@ pub fn decide(
     Verdict {
         candidates,
         unreachable,
+        passed_over: Vec::new(),
         winner,
         reason,
     }
@@ -1226,7 +1230,7 @@ fn score(observation: Observation, wanted: &Wanted, typical: f64) -> Scored {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::{
         admission::QueueCounts, learning::RunSample, parameters::Parameters,
@@ -1251,7 +1255,13 @@ mod tests {
             }),
         }
     }
-    fn member(name: &str, caller: bool, free: f64, speed: f64, copy: Copy) -> Observation {
+    pub(crate) fn member(
+        name: &str,
+        caller: bool,
+        free: f64,
+        speed: f64,
+        copy: Copy,
+    ) -> Observation {
         let capacity = Capacity::of(
             CoreCounts {
                 performance: 10,
@@ -1292,10 +1302,10 @@ mod tests {
             admission: None,
         }
     }
-    fn defaults() -> Placement {
+    pub(crate) fn defaults() -> Placement {
         Parameters::default().placement
     }
-    fn warm() -> Copy {
+    pub(crate) fn warm() -> Copy {
         Copy::Remote {
             warmth: Warmth::Warm,
             busy: false,
