@@ -266,6 +266,7 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall tools inventory --fleet` | Every member's tool inventory: this member first, then the others in roster order. A machine that has not joined a fleet is a fleet of one |
 | `elsecall tools inventory --member NAME` | That member's one entry from the fleet inventory |
 | `elsecall tools pins [PATH]` | The tool versions a workspace pins (mise project config, the global mise config, `.xcode-version`, `.elsecall-tools.toml`), each marked exact or not, read without running the workspace's code; PATH defaults to the current directory (see [Fleet provisioning](docs/fleet-provisioning.md)) |
+| `elsecall tools plan [--member NAME]` | On the master, each member's plan: the versions it lacks of what the workspaces runs started in, and the master's global mise config, pin, minus the exceptions; each step says which pins asked for it. Installs nothing (see [Fleet provisioning](docs/fleet-provisioning.md#delivery-2-a-plan-per-member)) |
 | `elsecall tools exceptions [--member NAME]` | The exceptions to the pins in `fleet-tools.toml` that apply to every fleet member, or one (see [Fleet tool management](docs/fleet-tools.md#exceptions)) |
 | `elsecall tools leave-out TOOL [--member NAME]` | On the master, leave a tool's pins out on every member, or one. `TOOL` is `mise:<name>`, `xcode`, or `simulators:<platform>` |
 | `elsecall tools set TOOL VERSION --member NAME [--install-only]` | On the master, keep exact versions on one member instead of what the pins ask for |

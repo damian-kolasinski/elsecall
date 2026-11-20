@@ -273,6 +273,38 @@ An exception changes only what pins ask for: one for a tool nothing pins plans
 nothing. `elsecall tools exceptions`, `leave-out`, `set --member` and `unset`
 read and write it.
 
+### Which workspaces
+
+**A workspace is the repository root a run was admitted from** (the working
+tree's `git rev-parse --show-toplevel`), not the run's working directory: pin
+files live at the root, and a run in a subdirectory needs the same tools. Each
+git worktree is its own workspace, since it may be on a branch that pins other
+versions. A run outside a working tree adds no workspace; on the master its
+directory is the home folder, whose mise config is the global layer.
+
+**It stays in the set for 30 days after its last run**, as run records do, and
+drops out sooner when its directory is gone (a removed worktree). Admission
+records the root of every run made in a working tree, local or placed, on the
+member where the run was requested, in `run-workspaces.json` in that member's
+data directory: owner-only, the 256 most recent roots, each rewritten at most
+hourly. Synthetic rehearsal runs are not recorded. The run records themselves
+keep only salted hashes of workspace paths, so they cannot be read back.
+
+**Pins are read where the files are, by that member, as data.** Each member
+answers `GET /peer/v1/tools/workspace-pins` with its 64 most recently used
+workspaces and what each one's own files pin (the mise project files,
+`.xcode-version`, `.elsecall-tools.toml`; never its global config), read by
+the same `PinSource` adapters as `tools pins`, without running mise. The pins
+travel unjudged: the master judges them against what it has installed. A member
+names a workspace home-relative (`~/Developer/acme-ios`), or by its absolute
+path outside its home folder, and the plan names it together with the member
+that holds it, so members whose home folders differ (`/Users/me`,
+`/Users/Me`) name the same layout the same way.
+
+**The plan runs on the master.** It reads the master's global config and
+`fleet-tools.toml` there, and judges pins against the master's inventory.
+`tools plan` on another member is `not_master` and names the master.
+
 ### Provisioning
 
 These are implemented in later deliveries and recorded now.
@@ -424,13 +456,117 @@ third, new Mac with Command Line Tools only: no mise, no Xcode, no simulator
 runtimes, no `~/.config`, and a home folder whose capitalisation differs from
 the master's.
 
+## Delivery 2: a plan per member
+
+`elsecall tools plan [--member NAME]` prints each member's plan from
+`GET /v1/tools/plan` on the master. It installs nothing. It waits 170 seconds,
+as `tools inventory --fleet` does: the master asks every member at once for its
+inventory (150 seconds each) and for its workspaces' pins (20 seconds each).
+`--member` plans one member; every member's workspaces still count, and only
+the master's inventory and that member's are read. An unknown
+name is `invalid_request` (exit 2); on a member that is not the master the
+command is `not_master` (exit 1). A machine that has not joined a fleet plans
+itself.
+
+The planner joins the two ports. Each pin becomes a want, judged on the master:
+
+- **mise.** An exact pin is planned only when the master has that version. A
+  plain version it has not installed (`python = "3.10.4"` before anyone
+  installed it, or `node = "22"` with no 22.x) is unresolved, with the hint to
+  install it on the master or pin a full version, since Elsecall cannot tell a
+  partial version from a full one without the network. An inexact pin is
+  planned at the version it resolves to on the master and shown as such
+  (`exact: false`, with a hint). A selector (`lts`, `ref:`…) is unresolved.
+  When the master cannot read mise, every mise pin is unresolved and the plan
+  carries a warning.
+- **Xcode.** Two or more segments are planned as written; one segment at the
+  newest installed match on the master.
+- **Simulator runtimes.** Planned as pinned. A workspace that pins Xcode and no
+  runtime also wants the default runtime: iOS at the Xcode's major and minor
+  version from Xcode 26 on (26.2 → iOS 26.2, 26.0.1 → iOS 26.0). Before Xcode
+  26 the versions differ, so that runtime is unresolved, with the hint to pin it
+  in `.elsecall-tools.toml`.
+
+Then, per member, its exceptions replace what the pins want for their tools,
+and what its inventory has installed is taken away. A version is installed when
+an inventory version compares equal to it; a derived runtime also when an
+installed one extends it (iOS 26.0 by 26.0.1), since an Xcode's SDK names only
+major and minor. An Xcode exception also replaces the derived runtimes on that
+member: a member kept on Xcode 26.0 wants iOS 26.0, not the runtime of the
+pinned 26.2, and one that leaves Xcode out wants none. Runtimes pinned in
+`.elsecall-tools.toml` stay as pinned.
+
+`data` is:
+
+- `master`, and `global`: `{file, state}` for the master's
+  `~/.config/mise/config.toml`, `state` `read`, `missing` or `failed` (with
+  `error`).
+- `workspaces`: every member's reported workspace, as `{member, workspace,
+  last_run_at, state}`, with `files` when `read` or `error` when `failed` (a
+  `pins_conflict`, say). A failed workspace's pins are not planned. Another
+  member's error text is not copied; the message names the workspace and the
+  hint says to run `tools pins` there. A workspace whose report does not
+  validate on the master (a version outside its file's grammar, a source that
+  is not a workspace file, too many files) fails on its own as
+  `protocol_error`; the member's other workspaces still count. Only a report
+  with an unusable workspace name or more than 64 workspaces is refused whole.
+- `unread_members`: members whose workspaces could not be listed, with
+  `error`, whose codes are the fleet inventory's (`member_unreachable`,
+  `member_timeout`, `version_skew`…). A member on an older build answers
+  `not_found` or `version_skew`, and the hint says to upgrade the fleet.
+- `warnings`: the master's managers that could not be read, as `{manager,
+  error}`.
+- `members`, this member first, then roster order. A member whose inventory
+  could not be read is `{member, state: "unavailable", error}`, with the fleet
+  inventory's codes. Otherwise `state` is `planned` with:
+  - `steps`: versions to install, ordered by manager (mise, xcodes,
+    simulators), tool and version: `{manager, tool, version, exact, reasons}`,
+    and `hint` when `exact` is false.
+  - `unresolved`: requests shown and not planned, grouped: `{manager, tool,
+    version, hint, reasons}`; `version` is the pin as written, or null for a
+    default runtime.
+  - `exceptions`: each exception that applies, as `tools exceptions` prints
+    it, plus `pinned`, the versions the pins asked for that tool (empty when
+    nothing pins it, and then nothing is planned).
+  - `installed`: wanted versions the member already has, `{manager, tool,
+    version}`.
+  - `unread_managers`: every manager the member could not read, with `error`.
+    Their steps are unknown and left out.
+
+A reason is `{kind: "pin", member, workspace, source, file, version,
+environment}` (`workspace` is null for the master's global config, and
+`version` is as written), `{kind: "default_runtime", member, workspace,
+xcode}`, `{kind: "exception", file: "fleet-tools.toml", key}`, or
+`{kind: "exception_runtime", file: "fleet-tools.toml", key, xcode}` for the
+runtime of a member's own Xcode.
+
+### Evidence
+
+On the host, with the services under scratch homes so nothing was installed in
+the operator's account: a master, `mac-mini`, reading this machine's real mise
+installs (through a link) and a copy of its global config, and a bare Mac
+enrolled beside it with no mise, no Xcode and no `simctl`. A run started in
+each real workspace on the master: `acme-ios` and this repository.
+
+- Both workspaces read: `acme-ios` from `mise.toml` and `mise.signing.toml`,
+  this repository from `mise.toml`. Neither has `.xcode-version`, so there is
+  no Xcode step and no runtime.
+- The master's plan has no steps: its 16 wanted versions are all installed.
+- The bare Mac's plan has 16 mise steps for both repositories and the global
+  pins: 12 exact, and 4 at the version their inexact pin resolves to on the
+  master (`bun` and `sentry-cli` `latest` → 1.3.14 and 3.8.0, `java = "zulu-17"`
+  → zulu-17.54.21, `node = "22"` → 22.19.0, the latter also pinned exactly by
+  `acme-ios`). Nothing unresolved, no warnings.
+- The plan took 0.7 and 1.0 seconds in two runs, mise's `ls` included.
+
 ## Open questions for later deliveries
 
-- **Which workspaces.** Delivery 2 decides which directories count as "repos jobs ran
-  in": a run's working directory or its repository root, and for how long one
-  stays in the set. `tools pins` prints the workspace as this machine's
-  absolute path; delivery 2 decides how a workspace is named across members,
-  whose home folders differ.
+- **Exceptions through config sync.** `fleet-tools.toml` lives on the master
+  only: carrying it on the config-sync generation (fleet-tools Slice 2b-2)
+  never landed. The plan reads it on the master, so it is always the file in
+  effect, but a `fleet move-master` leaves it behind until it is copied. That
+  is its own slice in `elsecall-sync`; it also needs a generation in a fleet
+  that syncs no paths.
 - **Install options.** Some tables carry options the installer needs
   (`version_prefix` for a GitHub release, verification identities for a package
   backend). Delivery 4 decides which to carry, as an allowlist; `postinstall` is never

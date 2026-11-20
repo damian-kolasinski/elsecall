@@ -22,7 +22,7 @@ use crate::{
 use std::cmp::Ordering;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) enum Exactness {
+pub(crate) enum Exactness {
     Exact,
     /// `resolved` is the newest installed match, when this machine has one.
     Inexact {
@@ -32,7 +32,7 @@ pub(super) enum Exactness {
 
 /// Classifies `version` for `target`, given the versions of that tool this
 /// machine has installed.
-pub(super) fn classify(
+pub(crate) fn classify(
     target: &Target,
     version: &ToolVersion,
     installed: &[ToolVersion],

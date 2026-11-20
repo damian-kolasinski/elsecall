@@ -8,7 +8,7 @@
 //! which pins are exact, against what this machine has installed.
 mod conflicts;
 mod elsecall_tools_file;
-mod exactness;
+pub(crate) mod exactness;
 pub mod lookup;
 mod mise_config;
 mod mise_global;
@@ -146,7 +146,7 @@ pub(crate) struct Pin {
 
 /// What one source found: the files it read, even those that pin nothing, and
 /// their pins in file order.
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct Reading {
     pub(crate) files: Vec<SourceFile>,
     pub(crate) pins: Vec<Pin>,
@@ -184,9 +184,33 @@ pub(crate) fn read_workspace(workspace: &Path) -> Result<report::PinReport> {
     report::read(&workspace, &sources, &managers)
 }
 
+/// What a workspace's own files pin, without the global layer, unjudged: what
+/// a member reports for the plan. `home` is not a workspace.
+pub(crate) fn workspace_pins(workspace: &Path, home: &Path) -> Result<Reading> {
+    let workspace = workspace_root(workspace, home)?;
+    let sources: [&dyn PinSource; 3] = [
+        &mise_project::MiseProject,
+        &xcode_version::XcodeVersionFile,
+        &elsecall_tools_file::ElsecallToolsFile,
+    ];
+    let mut reading = Reading::default();
+    for source in sources {
+        let read = source.read(&workspace)?;
+        reading.files.extend(read.files);
+        reading.pins.extend(read.pins);
+    }
+    reading.pins = conflicts::without_conflicts(reading.pins)?;
+    Ok(reading)
+}
+
+/// What this machine's global mise config pins: the master's, for the plan.
+pub(crate) fn global_pins(home: &Path) -> Result<Reading> {
+    mise_global::MiseGlobal::new(home.to_owned()).read(home)
+}
+
 /// The canonical workspace: a directory that can be listed, and not the home
 /// folder, whose mise config is the global layer rather than a project's.
-fn workspace_root(path: &Path, home: &Path) -> Result<PathBuf> {
+pub(crate) fn workspace_root(path: &Path, home: &Path) -> Result<PathBuf> {
     let root = std::fs::canonicalize(path)
         .ok()
         .filter(|root| std::fs::read_dir(root).is_ok())

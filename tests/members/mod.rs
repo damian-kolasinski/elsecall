@@ -232,6 +232,11 @@ impl TestMember {
         panic!("{name} did not install: {}", member.log());
     }
 
+    /// The member's home folder, as its service and CLI see it.
+    pub(crate) fn home(&self) -> &Path {
+        self.home.path()
+    }
+
     /// The installed service's state directory.
     pub(crate) fn data(&self) -> std::path::PathBuf {
         Paths::for_home(self.home.path()).unwrap().data

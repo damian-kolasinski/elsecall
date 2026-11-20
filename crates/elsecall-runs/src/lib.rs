@@ -9,5 +9,6 @@ pub mod placement_authority;
 pub mod placement_host;
 pub mod remote_run;
 pub mod run_relay;
+pub mod run_workspaces;
 mod sealed_run;
 mod service_handover;

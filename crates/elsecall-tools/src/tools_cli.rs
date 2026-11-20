@@ -48,6 +48,13 @@ enum ToolsCommand {
         /// The workspace, usually a repository's root. Defaults to the current directory
         path: Option<PathBuf>,
     },
+    /// On the master, plan each member: what it lacks of what the fleet's workspaces pin.
+    /// Read-only; nothing is installed
+    Plan {
+        /// Plan only this member; every member's workspaces still count
+        #[arg(long, value_name = "NAME")]
+        member: Option<String>,
+    },
     /// Show the exceptions to the pins in fleet-tools.toml for every member, or one
     Exceptions {
         /// Only this member
@@ -138,6 +145,20 @@ pub async fn run(paths: &Paths, args: ToolsArgs) -> Result<Value> {
                 })??;
             Ok(serde_json::to_value(report).expect("serializable pins"))
         }
+        ToolsCommand::Plan { member } => {
+            let route = match &member {
+                Some(name) => format!("{}?member={}", crate::plan_api::ROUTE, escaped(name)),
+                None => crate::plan_api::ROUTE.to_owned(),
+            };
+            client::send_bounded(
+                &paths.socket(),
+                Method::GET,
+                &route,
+                FLEET_TIMEOUT,
+                crate::fleet_tool_inventory::FLEET_RESPONSE_LIMIT,
+            )
+            .await
+        }
         ToolsCommand::Exceptions { member } => {
             let route = match &member {
                 Some(name) => format!("{}?member={name}", toolset_api::ROUTE),
@@ -192,15 +213,19 @@ pub async fn run(paths: &Paths, args: ToolsArgs) -> Result<Value> {
 }
 
 fn member_route(member: &str) -> String {
-    let mut route = String::from(tools_api::FLEET_ROUTE);
-    route.push_str("?member=");
+    format!("{}?member={}", tools_api::FLEET_ROUTE, escaped(member))
+}
+
+/// A member name for a query: anything outside a member name is escaped.
+fn escaped(member: &str) -> String {
+    let mut escaped = String::new();
     for byte in member.bytes() {
         match byte {
-            b'a'..=b'z' | b'0'..=b'9' | b'-' => route.push(byte as char),
-            _ => route.push_str(&format!("%{byte:02X}")),
+            b'a'..=b'z' | b'0'..=b'9' | b'-' => escaped.push(byte as char),
+            _ => escaped.push_str(&format!("%{byte:02X}")),
         }
     }
-    route
+    escaped
 }
 
 fn one_member(data: Value) -> Result<Value> {

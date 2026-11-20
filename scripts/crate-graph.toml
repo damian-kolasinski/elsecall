@@ -125,7 +125,8 @@ modules = ["installation", "window_release", "window_app", "window_startup", "in
 
 [crates.tools]
 band = "feature"
-# Tool versions across the fleet: the desired toolset, inventories of what each
+# Tool versions across the fleet: what workspaces pin, the exceptions to the
+# pins, the plan per member, inventories of what each
 # member has, and mise. `macos::xcodes` is `xcodes`.
 modules = ["toolset", "toolset_api", "tools_api", "tools_cli", "tool_inventory", "fleet_tool_inventory", "mise_cli", "macos::xcodes", "inventory_reader"]
 
@@ -158,9 +159,9 @@ band = "entry"
 # Router assembly and the peer listener: they mount routes from many slices and
 # apply enrolled-member authentication over all of them. With them, the adapters
 # that join two slices (housekeeping's callers and copies through the fleet,
-# placement's pre-run sync through config sync), so neither slice waits for the
-# other to build.
-modules = ["server", "peer_api", "peer_listener", "outside_pressure_api", "ui_app", "fleet_callers", "fleet_copies", "workspace_check_api", "placement_config_sync"]
+# placement's pre-run sync through config sync, the runs' workspaces through the
+# tool plan), so neither slice waits for the other to build.
+modules = ["server", "peer_api", "peer_listener", "outside_pressure_api", "ui_app", "fleet_callers", "fleet_copies", "workspace_check_api", "placement_config_sync", "run_workspace_pins"]
 
 [crates.cli]
 band = "entry"
