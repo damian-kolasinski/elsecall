@@ -258,7 +258,7 @@ impl MemberUnavailable {
 /// the member channel becomes `member_unreachable` or `member_timeout`.
 /// `version_skew` stays `version_skew`. Any other code Elsecall writes is kept.
 /// Anything else is `protocol_error`.
-fn unavailable_member(member: &MemberName, failure: &Failure) -> MemberUnavailable {
+pub(crate) fn unavailable_member(member: &MemberName, failure: &Failure) -> MemberUnavailable {
     if failure.code == "member_unavailable" {
         return if client_budget_expired(failure) {
             MemberUnavailable::timeout(member)

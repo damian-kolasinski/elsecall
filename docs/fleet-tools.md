@@ -36,7 +36,9 @@ its format and commands.
 
 ## Plan and apply
 
-A plan shows what would change on a member. Apply does it. Nothing is installed,
+A plan shows what would change on a member: `elsecall tools plan`, from
+[provisioning delivery 2](fleet-provisioning.md#delivery-2-a-plan-per-member).
+Apply does it. Nothing is installed,
 selected or removed as a side effect of reading the fleet. An agent may confirm a
 tool plan; a person confirms file and credential plans. Once the automatic loop
 lands (provisioning delivery 6), tool plans that follow from pins are applied

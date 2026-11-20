@@ -60,6 +60,7 @@ mod tools_exceptions;
 mod tools_fleet_inventory;
 mod tools_inventory;
 mod tools_pins;
+mod tools_plan;
 mod trace;
 mod tune;
 mod uninstall;

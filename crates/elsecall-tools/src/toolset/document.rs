@@ -113,6 +113,19 @@ impl Versions {
             Some(Self { default, install })
         }
     }
+
+    pub(crate) fn default(&self) -> Option<&ToolVersion> {
+        self.default.as_ref()
+    }
+
+    pub(crate) fn install(&self) -> impl Iterator<Item = &ToolVersion> {
+        self.install.iter()
+    }
+
+    /// Every version, the default first.
+    pub(crate) fn versions(&self) -> impl Iterator<Item = &ToolVersion> {
+        self.default.iter().chain(self.install.iter())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

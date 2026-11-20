@@ -1,4 +1,5 @@
 //! The local HTTP interface of admission, a driving adapter of the scheduler.
+use crate::run_workspaces::RunWorkspaces;
 use axum::{
     Extension, Json, Router,
     body::Bytes,
@@ -9,6 +10,7 @@ use axum::{
 };
 use elsecall_contract::api;
 use elsecall_contract::failure::Result;
+use elsecall_contract::scheduling_model::timestamp::Timestamp;
 use elsecall_contract::scheduling_model::{request, run_id::RunId};
 use elsecall_host::local_access::LocalCaller;
 use elsecall_scheduling::service::{OnHandover, Scheduler};
@@ -37,7 +39,8 @@ impl Admitting {
     }
 }
 
-pub fn routes(scheduler: Arc<Scheduler>) -> Router {
+/// `workspaces` learns the root of every run admitted from a working tree.
+pub fn routes(scheduler: Arc<Scheduler>, workspaces: Arc<RunWorkspaces>) -> Router {
     Router::new()
         .route("/v1/admissions", post(admit))
         .route("/v1/runs", get(runs))
@@ -47,6 +50,7 @@ pub fn routes(scheduler: Arc<Scheduler>) -> Router {
         .route("/v1/runs/{id}/observation", post(observation))
         .route("/v1/runs/{id}/placed", post(placed_report))
         .route("/v1/leases/release", post(release))
+        .layer(Extension(workspaces))
         .with_state(scheduler)
 }
 
@@ -81,13 +85,30 @@ fn peer(peer: &LocalCaller) -> Result<u32> {
 async fn admit(
     State(scheduler): State<Arc<Scheduler>>,
     Extension(caller): Extension<LocalCaller>,
+    Extension(workspaces): Extension<Arc<RunWorkspaces>>,
     Query(admitting): Query<Admitting>,
     body: Bytes,
 ) -> Response {
     let result = async {
-        scheduler
-            .request_on_handover(peer(&caller)?, parse(&body)?, admitting.on_handover())
-            .await
+        let request: request::AdmissionRequest = parse(&body)?;
+        let root = request
+            .workspace
+            .as_ref()
+            .filter(|_| !elsecall_contract::labels::rules::synthetic(request.label.as_deref()))
+            .map(|workspace| std::path::PathBuf::from(&workspace.root));
+        let grant = scheduler
+            .request_on_handover(peer(&caller)?, request, admitting.on_handover())
+            .await?;
+        if let Some(root) = root {
+            // Only remembers where runs started, for planning tools; the run
+            // goes ahead whatever happens to the record.
+            tokio::task::spawn_blocking(move || {
+                if workspaces.record(&root, Timestamp::now()).is_err() {
+                    elsecall_host::service_log!("{{\"event\":\"run_workspaces_unwritten\"}}");
+                }
+            });
+        }
+        Ok(grant)
     };
     respond(result.await)
 }
