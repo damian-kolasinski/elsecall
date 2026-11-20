@@ -230,7 +230,10 @@ fn each_member_is_planned_from_every_members_workspaces() {
     workspace(
         &bravo,
         "acme-tools",
-        &[("mise.toml", "[tools]\nbun = \"1.3.5\"\n")],
+        &[(
+            "mise.toml",
+            "[tools]\nbun = { version = \"1.3.5\", version_prefix = \"bun-v\", postinstall = \"touch /tmp/never\" }\n",
+        )],
     );
     alpha.ok(&["tools", "leave-out", "mise:sentry-cli"]);
     alpha.ok(&["tools", "set", "xcode", "26.3", "--member", "bravo"]);
@@ -303,6 +306,23 @@ fn each_member_is_planned_from_every_members_workspaces() {
             named("iOS", "26.3", Some(true)),
         ],
         "{member}"
+    );
+    let options: Vec<&Value> = member["steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|step| &step["options"])
+        .collect();
+    assert_eq!(
+        options,
+        [
+            &json!({"version_prefix": "bun-v"}),
+            &json!({}),
+            &json!({}),
+            &json!({}),
+            &json!({})
+        ],
+        "a member's workspace carries its install options to the plan, and nothing else"
     );
     let bun = &member["steps"][1];
     assert_eq!(

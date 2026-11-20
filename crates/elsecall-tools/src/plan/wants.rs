@@ -22,7 +22,7 @@
 //! 26.0.1), since Xcode's SDK names only major and minor.
 use crate::{
     pins::{
-        Environment, Pin, Platform, SourceFile, Target,
+        Environment, InstallOptions, Pin, Platform, SourceFile, Target,
         exactness::{Exactness, classify},
     },
     tool_inventory::{Manager, ToolName, ToolVersion, compare_versions, version_selector},
@@ -92,6 +92,8 @@ pub(crate) enum Unresolved {
     MasterUnread,
     /// An Xcode before 26, whose runtime version is not its own.
     OlderXcode,
+    /// Pins ask for one version with different install options.
+    OptionsDiffer,
 }
 
 impl Reason {
@@ -117,6 +119,7 @@ impl Unresolved {
             Self::MasterUnread => format!(
                 "The master, {master}, could not report this manager's tools; run elsecall tools inventory there, then retry."
             ),
+            Self::OptionsDiffer => "Pins ask for this version with different install options; pin it with the same options everywhere, as tools pins shows them.".into(),
             Self::OlderXcode => "Before Xcode 26 the runtime's version differs from Xcode's; pin the runtime in .elsecall-tools.toml, such as runtimes = [\"iOS 18.5\"].".into(),
         }
     }
@@ -138,6 +141,8 @@ pub(crate) struct Want {
     pub(crate) key: ToolKey,
     pub(crate) outcome: Outcome,
     pub(crate) reason: Reason,
+    /// The install options of the pin behind it; empty for a derived runtime.
+    pub(crate) options: InstallOptions,
 }
 
 /// What the master has installed, by manager; `None` when it could not be read.
@@ -169,6 +174,7 @@ pub(crate) fn wants(master: &MasterTools, origin: &Origin, pins: &[Pin]) -> Vec<
                 version: pin.version.clone(),
                 environment: pin.target.environment().cloned(),
             },
+            options: pin.options.clone(),
         })
         .collect();
     let pins_runtime = pins
@@ -196,6 +202,7 @@ pub(crate) fn wants(master: &MasterTools, origin: &Origin, pins: &[Pin]) -> Vec<
                     workspace: workspace.clone(),
                     xcode,
                 },
+                options: InstallOptions::default(),
             });
         }
     }
@@ -324,6 +331,7 @@ mod tests {
                 kind,
                 file: file.into(),
             },
+            options: crate::pins::InstallOptions::default(),
         }
     }
 

@@ -1,9 +1,9 @@
 //! `.tool-versions`, the asdf format mise also reads: one tool per line, its
 //! name and then one or more versions, `#` starting a comment. Names follow
-//! `mise_config::tool_name`, so `nodejs` is `node`.
+//! `mise_config::tool_key`, so `nodejs` is `node`.
 use crate::pins::{
-    invalid, literal_version,
-    mise_config::{ToolRequests, add, tool_name},
+    InstallOptions, invalid, literal_version,
+    mise_config::{ToolRequests, add, tool_key},
 };
 use elsecall_contract::failure::Result;
 
@@ -22,10 +22,14 @@ pub(super) fn tools(text: &str, file: &str) -> Result<Vec<ToolRequests>> {
         let Some(name) = words.next() else {
             continue;
         };
-        let tool = tool_name(name)
-            .ok_or_else(|| invalid(file, &key, "tool names cannot contain control characters"))?;
+        let (tool, bracketed) = tool_key(file, &key, name)?;
         let versions = words
-            .map(|word| literal_version(file, &key, word))
+            .map(|word| {
+                Ok((
+                    literal_version(file, &key, word)?,
+                    InstallOptions::from_brackets(&bracketed),
+                ))
+            })
             .collect::<Result<Vec<_>>>()?;
         if versions.is_empty() {
             return Err(invalid(file, &key, "a tool needs at least one version"));
@@ -33,7 +37,7 @@ pub(super) fn tools(text: &str, file: &str) -> Result<Vec<ToolRequests>> {
         if requests.iter().any(|request| request.tool == tool) {
             return Err(invalid(file, &key, "a tool is listed on two lines"));
         }
-        add(&mut requests, tool, versions);
+        add(&mut requests, tool, versions).map_err(|rule| invalid(file, &key, rule))?;
     }
     Ok(requests)
 }
@@ -54,7 +58,7 @@ mod tests {
                     request
                         .versions
                         .iter()
-                        .map(|version| version.as_str())
+                        .map(|(version, _)| version.as_str())
                         .collect(),
                 )
             })
