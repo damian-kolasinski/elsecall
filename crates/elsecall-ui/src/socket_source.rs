@@ -171,6 +171,7 @@ pub(crate) fn snapshot_from_value(data: &Value) -> Result<FleetSnapshot, SourceF
         .collect::<Result<Vec<_>, _>>()?;
     Ok(FleetSnapshot {
         enrolled: fleet.enrolled,
+        attention: fleet.attention,
         members,
         standing: match fleet.roster_error {
             None => Standing::Rostered,
@@ -223,6 +224,13 @@ fn map_member(mut member: WireMember, master: Option<&str>) -> Result<MemberRow,
                 .unwrap_or(crate::resource_details::Pressure::Unreadable),
         },
         warnings: member.outside_warnings,
+    };
+    let provisioning = match reach {
+        Reachability::Reachable => member
+            .status
+            .as_mut()
+            .and_then(|status| status.provisioning.take()),
+        Reachability::Unreachable => None,
     };
     let machine = match reach {
         Reachability::Reachable => member.status.and_then(|status| status.machine),
@@ -278,7 +286,21 @@ fn map_member(mut member: WireMember, master: Option<&str>) -> Result<MemberRow,
         load,
         release,
         contributors,
+        provisioning,
     })
+}
+
+/// The items this window can read; one a later service writes differently is
+/// left out rather than failing the fleet.
+fn read_attention<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Vec<elsecall_contract::attention::Item>, D::Error> {
+    let values = Option::<Vec<Value>>::deserialize(deserializer)?.unwrap_or_default();
+    Ok(values
+        .into_iter()
+        .take(512)
+        .filter_map(|value| serde_json::from_value(value).ok())
+        .collect())
 }
 
 #[derive(Deserialize)]
@@ -288,6 +310,9 @@ struct WireFleet {
     /// Older services do not report it.
     #[serde(default)]
     roster_error: Option<WireRosterError>,
+    /// Older services do not report it.
+    #[serde(default, deserialize_with = "read_attention")]
+    attention: Vec<elsecall_contract::attention::Item>,
 }
 
 #[derive(Deserialize)]
@@ -344,6 +369,11 @@ struct WireStatus {
     active_grants: Option<elsecall_fleet::resource_report::GrantSnapshot>,
     #[serde(default)]
     machine: Option<WireMachine>,
+    #[serde(
+        default,
+        deserialize_with = "elsecall_fleet::provisioning_model::lenient"
+    )]
+    provisioning: Option<elsecall_fleet::provisioning_model::ProvisioningSummary>,
 }
 
 #[derive(Deserialize)]

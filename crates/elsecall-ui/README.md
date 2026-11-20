@@ -113,7 +113,20 @@ under that banner.
 
 The status cell shows **Provision** for a member awaiting provisioning. Its hover
 help explains that automatic job placement skips the member and reports whether
-it is reachable. The button has no action until provisioning is available.
+it is reachable. Pressing it asks the master to plan and install the member's tools
+now (`POST /v1/tools/provisioning`, as `elsecall tools provision` does); the cell
+reads **Starting…**, then **Installing 2 of 5** while the member's apply runs, and
+**Needs you** when a step waits for a person, which opens the member's setup. The
+master provisions new members by itself as well; the button only skips its wait.
+
+**Setup**, beside Load details, opens a member's setup: what waits for a person and
+the command to run where, what its latest apply did with each failure's hint, and
+what its plan still installs, read from `GET /v1/tools/apply` and, on the master,
+`GET /v1/tools/plan`. Above the members, every attention item the service reports
+is listed with its hint and commands; a secret consent's checkbox picks whether its
+command adds `--always`. The window runs none of them: they are a person's, or an
+agent's through `elsecall fleet`. See [fleet provisioning](../../docs/fleet-provisioning.md),
+"The window".
 
 Add Mac shows only on the master, the Mac that adds others.
 

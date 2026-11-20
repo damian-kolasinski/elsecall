@@ -1307,6 +1307,71 @@ session's sudo installed the helper (`root:wheel`, 0755) and the drop-in
 (`root:wheel`, 0440), the Mac's own `elsecall tools privileges` read `ready:
 true` and `helper: current`, and installing them again changed nothing.
 
+### The window
+
+The fleet window shows provisioning where the operator already looks, and runs
+nothing an agent could not: every command it shows is one `elsecall fleet`
+lists for agents too.
+
+- **Status.** A member's status cell shows `Installing 2 of 5` with a spinner
+  while an apply runs there (from its `status.provisioning`: the step after
+  those installed or failed, of all its steps), `Needs you` when one of its
+  provisioning items starts with a person's action (Xcode privileges on it, or
+  an Apple ID on the master, on the master's row), and the Provision button
+  while it awaits provisioning and nothing runs. Otherwise the usual online,
+  blocked or offline pill shows.
+- **Provision** runs `elsecall tools provision <member>` through the local
+  service (`POST /v1/tools/provisioning`), so the master plans and applies it
+  at once. It is enabled only in the master's window; another member's window
+  says where to press it. The button reads `Starting…` until the fleet shows a
+  new apply on the member (running, or already finished), the member ready, or
+  200 seconds pass; a refusal shows in its help. The loop provisions a new
+  member by itself anyway; the button only skips its wait, and retries failed
+  steps but those held for a person, which its help counts apart.
+- **Setup**, next to Load details on every reachable member, opens the
+  member's setup: **For you**, its provisioning items that start with a
+  person, each with its message, hint and the command with the member to run
+  it on, and the Apple ID item when its apply needed an Xcode the master lacks;
+  **Latest apply**, each step and how it ended, a failure with its stage, code
+  and its item's hint; and **To install**, the plan's steps and its unresolved
+  requests with their hints, or a note when some pins or tools went unread.
+  It reads `GET /v1/tools/apply` and `GET /v1/tools/plan` for that member
+  when it opens, each on a thread of its own and shown as it lands, and the
+  apply again whenever it moves; one read of each runs at a time. On a member
+  that is not the master the plan reads as `not_master`, said in place.
+  **Needs you** opens it too.
+- **Attention.** Above the members, every item of `elsecall fleet`'s
+  `attention`, plainly: its message, its hint and each action's command with
+  where to run it, a person's marked `For you`. A secret consent item keeps
+  its checkbox, "Sync changes to these automatically from now on", which
+  chooses which of its two `person_only` commands to show (`--always` or
+  not): the CLI refuses `--confirm` without a terminal, so the window shows
+  the command for a person to run rather than running it.
+
+Nothing in the window starts an agent: the items and their actions are the
+hooks a hand-off will use.
+
+### Evidence: one click
+
+In a macOS VM (macOS 26.6), two members on one Mac, each an account running its
+own `elsecall serve` on loopback: the master `mac-mini` (`admin`, Homebrew's
+mise 2026.11.3 with jq 1.7.1 installed, a workspace pinning `jq = "1.7.1"`)
+and `macbook-pro` (`devbox`, an administrator account with no mise), enrolled
+awaiting provisioning as Add Mac leaves a Mac. The fleet window on the master
+listed `macbook-pro` with Provision and the `awaiting_provisioning` item.
+
+- The click at 21:24:02 was planned at 21:24:03 (`tools provisioning`:
+  `applying`, one step), and the row read `Installing 1 of 1`.
+- The apply ran 21:24:03 to 21:24:22 as one `elsecall tools install` run that
+  exited 0: the master's mise (237 MB) was copied to `~/.local/bin/mise`, then
+  jq 1.7.1 installed with it.
+- At the loop's next look the plan had no steps; `macbook-pro` was ready on
+  both members at 21:25:09, its row read `online`, the attention list was
+  empty and `tools provisioning` read `in_step`.
+- For the 47 seconds between the apply's end and that look the row read
+  Provision again, which looks unfinished. So the loop now looks every five
+  seconds while an apply runs ("The loop", above); this run predates that.
+
 ### Placement by pins
 
 Placeable work goes to a member that has the tools its workspace pins. What a
