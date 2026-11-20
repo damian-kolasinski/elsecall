@@ -662,6 +662,10 @@ never reaches a record, a status, an item or a log. The codes so far:
 | Stage | Code | When |
 | --- | --- | --- |
 | `admission` | `install_not_admitted` | The member's scheduler refused the step, as while it stops. |
+| `download` | `xcode_missing` | No Xcode installed on the member knows the runtime. |
+| `download` | `xcode_unreadable` | The member's Xcodes could not be read. |
+| `download` | `runtime_download_failed` | `xcodebuild -downloadPlatform` exited with an error. |
+| `download` | `runtime_download_timeout` | It ran for an hour. |
 | `bootstrap` | `artifact_on_master` | The member without mise is the master, which has nothing to copy it from. |
 | `bootstrap` | `artifact_unavailable` | The master has no mise to copy. |
 | `bootstrap` | `artifact_unreachable` | The master could not be reached, or this member has no roster. |
@@ -742,6 +746,27 @@ system libraries, so the master's runs on a member. The copy is held in memory
 until it is written, up to 1 GiB; Homebrew's mise 2026.11 is 237 MB. In a macOS
 VM, a member without mise copied Homebrew's from the master, checked it and
 installed a tool with it within one 133-second step.
+
+**Simulator runtimes.** A runtime step is `xcodebuild -downloadPlatform
+<platform> -buildVersion <version> -architectureVariant arm64`, as Xcode's own
+Components settings download one, from Apple and with no Apple ID. The variant
+is named because a version alone looks for a universal image, which Apple does
+not offer for every version: with Xcode 26.2, `-buildVersion 26.2` alone
+answered `iOS 26.2 is not available for download`, and with `arm64` it
+downloaded. Every member runs Elsecall's Apple silicon build. It runs the `xcodebuild` of an
+Xcode installed on the member, with that Xcode as `DEVELOPER_DIR`, in `/`, for up
+to an hour: the Xcode of the runtime's major and minor version (iOS 26.2 through
+Xcode 26.2), else the oldest later one, since an earlier Xcode does not know the
+runtime; with none, the step fails as `xcode_missing` rather than running a
+download bound to fail. A runtime before 26, numbered apart from Xcode, uses the
+selected Xcode, else the newest. A plan lists Xcode before runtimes, so the
+default runtime of a pinned Xcode finds it installed. A runtime counts as
+installed when `simctl` reports its version, whatever build the download chose
+(26.2 came as 23C52 where Xcode 26.2 shipped 23C54), and a pinned trailing zero
+does not count (`26.2.0` is 26.2). A download cut short at its hour may leave a
+partial image, which `xcodebuild` replaces on the next try. Runtimes
+are downloaded rather than copied from the master: the master keeps no runtime
+image it could send, only what `simctl` mounted.
 
 **Copying between members.** A member copies an installed tool from another
 over `POST /peer/v1/tools/artifact/<artifact>` (now `mise`), upgraded to

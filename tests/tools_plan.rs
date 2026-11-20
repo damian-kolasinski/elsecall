@@ -137,7 +137,7 @@ pub(crate) fn bare() -> Managers {
     }
 }
 
-fn plist(pairs: &[(&str, &str)]) -> String {
+pub(crate) fn plist(pairs: &[(&str, &str)]) -> String {
     let mut body =
         String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\"><dict>");
     for (key, value) in pairs {
