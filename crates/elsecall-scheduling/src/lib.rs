@@ -17,6 +17,7 @@ pub mod missing_tool;
 pub mod outside_pressure;
 pub mod outside_pressure_gate;
 pub mod parameters;
+pub mod pin_fit;
 pub mod placed;
 pub mod placement;
 pub mod pre_run_sync;

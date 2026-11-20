@@ -545,13 +545,15 @@ impl Scheduler {
             hold_left: expires_at.since(now),
             parameters: &self.parameters().placement,
         };
-        let mut verdict = placement::decide(observations, unreachable, &wanted);
+        let lacking = self.members.lacking(&auto.workspace);
+        let mut verdict = crate::pin_fit::decide(observations, unreachable, &wanted, &lacking);
         verdict.reason += &standing.awaiting_left_out(&own);
         let scoring = Scoring {
             scored_at: now,
             size: wanted.size,
             hold_left: wanted.hold_left,
             winner: verdict.winner.clone(),
+            passed_over: verdict.passed_over.clone(),
         };
         Some((verdict, scoring))
     }
@@ -941,6 +943,7 @@ mod tests {
                 member: "laptop".into(),
                 why: "It did not answer.".into(),
             }],
+            passed_over: Vec::new(),
             winner: winner.map(Into::into),
             reason: "The scoring's reason. laptop was left out: it did not answer.".into(),
         }

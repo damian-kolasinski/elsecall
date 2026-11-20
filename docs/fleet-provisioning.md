@@ -1282,6 +1282,48 @@ The loop writes one service log line per plan and per action it takes,
 `provisioning_planned`, `provisioning_applied` and `provisioning_ready`, naming
 members and counts, never a path or version.
 
+### Placement by pins
+
+Placeable work goes to a member that has the tools its workspace pins. What a
+member lacks is what the loop's last plan for it would install, step by step,
+with the workspaces each step's pins come from; the master's global pins and a
+member's exceptions count for every workspace, since a job uses the defaults
+for whatever its workspace does not pin. Placement asks it without waiting: the
+loop holds it in memory, so a request is never slowed by planning. A member the
+loop has not planned yet lacks nothing as far as placement knows, so placement
+is never worse off than before.
+
+This applies to runs the master places, as agents' placed runs start on the
+master, where the loop runs. Another member placing work of its own places it
+as before: the loop's view of the fleet stays on the master. Carrying it to
+every member is a later change.
+
+- **Preferred.** The members lacking something are left out of the first
+  scoring, each named in the reason: `bravo was left out: it lacks bun 1.3.5,
+  which the workspace pins; the master is installing them.` The decision's
+  `scoring.passed_over` lists them with that reason, apart from `unreachable`,
+  which keeps meaning members placement could not ask. The calling member is
+  never left out: the work comes from there, with its own tools. The usual
+  rules then pick among the rest.
+- **Fallback.** Only when no remaining member can start the request within its
+  hold limit is it scored again with every member. If the winner lacks
+  something, the reason says so, and the run carries a warning in its
+  `warnings`, as consistency warnings are carried (`elsecall runs`, `explain`,
+  its status file), also when the run then fails to start: `bravo lacks bun
+  1.3.5, which this workspace pins, so the run may fail there; the master is
+  installing them. Elsecall placed it there because no member that has them
+  could start it in time.`
+- **Named.** A run that names its member with `--member` runs there as asked,
+  and carries the same warning ending `It runs there because it was asked to.`
+  when that member lacks something.
+
+At most three tools are named, then how many more. Waiting for a member to be
+provisioned is not an option placement takes: a run fails over to a member
+lacking a tool only where it would otherwise wait past its hold limit or fail
+`fleet_busy`, and the warning names what to expect. `elsecall replay` scores
+recorded decisions again with the candidates they recorded, so a what-if under
+other parameters does not bring passed-over members back in.
+
 ## Open questions for later deliveries
 
 - **Exceptions through config sync.** `fleet-tools.toml` lives on the master

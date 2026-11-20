@@ -161,7 +161,7 @@ band = "entry"
 # that join two slices (housekeeping's callers and copies through the fleet,
 # placement's pre-run sync through config sync, the runs' workspaces through the
 # tool plan), so neither slice waits for the other to build.
-modules = ["server", "peer_api", "peer_listener", "outside_pressure_api", "ui_app", "fleet_callers", "fleet_copies", "workspace_check_api", "placement_config_sync", "run_workspace_pins"]
+modules = ["server", "peer_api", "peer_listener", "outside_pressure_api", "ui_app", "fleet_callers", "fleet_copies", "workspace_check_api", "placement_config_sync", "placement_pins", "run_workspace_pins"]
 
 [crates.cli]
 band = "entry"
