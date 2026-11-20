@@ -454,7 +454,7 @@ fn a_member_awaiting_provisioning_needs_attention_until_marked_ready() {
         let action = &item["actions"][0];
         assert_eq!(
             action["command"],
-            serde_json::json!(["elsecall", "fleet", "ready", "bravo"])
+            serde_json::json!(["elsecall", "tools", "provision", "bravo"])
         );
         assert_eq!(action["run_on"], "alpha");
         assert_eq!(action["person_only"], false);
@@ -475,8 +475,17 @@ fn a_member_awaiting_provisioning_needs_attention_until_marked_ready() {
         .map(|word| word.as_str().unwrap())
         .collect();
     a.ok(&words);
+    // The master plans it at once: nothing is pinned, so it is ready.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(90);
     for member in [&a, &b] {
-        assert_eq!(member.fleet()["attention"], serde_json::json!([]));
+        while member.fleet()["attention"] != serde_json::json!([]) {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "{}",
+                member.fleet()["attention"]
+            );
+            std::thread::sleep(std::time::Duration::from_millis(250));
+        }
     }
 }
 

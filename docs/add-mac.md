@@ -221,8 +221,10 @@ it without changing its readiness.
   agrees on it. Placement leaves it out and says why in the run's reason; work that
   names it with `--member` still runs there, which is how the master controls it.
   Configuration sync and upgrades include it as any member. It cannot become master.
-  `elsecall fleet ready <name>`,
-  and later provisioning, marks it ready with a roster change, which, like every
+  The master's provisioning loop marks it ready once everything the fleet's
+  pins ask of it is installed ([fleet provisioning](fleet-provisioning.md),
+  "Delivery 6"), and `elsecall fleet ready <name>` still does by hand, each
+  with a roster change, which, like every
   roster change, is refused while a member is unreachable unless forced. A roster
   with no member awaiting provisioning serializes exactly as before. A member on a
   build that predates this drops the list when it stores the roster, and a roster

@@ -3,8 +3,10 @@
 //! installing it.
 pub mod apply_api;
 mod apply_cli;
+mod apply_dispatch;
 mod artifact;
 mod artifact_api;
+pub mod drift;
 pub mod fleet_tool_inventory;
 pub mod install;
 mod inventory_reader;
@@ -13,6 +15,8 @@ pub mod pins;
 mod plan;
 pub mod plan_api;
 pub mod privileges_cli;
+pub mod provisioning_api;
+pub mod provisioning_loop;
 pub mod simulator_runtimes;
 pub mod tool_inventory;
 pub mod tools_api;

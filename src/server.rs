@@ -491,6 +491,19 @@ pub async fn serve_with_updates(
         fleet.report_provisioning(applier.clone());
     }
     let planning = |recent| elsecall_tools::plan_api::Planning::new(fleet.clone(), &paths, recent);
+    let drift = elsecall_tools::drift::Drift::new(
+        recent_workspaces.clone(),
+        applier.clone(),
+        build.build.as_str().to_owned(),
+        &paths.data,
+    );
+    // The master keeps every member in step with the pins by itself.
+    let provisioning = elsecall_tools::provisioning_loop::ProvisioningLoop::new(
+        planning(recent_workspaces.clone()),
+        applier.clone(),
+        drift.clone(),
+    );
+    let _provisioning = AbortOnDrop(provisioning.start().abort_handle());
     let tools_routes = elsecall_tools::tools_api::routes(fleet.clone())
         .merge(elsecall_tools::plan_api::routes(planning(
             recent_workspaces.clone(),
@@ -498,7 +511,8 @@ pub async fn serve_with_updates(
         .merge(elsecall_tools::apply_api::routes(
             planning(recent_workspaces.clone()),
             applier.clone(),
-        ));
+        ))
+        .merge(elsecall_tools::provisioning_api::routes(provisioning));
     let desired_routes = elsecall_tools::toolset_api::routes(fleet.clone(), &paths);
     let fleet_routes = match fleet {
         Ok(fleet) => {
@@ -514,7 +528,8 @@ pub async fn serve_with_updates(
                 ))
                 .merge(elsecall_tools::tools_api::peer_routes())
                 .merge(elsecall_tools::plan_api::peer_routes(recent_workspaces))
-                .merge(elsecall_tools::apply_api::peer_routes(applier));
+                .merge(elsecall_tools::apply_api::peer_routes(applier))
+                .merge(elsecall_tools::drift::peer_routes(drift));
             if let Ok(sync) = &config_sync {
                 member_routes =
                     member_routes.merge(elsecall_sync::config_sync_api::routes(sync.clone()));

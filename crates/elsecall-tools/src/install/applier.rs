@@ -14,7 +14,7 @@
 use crate::install::{
     InstallAdmission, Installer, StepFailure,
     record::{self, Failure, Record, State},
-    request::InstallStep,
+    request::{HeldStep, InstallStep},
     work::AdmittedWork,
 };
 use elsecall_contract::{
@@ -104,8 +104,13 @@ impl Applier {
 
     /// Starts carrying out `steps`, unless an apply already runs here. No steps
     /// is an apply too: it finishes at once, and the failures of the one before
-    /// stop standing.
-    pub(crate) fn start(self: &Arc<Self>, steps: Vec<InstallStep>) -> Result<Record> {
+    /// stop standing, except those of the `held` steps, which are recorded
+    /// failed again as they were and not run.
+    pub(crate) fn start(
+        self: &Arc<Self>,
+        steps: Vec<InstallStep>,
+        held: Vec<HeldStep>,
+    ) -> Result<Record> {
         let record = {
             let mut latest = self.lock();
             if latest.as_ref().is_some_and(Record::running) {
@@ -115,9 +120,9 @@ impl Applier {
                     "Wait for it with elsecall tools applied --wait, then apply again.",
                 ));
             }
-            let mut record = Record::new(steps);
+            let mut record = Record::new(steps, held);
             for entry in &mut record.entries {
-                if self.installer(&entry.step).is_none() {
+                if entry.state == State::Queued && self.installer(&entry.step).is_none() {
                     entry.state = State::Skipped {
                         reason: "not_supported",
                     };
@@ -408,6 +413,7 @@ mod tests {
         .unwrap()
         .accept()
         .unwrap()
+        .0
     }
 
     async fn finished(applier: &Applier) -> Record {
@@ -429,9 +435,9 @@ mod tests {
             admissions.clone(),
             vec![Arc::new(Commands)],
         );
-        applier.start(steps()).unwrap();
+        applier.start(steps(), Vec::new()).unwrap();
         assert_eq!(
-            applier.start(steps()).unwrap_err().code,
+            applier.start(steps(), Vec::new()).unwrap_err().code,
             "apply_in_progress"
         );
         let record = finished(&applier).await;
@@ -482,8 +488,45 @@ mod tests {
             record,
             "the record is kept"
         );
-        applier.start(steps()).unwrap();
+        applier.start(steps(), Vec::new()).unwrap();
         finished(&applier).await;
+    }
+
+    #[tokio::test]
+    async fn a_held_step_keeps_its_failure_and_runs_nothing() {
+        let data = tempfile::tempdir().unwrap();
+        let admissions = Arc::new(Admissions::default());
+        let applier = Applier::with_installers(
+            data.path().to_owned(),
+            admissions.clone(),
+            vec![Arc::new(Commands)],
+        );
+        let mut steps = steps();
+        let failed_at = Timestamp::parse_rfc3339("2026-11-20T09:00:00Z").unwrap();
+        let held = HeldStep {
+            step: steps.remove(2),
+            stage: "privileges".into(),
+            code: "xcode_privileges_missing".into(),
+            failed_at,
+        };
+        steps.truncate(1);
+        steps[0].tool = crate::tool_inventory::ToolName::new("bun").unwrap();
+        applier.start(steps, vec![held]).unwrap();
+        let record = finished(&applier).await;
+        assert!(matches!(&record.entries[0].state,
+            State::Failed(f) if f.code == "xcode_privileges_missing" && f.at == failed_at));
+        assert!(matches!(record.entries[1].state, State::Installed { .. }));
+        assert_eq!(admissions.requests.lock().unwrap().len(), 1, "only bun ran");
+
+        let only_held = HeldStep {
+            step: record.entries[0].step.clone(),
+            stage: "privileges".into(),
+            code: "xcode_privileges_missing".into(),
+            failed_at,
+        };
+        let record = applier.start(Vec::new(), vec![only_held]).unwrap();
+        assert!(!record.running(), "nothing to run finishes at once");
+        assert_eq!(applier.summary().unwrap().failed.len(), 1);
     }
 
     #[tokio::test]
@@ -498,7 +541,7 @@ mod tests {
             admissions.clone(),
             vec![Arc::new(Commands)],
         );
-        applier.start(steps()).unwrap();
+        applier.start(steps(), Vec::new()).unwrap();
         let record = finished(&applier).await;
         assert!(matches!(&record.entries[0].state,
             State::Failed(f) if f.stage == "admission" && f.code == "install_not_admitted"));
