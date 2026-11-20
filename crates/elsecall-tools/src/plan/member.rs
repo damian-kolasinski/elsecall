@@ -296,15 +296,26 @@ fn order(
 }
 
 /// Whether the member's inventory has the step's version; `None` when it could
-/// not read that manager.
+/// not read that manager. A runtime's trailing zero segments do not count:
+/// `simctl` reports iOS 26.2 for a pinned 26.2.0.
 fn installed(inventory: &Inventory, step: &Step) -> Option<bool> {
     let derived = step.reasons.iter().all(Reason::derived_runtime);
+    let runtime = step.key.manager == Manager::Simulators;
+    let trimmed = |version: &str| {
+        if runtime {
+            version.trim_end_matches(".0").to_owned()
+        } else {
+            version.to_owned()
+        }
+    };
     inventory.managers.iter().find_map(|report| match report {
         ManagerReport::Read(read) if read.manager == step.key.manager => {
             Some(read.tools.iter().any(|tool| {
                 tool.name == step.key.tool
-                    && (compare_versions(tool.version.as_str(), step.version.as_str())
-                        == Ordering::Equal
+                    && (compare_versions(
+                        &trimmed(tool.version.as_str()),
+                        &trimmed(step.version.as_str()),
+                    ) == Ordering::Equal
                         || (derived
                             && version_extends(tool.version.as_str(), step.version.as_str())))
             }))
@@ -559,6 +570,11 @@ mod tests {
 
     #[test]
     fn a_patch_satisfies_a_derived_runtime_but_not_a_pinned_one() {
+        let zero = plan_member(&[runtime_want("26.2.0")], &[], &with_runtimes(&["26.2"]));
+        assert!(
+            zero.steps.is_empty(),
+            "a runtime's trailing zero does not count: {zero:?}"
+        );
         let derived = plan_member(&[runtime_want("26.0")], &[], &with_runtimes(&["26.0.1"]));
         assert!(derived.steps.is_empty(), "{derived:?}");
         assert_eq!(derived.installed.len(), 1);

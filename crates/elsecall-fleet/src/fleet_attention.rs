@@ -157,6 +157,28 @@ fn step_failure(member: &MemberName, failed: &FailedStep) -> (&'static str, Stri
             "mise is not installed there",
             format!("Install mise on {member}, {retry}."),
         ),
+        "xcode_missing" => (
+            "no Xcode installed there knows the runtime",
+            format!(
+                "Install Xcode {} or later on {member}; a plan that pins it in .xcode-version installs it before its runtime, {retry}.",
+                failed.version
+            ),
+        ),
+        "xcode_unreadable" => (
+            "its Xcodes could not be read",
+            format!("Run elsecall tools inventory on {member} to see why, {retry}."),
+        ),
+        "runtime_download_failed" => (
+            "xcodebuild -downloadPlatform exited with an error",
+            format!(
+                "Run xcodebuild -downloadPlatform {} -buildVersion {} -architectureVariant arm64 on {member} to see why, {retry}.",
+                failed.tool, failed.version
+            ),
+        ),
+        "runtime_download_timeout" => (
+            "the runtime's download ran for an hour",
+            format!("Check {member}'s network, {retry}."),
+        ),
         "artifact_on_master" => (
             "it is the master, which has no other member to copy mise from",
             format!("Install mise on {member} (curl https://mise.run | sh), {retry}."),

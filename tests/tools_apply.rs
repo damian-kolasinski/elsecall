@@ -3,7 +3,7 @@
 #![cfg(target_os = "macos")]
 use crate::{
     members::{TestMember, enrol},
-    tools_plan::{bare, equipped, executable, plan_with, utf8, workspace, write},
+    tools_plan::{bare, equipped, executable, plan_with, plist, utf8, workspace, write},
 };
 use serde_json::{Value, json};
 use std::{fs, path::PathBuf};
@@ -101,7 +101,7 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
         steps(&bravo_started["apply"])
             .iter()
             .all(|(tool, _, state)| {
-                if matches!(tool.as_str(), "xcode" | "iOS") {
+                if tool == "xcode" {
                     state == "skipped"
                 } else {
                     state == "queued" || state == "running"
@@ -119,7 +119,7 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
             ("bun".into(), "1.3.5".into(), "installed".into()),
             ("node".into(), "22.19.0".into(), "failed".into()),
             ("xcode".into(), "26.2".into(), "skipped".into()),
-            ("iOS".into(), "26.2".into(), "skipped".into()),
+            ("iOS".into(), "26.2".into(), "failed".into()),
         ]
     );
     assert_eq!(
@@ -129,6 +129,11 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
     assert_eq!(apply["steps"][1]["stage"], "install");
     assert_eq!(apply["steps"][1]["code"], "tool_install_failed");
     assert_eq!(apply["steps"][2]["reason"], "not_supported");
+    assert_eq!(
+        (&apply["steps"][3]["stage"], &apply["steps"][3]["code"]),
+        (&json!("download"), &json!("xcode_missing")),
+        "a runtime needs an Xcode to download it with"
+    );
 
     let log = fs::read_to_string(&mise.log).unwrap();
     let home = utf8(&fs::canonicalize(bravo.home()).unwrap());
@@ -150,8 +155,8 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
         .collect();
     assert_eq!(
         installs.len(),
-        2,
-        "one admitted run per installed step: {runs}"
+        3,
+        "one admitted run per step that ran, skipped ones not: {runs}"
     );
 
     let view = alpha.fleet();
@@ -161,7 +166,8 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
         .iter()
         .filter(|item| item["category"] == "provisioning_step_failed")
         .collect();
-    assert_eq!(items.len(), 1, "{view}");
+    assert_eq!(items.len(), 2, "{view}");
+    assert_eq!(items[1]["subject"], "simulators:iOS@26.2");
     assert_eq!(
         items[0]["id"],
         "provisioning_step_failed:bravo:mise:node@22.19.0"
@@ -187,8 +193,8 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
             .iter()
             .filter(|item| item["category"] == "provisioning_step_failed")
             .count(),
-        1,
-        "the retried step failed again and still needs attention: {view}"
+        2,
+        "the retried steps failed again and still need attention: {view}"
     );
     let everyone = alpha.ok(&["tools", "apply", "--wait"]);
     assert_eq!(
@@ -374,4 +380,58 @@ fn a_master_without_mise_has_none_to_copy_and_later_steps_fail_with_it() {
         installs, 1,
         "the second step fails without asking again: {runs}"
     );
+}
+
+#[test]
+fn a_runtime_downloads_through_the_members_own_xcode() {
+    let master_tools = equipped();
+    let bare_tools = bare();
+    let applications = PathBuf::from(
+        &bare_tools
+            .env
+            .iter()
+            .find(|(key, _)| key == "ELSECALL_XCODE_APPLICATIONS")
+            .unwrap()
+            .1,
+    );
+    let contents = applications.join("Xcode-26.2.app/Contents");
+    write(
+        &contents.join("Info.plist"),
+        &plist(&[
+            ("CFBundleIdentifier", "com.apple.dt.Xcode"),
+            ("CFBundleShortVersionString", "26.2"),
+        ]),
+    );
+    write(
+        &contents.join("version.plist"),
+        &plist(&[("ProductBuildVersion", "17C52")]),
+    );
+    let log = applications.join("xcodebuild.log");
+    executable(
+        &contents.join("Developer/usr/bin/xcodebuild"),
+        &format!(
+            "#!/bin/sh\necho \"$*|$DEVELOPER_DIR|$PWD\" >> '{}'\n",
+            utf8(&log)
+        ),
+    );
+    let alpha = TestMember::start_with("alpha", "", &master_tools.pairs());
+    let bravo = TestMember::start_with("bravo", "", &bare_tools.pairs());
+    enrol(&alpha, &bravo);
+    workspace(&alpha, "acme-ios", &[(".xcode-version", "26.2\n")]);
+    plan_with(&alpha, 1, &["tools", "plan"]);
+
+    let done = alpha.ok(&["tools", "apply", "--member", "bravo", "--wait"]);
+    assert_eq!(
+        steps(&done["members"][0]["apply"]),
+        [("iOS".into(), "26.2".into(), "installed".into())],
+        "bravo has Xcode 26.2, so only its default runtime is a step: {done}"
+    );
+    assert_eq!(
+        fs::read_to_string(&log).unwrap(),
+        format!(
+            "-downloadPlatform iOS -buildVersion 26.2 -architectureVariant arm64|{}|/\n",
+            utf8(&contents.join("Developer"))
+        )
+    );
+    drop(bravo);
 }

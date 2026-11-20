@@ -60,7 +60,10 @@ impl Applier {
         Self::with_installers(
             data,
             admission,
-            vec![Arc::new(crate::install::mise::MiseInstaller { source })],
+            vec![
+                Arc::new(crate::install::mise::MiseInstaller { source }),
+                Arc::new(crate::install::runtimes::RuntimeInstaller),
+            ],
         )
     }
 

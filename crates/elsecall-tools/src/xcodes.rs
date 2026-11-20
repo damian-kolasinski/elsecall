@@ -64,6 +64,14 @@ impl ToolManager for XcodesCli {
     }
 }
 
+/// The Xcodes installed here, with the selected one marked default, without
+/// asking `xcodes`: what the installers need.
+pub(crate) fn installed() -> Result<Vec<InstalledTool>, InventoryFailure> {
+    let mut tools = scan(&applications_dir()?)?;
+    apply_default(&mut tools, selected_developer()?.as_deref())?;
+    Ok(tools)
+}
+
 fn applications_dir() -> Result<PathBuf, InventoryFailure> {
     directory_from(command_capture::classify(command_capture::path_override(
         "ELSECALL_XCODE_APPLICATIONS",
