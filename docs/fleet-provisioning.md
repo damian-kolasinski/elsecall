@@ -768,6 +768,72 @@ partial image, which `xcodebuild` replaces on the next try. Runtimes
 are downloaded rather than copied from the master: the master keeps no runtime
 image it could send, only what `simctl` mounted.
 
+**Xcode's root steps.** Placing an Xcode bundle, selecting it and accepting
+its license need root. Elsecall never gets a general root shell for them: once
+per member, a person runs `elsecall tools privileges install`, which asks for
+an administrator's password (on the terminal, or piped in on standard input)
+and installs two files as root:
+
+- the helper, `/Library/PrivilegedHelperTools/dev.elsecall.xcode-admin`,
+  rendered for this account, owned by root and not writable by anyone else. Its
+  folder is made root's when missing; one that exists keeps its mode and must be
+  root's and writable by no one else, or nothing is installed;
+- the drop-in, `/private/etc/sudoers.d/elsecall`, mode 0440, checked by `visudo`
+  before it is moved into place, with exactly one rule:
+
+  ```
+  devbox ALL = (root) NOPASSWD: /Library/PrivilegedHelperTools/dev.elsecall.xcode-admin ^(place|select|license) [0-9]+[.][0-9]+([.][0-9]+)?$
+  ```
+
+  for the account Elsecall runs as. sudo matches the whole argument list
+  against that pattern (sudo 1.9.10 and later; macOS 26 ships 1.9.17), so this
+  account may run the helper with `place`, `select` or `license` and a version
+  of two or three numbers, without a password, and nothing else. The dot is
+  `[.]`: sudoers removes backslashes from a word, so `\.` would match any
+  character.
+
+The account is usually an administrator, and an administrator may rename
+anything in `/Applications` (`root:admin`, mode 0775): a helper that read or
+wrote a bundle there could be raced into running the account's own code as
+root, or writing where the account points. So placed bundles live in
+`/Library/Elsecall/Xcodes`, a tree only root writes, and root writes nowhere
+else; the inventory lists Xcodes there as well as in `/Applications`, and the
+installer links each one from `/Applications` as the account, for people and
+tools that look there. The helper runs again with an empty environment in `/`
+before anything else, since sudo on macOS keeps `HOME` and the caller's folder,
+and checks its arguments again, including a version of 16.0 or later. Then, as
+root:
+
+- `place VERSION` copies (never moves, so the account keeps no handle on what
+  root then runs) the account's staged `~/Library/Application
+  Support/Elsecall/xcode-staging/Xcode-VERSION.app` into a root-only folder in
+  the store, without extended attributes or ACLs and with the file flags an
+  account can set (`uchg`, `uappnd`) cleared, makes it root's,
+  strips set-ID bits and others' write bits, and moves it to
+  `/Library/Elsecall/Xcodes/Xcode-VERSION.app` only once it is Xcode of that
+  version (`CFBundleIdentifier`, `CFBundleShortVersionString`) and
+  `codesign --verify --deep --strict -R='anchor apple and identifier
+  "com.apple.dt.Xcode"'` accepts it and its license is accepted (below), so a
+  placed Xcode is a ready one and a failure (`70`) leaves nothing placed for the
+  next try to skip. It never replaces an existing bundle, and places one version
+  at a time (`75` while another placing of it runs).
+- `select VERSION` runs `xcode-select --switch` on a bundle it placed: in the
+  store, root's, and writable by no one else.
+- `license VERSION` accepts a placed bundle's license again, for a person
+  repairing a member.
+
+Accepting a license runs the bundle's `xcodebuild -license accept`, and
+`-runFirstLaunch` only when it is the newest Xcode placed: first-launch tasks
+install system packages, and an older release's would replace newer ones.
+
+`elsecall tools privileges` prints `{account, helper, drop_in, ready}`, with
+`helper` `current` (this build's for this account, root's), `stale` or
+`missing` and `drop_in` `present` or `missing` (only root may read it, so its
+content is not checked here); `ready` is both. `elsecall tools privileges
+remove` removes both files; an Xcode the helper placed stays, since nothing is
+ever uninstalled. Both commands are a person's: they ask for an administrator's
+password.
+
 **Copying between members.** A member copies an installed tool from another
 over `POST /peer/v1/tools/artifact/<artifact>` (now `mise`), upgraded to
 `elsecall-artifact/1`. Both members sign the channel for the artifact it carries
@@ -830,6 +896,37 @@ On the host, `tests/tools_apply.rs` covers two enrolled members with a fake mise
 the dry run equals the plan, steps run in the home folder with `MISE_*` removed,
 a failed step becomes a `provisioning_step_failed` item in the master's fleet
 view, and a retry that fails again keeps it.
+
+### Evidence: Xcode's root steps
+
+In a macOS VM (macOS 26.6, sudo 1.9.17), with `devbox` as the member account:
+
+- As a standard account with only the drop-in, `sudo -n` ran the helper with
+  `place 26.2`, `select 26.0.1` and `license 26.2`, and refused `place 26`,
+  `place 26.2.1.4`, `place 26.2 x`, `place 26.2;id`, `place ../x`, `remove 26.2`,
+  the helper with no arguments, and `/usr/bin/true`.
+- As an administrator whose sudo asks for its password: `elsecall tools
+  privileges` read `ready: false`; `elsecall tools privileges install` with the
+  password piped in installed both files and read `ready: true`, `helper:
+  current`. Without a password, sudo then still refused `place 26x2`, `place 26
+  2`, `place 26`, `place 26.2.1.4`, `license 26.2 x`, `remove 26.2`, `--clean
+  place 26.2` and `/usr/bin/true`.
+- A real Xcode 26.2 staged with one byte appended to its `version.plist` was
+  refused (exit 65) and nothing was placed. Staged intact, it was placed in 62
+  to 84 seconds, most of them the deep signature check: in
+  `/Library/Elsecall/Xcodes`, owned by `root:wheel` with no file set-ID,
+  writable by others or not root's. Placing it again was refused (73).
+- Clearing every file flag of the copy broke its signature: Xcode's files are
+  stored compressed, and `chflags 0` clears that flag too. Dropping extended
+  attributes and clearing only `uchg` and `uappnd` keep it valid, checked step
+  by step.
+- `license 26.2` took 5 to 7 seconds, `select 26.2` pointed `xcode-select -p` at
+  the placed bundle, and `xcodebuild -version` printed Xcode 26.2.
+
+On the host, unit tests run the helper rendered with a scratch layout and fakes
+for `codesign`, `xcode-select` and `xcodebuild` (including that none of the
+caller's environment reaches them), and check the drop-in with `visudo -c`;
+nothing is installed in the operator's account.
 
 ## Open questions for later deliveries
 

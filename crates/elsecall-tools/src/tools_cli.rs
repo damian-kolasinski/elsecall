@@ -77,6 +77,12 @@ enum ToolsCommand {
         #[arg(long)]
         wait: bool,
     },
+    /// Whether this account may place, select and license Xcode through Elsecall's
+    /// helper, and the one-time step a person takes to let it
+    Privileges {
+        #[command(subcommand)]
+        command: Option<crate::privileges_cli::PrivilegesCommand>,
+    },
     /// Show the exceptions to the pins in fleet-tools.toml for every member, or one
     Exceptions {
         /// Only this member
@@ -122,7 +128,11 @@ struct Target {
     name: String,
 }
 
-pub async fn run(paths: &Paths, args: ToolsArgs) -> Result<Value> {
+pub async fn run(
+    paths: &Paths,
+    args: ToolsArgs,
+    root: &dyn crate::privileges_cli::RootShell,
+) -> Result<Value> {
     match args.command {
         ToolsCommand::Inventory { fleet, member } => {
             if let Some(member) = member {
@@ -189,6 +199,7 @@ pub async fn run(paths: &Paths, args: ToolsArgs) -> Result<Value> {
         ToolsCommand::Applied { member, wait } => {
             crate::apply_cli::applied(paths, member.as_deref(), wait).await
         }
+        ToolsCommand::Privileges { command } => crate::privileges_cli::run(command, root).await,
         ToolsCommand::Exceptions { member } => {
             let route = match &member {
                 Some(name) => format!("{}?member={name}", toolset_api::ROUTE),

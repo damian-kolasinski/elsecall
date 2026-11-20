@@ -435,3 +435,22 @@ fn a_runtime_downloads_through_the_members_own_xcode() {
     );
     drop(bravo);
 }
+
+#[test]
+fn privileges_report_what_this_account_may_do_without_asking_for_anything() {
+    let solo = TestMember::start("solo");
+    let status = solo.ok(&["tools", "privileges"]);
+    assert!(status["ready"].is_boolean(), "{status}");
+    assert!(
+        matches!(
+            status["helper"].as_str(),
+            Some("missing" | "stale" | "current")
+        ),
+        "{status}"
+    );
+    assert!(
+        status["account"]
+            .as_str()
+            .is_some_and(|name| !name.is_empty())
+    );
+}
