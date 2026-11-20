@@ -22,6 +22,11 @@ A change to anything here is a product decision and updates this document first.
    CLI. The master lists the Macs it finds on the local network. A Mac it does not
    find can be added by host name or address.
 3. **Pick the Mac and give an administrator account's name and password on it.**
+   "Let Elsecall install Xcode on this Mac" is selected for a new Mac: Add Mac
+   then uses the same password once more, at the end, to install Elsecall's
+   Xcode helper and a sudoers rule for it alone (`--xcode-privileges` in the
+   CLI). Clear it to keep the Mac without them; a person can run `elsecall
+   tools privileges install` there later.
 4. **Approve the Mac in Tailscale** when the Mac is not on the tailnet yet: the master
    opens Tailscale's login link in its browser, which is already signed in to the
    tailnet.
@@ -149,6 +154,21 @@ it without changing its readiness.
     selected, Add Mac checks AC power before installation and changes the sleep
     settings after the other setup steps succeed. The member remains awaiting
     provisioning for its project tools and automatic job placement.
+11. **Lets Elsecall install Xcode**, when selected: renders, with the master's
+    own build, the root script `elsecall tools privileges install` runs (the
+    helper for this account and a sudoers rule for it alone), runs it as root
+    through sudo like Add Mac's other root steps, then checks that the installed
+    Elsecall's `elsecall tools privileges` reports them ready
+    ([fleet provisioning](fleet-provisioning.md), "Xcode's root steps"). The
+    password goes to sudo only, never to Elsecall on the Mac. This is the person
+    step that would otherwise wait for someone at the new Mac: the master's
+    provisioning loop copies Xcode there later without a password. It comes
+    last, after the Mac joined and after lid-closed setup, so a failure here
+    reports `member_xcode_privileges_failed` with sudo's own words in its
+    details: the Mac is a member, and the step can be repeated by running Add
+    Mac again or `elsecall tools privileges install` on the Mac. The option is
+    selected for a new Mac and cleared when Add Mac repairs a member, so a
+    member whose privileges a person removed does not get them back unasked.
 
 ## Decisions
 

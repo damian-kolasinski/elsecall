@@ -115,7 +115,15 @@ pub(crate) fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut
             action,
         } => (
             "Adding the Mac",
-            adding(&target.name, *current, action.as_ref(), clock, k, &l),
+            adding(
+                &target.name,
+                flow.xcode_privileges_choice(target),
+                *current,
+                action.as_ref(),
+                clock,
+                k,
+                &l,
+            ),
             adding_buttons(k),
         ),
         Page::Done { report } => (
@@ -131,6 +139,9 @@ pub(crate) fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut
                 }
                 "member_lid_closed_setup_failed" => {
                     "The Mac joined. Lid-closed setup needs attention."
+                }
+                "member_xcode_privileges_failed" => {
+                    "The Mac joined. Letting Elsecall install Xcode needs attention."
                 }
                 _ => "The Mac was not added",
             },
@@ -503,6 +514,24 @@ fn sign_in(state: &AppState, target: &Target, k: &Kit, l: &Look) -> El {
                     l,
                 )),
         );
+    let page = page.child(
+        col()
+            .w_full()
+            .gap(theme::SPACE_1)
+            .child(
+                Checkbox::new(flow.xcode_privileges_choice(target))
+                    .label("Let Elsecall install Xcode on this Mac")
+                    .on_toggle(|state: &mut AppState| {
+                        state.add_mac_mut().toggle_xcode_privileges()
+                    })
+                    .build(k)
+                    .key("add-mac-xcode-privileges"),
+            )
+            .child(paragraph(
+                "Uses this password once more to install Elsecall's Xcode helper and a sudoers rule for it alone, so the master can copy Xcode to this Mac later without asking.",
+                l,
+            )),
+    );
     match flow.lid_closed_choice(target) {
         Some(checked) => page.child(
             col()
@@ -526,7 +555,7 @@ fn done(report: &AddReport, l: &Look) -> El {
     let model = report.mac.model.as_deref().unwrap_or("Mac");
     let standing = match report.readiness {
         Readiness::AwaitingProvisioning => {
-            "Automatic jobs wait for provisioning. Set up the projects and tools this Mac will run, including full Xcode for Xcode builds. You can still send jobs directly to this Mac."
+            "Automatic jobs wait until the master has installed the tools the fleet's projects pin, which it does by itself, and then marks it ready. You can still send jobs directly to this Mac."
         }
         Readiness::Ready => "It is a member and takes work; adding it again repaired it.",
     };

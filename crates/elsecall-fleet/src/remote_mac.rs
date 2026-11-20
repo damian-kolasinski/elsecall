@@ -155,6 +155,10 @@ pub trait RemoteMac {
     async fn check_lid_closed_power(&mut self) -> Result<()>;
     /// Configures a MacBook to stay awake with its lid closed.
     async fn keep_awake_with_lid_closed(&mut self) -> Result<()>;
+    /// Runs `script`, the root script the master's build renders for the
+    /// account's Xcode helper and its sudoers rule, as root, then checks that
+    /// the installed Elsecall reports them ready.
+    async fn install_xcode_privileges(&mut self, script: &str) -> Result<()>;
     /// Ensures the active developer tools supply Git, reporting whether they were installed.
     async fn ensure_command_line_tools(&mut self) -> Result<bool>;
     /// Copies `build` to the Mac and runs its `install`, returning its data.

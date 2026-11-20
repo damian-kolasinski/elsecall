@@ -51,6 +51,8 @@ pub enum Step {
     Enroll,
     Verify,
     Configuration,
+    /// Letting Elsecall place, select and license Xcode, when asked.
+    Privileges,
 }
 
 impl Step {
@@ -66,6 +68,7 @@ impl Step {
             Step::Enroll => "enrolling it",
             Step::Verify => "verifying it answers as a member",
             Step::Configuration => "syncing fleet configuration to the Mac",
+            Step::Privileges => "letting Elsecall install Xcode on it",
         }
     }
 }

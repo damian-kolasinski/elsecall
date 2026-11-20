@@ -164,6 +164,10 @@ impl RemoteMac for FakeMac {
         Ok(())
     }
 
+    async fn install_xcode_privileges(&mut self, _script: &str) -> Result<()> {
+        Ok(())
+    }
+
     async fn ensure_command_line_tools(&mut self) -> Result<bool> {
         Ok(!std::mem::replace(&mut self.git_available, true))
     }

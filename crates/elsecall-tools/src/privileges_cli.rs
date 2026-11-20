@@ -37,6 +37,13 @@ pub(crate) async fn run(command: Option<PrivilegesCommand>, root: &dyn RootShell
     Ok(serde_json::to_value(status).expect("a status serializes"))
 }
 
+/// The root script that installs the helper and the sudoers rule for
+/// `account`, as this build renders them: for a Mac being added, whose root
+/// steps run its own way.
+pub fn install_script(account: &str) -> Result<String> {
+    xcode_privileges::install_script(account)
+}
+
 async fn blocking<T: Send + 'static>(
     read: impl FnOnce() -> Result<T> + Send + 'static,
 ) -> Result<T> {
