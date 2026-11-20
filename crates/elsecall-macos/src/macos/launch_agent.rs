@@ -9,9 +9,12 @@ use std::{
     process::{Command, Stdio},
 };
 /// A per-user LaunchAgent. The desktop session uses the `gui/<uid>` domain, which
-/// exists while the user is logged in to the desktop. The background session uses the
-/// `user/<uid>` domain with `LimitLoadToSessionType` `Background`, which runs without a
-/// desktop login and survives ssh disconnects.
+/// exists while the user is logged in to the desktop and loads the agent at each
+/// desktop login. The background session uses the `user/<uid>` domain with
+/// `LimitLoadToSessionType` `Background`: once bootstrapped there, the service runs
+/// without a desktop login and survives ssh disconnects, but launchd never loads it
+/// on its own, neither at boot nor at a desktop login. After a restart only the
+/// root boot starter (`boot_start`) bootstraps it again.
 pub struct LaunchAgent;
 const SESSIONS: [Session; 2] = [Session::Desktop, Session::Background];
 fn domain(session: Session) -> String {

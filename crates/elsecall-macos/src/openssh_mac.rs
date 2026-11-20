@@ -421,6 +421,18 @@ impl RemoteMac for OpensshMac {
         }
     }
 
+    async fn start_at_boot(&mut self, account: &str, uid: u32, agent: &Path) -> Result<bool> {
+        let start = crate::macos::boot_start::BootStart::new(account, uid, agent)?;
+        let ran = self.sudo(&start.install_script()?).await?;
+        match crate::macos::boot_start::BootStart::installed(&ran.stdout) {
+            Some(changed) if ran.success => Ok(changed),
+            _ => Err(remote_failure(
+                "Having the Mac start Elsecall at boot",
+                &ran,
+            )),
+        }
+    }
+
     async fn authorize_key(&mut self, line: &str) -> Result<bool> {
         let output = self
             .checked(
@@ -653,6 +665,7 @@ printf 'architecture=%s\n' "$(uname -m)"
 printf 'model=%s\n' "$(sysctl -n hw.model 2>/dev/null)"
 printf 'serial=%s\n' "$(ioreg -c IOPlatformExpertDevice -d 2 | awk -F'"' '/IOPlatformSerialNumber/{print $4}')"
 printf 'account=%s\n' "$(id -un)"
+printf 'uid=%s\n' "$(id -u)"
 printf 'home=%s\n' "$HOME"
 if id -Gn | tr ' ' '\n' | grep -qx admin; then echo administrator=yes; else echo administrator=no; fi
 printf 'local_host_name=%s\n' "$(scutil --get LocalHostName 2>/dev/null)""#;
@@ -679,6 +692,9 @@ fn parse_facts(output: &str) -> Result<MacFacts> {
         model: field("model"),
         serial_number: field("serial"),
         account: field("account").ok_or_else(missing)?,
+        uid: field("uid")
+            .and_then(|uid| uid.parse().ok())
+            .ok_or_else(missing)?,
         home: field("home").ok_or_else(missing)?,
         administrator: field("administrator").as_deref() == Some("yes"),
         local_host_name: field("local_host_name"),
@@ -723,22 +739,28 @@ mod tests {
     #[test]
     fn facts_are_read_from_their_lines() {
         let facts = parse_facts(
-            "version=26.1\narchitecture=arm64\nmodel=Mac16,10\nserial=\naccount=devbox\nhome=/Users/devbox\nadministrator=yes\nlocal_host_name=macbook-pro\n",
+            "version=26.1\narchitecture=arm64\nmodel=Mac16,10\nserial=\naccount=devbox\nuid=502\nhome=/Users/devbox\nadministrator=yes\nlocal_host_name=macbook-pro\n",
         )
         .unwrap();
         assert_eq!(facts.macos_version, "26.1");
         assert_eq!(facts.macos_major(), Some(26));
         assert_eq!(facts.serial_number, None);
         assert!(facts.administrator);
+        assert_eq!(facts.uid, 502);
         let user = parse_facts(
-            "version=15.6\narchitecture=arm64\naccount=me\nhome=/Users/me\nadministrator=no\n",
+            "version=15.6\narchitecture=arm64\naccount=me\nuid=501\nhome=/Users/me\nadministrator=no\n",
         )
         .unwrap();
         assert!(!user.administrator);
-        assert_eq!(
-            parse_facts("architecture=arm64\n").unwrap_err().code,
-            "unexpected_response"
-        );
+        for incomplete in [
+            "architecture=arm64\n",
+            "version=15.6\narchitecture=arm64\naccount=me\nuid=\nhome=/Users/me\n",
+        ] {
+            assert_eq!(
+                parse_facts(incomplete).unwrap_err().code,
+                "unexpected_response"
+            );
+        }
     }
 
     #[test]

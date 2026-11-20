@@ -161,8 +161,9 @@ Installation copies the current executable; run the newly built binary's `instal
 command again to update. In a fleet, update the master this way, then run
 `elsecall fleet upgrade` there to install the same build on every other member (see
 "Upgrading the fleet"). No root privileges, shell-profile edits, or network
-access are required by the installed application. Dependency downloads during the
-build require network access.
+access are required by the installed application; only starting a
+background-session service at boot takes a one-time root step (see sessions
+below). Dependency downloads during the build require network access.
 
 With mise, `cargo` runs through [mbx](https://mr-boxington.jdx.dev): in `mise run`
 tasks, under `mise exec`, and in any shell where mise is activated. mbx caches each
@@ -200,12 +201,26 @@ there. It runs in one of two **sessions**:
 - **background** (`user/<uid>` domain, `LimitLoadToSessionType` `Background`): runs
   without a desktop login and keeps running after the ssh session that installed it
   ends. New installations in an account without a desktop login use it, for example an
-  agent account reached only over ssh.
+  agent account reached only over ssh. launchd never loads this agent on its own,
+  neither at boot nor at a desktop login, so after a restart the service stays down
+  until something bootstraps it. A root LaunchDaemon,
+  `dev.elsecall.boot.<account>`, does that at boot, before anyone logs in (after a
+  FileVault unlock): it runs as the account and only runs
+  `launchctl bootstrap user/<uid>` on the LaunchAgent above. Add Mac installs it, and
+  `elsecall service start-at-boot` installs it on any other Mac once; it needs an
+  administrator's password, which sudo asks for on a terminal or a program pipes in
+  on standard input. Updates, `fleet upgrade`, restarts and uninstalls never need it
+  again.
 
 `install` output and `doctor` report the `session`. Updates keep the current session;
 `install --session desktop|background` switches it. Asking for the desktop session in
 an account with no desktop login is refused with `desktop_unavailable` before the
-running service is stopped. Neither session is a system boot daemon. Files live at:
+running service is stopped. `install`, `doctor` and `service start-at-boot` report the
+boot starter as `boot_start`: `installed`, `outdated` (another build's or another
+installation's) or `missing`. While a background-session installation has no current
+one, `install` and `doctor` say so in `next_step`; `doctor` stays healthy, since the
+service runs until the next restart. The starter does nothing for a desktop-session
+agent, which the desktop login starts. Files live at:
 
 | Purpose | Location |
 | --- | --- |
@@ -259,6 +274,7 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall skill status` / `remove [--agent AGENT] [--dry-run]` | Whether each agent has the skill; remove what Elsecall wrote |
 | `elsecall skill install [--dir PATH]` | Write the whole skill folder for an agent `setup` does not know, and print where |
 | `elsecall service restart` | Stop/start the registered service and wait for readiness |
+| `elsecall service start-at-boot` | Install the root boot starter that brings a background-session service back after a restart without a login; asks for an administrator's password once (see the sessions under "Build and install") |
 | `elsecall install [--open]` | Install/update and wait for readiness; set the agent skill up for the coding agents found (see "Agent skill"); in a desktop session, put the fleet window in place as an app and, with `--open`, open it (see "Desktop UI") |
 | `elsecall uninstall [--force] [--keep-mise]` | Stop the service, remove its installation, window and agent skills, and remove Elsecall's request from mise's global configuration (see "Uninstall") |
 | `elsecall run [options] -- COMMAND...` | Run a command once this machine has room, passing its I/O, signals and exit code through (see "Running commands") |
@@ -1719,7 +1735,10 @@ the Mac's host key for the rest of the command, it:
    connections (`firewall_blocks_all`), and no membership in another fleet
    (`member_of_another_fleet`);
 2. copies the master's installed build (and its window, when it has one) and runs its
-   `install`, unless the Mac already runs that build;
+   `install`, unless the Mac already runs that build, and installs the root boot
+   starter, `dev.elsecall.boot.<account>`, that brings a background-session service
+   back after the Mac restarts, before anyone logs in. Running Add Mac again
+   installs it on a member added before it existed;
 3. lets the Application Firewall pass Elsecall, and Add Mac's `tailscaled`, when it
    filters and has no rule for them, then checks that it does (`firewall_unchanged`
    otherwise), and installs a root LaunchDaemon, `dev.elsecall.firewall-guard`, that
@@ -2243,6 +2262,7 @@ repairs missing owned files and starts an unloaded service. On a
 ```sh
 launchctl print "gui/$(id -u)/dev.elsecall.agent"   # desktop session
 launchctl print "user/$(id -u)/dev.elsecall.agent"  # background session
+launchctl print "system/dev.elsecall.boot.$(id -un)" # its boot starter
 ```
 
 For foreground diagnosis, first unload the LaunchAgent to prevent competing
@@ -2292,7 +2312,10 @@ their callers' paths, and a later install's housekeeping removes them through it
 and a master's `fleet-config.toml`, `fleet-tools.toml` and `service-config-backups/`.
 Shared parent directories and unrecognized files are preserved. When anything
 stays, uninstall still succeeds and lists it under `kept`: the state directory and
-the names left in it.
+the names left in it. The root boot starter stays too, since removing it needs an
+administrator: uninstall lists it under `boot_start_kept` with the two `sudo`
+commands that remove it. Without an installation it does nothing at boot, and a
+later install uses it again.
 
 After the installation is gone, uninstall removes Elsecall's request from the global
 mise configuration that holds it, which the one-command installer added, with
