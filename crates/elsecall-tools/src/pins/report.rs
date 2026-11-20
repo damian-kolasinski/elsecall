@@ -169,6 +169,9 @@ impl Serialize for ReportedPin {
                 file: pin.source.file.clone(),
             },
         )?;
+        if !pin.options.is_empty() {
+            map.serialize_entry("options", &pin.options)?;
+        }
         map.end()
     }
 }
@@ -264,6 +267,7 @@ mod tests {
                 kind,
                 file: file.to_owned(),
             },
+            options: crate::pins::InstallOptions::default(),
         }
     }
 

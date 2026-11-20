@@ -12,6 +12,7 @@
 //! could not read is listed as unread. A derived runtime is installed when an
 //! installed version equals or extends it.
 use crate::{
+    pins::InstallOptions,
     plan::wants::{Outcome, Reason, ToolKey, Unresolved, Want, default_runtime},
     tool_inventory::{
         Inventory, InventoryFailure, Manager, ManagerReport, ToolName, ToolVersion,
@@ -37,6 +38,8 @@ pub(crate) struct Step {
     pub(crate) version: ToolVersion,
     pub(crate) exact: bool,
     pub(crate) reasons: Vec<Reason>,
+    /// The install options every pin asking for this version carries.
+    pub(crate) options: InstallOptions,
 }
 
 /// A request that is shown, not planned.
@@ -73,7 +76,7 @@ pub(crate) fn plan_member(
     for want in &wants {
         groups.entry(want.key.clone()).or_default().push(want);
     }
-    let mut candidates: Vec<Step> = Vec::new();
+    let mut candidates: Vec<Candidate> = Vec::new();
     let mut applied = Vec::new();
     for exception in exceptions {
         let key = ToolKey {
@@ -84,8 +87,9 @@ pub(crate) fn plan_member(
         if let Exception::Versions(versions) = &exception.exception
             && !replaced.is_empty()
         {
+            let options = shared_options(&replaced);
             for version in versions.versions() {
-                add(
+                let index = add(
                     &mut candidates,
                     &key,
                     version.clone(),
@@ -93,7 +97,9 @@ pub(crate) fn plan_member(
                     Reason::Exception {
                         key: exception.key.clone(),
                     },
+                    options.as_ref().unwrap_or(&InstallOptions::default()),
                 );
+                candidates[index].options_differ |= options.is_none();
             }
         }
         applied.push(Applied {
@@ -105,13 +111,16 @@ pub(crate) fn plan_member(
     for (key, wants) in groups {
         for want in wants {
             match &want.outcome {
-                Outcome::Planned { version, exact } => add(
-                    &mut candidates,
-                    &key,
-                    version.clone(),
-                    *exact,
-                    want.reason.clone(),
-                ),
+                Outcome::Planned { version, exact } => {
+                    add(
+                        &mut candidates,
+                        &key,
+                        version.clone(),
+                        *exact,
+                        want.reason.clone(),
+                        &want.options,
+                    );
+                }
                 Outcome::Unresolved { written, why } => {
                     match unresolved.iter_mut().find(|pending| {
                         pending.key == key && &pending.written == written && pending.why == *why
@@ -135,17 +144,34 @@ pub(crate) fn plan_member(
         installed: Vec::new(),
         unread: Vec::new(),
     };
-    candidates.sort_by(|left, right| order(&left.key, &left.version, &right.key, &right.version));
+    candidates.sort_by(|left, right| {
+        order(
+            &left.step.key,
+            &left.step.version,
+            &right.step.key,
+            &right.step.version,
+        )
+    });
     for report in &inventory.managers {
         if let ManagerReport::Failed { manager, failure } = report {
             plan.unread.push((*manager, failure.clone()));
         }
     }
-    for step in candidates {
+    for Candidate {
+        step,
+        options_differ,
+    } in candidates
+    {
         match installed(inventory, &step) {
             Some(true) => plan.installed.push(Installed {
                 key: step.key,
                 version: step.version,
+            }),
+            Some(false) if options_differ => plan.unresolved.push(Pending {
+                key: step.key,
+                written: Some(step.version),
+                why: Unresolved::OptionsDiffer,
+                reasons: step.reasons,
             }),
             Some(false) => plan.steps.push(step),
             None => {}
@@ -184,34 +210,62 @@ fn with_member_xcode(wants: &[Want], exceptions: &[MemberException]) -> Vec<Want
                     key: xcode.key.clone(),
                     xcode: version.clone(),
                 },
+                options: InstallOptions::default(),
             });
         }
     }
     kept
 }
 
+/// A version wanted so far, and whether its wants disagree on install options.
+struct Candidate {
+    step: Step,
+    options_differ: bool,
+}
+
 fn add(
-    candidates: &mut Vec<Step>,
+    candidates: &mut Vec<Candidate>,
     key: &ToolKey,
     version: ToolVersion,
     exact: bool,
     reason: Reason,
-) {
-    match candidates.iter_mut().find(|step| {
-        &step.key == key
-            && compare_versions(step.version.as_str(), version.as_str()) == Ordering::Equal
+    options: &InstallOptions,
+) -> usize {
+    match candidates.iter_mut().position(|candidate| {
+        &candidate.step.key == key
+            && compare_versions(candidate.step.version.as_str(), version.as_str())
+                == Ordering::Equal
     }) {
-        Some(step) => {
-            step.exact &= exact;
-            step.reasons.push(reason);
+        Some(index) => {
+            let candidate = &mut candidates[index];
+            candidate.step.exact &= exact;
+            candidate.step.reasons.push(reason);
+            candidate.options_differ |= &candidate.step.options != options;
+            index
         }
-        None => candidates.push(Step {
-            key: key.clone(),
-            version,
-            exact,
-            reasons: vec![reason],
-        }),
+        None => {
+            candidates.push(Candidate {
+                step: Step {
+                    key: key.clone(),
+                    version,
+                    exact,
+                    reasons: vec![reason],
+                    options: options.clone(),
+                },
+                options_differ: false,
+            });
+            candidates.len() - 1
+        }
     }
+}
+
+/// The install options the pins an exception replaces agree on, which its own
+/// versions take, since an exception names versions and no options. None when
+/// they disagree: which options a member's own version needs is then unknown.
+fn shared_options(replaced: &[&Want]) -> Option<InstallOptions> {
+    let mut options = replaced.iter().map(|want| &want.options);
+    let first = options.next()?;
+    options.all(|other| other == first).then(|| first.clone())
 }
 
 /// The versions the replaced wants asked for, as written, without repeats.
@@ -300,6 +354,7 @@ mod tests {
                 exact,
             },
             reason: pin_reason("~/acme-ios", written),
+            options: InstallOptions::default(),
         }
     }
 
@@ -410,6 +465,7 @@ mod tests {
                 why: Unresolved::Selector,
             },
             reason: pin_reason(workspace, "lts"),
+            options: InstallOptions::default(),
         };
         let plan = plan_member(
             &[pending("~/a"), pending("~/b")],
@@ -476,6 +532,7 @@ mod tests {
                 workspace: "~/acme-ios".into(),
                 xcode: version(xcode),
             },
+            options: InstallOptions::default(),
         }
     }
 
@@ -542,6 +599,68 @@ mod tests {
             plan.steps.is_empty() && plan.unresolved.is_empty(),
             "{plan:?}"
         );
+    }
+
+    fn with_options(mut want: Want, toml: &str) -> Want {
+        let table: toml::Table = toml::from_str(toml).unwrap();
+        want.options =
+            InstallOptions::from_table("mise.toml", "tools.x", &table, &Default::default())
+                .unwrap();
+        want
+    }
+
+    #[test]
+    fn steps_carry_install_options_and_disagreeing_ones_are_unresolved() {
+        let prefixed = |version: &str| {
+            with_options(
+                want(Manager::Mise, "github:example/tool", version, true, version),
+                "version_prefix = \"tool-\"",
+            )
+        };
+        let wants = [
+            prefixed("1.0.0"),
+            prefixed("1.0.0"),
+            prefixed("2.0.0"),
+            want(Manager::Mise, "github:example/tool", "2.0.0", true, "2.0.0"),
+        ];
+        let plan = plan_member(&wants, &[], &inventory(&[], Some(&[])));
+        assert_eq!(plan.steps.len(), 1);
+        assert_eq!(plan.steps[0].version, version("1.0.0"));
+        assert_eq!(plan.steps[0].reasons.len(), 2);
+        assert_eq!(plan.steps[0].options.to_map()["version_prefix"], "tool-");
+        assert_eq!(plan.unresolved.len(), 1);
+        assert_eq!(plan.unresolved[0].why, Unresolved::OptionsDiffer);
+        assert_eq!(plan.unresolved[0].written, Some(version("2.0.0")));
+
+        let installed = plan_member(
+            &wants,
+            &[],
+            &inventory(&[("github:example/tool", "2.0.0")], Some(&[])),
+        );
+        assert!(
+            installed.unresolved.is_empty(),
+            "an installed version needs no options"
+        );
+
+        let kept = "[members.alpha.mise.tools.\"github:example/tool\"]\ninstall = [\"3.0.0\"]\n";
+        let plan = plan_member(
+            &wants[..1],
+            &exceptions(kept, "alpha"),
+            &inventory(&[], Some(&[])),
+        );
+        assert_eq!(plan.steps[0].version, version("3.0.0"));
+        assert_eq!(
+            plan.steps[0].options.to_map()["version_prefix"],
+            "tool-",
+            "an exception's versions take the options its pins agree on"
+        );
+        let plan = plan_member(
+            &wants[2..],
+            &exceptions(kept, "alpha"),
+            &inventory(&[], Some(&[])),
+        );
+        assert!(plan.steps.is_empty(), "{plan:?}");
+        assert_eq!(plan.unresolved[0].why, Unresolved::OptionsDiffer);
     }
 
     #[test]

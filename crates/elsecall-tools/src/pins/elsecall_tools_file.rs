@@ -11,8 +11,8 @@
 //! here. Versions are exact from the start, since this file is Elsecall's own. `.elsecall.toml`, the
 //! legacy workload file, is a different file and is not read.
 use crate::pins::{
-    Pin, PinSource, Platform, Reading, SourceFile, SourceKind, Target, dotted_version, invalid,
-    source_file::read_workspace_file,
+    InstallOptions, Pin, PinSource, Platform, Reading, SourceFile, SourceKind, Target,
+    dotted_version, invalid, source_file::read_workspace_file,
 };
 use elsecall_contract::failure::Result;
 use std::path::Path;
@@ -37,6 +37,7 @@ impl PinSource for ElsecallToolsFile {
                 target: Target::SimulatorRuntime(platform),
                 version,
                 source: source.clone(),
+                options: InstallOptions::default(),
             });
         }
         reading.files.push(source);

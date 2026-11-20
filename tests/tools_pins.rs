@@ -59,7 +59,8 @@ fn layout() -> Layout {
     write(
         &workspace.join("mise.toml"),
         &format!(
-            "[tools]\npython = \"3.10.4\"\nbun = \"latest\"\nsentry-cli = \"latest\"\n\
+            "[tools]\npython = {{ version = \"3.10.4\", version_prefix = \"v\", postinstall = \"touch {marker}\", install_env = {{ CC = \"{marker}\" }} }}\n\
+             bun = \"latest\"\nsentry-cli = \"latest\"\n\
              [env]\nAPI_TOKEN = \"{{{{ exec(command='touch {marker}') }}}}\"\n\
              [hooks]\nenter = \"touch {marker}\"\n\
              [tasks.build]\nrun = \"touch {marker}\"\n",
@@ -189,7 +190,8 @@ fn a_workspace_reports_every_pin_and_runs_none_of_its_code() {
                      "exact": true, "environment": "signing",
                      "source": source("mise_project", "mise.signing.toml")},
                     {"manager": "mise", "tool": "python", "version": "3.10.4", "exact": true,
-                     "environment": null, "source": project},
+                     "environment": null, "source": project,
+                     "options": {"version_prefix": "v"}},
                     {"manager": "mise", "tool": "ruby", "version": "3.2.0", "exact": true,
                      "environment": null, "source": global},
                     {"manager": "mise", "tool": "sentry-cli", "version": "latest", "exact": false,

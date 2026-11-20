@@ -101,8 +101,9 @@ It parses each file as TOML and looks only at `[tools]`. `[env]`, `[hooks]`,
 `[tasks]` and the rest are never evaluated. A tool's value is a version, a list
 of versions, a table with `version`, or a list mixing them. A table whose `os`
 leaves out Apple Silicon macOS (`macos`, `darwin`, or either with `/arm64`)
-pins nothing, since every member runs Elsecall's arm64 build. Other per-tool options are ignored
-(see "Open questions" for those the installer needs). A version must be literal:
+pins nothing, since every member runs Elsecall's arm64 build. Of the other
+per-tool options only the [install options](#install-options) are kept; the rest
+are never read. A version must be literal:
 one containing `{{`, `{%` or `{#` is an error, not something to render.
 
 The reader also does not trust the files themselves. A workspace path is
@@ -120,6 +121,46 @@ value or an unknown key.
 mise runs only to resolve inexact pins against this machine, as the inventory
 already runs it: in the home folder, with `MISE_*` removed, never in the
 workspace.
+
+### Install options
+
+Some tools need options next to their version to be installed at all: a GitHub
+release whose tags are `cargo-nextest-0.9.150` needs `version_prefix`. Delivery 4
+decided which options travel from a pin to the installer: an allowlist of the
+options that pick which published artifact a version is and how mise verifies
+it, so a member installs the build the pins describe, and nothing else.
+
+- which release and asset: `version_prefix`, `asset_pattern`, `matching`;
+- where its executables are: `bin`, `bin_path`, `exe`, `rename_exe`,
+  `strip_components`;
+- who must have signed it: `slsa_signer_identity`, `slsa_signer_issuer`.
+
+They are read from a tool's table and from the brackets of its key, as mise
+reads `"ubi:cli/cli[exe=gh]"`: the tool is `ubi:cli/cli`, with `exe`. One option
+set both ways is an error. Every other option is dropped. `postinstall` is a
+shell command and `install_env` the environment a build runs in, so neither ever
+travels; nor does `api_url`, which would send the download to another server,
+or `os`, which the reader applies.
+
+A carried value is a string, number or boolean of 1 to 256 characters, literal
+like a version (a template is `pin_source_invalid`). The installer passes
+options in mise's bracket syntax (`tool[option=value]@version`), so a value
+holds no white space, control character, comma, equals sign, bracket, quote or
+backslash, which could end it there; that is why `matching_regex` and
+`filter_bins`, whose values need them, are not carried. A path (`bin`,
+`bin_path`, `exe`, `rename_exe`) is relative to the tool's install and has no
+`..`. A value breaking these rules is `pin_source_invalid`, naming the key.
+
+- One file repeating a version with other options is `pin_source_invalid`; two
+  workspace files pinning the same versions with different options conflict
+  (`pins_conflict`).
+- Across workspaces, and between a workspace and the master's global config,
+  pins asking for one version with different options are not planned: the
+  version is unresolved with a hint to pin it with the same options everywhere,
+  unless the member already has it.
+- An exception's versions take the options of the pins it replaces when they
+  agree; when they disagree, its versions are unresolved the same way, since an
+  exception names versions and no options.
 
 ### Inexact pins
 
@@ -414,7 +455,8 @@ It prints the standard JSON envelope. `data` is:
 - `pins`: ordered by manager (mise, xcodes, simulators), tool, environment, then
   source. Each has `manager`, `tool`, `version` (as written), `exact`,
   `environment` (the mise environment, or null) and `source` (`{kind, file}`). An
-  inexact pin adds `resolved` (a version, or null) and `hint`. Managers and tool
+  inexact pin adds `resolved` (a version, or null) and `hint`; a mise pin with
+  [install options](#install-options) adds `options`, an object by option name. Managers and tool
   names are inventory's: Xcode is manager `xcodes`, tool `xcode`; a runtime is
   manager `simulators`, tool `iOS`.
 - `warnings`: managers that could not be read, as `{manager, error}`, with the
@@ -520,8 +562,11 @@ pinned 26.2, and one that leaves Xcode out wants none. Runtimes pinned in
   could not be read is `{member, state: "unavailable", error}`, with the fleet
   inventory's codes. Otherwise `state` is `planned` with:
   - `steps`: versions to install, ordered by manager (mise, xcodes,
-    simulators), tool and version: `{manager, tool, version, exact, reasons}`,
-    and `hint` when `exact` is false.
+    simulators), tool and version: `{manager, tool, version, exact, reasons,
+    options}`, and `hint` when `exact` is false. `options` are the
+    [install options](#install-options) the pins agree on, `{}` for most.
+    An entry of `unresolved` for options that differ names the planned version,
+    not each pin as written; its `reasons` keep those.
   - `unresolved`: requests shown and not planned, grouped: `{manager, tool,
     version, hint, reasons}`; `version` is the pin as written, or null for a
     default runtime.
@@ -567,10 +612,5 @@ each real workspace on the master: `acme-ios` and this repository.
   effect, but a `fleet move-master` leaves it behind until it is copied. That
   is its own slice in `elsecall-sync`; it also needs a generation in a fleet
   that syncs no paths.
-- **Install options.** Some tables carry options the installer needs
-  (`version_prefix` for a GitHub release, verification identities for a package
-  backend). Delivery 4 decides which to carry, as an allowlist; `postinstall` is never
-  one of them, and installs name `tool@version` explicitly instead of running
-  `mise install` in a workspace.
 - **mise lockfiles.** A `mise.lock` records exact resolved versions and would make
   `latest` pins exact without asking the master. Not read yet.

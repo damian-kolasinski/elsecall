@@ -2,12 +2,13 @@
 //!
 //! Two workspace files that pin the same target (a mise tool in one mise
 //! environment, Xcode, a runtime) conflict, unless both are mise project files
-//! asking for the same versions, which is one pin credited to the first. A
+//! asking for the same versions with the same install options, which is one pin
+//! credited to the first. A
 //! conflict is never settled by precedence: a reader of either file alone would
 //! be misled. The master's global config is a layer under the project, as mise
 //! treats it, so a global pin never conflicts with a project one; both stay.
 use crate::{
-    pins::{Pin, SourceFile, SourceKind, Target},
+    pins::{InstallOptions, Pin, SourceFile, SourceKind, Target},
     tool_inventory::ToolVersion,
 };
 use elsecall_contract::failure::{Failure, Result};
@@ -15,12 +16,13 @@ use std::collections::BTreeMap;
 
 /// `pins` without repeated identical project pins, or the first conflict.
 pub(super) fn without_conflicts(pins: Vec<Pin>) -> Result<Vec<Pin>> {
-    let mut groups: BTreeMap<&Target, Vec<(&SourceFile, Vec<&ToolVersion>)>> = BTreeMap::new();
+    type Requested<'a> = Vec<(&'a ToolVersion, &'a InstallOptions)>;
+    let mut groups: BTreeMap<&Target, Vec<(&SourceFile, Requested)>> = BTreeMap::new();
     for pin in pins.iter().filter(|pin| !global(pin)) {
         let files = groups.entry(&pin.target).or_default();
         match files.iter_mut().find(|(source, _)| *source == &pin.source) {
-            Some((_, versions)) => versions.push(&pin.version),
-            None => files.push((&pin.source, vec![&pin.version])),
+            Some((_, versions)) => versions.push((&pin.version, &pin.options)),
+            None => files.push((&pin.source, vec![(&pin.version, &pin.options)])),
         }
     }
     let mut owners: BTreeMap<Target, SourceFile> = BTreeMap::new();
@@ -79,6 +81,7 @@ mod tests {
                 kind,
                 file: file.to_owned(),
             },
+            options: InstallOptions::default(),
         }
     }
 
@@ -107,6 +110,18 @@ mod tests {
         ])
         .unwrap();
         assert_eq!(files(&kept), [".tool-versions", ".tool-versions"]);
+    }
+
+    #[test]
+    fn the_same_version_with_other_install_options_conflicts() {
+        let table: toml::Table = toml::from_str("version = \"22.19.0\"\nbin = \"node\"").unwrap();
+        let mut optioned = project("mise.toml", "22.19.0");
+        optioned.options =
+            InstallOptions::from_table("mise.toml", "tools.node", &table, &Default::default())
+                .unwrap();
+        let error =
+            without_conflicts(vec![project(".tool-versions", "22.19.0"), optioned]).unwrap_err();
+        assert_eq!(error.code, "pins_conflict");
     }
 
     #[test]

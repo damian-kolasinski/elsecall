@@ -12,14 +12,14 @@
 //! its own, as `protocol_error`; the member's other workspaces still count.
 use crate::{
     pins::{
-        Environment, Pin, Platform, Reading, SourceFile, SourceKind, Target, dotted_version,
-        literal_version,
+        Environment, InstallOptions, Pin, Platform, Reading, SourceFile, SourceKind, Target,
+        dotted_version, literal_version,
     },
     tool_inventory::{ToolName, ToolVersion},
 };
 use elsecall_contract::{failure::Failure, scheduling_model::timestamp::Timestamp};
 use serde::{Deserialize, Serialize, ser::SerializeMap};
-use std::path::Path;
+use std::{collections::BTreeMap, path::Path};
 
 /// Workspaces a member reports, the most recently used first.
 pub(crate) const MAXIMUM_WORKSPACES: usize = 64;
@@ -118,6 +118,8 @@ struct WirePin {
     version: String,
     environment: Option<String>,
     source: WireSource,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    options: BTreeMap<String, String>,
 }
 
 impl WirePin {
@@ -128,6 +130,7 @@ impl WirePin {
             version: pin.version.as_str().to_owned(),
             environment: pin.target.environment().map(|e| e.as_str().to_owned()),
             source: WireSource::of(&pin.source),
+            options: pin.options.to_map(),
         }
     }
 }
@@ -217,10 +220,15 @@ fn accept_reading(
         }
         let target = target(&pin.manager, &pin.tool, pin.environment.as_deref())?;
         let version = version_of(&target, &source, &pin.version)?;
+        if !pin.options.is_empty() && !matches!(target, Target::Mise { .. }) {
+            return Err("only a mise pin carries install options");
+        }
+        let options = InstallOptions::from_wire(pin.options)?;
         accepted.push(Pin {
             target,
             version,
             source,
+            options,
         });
     }
     Ok(Reading {
@@ -281,7 +289,7 @@ fn target(
     match (manager, environment) {
         ("mise", environment) => Ok(Target::Mise {
             tool: ToolName::new(tool)
-                .filter(|_| text(tool) && !tool.starts_with('-'))
+                .filter(|_| text(tool) && !tool.starts_with('-') && !tool.contains(['[', ']']))
                 .ok_or("a mise tool name is not a name")?,
             environment: environment
                 .map(|name| Environment::new(name).ok_or("an environment is not a name"))
@@ -346,6 +354,11 @@ mod tests {
                             },
                             version: version("0.2.0"),
                             source: project,
+                            options: InstallOptions::from_wire(BTreeMap::from([(
+                                "version_prefix".to_owned(),
+                                "v".to_owned(),
+                            )]))
+                            .unwrap(),
                         }],
                     }),
                 },
@@ -365,7 +378,8 @@ mod tests {
         assert_eq!(
             value["workspaces"][0]["pins"][0],
             json!({"manager": "mise", "tool": "crem", "version": "0.2.0", "environment": "signing",
-                   "source": {"kind": "mise_project", "file": "mise.signing.toml"}})
+                   "source": {"kind": "mise_project", "file": "mise.signing.toml"},
+                   "options": {"version_prefix": "v"}})
         );
         let parsed: WorkspaceReport = serde_json::from_value(value).unwrap();
         let first = &parsed.workspaces[0];
@@ -400,12 +414,15 @@ mod tests {
             }) as &dyn Fn(&mut serde_json::Value),
             &|v| v["workspaces"][0]["pins"][0]["version"] = json!("--force"),
             &|v| v["workspaces"][0]["pins"][0]["tool"] = json!("-x"),
+            &|v| v["workspaces"][0]["pins"][0]["tool"] = json!("crem[postinstall=x]"),
             &|v| v["workspaces"][0]["pins"][0]["source"]["kind"] = json!("mise_global"),
             &|v| v["workspaces"][0]["sources"][0]["file"] = json!("/etc/passwd"),
             &|v| v["workspaces"][0]["pins"][0]["source"]["file"] = json!("mise.toml"),
             &|v| v["workspaces"][0]["pins"][0]["manager"] = json!("xcodes"),
             &|v| v["workspaces"][0]["pins"][0]["environment"] = json!("local"),
             &|v| v["workspaces"][0]["state"] = json!("failed"),
+            &|v| v["workspaces"][0]["pins"][0]["options"]["postinstall"] = json!("touch /tmp/x"),
+            &|v| v["workspaces"][0]["pins"][0]["options"]["bin"] = json!("{{ env.X }}"),
         ] {
             assert_eq!(first_fails(edit), "protocol_error");
         }
@@ -420,6 +437,17 @@ mod tests {
             parsed.workspaces[0].pins.is_ok()
         };
         assert!(xcode("26.2") && xcode("26"));
+        let mut optioned_xcode = base.clone();
+        optioned_xcode["workspaces"][0]["sources"][0] =
+            json!({"kind": "xcode_version", "file": ".xcode-version"});
+        optioned_xcode["workspaces"][0]["pins"][0] = json!({"manager": "xcodes", "tool": "xcode",
+            "version": "26.2", "environment": null, "options": {"bin": "x"},
+            "source": {"kind": "xcode_version", "file": ".xcode-version"}});
+        let parsed: WorkspaceReport = serde_json::from_value(optioned_xcode).unwrap();
+        assert_eq!(
+            parsed.workspaces[0].pins.as_ref().unwrap_err().code,
+            "protocol_error"
+        );
         assert!(!xcode("latest") && !xcode("26.2-beta"));
         let mut odd = base.clone();
         odd["workspaces"][1]["error"]["code"] = json!("internal_error");

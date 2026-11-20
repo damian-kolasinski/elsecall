@@ -9,6 +9,7 @@
 mod conflicts;
 mod elsecall_tools_file;
 pub(crate) mod exactness;
+pub(crate) mod install_options;
 pub mod lookup;
 mod mise_config;
 mod mise_global;
@@ -20,6 +21,7 @@ mod xcode_version;
 
 use crate::tool_inventory::{ToolManager, ToolName, ToolVersion};
 use elsecall_contract::failure::{Failure, Result};
+pub(crate) use install_options::InstallOptions;
 use std::path::{Path, PathBuf};
 
 /// How many characters a pinned version may have.
@@ -142,6 +144,8 @@ pub(crate) struct Pin {
     pub(crate) target: Target,
     pub(crate) version: ToolVersion,
     pub(crate) source: SourceFile,
+    /// The install options a mise pin carries; empty for every other pin.
+    pub(crate) options: InstallOptions,
 }
 
 /// What one source found: the files it read, even those that pin nothing, and

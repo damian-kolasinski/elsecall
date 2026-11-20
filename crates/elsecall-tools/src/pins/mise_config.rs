@@ -4,14 +4,19 @@
 //! `[tasks]` and the rest are never evaluated. A tool's value is a version, a
 //! list of versions, a table with `version`, or a list mixing both. A table
 //! whose `os` leaves out Apple Silicon macOS (`macos`, `macos/arm64`) pins
-//! nothing here: every member runs on it. Its other options, such as
-//! `postinstall`, are ignored: reading never runs them. Versions must be
+//! nothing here: every member runs on it. Of its other options only those that
+//! pick the artifact are kept, for the installer ([`InstallOptions`]); the rest,
+//! such as `postinstall`, are dropped: reading never runs them. Versions must be
 //! literal, so a template is an error rather than something to render. A
 //! version repeated for one tool is one pin. The asdf names mise accepts for
 //! its own tools (`nodejs`, `golang`) are read as the names inventory reports;
 //! naming one tool both ways in a file is an error, as mise would keep one.
 use crate::{
-    pins::{Environment, Pin, Reading, SourceFile, Target, invalid, literal_version},
+    pins::{
+        Environment, InstallOptions, Pin, Reading, SourceFile, Target,
+        install_options::{Bracketed, split_key},
+        invalid, literal_version,
+    },
     tool_inventory::{ToolName, ToolVersion},
 };
 use elsecall_contract::failure::Result;
@@ -19,11 +24,12 @@ use elsecall_contract::failure::Result;
 /// More versions than any real config pins; a bound on untrusted input.
 const MAX_PINS: usize = 1024;
 
-/// One tool's requested versions in one file, in the order written.
+/// One tool's requested versions in one file, in the order written, each with
+/// the install options its table carries.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct ToolRequests {
     pub(super) tool: ToolName,
-    pub(super) versions: Vec<ToolVersion>,
+    pub(super) versions: Vec<(ToolVersion, InstallOptions)>,
 }
 
 /// The tools `text` pins, by tool name. `file` names the file in errors.
@@ -39,15 +45,9 @@ pub(super) fn tools(text: &str, file: &str) -> Result<Vec<ToolRequests>> {
     let mut requests = Vec::new();
     let mut count = 0;
     for (name, value) in tools {
-        let tool = tool_name(name).ok_or_else(|| {
-            invalid(
-                file,
-                "tools",
-                "tool names cannot be empty or contain whitespace or control characters",
-            )
-        })?;
+        let (tool, bracketed) = tool_key(file, "tools", name)?;
         let key = format!("tools.{name}");
-        let versions = tool_versions(file, &key, value)?;
+        let versions = tool_versions(file, &key, value, &bracketed)?;
         count += versions.len();
         if count > MAX_PINS {
             return Err(invalid(file, "tools", "at most 1024 versions in one file"));
@@ -62,23 +62,38 @@ pub(super) fn tools(text: &str, file: &str) -> Result<Vec<ToolRequests>> {
                 "the tool is also named another way in this file; mise keeps only one",
             ));
         }
-        add(&mut requests, tool, versions);
+        add(&mut requests, tool, versions).map_err(|rule| invalid(file, &key, rule))?;
     }
     Ok(requests)
 }
 
-/// A tool name as written, with mise's asdf aliases replaced by its own names.
-pub(super) fn tool_name(name: &str) -> Option<ToolName> {
+/// A tool's key as written: its name, with mise's asdf aliases replaced by its
+/// own names, and the options the key holds in brackets. `place` names the
+/// key in errors.
+pub(super) fn tool_key(file: &str, place: &str, key: &str) -> Result<(ToolName, Bracketed)> {
+    let (name, bracketed) = split_key(key).map_err(|rule| invalid(file, place, rule))?;
     let name = match name {
         "nodejs" => "node",
         "golang" => "go",
         other => other,
     };
-    ToolName::new(name)
+    let tool = ToolName::new(name).ok_or_else(|| {
+        invalid(
+            file,
+            place,
+            "tool names cannot be empty or contain whitespace or control characters",
+        )
+    })?;
+    Ok((tool, bracketed))
 }
 
-/// Adds `versions` to `tool`'s request, keeping the first of any repeat.
-pub(super) fn add(requests: &mut Vec<ToolRequests>, tool: ToolName, versions: Vec<ToolVersion>) {
+/// Adds `versions` to `tool`'s request; a repeated version is one pin, and one
+/// repeated with other install options is the broken rule.
+pub(super) fn add(
+    requests: &mut Vec<ToolRequests>,
+    tool: ToolName,
+    versions: Vec<(ToolVersion, InstallOptions)>,
+) -> std::result::Result<(), &'static str> {
     let index = match requests.iter().position(|request| request.tool == tool) {
         Some(index) => index,
         None => {
@@ -90,14 +105,19 @@ pub(super) fn add(requests: &mut Vec<ToolRequests>, tool: ToolName, versions: Ve
         }
     };
     let request = &mut requests[index];
-    for version in versions {
-        if !request.versions.contains(&version) {
-            request.versions.push(version);
+    for (version, options) in versions {
+        match request.versions.iter().find(|(kept, _)| kept == &version) {
+            Some((_, kept)) if kept != &options => {
+                return Err("a version is repeated with other install options");
+            }
+            Some(_) => {}
+            None => request.versions.push((version, options)),
         }
     }
     if request.versions.is_empty() {
         requests.remove(index);
     }
+    Ok(())
 }
 
 /// One pin per requested version, in the order written.
@@ -108,7 +128,7 @@ pub(super) fn push_pins(
     reading: &mut Reading,
 ) {
     for request in requests {
-        for version in request.versions {
+        for (version, options) in request.versions {
             reading.pins.push(Pin {
                 target: Target::Mise {
                     tool: request.tool.clone(),
@@ -116,35 +136,54 @@ pub(super) fn push_pins(
                 },
                 version,
                 source: source.clone(),
+                options,
             });
         }
     }
 }
 
-fn tool_versions(file: &str, key: &str, value: &toml::Value) -> Result<Vec<ToolVersion>> {
+fn tool_versions(
+    file: &str,
+    key: &str,
+    value: &toml::Value,
+    bracketed: &Bracketed,
+) -> Result<Vec<(ToolVersion, InstallOptions)>> {
     match value {
         toml::Value::Array(items) => {
             let mut versions = Vec::new();
             for item in items {
-                if let Some(version) = one_version(file, key, item)? {
+                if let Some(version) = one_version(file, key, item, bracketed)? {
                     versions.push(version);
                 }
             }
             Ok(versions)
         }
-        other => Ok(one_version(file, key, other)?.into_iter().collect()),
+        other => Ok(one_version(file, key, other, bracketed)?
+            .into_iter()
+            .collect()),
     }
 }
 
-fn one_version(file: &str, key: &str, value: &toml::Value) -> Result<Option<ToolVersion>> {
+fn one_version(
+    file: &str,
+    key: &str,
+    value: &toml::Value,
+    bracketed: &Bracketed,
+) -> Result<Option<(ToolVersion, InstallOptions)>> {
     match value {
-        toml::Value::String(text) => literal_version(file, key, text).map(Some),
+        toml::Value::String(text) => Ok(Some((
+            literal_version(file, key, text)?,
+            InstallOptions::from_brackets(bracketed),
+        ))),
         toml::Value::Table(table) => {
             if !for_macos(file, key, table.get("os"))? {
                 return Ok(None);
             }
             match table.get("version") {
-                Some(toml::Value::String(text)) => literal_version(file, key, text).map(Some),
+                Some(toml::Value::String(text)) => Ok(Some((
+                    literal_version(file, key, text)?,
+                    InstallOptions::from_table(file, key, table, bracketed)?,
+                ))),
                 _ => Err(invalid(file, key, "a tool table needs a version string")),
             }
         }
@@ -191,7 +230,7 @@ mod tests {
                     request
                         .versions
                         .iter()
-                        .map(|version| version.as_str().to_owned())
+                        .map(|(version, _)| version.as_str().to_owned())
                         .collect(),
                 )
             })
@@ -225,6 +264,41 @@ mod tests {
                 ("python".into(), vec!["3.10.4".into()]),
             ]
         );
+    }
+
+    #[test]
+    fn bracketed_options_join_the_table_and_a_repeat_must_agree() {
+        let text = r#"
+            [tools]
+            "ubi:cli/cli[exe=gh,postinstall=touch /tmp/never]" = ["2.0.0", { version = "2.1.0", bin_path = "bin" }]
+        "#;
+        let requests = tools(text, "mise.toml").unwrap();
+        assert_eq!(requests[0].tool.as_str(), "ubi:cli/cli");
+        let options: Vec<Vec<(&str, &str)>> = requests[0]
+            .versions
+            .iter()
+            .map(|(_, options)| options.iter().collect())
+            .collect();
+        assert_eq!(
+            options,
+            [
+                vec![("exe", "gh")],
+                vec![("bin_path", "bin"), ("exe", "gh")]
+            ]
+        );
+        let repeated = "[tools]\nnode = [\"22.19.0\", { version = \"22.19.0\", bin = \"node\" }]\n";
+        let error = tools(repeated, "mise.toml").unwrap_err();
+        assert!(
+            error
+                .message
+                .contains("repeated with other install options"),
+            "{}",
+            error.message
+        );
+        let same = "[tools]\nnode = [\"22.19.0\", { version = \"22.19.0\" }]\n";
+        assert_eq!(tools(same, "mise.toml").unwrap()[0].versions.len(), 1);
+        let broken = "[tools]\n\"github:a/b[exe]\" = \"1.0.0\"\n";
+        assert!(tools(broken, "mise.toml").is_err());
     }
 
     #[test]

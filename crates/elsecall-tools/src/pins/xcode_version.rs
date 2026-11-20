@@ -1,8 +1,8 @@
 //! `.xcode-version`: the Xcode a repository builds with, one version such as
 //! `26.2`, as xcodes and fastlane read it.
 use crate::pins::{
-    Pin, PinSource, Reading, SourceFile, SourceKind, Target, dotted_version, invalid,
-    source_file::read_workspace_file,
+    InstallOptions, Pin, PinSource, Reading, SourceFile, SourceKind, Target, dotted_version,
+    invalid, source_file::read_workspace_file,
 };
 use elsecall_contract::failure::Result;
 use std::path::Path;
@@ -37,6 +37,7 @@ impl PinSource for XcodeVersionFile {
             target: Target::Xcode,
             version,
             source: source.clone(),
+            options: InstallOptions::default(),
         });
         reading.files.push(source);
         Ok(reading)

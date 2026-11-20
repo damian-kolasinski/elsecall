@@ -117,6 +117,7 @@ fn step(master: &MemberName, step: &Step) -> Value {
         "version": step.version,
         "exact": step.exact,
         "reasons": step.reasons.iter().map(reason).collect::<Vec<_>>(),
+        "options": step.options,
     });
     if !step.exact {
         value["hint"] = json!(format!(
