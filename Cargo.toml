@@ -7,7 +7,7 @@ default-members = ["."]
 
 # Every crate is one release: they share its version, which the binaries report.
 [workspace.package]
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 rust-version = "1.99"
 license = "MIT"
