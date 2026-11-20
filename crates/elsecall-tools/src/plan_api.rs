@@ -18,6 +18,7 @@ use crate::{
     pins::{self, Reading},
     plan::{
         self, Inputs,
+        document::Document,
         reported::{self, ReportedWorkspace, WorkspaceReport},
     },
     toolset::{document::Toolset, store},
@@ -68,24 +69,36 @@ pub struct RecentWorkspace {
     pub last_run_at: Timestamp,
 }
 
-struct Planning {
+/// What planning reads: the fleet, `fleet-tools.toml` and this member's
+/// recent workspaces.
+pub struct Planning {
     fleet: std::result::Result<Arc<Fleet>, Failure>,
     exceptions: PathBuf,
     recent: Arc<dyn RecentWorkspaces>,
 }
 
-pub fn routes(
-    fleet: std::result::Result<Arc<Fleet>, Failure>,
-    paths: &Paths,
-    recent: Arc<dyn RecentWorkspaces>,
-) -> Router {
-    Router::new()
-        .route(ROUTE, get(plan_route))
-        .with_state(Arc::new(Planning {
+impl Planning {
+    pub fn new(
+        fleet: std::result::Result<Arc<Fleet>, Failure>,
+        paths: &Paths,
+        recent: Arc<dyn RecentWorkspaces>,
+    ) -> Self {
+        Self {
             fleet,
             exceptions: store::path(&paths.data),
             recent,
-        }))
+        }
+    }
+
+    pub(crate) fn fleet(&self) -> Result<Arc<Fleet>> {
+        self.fleet.clone()
+    }
+}
+
+pub fn routes(planning: Planning) -> Router {
+    Router::new()
+        .route(ROUTE, get(plan_route))
+        .with_state(Arc::new(planning))
 }
 
 /// The member route, behind the member API's authentication.
@@ -223,13 +236,23 @@ async fn plan_route(
     }
 }
 
-/// One member, and how to reach it.
-struct Reach {
-    name: MemberName,
-    peer: Option<Member>,
+/// One member, and how to reach it: none for this member.
+pub(crate) struct Reach {
+    pub(crate) name: MemberName,
+    pub(crate) peer: Option<Member>,
 }
 
 async fn plan(planning: &Planning, only: Option<&str>) -> Result<serde_json::Value> {
+    gather(planning, only)
+        .await
+        .map(|(document, _)| document.to_json())
+}
+
+/// The plan, and how to reach each member it names.
+pub(crate) async fn gather(
+    planning: &Planning,
+    only: Option<&str>,
+) -> Result<(Document, Vec<Reach>)> {
     let fleet = planning.fleet.clone()?;
     let (master, members) = fleet_members(&fleet)?;
     let only = match only {
@@ -282,7 +305,7 @@ async fn plan(planning: &Planning, only: Option<&str>) -> Result<serde_json::Val
         toolset,
         only,
     });
-    Ok(document.to_json())
+    Ok((document, members))
 }
 
 fn report_of(
@@ -311,32 +334,35 @@ fn report_of(
     }
 }
 
-/// The master and every member, this one first, when this member is the master.
-fn fleet_members(fleet: &Arc<Fleet>) -> Result<(MemberName, Vec<Reach>)> {
+/// Every member, this one first, or the one `only` names: on any member, for
+/// reading what each installed.
+pub(crate) fn members_to_read(fleet: &Arc<Fleet>, only: Option<&str>) -> Result<Vec<Reach>> {
+    let (_, members) = roster_members(fleet)?;
+    match only {
+        None => Ok(members),
+        Some(wanted) => {
+            let found = members
+                .iter()
+                .position(|member| member.name.as_str() == wanted)
+                .ok_or_else(|| unknown_member(wanted, &members))?;
+            Ok(members.into_iter().skip(found).take(1).collect())
+        }
+    }
+}
+
+/// The master, whether it is this member, and every member, this one first. A
+/// machine that has not joined a fleet is the master of a fleet of one.
+fn roster_members(fleet: &Arc<Fleet>) -> Result<((MemberName, bool), Vec<Reach>)> {
     let roster = match fleet.roster() {
         Ok(roster) => roster,
         Err(_) if matches!(fleet.membership(), Membership::Solo) => {
             let name = fleet.presence().map(|(name, _)| name).unwrap_or_else(|| {
                 crate::tools_api::name_from_host(sysinfo::System::host_name().as_deref())
             });
-            return Ok((name.clone(), vec![Reach { name, peer: None }]));
+            return Ok(((name.clone(), true), vec![Reach { name, peer: None }]));
         }
         Err(error) => return Err(error),
     };
-    let master = roster.master();
-    if master.key != fleet.public_key() {
-        return Err(Failure::new(
-            "not_master",
-            format!(
-                "Only the master, {}, plans the fleet: pins are judged against what it has installed.",
-                master.name
-            ),
-            format!(
-                "Run elsecall tools plan on {}, or elsecall run --member {} -- elsecall tools plan.",
-                master.name, master.name
-            ),
-        ));
-    }
     let mut members: Vec<Reach> = roster
         .members()
         .iter()
@@ -346,7 +372,28 @@ fn fleet_members(fleet: &Arc<Fleet>) -> Result<(MemberName, Vec<Reach>)> {
         })
         .collect();
     members.sort_by_key(|member| member.peer.is_some());
-    Ok((master.name.clone(), members))
+    let master = roster.master();
+    Ok((
+        (master.name.clone(), master.key == fleet.public_key()),
+        members,
+    ))
+}
+
+/// The master and every member, this one first, when this member is the master.
+fn fleet_members(fleet: &Arc<Fleet>) -> Result<(MemberName, Vec<Reach>)> {
+    let ((master, this_member), members) = roster_members(fleet)?;
+    if !this_member {
+        return Err(Failure::new(
+            "not_master",
+            format!(
+                "Only the master, {master}, plans the fleet: pins are judged against what it has installed."
+            ),
+            format!(
+                "Run elsecall tools plan on {master}, or elsecall run --member {master} -- elsecall tools plan."
+            ),
+        ));
+    }
+    Ok((master, members))
 }
 
 /// A member that could not report its workspaces, with the fleet inventory's

@@ -72,6 +72,12 @@ impl ToolManager for MiseCli {
     }
 }
 
+/// The home folder mise runs in and the executable the inventory would run,
+/// none when mise is missing: what the installer runs too.
+pub(crate) fn located() -> Result<(PathBuf, Option<PathBuf>), InventoryFailure> {
+    begin(home_dir(), locate_mise())
+}
+
 fn begin(
     home: Option<PathBuf>,
     located: command_capture::Located,
@@ -112,7 +118,7 @@ fn is_mise_variable(name: &OsStr) -> bool {
     bytes == b"MISE" || bytes.starts_with(b"MISE_")
 }
 
-fn variables_to_remove() -> Vec<OsString> {
+pub(crate) fn variables_to_remove() -> Vec<OsString> {
     std::env::vars_os()
         .filter_map(|(name, _)| is_mise_variable(&name).then_some(name))
         .collect()

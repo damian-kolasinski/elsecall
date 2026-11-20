@@ -51,6 +51,10 @@ pub enum Category {
     /// A change to files that look like secrets waits on the master before
     /// configuration sync sends it: only a person confirms it.
     SecretConsent,
+    /// A step of a member's tool plan failed to install there: the step names
+    /// the tool and the stage that failed, never what a command printed.
+    /// Applying the plan again retries it.
+    ProvisioningStepFailed,
     /// A category a newer build added, as this build reads it: shown, never
     /// accepted automatically. No producer makes it.
     #[serde(other)]
@@ -64,6 +68,7 @@ impl Category {
             Self::VersionSkew => "version_skew",
             Self::MissingToolPin => "missing_tool_pin",
             Self::SecretConsent => "secret_consent",
+            Self::ProvisioningStepFailed => "provisioning_step_failed",
             Self::Unknown => "unknown",
         }
     }
@@ -158,6 +163,7 @@ mod tests {
             Category::VersionSkew,
             Category::MissingToolPin,
             Category::SecretConsent,
+            Category::ProvisioningStepFailed,
         ] {
             assert_eq!(
                 serde_json::to_value(category).unwrap(),
@@ -165,7 +171,7 @@ mod tests {
             );
         }
         assert_eq!(
-            serde_json::from_value::<Category>(json!("provisioning_step_failed")).unwrap(),
+            serde_json::from_value::<Category>(json!("tool_drift")).unwrap(),
             Category::Unknown,
             "a newer build's category reads, as one this build does not know"
         );

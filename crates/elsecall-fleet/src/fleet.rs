@@ -79,6 +79,14 @@ pub struct PeerStatus {
         deserialize_with = "crate::resource_report::read_warnings"
     )]
     pub outside_warnings: Vec<crate::resource_report::Warning>,
+    /// The member's latest apply of its tool plan; absent when it never applied
+    /// one, from members that predate it, and when this build cannot read it.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::provisioning_model::lenient"
+    )]
+    pub provisioning: Option<crate::provisioning_model::ProvisioningSummary>,
 }
 
 /// Where the fleet learns this member's configuration sync state.
@@ -178,6 +186,11 @@ pub struct Identity {
     pub code: String,
 }
 
+/// Proof that a request came from the recorded master, for installing tools.
+/// Only `Fleet::authorize_provisioning` creates it.
+#[derive(Debug)]
+pub struct ProvisioningAuthority(());
+
 /// Proof that a request came from the member this member records as master. Only
 /// `Fleet::authorize_placement` creates it; placement handlers require it.
 #[derive(Debug)]
@@ -221,6 +234,7 @@ pub struct Fleet {
     blocked: std::sync::OnceLock<Arc<dyn elsecall_scheduling::outside_pressure::BlockedReport>>,
     warnings: std::sync::OnceLock<Arc<dyn elsecall_scheduling::outside_pressure::WarningReport>>,
     sync: std::sync::OnceLock<Arc<dyn SyncReport>>,
+    provisioning: std::sync::OnceLock<Arc<dyn crate::provisioning_model::ProvisioningReport>>,
     handover: std::sync::OnceLock<Arc<dyn RoleHandover>>,
     role_observer: std::sync::OnceLock<Arc<dyn RoleObserver>>,
 }
@@ -255,6 +269,7 @@ impl Fleet {
             blocked: std::sync::OnceLock::new(),
             warnings: std::sync::OnceLock::new(),
             sync: std::sync::OnceLock::new(),
+            provisioning: std::sync::OnceLock::new(),
             handover: std::sync::OnceLock::new(),
             role_observer: std::sync::OnceLock::new(),
         })
@@ -294,6 +309,13 @@ impl Fleet {
     }
 
     /// Reports this member's configuration sync state with its status from now on.
+    pub fn report_provisioning(
+        &self,
+        report: Arc<dyn crate::provisioning_model::ProvisioningReport>,
+    ) {
+        let _ = self.provisioning.set(report);
+    }
+
     pub fn report_sync(&self, report: Arc<dyn SyncReport>) {
         let _ = self.sync.set(report);
     }
@@ -576,6 +598,7 @@ impl Fleet {
                 .get()
                 .map(|report| report.warnings())
                 .unwrap_or_default(),
+            provisioning: self.provisioning.get().and_then(|report| report.summary()),
         })
     }
 
@@ -617,6 +640,25 @@ impl Fleet {
                     master.name
                 ),
                 format!("Run elsecall fleet upgrade on {}.", master.name),
+            ))
+        }
+    }
+
+    /// Proof that `sender` is the master this member records: only the master
+    /// asks a member to install tools.
+    pub fn authorize_provisioning(&self, sender: &PublicKey) -> Result<ProvisioningAuthority> {
+        let roster = self.roster()?;
+        let master = roster.master();
+        if &master.key == sender {
+            Ok(ProvisioningAuthority(()))
+        } else {
+            Err(Failure::new(
+                "not_master",
+                format!(
+                    "This member installs tools only when its recorded master, {}, asks.",
+                    master.name
+                ),
+                format!("Run elsecall tools apply on {}.", master.name),
             ))
         }
     }

@@ -24,7 +24,7 @@ const LOCAL_TIMEOUT: Duration = Duration::from_secs(150);
 /// Longer than [`crate::fleet_tool_inventory::MEMBER_TIMEOUT`], which bounds
 /// each other member. The members are asked together, so the wait is the
 /// slowest of them plus a margin for this service.
-const FLEET_TIMEOUT: Duration = Duration::from_secs(170);
+pub(crate) const FLEET_TIMEOUT: Duration = Duration::from_secs(170);
 
 #[derive(Args)]
 pub struct ToolsArgs {
@@ -54,6 +54,28 @@ enum ToolsCommand {
         /// Plan only this member; every member's workspaces still count
         #[arg(long, value_name = "NAME")]
         member: Option<String>,
+    },
+    /// On the master, install each member's plan: what `tools plan` lists, as admitted
+    /// work on each member. Nothing is ever uninstalled
+    Apply {
+        /// Apply only this member's plan; every member's workspaces still count
+        #[arg(long, value_name = "NAME")]
+        member: Option<String>,
+        /// Print the plan and install nothing
+        #[arg(long)]
+        dry_run: bool,
+        /// Wait until the started members finish, then print what each installed
+        #[arg(long, conflicts_with = "dry_run")]
+        wait: bool,
+    },
+    /// Show what each member's latest apply installed, or is installing
+    Applied {
+        /// Only this member
+        #[arg(long, value_name = "NAME")]
+        member: Option<String>,
+        /// Wait until no member is still installing
+        #[arg(long)]
+        wait: bool,
     },
     /// Show the exceptions to the pins in fleet-tools.toml for every member, or one
     Exceptions {
@@ -159,6 +181,14 @@ pub async fn run(paths: &Paths, args: ToolsArgs) -> Result<Value> {
             )
             .await
         }
+        ToolsCommand::Apply {
+            member,
+            dry_run,
+            wait,
+        } => crate::apply_cli::apply(paths, member, dry_run, wait).await,
+        ToolsCommand::Applied { member, wait } => {
+            crate::apply_cli::applied(paths, member.as_deref(), wait).await
+        }
         ToolsCommand::Exceptions { member } => {
             let route = match &member {
                 Some(name) => format!("{}?member={name}", toolset_api::ROUTE),
@@ -217,7 +247,7 @@ fn member_route(member: &str) -> String {
 }
 
 /// A member name for a query: anything outside a member name is escaped.
-fn escaped(member: &str) -> String {
+pub(crate) fn escaped(member: &str) -> String {
     let mut escaped = String::new();
     for byte in member.bytes() {
         match byte {

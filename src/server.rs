@@ -482,9 +482,20 @@ pub async fn serve_with_updates(
     let recent_workspaces: Arc<dyn elsecall_tools::plan_api::RecentWorkspaces> = Arc::new(
         crate::run_workspace_pins::RunWorkspacePins(run_workspaces.clone()),
     );
-    let tools_routes = elsecall_tools::tools_api::routes(fleet.clone()).merge(
-        elsecall_tools::plan_api::routes(fleet.clone(), &paths, recent_workspaces.clone()),
-    );
+    let applier =
+        elsecall_tools::install::Applier::new(paths.data.clone(), Arc::new(scheduler.clone()));
+    if let Ok(fleet) = &fleet {
+        fleet.report_provisioning(applier.clone());
+    }
+    let planning = |recent| elsecall_tools::plan_api::Planning::new(fleet.clone(), &paths, recent);
+    let tools_routes = elsecall_tools::tools_api::routes(fleet.clone())
+        .merge(elsecall_tools::plan_api::routes(planning(
+            recent_workspaces.clone(),
+        )))
+        .merge(elsecall_tools::apply_api::routes(
+            planning(recent_workspaces.clone()),
+            applier.clone(),
+        ));
     let desired_routes = elsecall_tools::toolset_api::routes(fleet.clone(), &paths);
     let fleet_routes = match fleet {
         Ok(fleet) => {
@@ -499,7 +510,8 @@ pub async fn serve_with_updates(
                     paths.clone(),
                 ))
                 .merge(elsecall_tools::tools_api::peer_routes())
-                .merge(elsecall_tools::plan_api::peer_routes(recent_workspaces));
+                .merge(elsecall_tools::plan_api::peer_routes(recent_workspaces))
+                .merge(elsecall_tools::apply_api::peer_routes(applier));
             if let Ok(sync) = &config_sync {
                 member_routes =
                     member_routes.merge(elsecall_sync::config_sync_api::routes(sync.clone()));

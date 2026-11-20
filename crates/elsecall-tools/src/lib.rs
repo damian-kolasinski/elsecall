@@ -1,6 +1,10 @@
 //! Tools on each member: what mise, Xcode and simctl report as installed, what
-//! workspaces pin, the exceptions to those pins, and the plan joining them.
+//! workspaces pin, the exceptions to those pins, the plan joining them, and
+//! installing it.
+pub mod apply_api;
+mod apply_cli;
 pub mod fleet_tool_inventory;
+pub mod install;
 mod inventory_reader;
 pub mod mise_cli;
 pub mod pins;

@@ -1,9 +1,11 @@
 //! What in the fleet view needs attention: members awaiting provisioning,
-//! members on another build than the master, and placed runs that failed for
-//! lack of a tool nothing pins. Derived from the view each time it is read, so an
+//! members on another build than the master, steps of a member's tool plan that
+//! failed to install, and placed runs that failed for lack of a tool nothing
+//! pins. Derived from the view each time it is read, so an
 //! item clears as soon as its condition does.
 use crate::config_sync_model::consent::ConsentRequest;
 use crate::fleet_view::{MemberView, Reach, Role, UnpinnedTool};
+use crate::provisioning_model::{FailedStep, ProvisioningSummary};
 use elsecall_contract::attention::{Action, Category, Item};
 use elsecall_contract::build_identity::Build;
 use elsecall_peers::roster::{MemberName, Readiness};
@@ -35,7 +37,15 @@ pub(crate) fn items(members: &[MemberView], master: Option<&MemberName>) -> Vec<
                 .then(|| awaiting_provisioning(&member.name, master));
             let skewed = (member.version_skew == Some(true))
                 .then(|| version_skew(&member.name, master, member.build.as_ref(), master_build));
-            awaiting.into_iter().chain(skewed)
+            let failed = match &member.reach {
+                Reach::Reachable { status, .. } => status
+                    .provisioning
+                    .as_ref()
+                    .map(|summary| failed_steps(&member.name, summary, master))
+                    .unwrap_or_default(),
+                Reach::Unreachable { .. } => Vec::new(),
+            };
+            awaiting.into_iter().chain(skewed).chain(failed)
         })
         .chain(waiting)
         .collect()
@@ -84,6 +94,86 @@ fn secret_consent(request: &ConsentRequest, master: &MemberName) -> Item {
                 person_only: true,
             },
         ],
+    }
+}
+
+/// One `provisioning_step_failed` item per failed step of `member`'s latest
+/// apply. The text is written here from the code: another member's report holds
+/// no text this member shows.
+fn failed_steps(
+    member: &MemberName,
+    summary: &ProvisioningSummary,
+    master: &MemberName,
+) -> Vec<Item> {
+    summary
+        .failed
+        .iter()
+        .map(|failed| failed_step(member, failed, master))
+        .collect()
+}
+
+fn failed_step(member: &MemberName, failed: &FailedStep, master: &MemberName) -> Item {
+    let category = Category::ProvisioningStepFailed;
+    let subject = failed.subject();
+    let what = format!("{} {} {}", failed.manager, failed.tool, failed.version);
+    let (why, hint) = step_failure(member, failed);
+    Item {
+        id: Item::id(category, member.as_str(), Some(&subject)),
+        member: member.to_string(),
+        category,
+        subject: Some(subject),
+        code: failed.code.clone(),
+        message: format!(
+            "Installing {what} on {member} failed at its {} stage: {why}.",
+            failed.stage
+        ),
+        hint,
+        since: Some(failed.failed_at),
+        actions: vec![Action {
+            summary: format!("Apply {member}'s plan again, which retries this step."),
+            command: elsecall(&["tools", "apply", "--member", member.as_str()]),
+            run_on: master.to_string(),
+            person_only: false,
+        }],
+    }
+}
+
+/// Why a step failed, and what resolves it, by its code.
+fn step_failure(member: &MemberName, failed: &FailedStep) -> (&'static str, String) {
+    let install = format!("mise install {}@{}", failed.tool, failed.version);
+    match failed.code.as_str() {
+        "tool_install_failed" => (
+            "mise install exited with an error",
+            format!("Run {install} on {member} to see why, fix the cause, then apply again."),
+        ),
+        "tool_install_timeout" => (
+            "mise install ran for 30 minutes",
+            format!("Run {install} on {member} to see where it stalls, then apply again."),
+        ),
+        "mise_missing" => (
+            "mise is not installed there",
+            format!("Install mise on {member} (curl https://mise.run | sh), then apply again."),
+        ),
+        "mise_unusable" => (
+            "mise could not be started there",
+            format!(
+                "Run mise --version on {member} and reinstall mise if it fails, then apply again."
+            ),
+        ),
+        "install_not_admitted" => (
+            "its scheduler did not admit the step",
+            format!("Run elsecall doctor on {member}, then apply again."),
+        ),
+        "apply_interrupted" => (
+            "the service stopped while the step waited or ran",
+            "Apply again; the step starts over.".to_owned(),
+        ),
+        _ => (
+            "a later build's failure this build does not describe",
+            format!(
+                "Run elsecall tools applied --member {member} on a member with the master's build, then apply again."
+            ),
+        ),
     }
 }
 
@@ -493,6 +583,46 @@ mod tests {
             "{outside:?}"
         );
         assert_eq!(outside.actions[0].command, elsecall(&["fleet"]));
+    }
+
+    #[test]
+    fn each_failed_install_step_is_an_item_naming_its_tool_and_stage() {
+        let summary: ProvisioningSummary = serde_json::from_value(json!({
+            "state": "finished", "started_at": "2026-11-20T09:00:00.000Z", "finished_at": "2026-11-20T10:00:00.000Z", "steps": 2, "installed": 0,
+            "failed": [
+                {"manager": "mise", "tool": "node", "version": "22.19.0", "stage": "install",
+                 "code": "tool_install_failed", "failed_at": "2026-11-20T10:00:00.000Z"},
+                {"manager": "mise", "tool": "bun", "version": "1.3.14", "stage": "apply",
+                 "code": "a_later_code", "failed_at": "2026-11-20T10:00:00.000Z"},
+            ],
+        }))
+        .unwrap();
+        let items = failed_steps(
+            &"macbook-pro".parse().unwrap(),
+            &summary,
+            &"mac-mini".parse().unwrap(),
+        );
+        assert_eq!(
+            serde_json::to_value(&items[0]).unwrap(),
+            json!({
+                "id": "provisioning_step_failed:macbook-pro:mise:node@22.19.0",
+                "member": "macbook-pro",
+                "category": "provisioning_step_failed",
+                "subject": "mise:node@22.19.0",
+                "code": "tool_install_failed",
+                "message": "Installing mise node 22.19.0 on macbook-pro failed at its install stage: mise install exited with an error.",
+                "hint": "Run mise install node@22.19.0 on macbook-pro to see why, fix the cause, then apply again.",
+                "since": "2026-11-20T10:00:00.000Z",
+                "actions": [{
+                    "summary": "Apply macbook-pro's plan again, which retries this step.",
+                    "command": ["elsecall", "tools", "apply", "--member", "macbook-pro"],
+                    "run_on": "mac-mini",
+                    "person_only": false
+                }]
+            })
+        );
+        assert_eq!(items[1].code, "a_later_code");
+        assert!(items[1].message.contains("this build does not describe"));
     }
 
     #[test]
