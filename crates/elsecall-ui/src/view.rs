@@ -320,7 +320,7 @@ fn members_table(state: &AppState, dark: bool, paints: Paints) -> El {
 
 fn cell(member: &MemberRow, column: &str, paints: Paints, kit: &rune_kit::Kit) -> Cell {
     match column {
-        "member" => Cell::text(member.name.clone()).mono(),
+        "member" => crate::resource_display::member_cell(member, kit),
         "role" => role_cell(member, paints),
         "status" => status_cell(member, paints),
         "release" => release_cell(&member.release, paints),

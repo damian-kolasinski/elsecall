@@ -81,7 +81,7 @@ pub(crate) enum Phase {
 
 pub(crate) struct AppState {
     pub(crate) snapshot_at: elsecall_contract::scheduling_model::timestamp::Timestamp,
-    pub(crate) resource_hover: crate::resource_display::Hover,
+    pub(crate) load_member: Option<String>,
     pub(crate) configuration: ConfigurationView,
     phase: Phase,
     refreshed: Option<String>,
@@ -124,7 +124,7 @@ const ANIMATION_FRAME: std::time::Duration = std::time::Duration::from_millis(33
 impl AppState {
     fn open_configuration(&mut self, tx: &mut Tx) {
         if !self.add_mac.is_open() {
-            self.resource_hover.dismiss();
+            self.load_member = None;
             self.configuration.open();
             tx.instant();
         }
@@ -143,7 +143,7 @@ impl AppState {
     }
 
     pub(crate) fn open_add_mac(&mut self) {
-        self.resource_hover.dismiss();
+        self.load_member = None;
         self.add_mac.open();
         self.last_look = None;
     }
@@ -393,6 +393,14 @@ impl AppState {
             Ok(snapshot) => {
                 self.snapshot_at = elsecall_contract::scheduling_model::timestamp::Timestamp::now();
                 self.refreshed = Some(update.refreshed_at);
+                if self.load_member.as_ref().is_some_and(|name| {
+                    !snapshot
+                        .members
+                        .iter()
+                        .any(|m| &m.name == name && m.reach == Reachability::Reachable)
+                }) {
+                    self.load_member = None;
+                }
                 self.phase = Phase::Ready(snapshot);
             }
             Err(failure) => {
@@ -494,7 +502,7 @@ fn render(state: &AppState, cx: &mut rune::Cx<AppState>) -> rune::El {
         .child(col().w_full().grow(1.0).min_h(0.0).child(page));
     let mut overlays = Vec::new();
     if !state.configuration.visible() && !state.add_mac.is_open() {
-        crate::resource_display::overlay(state, &kit, &mut overlays);
+        crate::load_dialog::overlay(state, &kit, &mut overlays);
     }
     crate::add_mac_view::sheet(state, &kit, cx.is_reduced_motion(), &mut overlays);
     rune_kit::root(base, overlays)
@@ -508,9 +516,6 @@ fn spec() -> AppSpec<AppState> {
         families: theme::FAMILIES,
         setup: Some(setup),
         poll: Some(poll),
-        on_key: Some(|state, event, _| {
-            event.key == rune::Key::Escape && state.resource_hover.dismiss()
-        }),
         ..AppSpec::new("Elsecall", (1120.0, 560.0), init, render)
     }
 }
@@ -518,7 +523,7 @@ fn spec() -> AppSpec<AppState> {
 fn init() -> AppState {
     AppState {
         snapshot_at: elsecall_contract::scheduling_model::timestamp::Timestamp::now(),
-        resource_hover: Default::default(),
+        load_member: None,
         configuration: ConfigurationView::default(),
         phase: Phase::Loading,
         refreshed: None,
@@ -571,7 +576,6 @@ fn setup(state: &mut AppState, waker: Waker) {
 
 fn poll(state: &mut AppState, now: f64, tx: &mut Tx) -> bool {
     let mut changed = poll_add_mac(state, now, tx);
-    changed |= state.resource_hover.poll(now, tx);
     changed |= state.configuration.poll();
     if let Some(update) = state.feed.take() {
         state.apply_refresh(update);

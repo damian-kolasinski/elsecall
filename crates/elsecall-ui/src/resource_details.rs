@@ -32,28 +32,13 @@ impl Metric {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Source {
-    Managed,
-    Outside,
-}
-
-impl Source {
-    pub(crate) fn name(self) -> &'static str {
-        match self {
-            Self::Managed => "Managed",
-            Self::Outside => "Outside",
-        }
-    }
-}
-
 pub(crate) struct Reading {
     pub(crate) label: String,
-    pub(crate) measured: Option<Measurement>,
+    pub(crate) quantity: Quantity,
     pub(crate) detail: String,
 }
 
-pub(crate) struct Measurement {
+pub(crate) struct Quantity {
     pub(crate) value: String,
     pub(crate) amount: f64,
 }
@@ -95,14 +80,7 @@ fn sample_time(sample: Timestamp, refreshed: Timestamp) -> String {
 }
 
 impl Contributors {
-    pub(crate) fn details(&self, metric: Metric, source: Source, at: Timestamp) -> Details {
-        match source {
-            Source::Managed => self.managed(metric),
-            Source::Outside => self.outside(metric, at),
-        }
-    }
-
-    fn managed(&self, metric: Metric) -> Details {
+    pub(crate) fn managed(&self) -> Details {
         let Some(grants) = &self.grants else {
             return Details {
                 caption: "This member did not report active grants.".into(),
@@ -113,10 +91,8 @@ impl Contributors {
             "No active grants.".into()
         } else {
             format!(
-                "{} weighted cores assigned across {} active grants. Live {} use per operation is unavailable.",
-                grants.assigned,
-                grants.total,
-                metric.name()
+                "{} weighted cores assigned across {} active grants. Live CPU and memory use per operation is unavailable.",
+                grants.assigned, grants.total
             )
         };
         Details {
@@ -139,18 +115,18 @@ impl Contributors {
                     };
                     Reading {
                         label: grant.label.as_deref().unwrap_or(kind).into(),
-                        measured: None,
-                        detail: format!(
-                            "{} weighted cores assigned · {kind}\n{}",
-                            grant.size, grant.run_id
-                        ),
+                        quantity: Quantity {
+                            value: format!("{} weighted cores", grant.size),
+                            amount: grant.size.as_f64(),
+                        },
+                        detail: format!("{kind} · {}", grant.run_id),
                     }
                 })
                 .collect(),
         }
     }
 
-    fn outside(&self, metric: Metric, at: Timestamp) -> Details {
+    pub(crate) fn outside(&self, metric: Metric, at: Timestamp) -> Details {
         let mut readings = vec![];
         if let Pressure::Sample(blocked) = &self.pressure
             && matches!(
@@ -169,7 +145,7 @@ impl Contributors {
                 };
                 readings.push(Reading {
                     label: process_label(&process.name).into(),
-                    measured: Some(Measurement {
+                    quantity: Quantity {
                         value,
                         amount: match metric {
                             Metric::Cpu => process.cpu_cores,
@@ -179,7 +155,7 @@ impl Contributors {
                                 .unwrap_or(process.memory.resident_bytes)
                                 as f64,
                         },
-                    }),
+                    },
                     detail: format!(
                         "{} · PID {} · {}\nSampled · {}",
                         process.name,
@@ -203,14 +179,14 @@ impl Contributors {
             };
             readings.push(Reading {
                 label: process_label(&w.process).into(),
-                measured: Some(Measurement {
+                quantity: Quantity {
                     value,
                     amount: match w.concern {
                         Concern::Spinning { cpu_cores } => cpu_cores,
                         Concern::Growing { memory_bytes, .. }
                         | Concern::Oversized { memory_bytes, .. } => memory_bytes as f64,
                     },
-                }),
+                },
                 detail: format!(
                     "{} · PID {} · {}\n{} warning · {}",
                     w.process,
@@ -226,11 +202,7 @@ impl Contributors {
         } else if readings.is_empty() {
             format!("No outside {} contributors reported.", metric.name())
         } else {
-            match metric {
-                Metric::Cpu => "Reported processes · bars show a share of machine CPU",
-                Metric::Memory => "Reported processes · bars show a share of physical memory",
-            }
-            .into()
+            String::new()
         };
         Details { caption, readings }
     }
@@ -252,15 +224,12 @@ mod tests {
             assert!(
                 fleet.members[0]
                     .contributors
-                    .managed(Metric::Cpu)
+                    .managed()
                     .caption
                     .contains("did not report")
             );
             assert_eq!(
-                fleet.members[1]
-                    .contributors
-                    .managed(Metric::Memory)
-                    .caption,
+                fleet.members[1].contributors.managed().caption,
                 "No active grants."
             );
         }
@@ -282,9 +251,9 @@ mod tests {
             fleet["members"][0]["blocked"]["outside_utilization"] = 0.95.into();
             let snapshot = snapshot_from_value(&fleet).unwrap();
             let evidence = &snapshot.members[0].contributors;
-            let managed = evidence.managed(relevant);
+            let managed = evidence.managed();
             assert_eq!(managed.readings.len(), 1);
-            assert!(managed.readings[0].measured.is_none());
+            assert_eq!(managed.readings[0].quantity.value, "2.5 weighted cores");
             assert!(managed.caption.contains("1 of 2"));
             assert_eq!(evidence.outside(other, at).readings.len(), 0);
             let rows = evidence.outside(relevant, at).readings;
@@ -321,13 +290,10 @@ mod tests {
         let cpu = member.outside(Metric::Cpu, Timestamp::now()).readings;
         assert_eq!(cpu.len(), 1);
         assert_eq!(cpu[0].label, "Spotlight indexing");
-        assert_eq!(
-            cpu[0].measured.as_ref().unwrap().value,
-            "1.20 cores · 6h mean"
-        );
+        assert_eq!(cpu[0].quantity.value, "1.20 cores · 6h mean");
         assert!(cpu[0].detail.contains("12:30 UTC"));
         let memory = member.outside(Metric::Memory, Timestamp::now()).readings;
         assert_eq!(memory.len(), 1);
-        assert_eq!(memory[0].measured.as_ref().unwrap().value, "8.00 GiB");
+        assert_eq!(memory[0].quantity.value, "8.00 GiB");
     }
 }

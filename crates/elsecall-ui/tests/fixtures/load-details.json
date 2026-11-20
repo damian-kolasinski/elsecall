@@ -1,0 +1,8 @@
+[
+  {"t":0.6,"type":"move","key":"load-details:mac-mini"},
+  {"t":1.1,"key":"load-details:mac-mini"},
+  {"t":4.4,"type":"key","name":"End"},
+  {"t":6.5,"type":"key","name":"Escape"},
+  {"t":7.0,"key":"load-details:macbook-pro"},
+  {"t":9.3,"type":"key","name":"Escape"}
+]

@@ -4,6 +4,7 @@ mod add_mac_view;
 mod app;
 mod configuration_view;
 mod fleet_source;
+mod load_dialog;
 mod load_trend;
 mod refresh;
 mod release_source;

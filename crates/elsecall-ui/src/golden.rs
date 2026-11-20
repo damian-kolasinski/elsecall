@@ -72,14 +72,13 @@ fn fleet_scenes_match_goldens() {
     }
     let script = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/tests/fixtures/resource-hovers.json"
+        "/tests/fixtures/load-details.json"
     );
     for appearance in APPEARANCES {
         for (suffix, at) in [
-            ("-managed", "2.7"),
-            ("-outside-cpu", "4.5"),
-            ("-outside-memory", "7"),
-            ("-dismissed", "9.5"),
+            ("-breakdown", "2.7"),
+            ("-empty", "8"),
+            ("-dismissed", "9.8"),
         ] {
             compare(
                 "resource-load",

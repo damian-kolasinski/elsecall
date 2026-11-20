@@ -11,7 +11,7 @@ pub struct ActiveGrant {
 }
 
 /// Keep a frequently polled peer status bounded even with many fractional grants.
-pub const REPORTED_GRANTS: usize = 32;
+pub(crate) const REPORTED_GRANTS: usize = 32;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GrantSnapshot {
