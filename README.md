@@ -266,9 +266,10 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall tools inventory --fleet` | Every member's tool inventory: this member first, then the others in roster order. A machine that has not joined a fleet is a fleet of one |
 | `elsecall tools inventory --member NAME` | That member's one entry from the fleet inventory |
 | `elsecall tools pins [PATH]` | The tool versions a workspace pins (mise project config, the global mise config, `.xcode-version`, `.elsecall-tools.toml`), each marked exact or not, read without running the workspace's code; PATH defaults to the current directory (see [Fleet provisioning](docs/fleet-provisioning.md)) |
-| `elsecall tools desired [--member NAME]` | Desired tool versions resolved for every fleet member, or one (see [Fleet tool management](docs/fleet-tools.md)) |
-| `elsecall tools set TOOL VERSION [--member NAME] [--install-only]` | On the master, set an exact desired version in `fleet-tools.toml`. `TOOL` is `mise`, `xcodes`, `mise:<name>`, or `xcode` |
-| `elsecall tools unset TOOL [--version VERSION] [--member NAME]` | On the master, remove a desired version or a whole entry |
+| `elsecall tools exceptions [--member NAME]` | The exceptions to the pins in `fleet-tools.toml` that apply to every fleet member, or one (see [Fleet tool management](docs/fleet-tools.md#exceptions)) |
+| `elsecall tools leave-out TOOL [--member NAME]` | On the master, leave a tool's pins out on every member, or one. `TOOL` is `mise:<name>`, `xcode`, or `simulators:<platform>` |
+| `elsecall tools set TOOL VERSION --member NAME [--install-only]` | On the master, keep exact versions on one member instead of what the pins ask for |
+| `elsecall tools unset TOOL [--version VERSION] [--member NAME]` | On the master, remove an exception, or one version of a member's exception |
 | `elsecall doctor` | Installation integrity, launchd registration, API connectivity, relevant paths and recovery guidance |
 | `elsecall skill show [NAME]` | The agent guide matching this binary, or its topic NAME, as text (see "Agent skill") |
 | `elsecall skill setup [--agent AGENT] [--dry-run] [--force]` | Install or update the agent skill for the coding agents on this machine |

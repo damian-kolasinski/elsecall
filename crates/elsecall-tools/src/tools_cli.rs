@@ -1,12 +1,12 @@
-//! `elsecall tools`: inventory and the fleet's desired versions, through the local service,
-//! and a workspace's pins, read here without the service.
+//! `elsecall tools`: inventory and the exceptions to the pins, through the local
+//! service, and a workspace's pins, read here without the service.
 //!
 //! Without flags inventory is this machine. `--fleet` is every member. `--member`
 //! is one member's entry from that same fleet document.
 use crate::{
     tool_inventory::{Manager, ToolName},
     tools_api,
-    toolset_api::{DesiredEdit, EditBody},
+    toolset_api::{self, DesiredEdit, EditBody},
 };
 use clap::{Args, Subcommand};
 use elsecall_contract::failure::{Failure, Result};
@@ -48,41 +48,49 @@ enum ToolsCommand {
         /// The workspace, usually a repository's root. Defaults to the current directory
         path: Option<PathBuf>,
     },
-    /// Show desired tool versions for every member, or one
-    Desired {
-        /// Resolve only this member
+    /// Show the exceptions to the pins in fleet-tools.toml for every member, or one
+    Exceptions {
+        /// Only this member
         #[arg(long)]
         member: Option<MemberName>,
     },
-    /// On the master, set a desired version in fleet-tools.toml
+    /// On the master, leave a tool's pins out on every member, or one
+    LeaveOut {
+        /// `mise:<name>`, `xcode`, or `simulators:<platform>` such as `simulators:iOS`
+        tool: String,
+        /// Leave it out on this member only
+        #[arg(long)]
+        member: Option<MemberName>,
+    },
+    /// On the master, keep versions on one member instead of what the pins ask for
     Set {
-        /// `mise`, `xcodes`, `mise:<name>`, or `xcode`
+        /// `mise:<name>`, `xcode`, or `simulators:<platform>`
         tool: String,
         /// Exact version, such as 22.19.0
         version: String,
-        /// Write this member's overlay instead of the fleet default
+        /// The member that differs
         #[arg(long)]
-        member: Option<MemberName>,
+        member: MemberName,
         /// Add the version beside the default instead of making it the default
         #[arg(long)]
         install_only: bool,
     },
-    /// On the master, remove a desired version or a whole entry
+    /// On the master, remove an exception, or one version of a member's exception
     Unset {
-        /// `mise`, `xcodes`, `mise:<name>`, or `xcode`
+        /// `mise:<name>`, `xcode`, or `simulators:<platform>`
         tool: String,
         /// Remove only this version from default and install
         #[arg(long)]
         version: Option<String>,
-        /// Change this member's overlay instead of the fleet default
+        /// Change this member's exception instead of the one for every member
         #[arg(long)]
         member: Option<MemberName>,
     },
 }
 
-enum Target {
-    Executable(Manager),
-    Tool { manager: Manager, name: String },
+struct Target {
+    manager: Manager,
+    name: String,
 }
 
 pub async fn run(paths: &Paths, args: ToolsArgs) -> Result<Value> {
@@ -130,12 +138,26 @@ pub async fn run(paths: &Paths, args: ToolsArgs) -> Result<Value> {
                 })??;
             Ok(serde_json::to_value(report).expect("serializable pins"))
         }
-        ToolsCommand::Desired { member } => {
+        ToolsCommand::Exceptions { member } => {
             let route = match &member {
-                Some(name) => format!("/v1/tools/desired?member={name}"),
-                None => "/v1/tools/desired".to_owned(),
+                Some(name) => format!("{}?member={name}", toolset_api::ROUTE),
+                None => toolset_api::ROUTE.to_owned(),
             };
             client::get_large(&paths.socket(), &route).await
+        }
+        ToolsCommand::LeaveOut { tool, member } => {
+            let Target { manager, name } = target(&tool)?;
+            post(
+                &paths.socket(),
+                &DesiredEdit {
+                    member,
+                    edit: EditBody::LeaveOut {
+                        manager,
+                        tool: tool_name(&name)?,
+                    },
+                },
+            )
+            .await
         }
         ToolsCommand::Set {
             tool,
@@ -146,7 +168,7 @@ pub async fn run(paths: &Paths, args: ToolsArgs) -> Result<Value> {
             post(
                 &paths.socket(),
                 &DesiredEdit {
-                    member,
+                    member: Some(member),
                     edit: set_edit(&tool, &version, install_only)?,
                 },
             )
@@ -198,7 +220,7 @@ fn one_member(data: Value) -> Result<Value> {
 async fn post(socket: &std::path::Path, body: &DesiredEdit) -> Result<Value> {
     match tokio::time::timeout(
         client::TIMEOUT,
-        client::post_large(socket, "/v1/tools/desired", body),
+        client::post_large(socket, toolset_api::ROUTE, body),
     )
     .await
     {
@@ -212,87 +234,66 @@ async fn post(socket: &std::path::Path, body: &DesiredEdit) -> Result<Value> {
 }
 
 fn set_edit(spec: &str, version: &str, install_only: bool) -> Result<EditBody> {
-    match target(spec)? {
-        Target::Executable(manager) => {
-            if install_only {
-                return Err(Failure::new(
-                    "invalid_request",
-                    "The manager executable has one version; --install-only applies to a tool.",
-                    "Drop --install-only to set mise or xcodes, or name a tool such as mise:node or xcode.",
-                ));
-            }
-            Ok(EditBody::SetExecutable {
-                manager,
-                version: version.to_owned(),
-            })
+    let Target { manager, name } = target(spec)?;
+    let tool = tool_name(&name)?;
+    let version = version.to_owned();
+    Ok(if install_only {
+        EditBody::AddInstall {
+            manager,
+            tool,
+            version,
         }
-        Target::Tool { manager, name } => {
-            let tool = tool_name(&name)?;
-            if install_only {
-                Ok(EditBody::AddInstall {
-                    manager,
-                    tool,
-                    version: version.to_owned(),
-                })
-            } else {
-                Ok(EditBody::SetDefault {
-                    manager,
-                    tool,
-                    version: version.to_owned(),
-                })
-            }
+    } else {
+        EditBody::SetDefault {
+            manager,
+            tool,
+            version,
         }
-    }
+    })
 }
 
 fn unset_edit(spec: &str, version: Option<String>) -> Result<EditBody> {
-    match target(spec)? {
-        Target::Executable(manager) => {
-            if version.is_some() {
-                return Err(Failure::new(
-                    "invalid_request",
-                    "The manager executable has one version; --version applies to a tool.",
-                    "Drop --version to clear mise or xcodes, or name a tool such as mise:node or xcode.",
-                ));
-            }
-            Ok(EditBody::UnsetExecutable { manager })
-        }
-        Target::Tool { manager, name } => Ok(EditBody::Unset {
-            manager,
-            tool: tool_name(&name)?,
-            version,
-        }),
-    }
+    let Target { manager, name } = target(spec)?;
+    Ok(EditBody::Unset {
+        manager,
+        tool: tool_name(&name)?,
+        version,
+    })
 }
 
 fn target(spec: &str) -> Result<Target> {
+    let named = |manager, name: &str| {
+        if name.is_empty() {
+            Err(bad_tool(spec))
+        } else {
+            Ok(Target {
+                manager,
+                name: name.to_owned(),
+            })
+        }
+    };
     match spec {
-        "mise" => Ok(Target::Executable(Manager::Mise)),
-        "xcodes" => Ok(Target::Executable(Manager::Xcodes)),
-        "xcode" => Ok(Target::Tool {
-            manager: Manager::Xcodes,
-            name: "xcode".into(),
-        }),
+        "mise" | "xcodes" => Err(Failure::new(
+            "invalid_request",
+            format!(
+                "fleet-tools.toml holds only exceptions to the pins and no longer sets the {spec} executable."
+            ),
+            "Name a tool such as mise:node, xcode or simulators:iOS.",
+        )),
+        "xcode" => named(Manager::Xcodes, "xcode"),
         other => {
-            if let Some(name) = other.strip_prefix("mise:") {
-                return named(Manager::Mise, name, spec);
-            }
-            if let Some(name) = other.strip_prefix("xcodes:") {
-                return named(Manager::Xcodes, name, spec);
+            for (prefix, manager) in [
+                ("mise:", Manager::Mise),
+                ("xcodes:", Manager::Xcodes),
+                ("simulators:", Manager::Simulators),
+            ] {
+                if let Some(name) = other.strip_prefix(prefix) {
+                    return named(manager, name);
+                }
             }
             Err(bad_tool(spec))
         }
     }
-}
-
-fn named(manager: Manager, name: &str, spec: &str) -> Result<Target> {
-    if name.is_empty() {
-        return Err(bad_tool(spec));
-    }
-    Ok(Target::Tool {
-        manager,
-        name: name.to_owned(),
-    })
 }
 
 fn tool_name(name: &str) -> Result<String> {
@@ -302,7 +303,7 @@ fn tool_name(name: &str) -> Result<String> {
             Failure::new(
                 "invalid_request",
                 "Tool names cannot be empty or contain whitespace or control characters.",
-                "Name a tool such as mise:node or xcode.",
+                "Name a tool such as mise:node, xcode or simulators:iOS.",
             )
         })
 }
@@ -311,7 +312,7 @@ fn bad_tool(spec: &str) -> Failure {
     Failure::new(
         "invalid_request",
         format!("Unknown tool {spec}."),
-        "Use mise or xcodes for the manager, mise:<name> for a mise tool, or xcode.",
+        "Use mise:<name> for a mise tool, xcode, or simulators:<platform> such as simulators:iOS.",
     )
 }
 
@@ -352,5 +353,16 @@ mod tests {
         assert!(unset_edit("xcodes:node", None).is_ok());
         assert!(set_edit("mise:node", "22", true).is_ok());
         assert!(set_edit("mise:java", "zulu-17", false).is_ok());
+        assert!(set_edit("simulators:iOS", "26.2", false).is_ok());
+    }
+
+    #[test]
+    fn manager_executables_are_no_longer_exceptions() {
+        for spec in ["mise", "xcodes"] {
+            let error = set_edit(spec, "1.0.0", false).unwrap_err();
+            assert_eq!(error.code, "invalid_request");
+            assert!(error.message.contains("only exceptions"), "{error}");
+            assert!(unset_edit(spec, None).is_err());
+        }
     }
 }

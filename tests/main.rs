@@ -56,7 +56,7 @@ mod shutdown;
 mod simulate;
 mod state_retention;
 mod test_environment;
-mod tools_desired;
+mod tools_exceptions;
 mod tools_fleet_inventory;
 mod tools_inventory;
 mod tools_pins;

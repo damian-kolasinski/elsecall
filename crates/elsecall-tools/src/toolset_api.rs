@@ -1,11 +1,12 @@
-//! Desired tool versions on the local socket.
+//! The exceptions to the pins, `fleet-tools.toml`, on the local socket.
 //!
 //! The same-user rule authorizes the caller. Writes are serialized, re-read the
-//! file inside that lock, and run only on the master.
+//! file inside that lock, and run only on the master. Only a member's exception
+//! names versions; `[defaults]` only leaves tools out.
 use crate::{
     tool_inventory::Manager,
     toolset::{
-        document::{self, MemberWants, Toolset},
+        document::{self, MemberException, Toolset},
         edit::{self, Edit, Scope},
         store,
     },
@@ -29,7 +30,7 @@ use std::{path::PathBuf, sync::Arc};
 pub fn routes(fleet: Result<Arc<Fleet>>, paths: &Paths) -> Router {
     match fleet {
         Ok(fleet) => Router::new()
-            .route("/v1/tools/desired", get(show).post(change))
+            .route(ROUTE, get(show).post(change))
             .with_state(Arc::new(Desired {
                 fleet,
                 path: store::path(&paths.data),
@@ -49,8 +50,10 @@ fn unavailable(error: Failure) -> Router {
             )
         }
     };
-    Router::new().route("/v1/tools/desired", any(respond))
+    Router::new().route(ROUTE, any(respond))
 }
+
+pub const ROUTE: &str = "/v1/tools/exceptions";
 
 struct Desired {
     fleet: Arc<Fleet>,
@@ -76,6 +79,10 @@ pub struct DesiredEdit {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum EditBody {
+    LeaveOut {
+        manager: Manager,
+        tool: String,
+    },
     SetDefault {
         manager: Manager,
         tool: String,
@@ -86,23 +93,16 @@ pub enum EditBody {
         tool: String,
         version: String,
     },
-    SetExecutable {
-        manager: Manager,
-        version: String,
-    },
     Unset {
         manager: Manager,
         tool: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         version: Option<String>,
     },
-    UnsetExecutable {
-        manager: Manager,
-    },
 }
 
 #[derive(Serialize)]
-struct DesiredView {
+struct ExceptionsView {
     members: Vec<MemberView>,
     unknown_members: Vec<MemberName>,
 }
@@ -110,7 +110,7 @@ struct DesiredView {
 #[derive(Serialize)]
 struct MemberView {
     member: MemberName,
-    wants: MemberWants,
+    exceptions: Vec<MemberException>,
 }
 
 async fn show(State(desired): State<Arc<Desired>>, Query(query): Query<DesiredQuery>) -> Response {
@@ -136,14 +136,14 @@ fn joined<T>(result: std::result::Result<Result<T>, tokio::task::JoinError>) -> 
     result.unwrap_or_else(|_| {
         Err(Failure::new(
             "tools_failed",
-            "Reading or updating desired tool versions failed unexpectedly.",
+            "Reading or updating the fleet's tool exceptions failed unexpectedly.",
             "Run elsecall service restart, then retry.",
         ))
     })
 }
 
 impl Desired {
-    fn view(&self, member: Option<MemberName>) -> Result<DesiredView> {
+    fn view(&self, member: Option<MemberName>) -> Result<ExceptionsView> {
         let roster = self.fleet.roster()?;
         if let Some(name) = &member {
             known(&roster, name)?;
@@ -152,7 +152,7 @@ impl Desired {
         Ok(present(&toolset, &roster, member.as_ref()))
     }
 
-    fn edit(&self, request: DesiredEdit) -> Result<DesiredView> {
+    fn edit(&self, request: DesiredEdit) -> Result<ExceptionsView> {
         let roster = self.fleet.roster()?;
         if roster.master().key != self.fleet.public_key() {
             return Err(not_master(&roster.master().name));
@@ -193,12 +193,12 @@ fn known(roster: &Roster, name: &MemberName) -> Result<()> {
 fn not_master(master: &MemberName) -> Failure {
     Failure::new(
         "not_master",
-        format!("Only the master, {master}, changes the fleet's desired tool versions."),
+        format!("Only the master, {master}, changes the fleet's tool exceptions."),
         format!("Run this command on {master}."),
     )
 }
 
-fn present(toolset: &Toolset, roster: &Roster, only: Option<&MemberName>) -> DesiredView {
+fn present(toolset: &Toolset, roster: &Roster, only: Option<&MemberName>) -> ExceptionsView {
     let names = match only {
         Some(name) => vec![name.clone()],
         None => roster
@@ -207,11 +207,11 @@ fn present(toolset: &Toolset, roster: &Roster, only: Option<&MemberName>) -> Des
             .map(|member| member.name.clone())
             .collect(),
     };
-    DesiredView {
+    ExceptionsView {
         members: names
             .into_iter()
             .map(|member| MemberView {
-                wants: toolset.resolve(&member),
+                exceptions: toolset.exceptions(&member),
                 member,
             })
             .collect(),
@@ -225,35 +225,41 @@ fn present(toolset: &Toolset, roster: &Roster, only: Option<&MemberName>) -> Des
 
 fn to_edit(scope: &Scope, body: EditBody) -> Result<Edit> {
     match body {
+        EditBody::LeaveOut { manager, tool } => Ok(Edit::LeaveOut {
+            tool: require(scope, manager, &tool)?,
+            manager,
+        }),
         EditBody::SetDefault {
             manager,
             tool,
             version,
-        } => Ok(Edit::SetDefault {
-            version: exact(scope, manager, Some(&tool), "default", &tool, &version)?,
-            tool: require(scope, manager, &tool)?,
-            manager,
-        }),
+        } => {
+            member_only(scope)?;
+            Ok(Edit::SetDefault {
+                version: exact(scope, manager, &tool, "default", &version)?,
+                tool: require(scope, manager, &tool)?,
+                manager,
+            })
+        }
         EditBody::AddInstall {
             manager,
             tool,
             version,
-        } => Ok(Edit::AddInstall {
-            version: exact(scope, manager, Some(&tool), "install", &tool, &version)?,
-            tool: require(scope, manager, &tool)?,
-            manager,
-        }),
-        EditBody::SetExecutable { manager, version } => Ok(Edit::SetExecutable {
-            version: exact(scope, manager, None, "version", manager.as_str(), &version)?,
-            manager,
-        }),
+        } => {
+            member_only(scope)?;
+            Ok(Edit::AddInstall {
+                version: exact(scope, manager, &tool, "install", &version)?,
+                tool: require(scope, manager, &tool)?,
+                manager,
+            })
+        }
         EditBody::Unset {
             manager,
             tool,
             version,
         } => {
             let version = version
-                .map(|version| exact(scope, manager, Some(&tool), "default", &tool, &version))
+                .map(|version| exact(scope, manager, &tool, "default", &version))
                 .transpose()?;
             Ok(Edit::Unset {
                 tool: require(scope, manager, &tool)?,
@@ -261,7 +267,18 @@ fn to_edit(scope: &Scope, body: EditBody) -> Result<Edit> {
                 version,
             })
         }
-        EditBody::UnsetExecutable { manager } => Ok(Edit::UnsetExecutable { manager }),
+    }
+}
+
+/// Versions are a member's own; the defaults only leave tools out.
+fn member_only(scope: &Scope) -> Result<()> {
+    match scope {
+        Scope::Member(_) => Ok(()),
+        Scope::Defaults => Err(Failure::new(
+            "invalid_request",
+            "Only one member's exception names versions; for every member, pin the version in the workspace instead.",
+            "Pass --member NAME, or change the pin in the workspace's mise config or .xcode-version.",
+        )),
     }
 }
 
@@ -272,23 +289,19 @@ fn require(scope: &Scope, manager: Manager, tool: &str) -> Result<crate::tool_in
 fn exact(
     scope: &Scope,
     manager: Manager,
-    tool: Option<&str>,
+    tool: &str,
     field: &str,
-    label: &str,
     version: &str,
 ) -> Result<crate::tool_inventory::ToolVersion> {
-    document::exact_version(&field_path(scope, manager, tool, field), label, version)
+    document::exact_version(&field_path(scope, manager, tool, field), tool, version)
 }
 
 fn tool_path(scope: &Scope, manager: Manager, tool: &str) -> String {
     format!("{}.tools.{tool}", manager_path(scope, manager))
 }
 
-fn field_path(scope: &Scope, manager: Manager, tool: Option<&str>, field: &str) -> String {
-    match tool {
-        Some(tool) => format!("{}.{field}", tool_path(scope, manager, tool)),
-        None => format!("{}.{field}", manager_path(scope, manager)),
-    }
+fn field_path(scope: &Scope, manager: Manager, tool: &str, field: &str) -> String {
+    format!("{}.{field}", tool_path(scope, manager, tool))
 }
 
 fn manager_path(scope: &Scope, manager: Manager) -> String {
