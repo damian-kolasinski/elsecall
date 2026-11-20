@@ -245,9 +245,10 @@ Each is one pull request, verifiable on its own.
 | 5 | A warning when a run fails on a missing tool ("not pinned, pin it here"), and consent for secret files | 1, 3 |
 | 6 | The automatic loop: drift detection, automatic installs, placement by pins, automatic ready; and the UI | 2, 4, 5 |
 
-The Add Mac flow and the Provision button in the fleet window belong to the Add
-Mac work (branch `fix-add-mac-onboarding`), which already shows members awaiting
-provisioning. Delivery 6 drives that button; it does not rebuild the flow.
+The Add Mac flow and the Provision button in the fleet window come from the Add
+Mac work (elsecall#73, `crates/elsecall-ui`), which already shows members
+awaiting provisioning. Delivery 6 drives that button; it does not rebuild the
+flow.
 
 ## Delivery 1: reading pins
 
