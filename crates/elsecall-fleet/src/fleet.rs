@@ -308,7 +308,7 @@ impl Fleet {
         let _ = self.warnings.set(report);
     }
 
-    /// Reports this member's configuration sync state with its status from now on.
+    /// Reports this member's latest apply of its tool plan with its status.
     pub fn report_provisioning(
         &self,
         report: Arc<dyn crate::provisioning_model::ProvisioningReport>,
@@ -316,6 +316,7 @@ impl Fleet {
         let _ = self.provisioning.set(report);
     }
 
+    /// Reports this member's configuration sync state with its status from now on.
     pub fn report_sync(&self, report: Arc<dyn SyncReport>) {
         let _ = self.sync.set(report);
     }

@@ -17,6 +17,9 @@ use std::time::Duration;
 const POLL: Duration = Duration::from_secs(2);
 /// Each read asks every member once, for at most 20 seconds.
 const READ_TIMEOUT: Duration = Duration::from_secs(30);
+/// Planning waits up to 150 seconds for a member's inventory, then starting an
+/// apply up to 20 seconds; this waits for both, with a margin.
+const APPLY_TIMEOUT: Duration = Duration::from_secs(200);
 
 pub(crate) async fn apply(
     paths: &Paths,
@@ -38,31 +41,35 @@ pub(crate) async fn apply(
         )
         .await;
     }
-    let started: Value = match tokio::time::timeout(
-        FLEET_TIMEOUT,
+    let mut started: Value = match tokio::time::timeout(
+        APPLY_TIMEOUT,
         client::post_large(&paths.socket(), apply_api::ROUTE, &ApplyBody { member }),
     )
     .await
     {
         Ok(result) => result?,
-        Err(_) => return Err(timed_out(FLEET_TIMEOUT)),
+        Err(_) => return Err(timed_out(APPLY_TIMEOUT)),
     };
     if !wait {
         return Ok(started);
     }
-    let names: Vec<String> = started["members"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter(|entry| entry["state"] == "started")
-        .filter_map(|entry| entry["member"].as_str().map(str::to_owned))
-        .collect();
-    let mut finished = Vec::new();
-    for name in names {
-        let read = applied(paths, Some(&name), true).await?;
-        finished.extend(read["members"].as_array().cloned().unwrap_or_default());
+    // Each started member's entry becomes its finished apply; the others stay
+    // as they were, refusals included.
+    if let Some(members) = started["members"].as_array_mut() {
+        for entry in members.iter_mut() {
+            if entry["state"] != "started" {
+                continue;
+            }
+            let Some(name) = entry["member"].as_str().map(str::to_owned) else {
+                continue;
+            };
+            let read = applied(paths, Some(&name), true).await?;
+            let mut finished = read["members"][0].clone();
+            finished["unresolved"] = entry["unresolved"].clone();
+            *entry = finished;
+        }
     }
-    Ok(serde_json::json!({"master": started["master"], "members": finished}))
+    Ok(started)
 }
 
 pub(crate) async fn applied(paths: &Paths, member: Option<&str>, wait: bool) -> Result<Value> {

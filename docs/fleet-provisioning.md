@@ -608,9 +608,13 @@ each real workspace on the master: `acme-ios` and this repository.
 
 `elsecall tools apply [--member NAME] [--dry-run] [--wait]` carries out the plan
 on the master. It plans the fleet exactly as `tools plan` does
-(`POST /v1/tools/apply` with `{member}`, the same 170-second wait, `not_master`
-elsewhere, `invalid_request` for an unknown `--member`) and then sends each
-planned member its steps. `--dry-run` sends nothing and prints the plan: it
+(`POST /v1/tools/apply` with `{member}`, `not_master` elsewhere,
+`invalid_request` for an unknown `--member`) and then sends each planned member
+its steps, the members with nothing to install too: their apply has no steps and
+finishes at once, so their last apply's failures stop standing. The command
+waits 200 seconds, for the plan's 150 and a member's 20. The sends run on their
+own in the service, so a caller that gives up never leaves some members asked
+and others not. `--dry-run` sends nothing and prints the plan: it
 reads `GET /v1/tools/plan`, so its `data` is the `tools plan` document, field
 for field. Agents may run it: a tool plan follows
 from pins, so it needs no person, and nothing in it is `person_only`.
@@ -622,19 +626,22 @@ own work (below). Without `--wait` the command returns then, and `data` is
 - `{member, state: "started", apply, unresolved}`: `apply` is the member's new
   apply (below), every step `queued`; `unresolved` counts the plan's
   unresolved requests, which are not installed.
-- `{member, state: "nothing_to_install", unresolved}`: the plan has no steps.
+- `{member, state: "nothing_to_install", unresolved}`: the plan has no steps;
+  the member recorded an empty apply.
 - `{member, state: "unavailable", error}`: its inventory could not be read, so
   it has no plan, with the fleet inventory's codes.
 - `{member, state: "refused", error}`: it did not start, as `apply_in_progress`
-  (an apply already runs there), `version_skew`, `member_unreachable` and the
-  like. Another member's text is not copied.
+  (an apply already runs there), `plan_too_large` (more than 256 steps or
+  60 KiB, beyond what one request to a member carries), `version_skew`,
+  `member_unreachable` and the like. Another member's text is not copied.
 
 `elsecall tools applied [--member NAME] [--wait]` reads each member's latest
 apply (`GET /v1/tools/apply`), this member first, on any member: `{members:
 [{member, state, apply?, error?}]}` with `state` `none` (it never applied a
 plan), `running`, `finished` or `unavailable` (with `error`). `--wait` reads
 again every two seconds until no member it read is `running`; `tools apply
---wait` does that for the members it started. Both exit 0 when a step failed:
+--wait` does that for the members it started, replacing each of their entries
+with its finished read and keeping every other entry as it was. Both exit 0 when a step failed:
 that is data, in `apply` and in the fleet's attention.
 
 An `apply` is `{started_at, finished_at, steps}`, `finished_at` null while it
@@ -643,8 +650,8 @@ with `state`:
 
 - `queued`, or `running` with `since`;
 - `installed` with `at`;
-- `skipped` with `reason` `not_supported`: its manager does not install yet,
-  and nothing ran;
+- `skipped` with `reason` `not_supported`: its manager does not install yet;
+  it is skipped when the apply starts, and nothing runs;
 - `failed` with `stage`, `code` and `at`.
 
 A failure's `stage` is the part of the step that failed (`admission`,
@@ -659,7 +666,8 @@ never reaches a record, a status, an item or a log. The codes so far:
 | `install` | `mise_unusable` | mise could not be started, or `HOME` is not set. |
 | `install` | `tool_install_failed` | `mise install` exited with an error. |
 | `install` | `tool_install_timeout` | It ran for 30 minutes. |
-| `apply` | `apply_interrupted` | The service stopped while the step waited or ran. |
+| `admission` or `apply` | `apply_interrupted` | The service stopped while the step waited or ran. |
+| `apply` | `apply_failed` | The apply stopped unexpectedly; its unfinished steps fail with it. |
 
 ### On the member
 
@@ -667,10 +675,12 @@ never reaches a record, a status, an item or a log. The codes so far:
 version, options}`. Only the member's recorded master may send it (`not_master`,
 403, from anyone else), and each step is checked against its manager's grammar
 before anything runs, as a member's pin report is on the master: a tool or
-version that could read as an option, a mise tool holding brackets, a version
-outside Xcode's or a runtime's digits and dots, options on anything but mise, or
-an option Elsecall does not carry is `invalid_request`. One apply runs at a time;
-another is `apply_in_progress` (409). `GET /peer/v1/tools/apply` is its latest
+version that could read as an option, a mise tool holding brackets, a mise
+version that is a selector (`latest`, `ref:`, `path:`…), a version outside
+Xcode's or a runtime's digits and dots, options on anything but mise, or an
+option Elsecall does not carry is `invalid_request`. 0 to 256 steps, at most
+the listener's 64 KiB. One apply runs at a time; another is
+`apply_in_progress` (409). `GET /peer/v1/tools/apply` is its latest
 apply, `{apply}`, null when there is none; any enrolled member may read it. Both
 are refused across builds.
 
@@ -682,18 +692,26 @@ and it shows in `elsecall runs` and `explain` like any job, as Elsecall's own
 work. After an hour of waiting it starts at its deadline anyway, still only
 when it fits. Each command the step runs is started in its own process group,
 with no input and its output discarded, and bound to the run as its holder; when
-the step ends, times out or is dropped, the group is killed. The run ends with
-exit 0 when the step installed and 1 otherwise. One failed step does not stop the
+the step times out or is dropped while it runs, the group is killed; a command
+that exits by itself leaves its group alone, since the group's ID may then be
+reused. The run ends exactly once, with exit 0 when the step installed and 1
+otherwise, also when the step is dropped or its task panics: its room is never
+held past the step. A panicking apply finishes with its unfinished steps failed
+as `apply_failed`, so the member is never stuck `apply_in_progress`. One failed step does not stop the
 next: tools do not depend on each other. Nothing is ever uninstalled.
 
 The latest apply is kept in `tools-apply.json` in the member's data directory,
 owner-only, after every change. Running work does not survive a restart, so an
 apply that was running when the service stopped reads back finished, its
-unfinished steps `failed` with `apply_interrupted`.
+unfinished steps `failed` with `apply_interrupted`, and is kept that way at
+once, so their times do not move with later restarts.
 
 **mise tools.** A step is `mise install '<tool>[<options>]@<version>'`: the
 version named explicitly, never `mise install` in a workspace, so no
-repository's config is read and no repository code runs. The
+repository's config is read and no hook, task or `postinstall` a repository
+wrote runs. The backend mise uses for the tool does run: a tool that builds from
+source, or that an asdf or vfox plugin installs, runs that upstream's code, as
+it did when the master installed it. The
 [install options](#install-options) go in mise's bracket syntax, which their
 values cannot end. mise runs as the inventory runs it: the executable the
 inventory finds (`ELSECALL_MISE` or the usual places), in the home folder, with
@@ -717,7 +735,7 @@ of every member's latest apply:
   "subject": "mise:node@22.19.0",
   "code": "tool_install_failed",
   "message": "Installing mise node 22.19.0 on macbook-pro failed at its install stage: mise install exited with an error.",
-  "hint": "Run mise install node@22.19.0 on macbook-pro to see why, fix the cause, then apply again.",
+  "hint": "Install node 22.19.0 with mise on macbook-pro, with the options elsecall tools plan lists, to see why; fix the cause, then run elsecall tools apply --member macbook-pro on the master to retry.",
   "since": 1763600000000,
   "actions": [{
     "summary": "Apply macbook-pro's plan again, which retries this step.",
@@ -729,8 +747,8 @@ of every member's latest apply:
 ```
 
 The `subject` is `<manager>:<tool>@<version>`, and `since` is when the step
-failed. The item stands until the member's next apply, which retries the step or
-no longer needs it. The text is written by the reading member from the code;
+failed. The item stands until the member's next apply, which retries the step,
+or no longer needs it and ends it with an empty apply. The text is written by the reading member from the code;
 another member's report is read leniently, and a failed step it cannot read is
 left out.
 

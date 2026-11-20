@@ -4,7 +4,9 @@
 //! output discarded: nothing it prints is kept, so a token in a download URL
 //! never reaches a record or a log. Its process is bound to the run, as a
 //! placed command's is, so a lease it takes nests inside the run. Past its
-//! limit, or when the step is dropped, the whole group is killed.
+//! limit, or when the step is dropped while it runs, the whole group is killed.
+//! A command that exits by itself leaves its group alone: once its leader is
+//! reaped the group's ID may be reused by an unrelated group.
 use crate::install::{InstallAdmission, Ran, Work};
 use elsecall_contract::scheduling_model::run_id::RunId;
 use futures_util::future::BoxFuture;
@@ -32,9 +34,12 @@ impl Work for AdmittedWork {
             if let Some(pid) = group {
                 self.admission.started(&self.run, pid);
             }
-            let _group = GroupGuard(group);
+            let mut guard = GroupGuard(group);
             match tokio::time::timeout(limit, child.wait()).await {
-                Ok(Ok(status)) => Ran::Ended(status),
+                Ok(Ok(status)) => {
+                    guard.0 = None;
+                    Ran::Ended(status)
+                }
                 Ok(Err(_)) => Ran::NotStarted,
                 Err(_) => Ran::TimedOut,
             }
@@ -42,8 +47,8 @@ impl Work for AdmittedWork {
     }
 }
 
-/// Kills what is left of a command's process group when the step moves on,
-/// times out or is dropped.
+/// Kills a command's process group when it times out or the step is dropped
+/// while it runs.
 struct GroupGuard(Option<u32>);
 
 impl Drop for GroupGuard {

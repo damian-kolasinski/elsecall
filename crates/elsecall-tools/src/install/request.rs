@@ -8,7 +8,7 @@
 use crate::{
     pins::{InstallOptions, Platform, dotted_version},
     plan::member::Step,
-    tool_inventory::{Manager, ToolName, ToolVersion},
+    tool_inventory::{Manager, ToolName, ToolVersion, version_selector},
 };
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -74,8 +74,11 @@ impl WireStep {
                 {
                     return Err("a mise tool name holds options or a version");
                 }
-                ToolVersion::new(self.version.as_str())
-                    .filter(|_| plain(&self.version) && !self.version.contains(['[', ']']))
+                ToolVersion::new(self.version.as_str()).filter(|_| {
+                    plain(&self.version)
+                        && !self.version.contains(['[', ']'])
+                        && !version_selector(&self.version)
+                })
             }
             Manager::Xcodes if self.tool == "xcode" => dotted_version(&self.version, 2),
             Manager::Simulators
@@ -102,7 +105,8 @@ impl WireStep {
     }
 }
 
-/// What the master sends: the member's steps, in plan order.
+/// What the master sends: the member's steps, in plan order. No steps is an
+/// apply too, which ends the last one's failures.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ApplyRequest {
@@ -111,8 +115,8 @@ pub(crate) struct ApplyRequest {
 
 impl ApplyRequest {
     pub(crate) fn accept(self) -> Result<Vec<InstallStep>, &'static str> {
-        if self.steps.is_empty() || self.steps.len() > MAXIMUM_STEPS {
-            return Err("a request names 1 to 256 steps");
+        if self.steps.len() > MAXIMUM_STEPS {
+            return Err("a request names at most 256 steps");
         }
         let steps = self
             .steps
@@ -163,6 +167,9 @@ mod tests {
             step("mise", "node", "--force"),
             step("mise", "node[postinstall=x]", "1.0.0"),
             step("mise", "node@22", "1.0.0"),
+            step("mise", "node", "latest"),
+            step("mise", "node", "ref:main"),
+            step("mise", "node", "path:/tmp/node"),
             step("xcodes", "xcode", "latest"),
             step("xcodes", "xcode", "26"),
             step("xcodes", "Xcode", "26.2"),
@@ -173,7 +180,7 @@ mod tests {
         ] {
             assert!(accepted(vec![bad.clone()]).is_err(), "{bad}");
         }
-        assert!(accepted(Vec::new()).is_err());
+        assert!(accepted(Vec::new()).unwrap().is_empty(), "an empty apply");
         assert!(accepted(vec![step("mise", "node", "1.0.0"); 2]).is_err());
         assert!(accepted(vec![step("mise", "node", "1.0.0"); MAXIMUM_STEPS + 1]).is_err());
         assert!(

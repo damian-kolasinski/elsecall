@@ -14,7 +14,7 @@ use crate::{
     install::{
         Applier,
         record::{Record, WireRecord},
-        request::{ApplyRequest, InstallStep, WireStep},
+        request::{ApplyRequest, InstallStep, MAXIMUM_STEPS, WireStep},
     },
     plan_api::{self, Planning},
 };
@@ -40,6 +40,8 @@ pub const ROUTE: &str = "/v1/tools/apply";
 pub const PEER_ROUTE: &str = "/peer/v1/tools/apply";
 /// Starting an apply is writing a file; reading one is reading it.
 const PEER_TIMEOUT: Duration = Duration::from_secs(20);
+/// What fits the member listener's 64 KiB body, with room for its framing.
+const MAXIMUM_BODY: usize = 60 * 1024;
 
 struct Applying {
     planning: Planning,
@@ -58,7 +60,15 @@ pub fn peer_routes(applier: Arc<Applier>) -> Router<Arc<Fleet>> {
     Router::new().route(
         PEER_ROUTE,
         post(
-            move |_master: ProvisioningAuthority, Json(request): Json<ApplyRequest>| async move {
+            move |_master: ProvisioningAuthority,
+                  request: std::result::Result<
+                Json<ApplyRequest>,
+                axum::extract::rejection::JsonRejection,
+            >| async move {
+                let request = match request {
+                    Ok(Json(request)) => request,
+                    Err(rejection) => return unreadable(rejection),
+                };
                 let steps = match request.accept() {
                     Ok(steps) => steps,
                     Err(rule) => {
@@ -117,6 +127,18 @@ async fn apply_route(
     respond(apply(&applying, &body).await)
 }
 
+/// A body that is not an apply request, answered with the API's own failure.
+fn unreadable(_: axum::extract::rejection::JsonRejection) -> Response {
+    elsecall_api_response::failure(
+        StatusCode::BAD_REQUEST,
+        Failure::new(
+            "invalid_request",
+            "The steps to install are not valid.",
+            "Run elsecall tools apply on the master, which sends the plan's steps.",
+        ),
+    )
+}
+
 async fn applied_route(
     State(applying): State<Arc<Applying>>,
     Query(query): Query<AppliedQuery>,
@@ -138,26 +160,52 @@ fn respond(result: Result<Value>) -> Response {
     }
 }
 
-async fn apply(applying: &Applying, body: &ApplyBody) -> Result<Value> {
-    let (document, members) = plan_api::gather(&applying.planning, body.member.as_deref()).await?;
+/// Plans, then starts every planned member's apply, the ones with nothing to
+/// install too, so their last failures stop standing. It runs on its own task:
+/// a caller that gives up never leaves some members asked and others not.
+async fn apply(applying: &Arc<Applying>, body: &ApplyBody) -> Result<Value> {
+    let applying = Arc::clone(applying);
+    let member = body.member.clone();
+    tokio::spawn(async move { start_all(&applying, member.as_deref()).await })
+        .await
+        .map_err(|_| {
+            Failure::new(
+                "tools_failed",
+                "Applying the plan stopped unexpectedly.",
+                "Run elsecall tools applied to see what started, then retry.",
+            )
+        })?
+}
+
+async fn start_all(applying: &Applying, only: Option<&str>) -> Result<Value> {
+    let (document, members) = plan_api::gather(&applying.planning, only).await?;
     let fleet = applying.planning.fleet()?;
     let sends = document.members.iter().map(|(member, plan)| {
         let reach = members.iter().find(|reach| &reach.name == member);
         let fleet = Arc::clone(&fleet);
         let applier = Arc::clone(&applying.applier);
         async move {
-            let plan = match plan {
-                Err(error) => {
+            let (plan, reach) = match (plan, reach) {
+                (Err(error), _) => {
                     return json!({"member": member, "state": "unavailable", "error": error});
                 }
-                Ok(plan) => plan,
+                (Ok(_), None) => {
+                    return json!({"member": member, "state": "refused", "error": Failure::new(
+                        "member_unreachable",
+                        format!("{member} is not in this member's roster."),
+                        "Run elsecall fleet on the master, then retry.",
+                    )});
+                }
+                (Ok(plan), Some(reach)) => (plan, reach),
             };
             let steps: Vec<InstallStep> = plan.steps.iter().map(InstallStep::of).collect();
-            if steps.is_empty() {
-                return json!({"member": member, "state": "nothing_to_install",
-                              "unresolved": plan.unresolved.len()});
+            let request = ApplyRequest {
+                steps: steps.iter().map(WireStep::of).collect(),
+            };
+            if let Err(error) = within_bounds(member, &request) {
+                return json!({"member": member, "state": "refused", "error": error});
             }
-            let started = match reach.and_then(|reach| reach.peer.as_ref()) {
+            let started = match &reach.peer {
                 None => applier
                     .start(steps)
                     .map(|record| Some(WireRecord::of(&record))),
@@ -166,24 +214,46 @@ async fn apply(applying: &Applying, body: &ApplyBody) -> Result<Value> {
                     peer,
                     Method::POST,
                     PEER_ROUTE,
-                    Some(&ApplyRequest {
-                        steps: steps.iter().map(WireStep::of).collect(),
-                    }),
+                    Some(&request),
                     PEER_TIMEOUT,
                 )
                 .await
-                .map(|applied| applied.apply),
+                .map(|applied| applied.apply)
+                .map_err(|error| refusal(member, &error)),
             };
+            let unresolved = plan.unresolved.len();
             match started {
+                Ok(_) if request.steps.is_empty() => json!({"member": member,
+                    "state": "nothing_to_install", "unresolved": unresolved}),
                 Ok(apply) => json!({"member": member, "state": "started", "apply": apply,
-                                    "unresolved": plan.unresolved.len()}),
-                Err(error) => json!({"member": member, "state": "refused",
-                                     "error": refusal(member, &error)}),
+                                    "unresolved": unresolved}),
+                Err(error) => json!({"member": member, "state": "refused", "error": error}),
             }
         }
     });
     let members = futures_util::future::join_all(sends).await;
     Ok(json!({"master": document.master, "members": members}))
+}
+
+/// A member accepts at most 256 steps in a body of at most 64 KiB; a plan
+/// beyond that is refused here rather than by the member's listener.
+fn within_bounds(member: &MemberName, request: &ApplyRequest) -> Result<()> {
+    let bytes = serde_json::to_vec(request)
+        .expect("a request serializes")
+        .len();
+    if request.steps.len() > MAXIMUM_STEPS || bytes > MAXIMUM_BODY {
+        return Err(Failure::new(
+            "plan_too_large",
+            format!(
+                "{member}'s plan has {} steps, more than one apply sends.",
+                request.steps.len()
+            ),
+            format!(
+                "Leave tools out with elsecall tools leave-out --member {member}, apply, then unset them and apply again."
+            ),
+        ));
+    }
+    Ok(())
 }
 
 async fn applied(applying: &Applying, only: Option<&str>) -> Result<Value> {

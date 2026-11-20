@@ -64,78 +64,127 @@ impl Applier {
         installers: Vec<Arc<dyn Installer>>,
     ) -> Arc<Self> {
         let latest = record::load(&data);
-        Arc::new(Self {
+        let applier = Arc::new(Self {
             admission,
             installers,
             data,
-            latest: Mutex::new(latest),
-        })
+            latest: Mutex::new(latest.clone()),
+        });
+        // An apply cut short by a restart is kept as it now reads, so its
+        // failures keep the time they were found.
+        if let Some(record) = &latest {
+            applier.keep(record);
+        }
+        applier
     }
 
     /// The latest apply on this member, if any.
     pub(crate) fn latest(&self) -> Option<Record> {
-        self.latest.lock().expect("apply lock").clone()
+        self.lock().clone()
     }
 
-    /// Starts carrying out `steps`, unless an apply already runs here.
+    /// The record, also after a panic elsewhere: every change to it is whole.
+    fn lock(&self) -> std::sync::MutexGuard<'_, Option<Record>> {
+        self.latest
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Starts carrying out `steps`, unless an apply already runs here. No steps
+    /// is an apply too: it finishes at once, and the failures of the one before
+    /// stop standing.
     pub(crate) fn start(self: &Arc<Self>, steps: Vec<InstallStep>) -> Result<Record> {
         let record = {
-            let mut latest = self.latest.lock().expect("apply lock");
+            let mut latest = self.lock();
             if latest.as_ref().is_some_and(Record::running) {
                 return Err(Refusal::new(
                     "apply_in_progress",
                     "This member is already installing a plan.",
-                    "Wait for it with elsecall tools apply --wait, then apply again.",
+                    "Wait for it with elsecall tools applied --wait, then apply again.",
                 ));
             }
-            let record = Record::new(steps);
+            let mut record = Record::new(steps);
+            for entry in &mut record.entries {
+                if self.installer(&entry.step).is_none() {
+                    entry.state = State::Skipped {
+                        reason: "not_supported",
+                    };
+                }
+            }
+            if !record
+                .entries
+                .iter()
+                .any(|entry| entry.state == State::Queued)
+            {
+                record.finished_at = Some(Timestamp::now());
+            }
             *latest = Some(record.clone());
             record
         };
         self.keep(&record);
-        let applier = Arc::clone(self);
-        tokio::spawn(async move { applier.run().await });
+        if record.running() {
+            let applier = Arc::clone(self);
+            tokio::spawn(async move {
+                let run = tokio::spawn(Arc::clone(&applier).run());
+                if run.await.is_err() {
+                    applier.cut_short("apply_failed");
+                }
+            });
+        }
         Ok(record)
+    }
+
+    fn installer(&self, step: &InstallStep) -> Option<&Arc<dyn Installer>> {
+        self.installers
+            .iter()
+            .find(|installer| installer.manager() == step.manager)
     }
 
     async fn run(self: Arc<Self>) {
         let count = self.latest().map_or(0, |record| record.entries.len());
         for index in 0..count {
-            let Some(step) = self
-                .latest()
-                .map(|record| record.entries[index].step.clone())
-            else {
+            let Some(entry) = self.latest().map(|record| record.entries[index].clone()) else {
                 return;
             };
-            let state = match self
-                .installers
-                .iter()
-                .find(|installer| installer.manager() == step.manager)
-            {
-                None => State::Skipped {
-                    reason: "not_supported",
-                },
-                Some(installer) => {
-                    self.update(|record| {
-                        record.entries[index].state = State::Running {
-                            since: Timestamp::now(),
-                        }
-                    });
-                    match self.install(installer.as_ref(), &step).await {
-                        Ok(()) => State::Installed {
-                            at: Timestamp::now(),
-                        },
-                        Err(failure) => State::Failed(Failure {
-                            stage: failure.stage.into(),
-                            code: failure.code.into(),
-                            at: Timestamp::now(),
-                        }),
-                    }
+            let (State::Queued, Some(installer)) = (&entry.state, self.installer(&entry.step))
+            else {
+                continue;
+            };
+            self.update(|record| {
+                record.entries[index].state = State::Running {
+                    since: Timestamp::now(),
                 }
+            });
+            let state = match self.install(installer.as_ref(), &entry.step).await {
+                Ok(()) => State::Installed {
+                    at: Timestamp::now(),
+                },
+                Err(failure) => State::Failed(Failure {
+                    stage: failure.stage.into(),
+                    code: failure.code.into(),
+                    at: Timestamp::now(),
+                }),
             };
             self.update(|record| record.entries[index].state = state);
         }
         self.update(|record| record.finished_at = Some(Timestamp::now()));
+    }
+
+    /// Ends an apply whose task stopped before its steps did.
+    fn cut_short(&self, code: &str) {
+        self.update(|record| {
+            let now = Timestamp::now();
+            for entry in &mut record.entries {
+                if matches!(entry.state, State::Queued | State::Running { .. }) {
+                    entry.state = State::Failed(Failure {
+                        stage: "apply".into(),
+                        code: code.into(),
+                        at: now,
+                    });
+                }
+            }
+            record.finished_at = Some(now);
+        });
     }
 
     /// One step, from admission to the end of its run.
@@ -162,30 +211,32 @@ impl Applier {
             .admission
             .admit(request)
             .await
-            .map_err(|_| StepFailure {
+            .map_err(|refusal| StepFailure {
                 stage: "admission",
-                code: "install_not_admitted",
+                // The scheduler refuses everything while the service stops.
+                code: if refusal.code == "service_unavailable" {
+                    "apply_interrupted"
+                } else {
+                    "install_not_admitted"
+                },
             })?;
+        let run = AdmittedRun {
+            admission: Arc::clone(&self.admission),
+            run,
+            failed: true,
+        };
         let work = AdmittedWork {
             admission: Arc::clone(&self.admission),
-            run: run.clone(),
+            run: run.run.clone(),
         };
         let outcome = installer.install(step, &work).await;
-        self.admission.end(
-            &run,
-            RunEnded::Exited {
-                exit_code: i32::from(outcome.is_err()),
-                cpu_ms: None,
-                run_phases: None,
-                plan_observation: None,
-            },
-        );
+        run.end(outcome.is_err());
         outcome
     }
 
     fn update(&self, change: impl FnOnce(&mut Record)) {
         let record = {
-            let mut latest = self.latest.lock().expect("apply lock");
+            let mut latest = self.lock();
             let Some(record) = latest.as_mut() else {
                 return;
             };
@@ -202,6 +253,35 @@ impl Applier {
                 serde_json::json!({"event": "tools_apply_unsaved", "detail": error})
             );
         }
+    }
+}
+
+/// A step's admitted run, ended exactly once: with the step's outcome, or as
+/// failed when the step is dropped or panics first, so its room is never held
+/// past the step.
+struct AdmittedRun {
+    admission: Arc<dyn InstallAdmission>,
+    run: elsecall_contract::scheduling_model::run_id::RunId,
+    failed: bool,
+}
+
+impl AdmittedRun {
+    fn end(mut self, failed: bool) {
+        self.failed = failed;
+    }
+}
+
+impl Drop for AdmittedRun {
+    fn drop(&mut self) {
+        self.admission.end(
+            &self.run,
+            RunEnded::Exited {
+                exit_code: i32::from(self.failed),
+                cpu_ms: None,
+                run_phases: None,
+                plan_observation: None,
+            },
+        );
     }
 }
 

@@ -140,38 +140,43 @@ fn failed_step(member: &MemberName, failed: &FailedStep, master: &MemberName) ->
 
 /// Why a step failed, and what resolves it, by its code.
 fn step_failure(member: &MemberName, failed: &FailedStep) -> (&'static str, String) {
-    let install = format!("mise install {}@{}", failed.tool, failed.version);
+    let tool = format!("{} {}", failed.tool, failed.version);
+    let retry = format!("then run elsecall tools apply --member {member} on the master to retry");
     match failed.code.as_str() {
         "tool_install_failed" => (
             "mise install exited with an error",
-            format!("Run {install} on {member} to see why, fix the cause, then apply again."),
+            format!(
+                "Install {tool} with mise on {member}, with the options elsecall tools plan lists, to see why; fix the cause, {retry}."
+            ),
         ),
         "tool_install_timeout" => (
             "mise install ran for 30 minutes",
-            format!("Run {install} on {member} to see where it stalls, then apply again."),
+            format!("Install {tool} with mise on {member} to see where it stalls, {retry}."),
         ),
         "mise_missing" => (
             "mise is not installed there",
-            format!("Install mise on {member} (curl https://mise.run | sh), then apply again."),
+            format!("Install mise on {member}, {retry}."),
         ),
         "mise_unusable" => (
             "mise could not be started there",
-            format!(
-                "Run mise --version on {member} and reinstall mise if it fails, then apply again."
-            ),
+            format!("Run mise --version on {member} and reinstall mise if it fails, {retry}."),
         ),
         "install_not_admitted" => (
             "its scheduler did not admit the step",
-            format!("Run elsecall doctor on {member}, then apply again."),
+            format!("Run elsecall doctor on {member}, {retry}."),
         ),
         "apply_interrupted" => (
             "the service stopped while the step waited or ran",
-            "Apply again; the step starts over.".to_owned(),
+            format!("Once {member}'s service runs again, {retry}."),
+        ),
+        "apply_failed" => (
+            "the apply stopped unexpectedly",
+            format!("Read elsecall doctor on {member}, {retry}."),
         ),
         _ => (
             "a later build's failure this build does not describe",
             format!(
-                "Run elsecall tools applied --member {member} on a member with the master's build, then apply again."
+                "Run elsecall fleet upgrade on the master so every member runs its build, {retry}."
             ),
         ),
     }
@@ -611,7 +616,7 @@ mod tests {
                 "subject": "mise:node@22.19.0",
                 "code": "tool_install_failed",
                 "message": "Installing mise node 22.19.0 on macbook-pro failed at its install stage: mise install exited with an error.",
-                "hint": "Run mise install node@22.19.0 on macbook-pro to see why, fix the cause, then apply again.",
+                "hint": "Install node 22.19.0 with mise on macbook-pro, with the options elsecall tools plan lists, to see why; fix the cause, then run elsecall tools apply --member macbook-pro on the master to retry.",
                 "since": "2026-11-20T10:00:00.000Z",
                 "actions": [{
                     "summary": "Apply macbook-pro's plan again, which retries this step.",

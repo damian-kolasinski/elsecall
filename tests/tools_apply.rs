@@ -100,8 +100,14 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
     assert!(
         steps(&bravo_started["apply"])
             .iter()
-            .all(|(_, _, state)| state == "queued" || state == "running"),
-        "{started}"
+            .all(|(tool, _, state)| {
+                if matches!(tool.as_str(), "xcode" | "iOS") {
+                    state == "skipped"
+                } else {
+                    state == "queued" || state == "running"
+                }
+            }),
+        "managers that do not install yet are skipped before anything runs: {started}"
     );
 
     let finished = alpha.ok(&["tools", "applied", "--member", "bravo", "--wait"]);
@@ -184,6 +190,85 @@ fn each_member_installs_its_plan_as_admitted_work_and_failures_need_attention() 
         1,
         "the retried step failed again and still needs attention: {view}"
     );
+    let everyone = alpha.ok(&["tools", "apply", "--wait"]);
+    assert_eq!(
+        everyone["members"][0]["state"], "nothing_to_install",
+        "--wait keeps the members it did not start: {everyone}"
+    );
+    assert_eq!(everyone["members"][1]["state"], "finished", "{everyone}");
+
+    for tool in ["mise:node", "mise:bun", "xcode"] {
+        alpha.ok(&["tools", "leave-out", tool]);
+    }
+    let emptied = alpha.ok(&["tools", "apply", "--member", "bravo"]);
+    assert_eq!(
+        emptied["members"][0]["state"], "nothing_to_install",
+        "{emptied}"
+    );
+    assert_eq!(
+        failed_items(&alpha),
+        0,
+        "an apply with nothing to install ends the last one's failures"
+    );
+}
+
+fn failed_items(viewer: &TestMember) -> usize {
+    viewer.fleet()["attention"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|item| item["category"] == "provisioning_step_failed")
+        .count()
+}
+
+#[test]
+fn a_restart_cuts_a_running_step_short_without_blocking_the_next_apply() {
+    let master_tools = equipped();
+    let mut bare_tools = bare();
+    let root = tempfile::Builder::new()
+        .prefix("ec-apply-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let slow = root.path().join("mise");
+    executable(
+        &slow,
+        "#!/bin/sh
+case \"$1\" in\n  --version) echo 2026.10.11 ;;\n  ls) echo '{}' ;;\n  install) exec sleep 60 ;;\nesac\n",
+    );
+    for (key, value) in &mut bare_tools.env {
+        if key == "ELSECALL_MISE" {
+            *value = utf8(&slow);
+        }
+    }
+    let alpha = TestMember::start_with("alpha", "", &master_tools.pairs());
+    let mut bravo = TestMember::start_with("bravo", "", &bare_tools.pairs());
+    enrol(&alpha, &bravo);
+    workspace(
+        &alpha,
+        "acme-ios",
+        &[("mise.toml", "[tools]\nbun = \"1.3.5\"\n")],
+    );
+    plan_with(&alpha, 1, &["tools", "plan"]);
+    alpha.ok(&["tools", "apply", "--member", "bravo"]);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    while alpha.ok(&["tools", "applied", "--member", "bravo"])["members"][0]["apply"]["steps"][0]["state"]
+        != "running"
+    {
+        assert!(std::time::Instant::now() < deadline, "the step never ran");
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    let busy = alpha.ok(&["tools", "apply", "--member", "bravo"]);
+    assert_eq!(busy["members"][0]["state"], "refused", "{busy}");
+    assert_eq!(busy["members"][0]["error"]["code"], "apply_in_progress");
+    bravo.restart();
+    let read = alpha.ok(&["tools", "applied", "--member", "bravo"]);
+    assert_eq!(read["members"][0]["state"], "finished", "{read}");
+    assert_eq!(
+        read["members"][0]["apply"]["steps"][0]["code"],
+        "apply_interrupted"
+    );
+    let again = alpha.ok(&["tools", "apply", "--member", "bravo"]);
+    assert_eq!(again["members"][0]["state"], "started", "{again}");
 }
 
 fn view_status(viewer: &TestMember, member: &str) -> Value {
