@@ -65,7 +65,7 @@ pub(crate) fn samples(records: &[Record], now: Timestamp, recency: Duration) -> 
                 record.requested_at,
                 SyncSample {
                     member: placed.member.clone(),
-                    workspace: placed.caller_workspace.clone(),
+                    workspace: placed.caller_workspace.clone()?,
                     repository: placed.repository.clone(),
                     warmth: placed.warmth?,
                     sync: Duration::from_millis(placed.sync.as_ref()?.duration_ms?),

@@ -403,7 +403,7 @@ mod tests {
             "mini", &workspace,
         ));
         let placed = record.placed.as_mut().unwrap();
-        placed.caller_workspace = "/private/SECRET_SENTINEL".into();
+        placed.caller_workspace = Some("/private/SECRET_SENTINEL".into());
         placed.copy = Some("/SECRET_SENTINEL".into());
         placed.repository = Some("/SECRET_SENTINEL".into());
         record.outcome = Some(Outcome::Cancelled {

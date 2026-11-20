@@ -31,6 +31,7 @@ mod install_window;
 mod installation;
 mod local_cli;
 mod loopback_policy;
+mod member_command;
 mod nearby;
 mod openssh_mac;
 mod peer_io;

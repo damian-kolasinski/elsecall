@@ -1,6 +1,7 @@
 //! Executes the command on the member a placed grant names: syncs the workspace,
 //! starts the command there, and passes the caller's input, output, signals and the
-//! command's exit through, as if it ran here.
+//! command's exit through, as if it ran here. Work requested outside a working tree
+//! syncs nothing and starts in the member's home directory.
 use crate::passthrough::executor::{
     CommandLine, Executor, Exit, Finished, ResultReturn, RunContext, RunFailure, RunResult, Running,
 };
@@ -39,13 +40,25 @@ use std::{
 };
 use tokio::sync::mpsc;
 
+/// Where a placed run comes from on this side.
+pub enum Origin {
+    /// A working tree, which the member's copy is synced to, with its sync caches.
+    Tree {
+        located: Located,
+        caches: CacheFiles,
+    },
+    /// The caller's directory outside any working tree. Nothing is synced, the
+    /// command starts in the member's home directory, and no outputs come back,
+    /// so nothing here is written.
+    Outside(PathBuf),
+}
+
 /// Runs commands on another member, through the local service's relay.
 pub struct RemoteExecutor {
     pub workload: Option<elsecall_contract::scheduling_model::workload_metadata::Workload>,
     pub socket: PathBuf,
-    pub located: Located,
+    pub origin: Origin,
     pub configuration: WorkloadSettings,
-    pub caches: CacheFiles,
     /// The hold limit, end to end: the command must start by then.
     pub start_by: Timestamp,
     /// This member's name, for warnings.
@@ -54,12 +67,19 @@ pub struct RemoteExecutor {
     pub synced_paths: Vec<String>,
 }
 
-fn hold_limit_passed() -> Failure {
-    Failure::new(
-        "fleet_busy",
-        "The command could not start on the member within its hold limit, which includes the workspace sync.",
-        "Retry: the copy stays warm, so the next sync moves only what changed. Or pass a longer --hold-limit.",
-    )
+fn hold_limit_passed(origin: &Origin) -> Failure {
+    match origin {
+        Origin::Tree { .. } => Failure::new(
+            "fleet_busy",
+            "The command could not start on the member within its hold limit, which includes the workspace sync.",
+            "Retry: the copy stays warm, so the next sync moves only what changed. Or pass a longer --hold-limit.",
+        ),
+        Origin::Outside(_) => Failure::new(
+            "fleet_busy",
+            "The command could not start on the member within its hold limit.",
+            "Retry, or pass a longer --hold-limit.",
+        ),
+    }
 }
 
 /// Whether stdout and stderr are one destination, as with `2>&1`.
@@ -104,18 +124,27 @@ impl Executor for RemoteExecutor {
             crate::local_run_client::attach(&self.socket, &context.run_id),
         )
         .await
-        .unwrap_or_else(|_| Err(hold_limit_passed()));
+        .unwrap_or_else(|_| Err(hold_limit_passed(&self.origin)));
         let mut link = match attached {
             Ok(stream) => stream,
             Err(failure) => {
                 report.send().await;
-                return Err(RunFailure::remote(
-                    failure,
-                    RemoteFailurePhase::WorkspaceSync,
-                ));
+                // Without a working tree nothing syncs: everything is execution.
+                let phase = match self.origin {
+                    Origin::Tree { .. } => RemoteFailurePhase::WorkspaceSync,
+                    Origin::Outside(_) => RemoteFailurePhase::Execution,
+                };
+                return Err(RunFailure::remote(failure, phase));
             }
         };
         let merged = merged_output();
+        // Outputs and relative directories belong to a working tree.
+        let (tree, outputs) = match &self.origin {
+            Origin::Tree { located, caches } => {
+                (Some((located, caches)), self.configuration.outputs.clone())
+            }
+            Origin::Outside(_) => (None, Vec::new()),
+        };
         let start = Start {
             program: command.program.as_bytes().to_vec(),
             arguments: command
@@ -124,10 +153,10 @@ impl Executor for RemoteExecutor {
                 .map(|a| a.as_bytes().to_vec())
                 .collect(),
             environment: environment::forwarded(&self.configuration, std::env::vars_os()),
-            directory: self.located.prefix.clone(),
+            directory: tree.and_then(|(located, _)| located.prefix.clone()),
             merged,
             input: descriptor_open(0),
-            outputs: self.configuration.outputs.clone(),
+            outputs: outputs.clone(),
             consistency: None,
         };
         // The caller's own fingerprints are taken while the workspace syncs; they
@@ -138,10 +167,15 @@ impl Executor for RemoteExecutor {
             .unwrap_or_default();
         let declared = consistency::Declared::from(&self.configuration)
             .without_synced(&self.synced_paths, &home);
-        let salt = (!declared.is_empty()).then(consistency::salt).flatten();
-        let own_fingerprints = salt.clone().map(|salt| {
+        // Consistency compares the two sides' toolchains as each sees them from its
+        // working directory; without a working tree the directories differ by
+        // design (the caller's against the member's home), so it is not checked.
+        let salt = tree
+            .filter(|_| !declared.is_empty())
+            .and_then(|_| consistency::salt());
+        let own_fingerprints = salt.clone().zip(tree).map(|(salt, (located, _))| {
             let declared = declared.clone();
-            let root = self.located.root.clone();
+            let root = located.root.clone();
             let locations: Vec<_> = self
                 .configuration
                 .configuration
@@ -156,16 +190,18 @@ impl Executor for RemoteExecutor {
         let remaining = self.start_by.since(Timestamp::now());
         let mut warnings = Vec::new();
         let started = tokio::time::timeout(remaining, async {
-            let stats = sync::push(
-                &mut SyncOverLink(&mut link),
-                &self.located,
-                &self.caches,
-                &context.member,
-                &self.configuration.workspace_refs,
-            )
-            .await?;
-            report.data.reached = Reached::Synced;
-            report.data.sync = Some(summary(&stats));
+            if let Some((located, caches)) = tree {
+                let stats = sync::push(
+                    &mut SyncOverLink(&mut link),
+                    located,
+                    caches,
+                    &context.member,
+                    &self.configuration.workspace_refs,
+                )
+                .await?;
+                report.data.reached = Reached::Synced;
+                report.data.sync = Some(summary(&stats));
+            }
             let mut start = start;
             start.consistency = salt.map(|salt| consistency::Request {
                 salt,
@@ -207,11 +243,12 @@ impl Executor for RemoteExecutor {
             }
         })
         .await
-        .unwrap_or_else(|_| Err(hold_limit_passed()));
+        .unwrap_or_else(|_| Err(hold_limit_passed(&self.origin)));
         let execution_started = match started {
             Ok(started) => started,
             Err(failure) => {
-                let phase = if report.data.reached == Reached::Synced {
+                // Without a working tree nothing syncs: everything is execution.
+                let phase = if report.data.reached == Reached::Synced || tree.is_none() {
                     RemoteFailurePhase::Execution
                 } else {
                     RemoteFailurePhase::WorkspaceSync
@@ -232,8 +269,11 @@ impl Executor for RemoteExecutor {
             input: start_input(),
             report,
             warnings,
-            outputs: self.configuration.outputs.clone(),
-            root: self.located.root.clone(),
+            outputs,
+            root: match &self.origin {
+                Origin::Tree { located, .. } => located.root.clone(),
+                Origin::Outside(directory) => directory.clone(),
+            },
         })
     }
 }
@@ -405,6 +445,8 @@ pub struct RemoteRun {
     warnings: Vec<String>,
     /// The declared outputs, which alone may come back.
     outputs: Vec<WorkspacePath>,
+    /// Where outputs come back to: the working tree, or for a run without one
+    /// the caller's directory, where none may come back.
     root: PathBuf,
 }
 

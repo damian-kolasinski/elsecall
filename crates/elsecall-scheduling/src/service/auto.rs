@@ -368,7 +368,7 @@ impl Scheduler {
                 Placing {
                     requester: waiting.requester,
                     target: Some(member.clone()),
-                    workspace,
+                    workspace: Some(workspace),
                     expires_at: waiting
                         .expires_at
                         .expect("interactive work has a hold limit"),

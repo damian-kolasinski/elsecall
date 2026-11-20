@@ -1,10 +1,11 @@
-//! A member hosting runs its master places on it: it claims the run's copy, asks
-//! its scheduler to admit the run at once, holds the admission until the caller
-//! attaches, and reports the runner's progress back to its records.
+//! A member hosting runs its master places on it: it claims the run's copy, or
+//! for work without a workspace takes its home directory, asks its scheduler to
+//! admit the run at once, holds the admission until the caller attaches, and
+//! reports the runner's progress back to its records.
 use crate::remote_run::{
     leftovers::Cap,
     protocol::Exited,
-    runner::{Assignment, Ending, Host, Reached as RunnerReached},
+    runner::{Assignment, Ending, Host, Reached as RunnerReached, Workplace},
 };
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::scheduling_model::run_id::RunId;
@@ -24,6 +25,7 @@ use elsecall_workspace::{
 use std::{
     collections::HashMap,
     ffi::OsString,
+    path::PathBuf,
     sync::{Arc, Mutex, Weak},
     time::{Duration, Instant},
 };
@@ -38,6 +40,8 @@ pub struct PlacementHost {
     locations: Locations,
     sources: ObjectSources,
     path: Option<OsString>,
+    /// The account's home directory, where work without a workspace runs.
+    home: PathBuf,
     /// How long what a placed command leaves running may run after it exits.
     leftovers_cap: Cap,
     /// Admitted runs waiting for their caller to attach, with the master that
@@ -60,6 +64,7 @@ impl PlacementHost {
         locations: Locations,
         sources: ObjectSources,
         path: Option<String>,
+        home: PathBuf,
         leftovers_cap: Cap,
     ) -> Arc<Self> {
         Arc::new_cyclic(|this| Self {
@@ -69,6 +74,7 @@ impl PlacementHost {
             locations,
             sources,
             path: path.map(OsString::from),
+            home,
             leftovers_cap,
             tickets: Mutex::new(HashMap::new()),
         })
@@ -76,32 +82,54 @@ impl PlacementHost {
 
     /// Considers `offer` from `master`, which placement authority established.
     pub fn offer(&self, master: &str, offer: &PlacementOffer) -> Result<OfferReply> {
-        let location =
-            self.locations
-                .locate(master, &offer.workspace.root, &offer.workspace.common_dir)?;
-        let claim = self.copies.claim(&location);
-        let warmth = warmth(&location);
-        let setting = match location.setting {
-            elsecall_workspace::location::Setting::Mapped => "mapped",
-            elsecall_workspace::location::Setting::SamePath => "same-path",
+        let (workplace, reply) = match &offer.workspace {
+            Some(workspace) => {
+                let location =
+                    self.locations
+                        .locate(master, &workspace.root, &workspace.common_dir)?;
+                let claim = self.copies.claim(&location);
+                let setting = match location.setting {
+                    elsecall_workspace::location::Setting::Mapped => "mapped",
+                    elsecall_workspace::location::Setting::SamePath => "same-path",
+                };
+                let reply = self.scheduler.accept_placed(
+                    master,
+                    offer,
+                    claim.is_some(),
+                    &location.root.to_string_lossy(),
+                    setting,
+                    Some(warmth(&location)),
+                )?;
+                (
+                    claim.map(|claim| Workplace::Copy {
+                        location,
+                        claim: Box::new(claim),
+                    }),
+                    reply,
+                )
+            }
+            None => {
+                let reply = self.scheduler.accept_placed(
+                    master,
+                    offer,
+                    true,
+                    &self.home.to_string_lossy(),
+                    "home",
+                    None,
+                )?;
+                (Some(Workplace::Home(self.home.clone())), reply)
+            }
         };
-        let reply = self.scheduler.accept_placed(
-            master,
-            offer,
-            claim.is_some(),
-            &location.root.to_string_lossy(),
-            setting,
-            warmth,
-        )?;
-        if let (OfferReply::Accepted { .. }, Some(mut claim)) = (&reply, claim) {
-            claim.begin_use();
+        if let (OfferReply::Accepted { .. }, Some(mut workplace)) = (&reply, workplace) {
+            if let Workplace::Copy { claim, .. } = &mut workplace {
+                claim.begin_use();
+            }
             let id = offer.run_id.clone();
             let assignment = Assignment {
                 run_id: id.clone(),
                 member: self.scheduler.name(),
                 calling_member: master.into(),
-                location,
-                claim,
+                workplace,
                 path: self.path.clone(),
                 sources: self.sources.clone(),
                 start_by: Instant::now() + Duration::from_millis(offer.start_within_ms),

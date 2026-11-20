@@ -432,6 +432,55 @@ fn enrolling_again_before_the_member_joined_repeats_the_join_step() {
 }
 
 #[test]
+fn a_member_awaiting_provisioning_needs_attention_until_marked_ready() {
+    let a = TestMember::start("alpha");
+    let b = TestMember::start("bravo");
+    enrol_awaiting(&a, &b);
+    // Every member lists it, with the action to run on the master.
+    for member in [&a, &b] {
+        let attention = member.fleet()["attention"].clone();
+        let items = attention.as_array().unwrap();
+        assert_eq!(items.len(), 1, "{attention}");
+        let item = &items[0];
+        assert_eq!(item["id"], "awaiting_provisioning:bravo");
+        assert_eq!(item["member"], "bravo");
+        assert_eq!(item["category"], "awaiting_provisioning");
+        assert_eq!(item["code"], "member_awaiting_provisioning");
+        assert_eq!(item["since"], serde_json::Value::Null);
+        assert!(
+            item["hint"].as_str().unwrap().contains("on alpha"),
+            "{item}"
+        );
+        let action = &item["actions"][0];
+        assert_eq!(
+            action["command"],
+            serde_json::json!(["elsecall", "fleet", "ready", "bravo"])
+        );
+        assert_eq!(action["run_on"], "alpha");
+        assert_eq!(action["person_only"], false);
+    }
+    // Its identity holds across reads while the condition lasts.
+    assert_eq!(
+        a.fleet()["attention"][0]["id"],
+        "awaiting_provisioning:bravo"
+    );
+
+    // The action resolves it, and the item clears everywhere.
+    let command = a.fleet()["attention"][0]["actions"][0]["command"].clone();
+    let words: Vec<&str> = command
+        .as_array()
+        .unwrap()
+        .iter()
+        .skip(1)
+        .map(|word| word.as_str().unwrap())
+        .collect();
+    a.ok(&words);
+    for member in [&a, &b] {
+        assert_eq!(member.fleet()["attention"], serde_json::json!([]));
+    }
+}
+
+#[test]
 fn a_member_awaits_provisioning_on_every_member_until_marked_ready() {
     let a = TestMember::start("alpha");
     let b = TestMember::start("bravo");

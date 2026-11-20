@@ -29,7 +29,9 @@ pub(super) struct Placing {
     /// The member it is offered to; `None` while a placeable request is
     /// undecided because no member can take it in time.
     pub target: Option<String>,
-    pub workspace: WorkspaceRef,
+    /// The working tree the member's copy follows; `None` for work required on
+    /// a member from outside a working tree, which runs in its home directory.
+    pub workspace: Option<WorkspaceRef>,
     /// The hold limit, on the wall clock; the sync must finish before it too.
     pub expires_at: Timestamp,
     pub responder: oneshot::Sender<Result<Grant, Failure>>,
@@ -109,7 +111,7 @@ impl Scheduler {
         book: &mut Book,
         mut entry: Entry,
         target: String,
-        workspace: WorkspaceRef,
+        workspace: Option<WorkspaceRef>,
         expires_at: Timestamp,
         responder: oneshot::Sender<Result<Grant, Failure>>,
     ) {
@@ -229,8 +231,8 @@ impl Scheduler {
             side: Side::Caller,
             calling_member: self.name(),
             member: target.clone(),
-            caller_workspace: placing.workspace.root.clone(),
-            repository: Some(placing.workspace.common_dir.clone()),
+            caller_workspace: placing.workspace.as_ref().map(|w| w.root.clone()),
+            repository: placing.workspace.as_ref().map(|w| w.common_dir.clone()),
             copy: Some(copy.clone()),
             location: Some(location),
             warmth,

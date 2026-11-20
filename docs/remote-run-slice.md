@@ -194,7 +194,7 @@ The most literal reading was implemented in each case.
 
 1. **Submodules.** "The git working tree" was read as excluding submodules' own working trees. A build that needs submodule content fails on the member. Should a later step copy submodules as nested workspaces?
 2. **History.** All history reachable from HEAD and its upstream is carried, so `git log`, `describe` and `rev-list --count` match. The cost is a first sync of the whole history, once per repository.
-3. **Required member outside a working tree.** It runs locally, because the contract says placeable work outside a tree does, although a required member is otherwise a hard requirement.
+3. **Required member outside a working tree.** At first it ran locally, because the contract says placeable work outside a tree does. That ignored a required member without a word, so it now runs on the member, in its home directory with no copy (README, "Running on another member"; `docs/fleet-scheduling.md`, "Workspace").
 4. **Nested requests.** A `--member` request from inside a local lease or run nests and runs on the calling member ("runs on the same member").
 5. **"Only if they changed"** was read as changed by the run on the member, compared before and after the command. A changed output replaces the caller's whole; one the run removed is removed from the caller.
 6. **Process groups.** Forwarded signals go to the command's process group, as a terminal's Ctrl-C does. Leftover processes in the group are stopped when the run ends, so that one run at a time uses a copy. (Later: they run on up to a cap, and the next run of the copy waits for them or stops them.)

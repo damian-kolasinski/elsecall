@@ -407,6 +407,7 @@ pub async fn serve_with_updates(
         locations,
         ObjectSources::new(configuration.object_sources.clone()),
         configuration.placed_path,
+        paths.home.clone(),
         configuration.leftovers_cap,
     );
     let stopping = scheduler.clone();

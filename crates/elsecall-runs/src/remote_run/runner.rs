@@ -1,5 +1,6 @@
 //! The member's side of a placed run: sync the copy, start the command in it, pass
-//! input, output and signals, and stop the command if the caller goes silent.
+//! input, output and signals, and stop the command if the caller goes silent. A
+//! run without a workspace skips the sync and starts in the home directory.
 //! Processes the command leaves running when it exits are handed to
 //! [`leftovers`](crate::remote_run::leftovers), which caps them.
 use crate::remote_run::{
@@ -101,14 +102,26 @@ pub trait Host: Send + Sync {
     fn waited_for_leftovers(&self, run: &RunId, waited: Duration);
 }
 
+/// Where a placed run works on this member.
+pub enum Workplace {
+    /// The member's copy of the caller's working tree, synced before the start.
+    Copy {
+        location: CopyLocation,
+        /// Exclusive use of the copy for the whole run.
+        claim: Box<Claim>,
+    },
+    /// The account's home directory, for work required here from outside a
+    /// working tree: nothing is synced, and nothing but the command's streams and
+    /// exit comes back. Runs share it, as commands over SSH would.
+    Home(PathBuf),
+}
+
 /// One admitted placed run, ready to be attached.
 pub struct Assignment {
     pub run_id: RunId,
     pub member: String,
     pub calling_member: String,
-    pub location: CopyLocation,
-    /// Exclusive use of the copy for the whole run.
-    pub claim: Claim,
+    pub workplace: Workplace,
     /// The member's PATH for placed work, if configured.
     pub path: Option<OsString>,
     /// Where the member may find callers' history before asking for it.
@@ -155,9 +168,10 @@ where
     // work and counts as outside load.
     host.ended(&id, ending);
     link.close().await;
-    match left {
-        Some(leftovers) => assignment.claim.release_with(Arc::new(leftovers)),
-        None => drop(assignment.claim),
+    // What a run left in a copy waits for the copy's next run; in the home
+    // directory it runs on until it ends or reaches the cap.
+    if let (Workplace::Copy { claim, .. }, Some(leftovers)) = (assignment.workplace, left) {
+        claim.release_with(Arc::new(leftovers));
     }
 }
 
@@ -178,38 +192,47 @@ async fn execute(
     host: &Arc<dyn Host>,
 ) -> Outcome<Finished> {
     let at = |reached| move |failure| (failure, reached);
-    let too_late = || {
-        Failure::new(
+    let too_late = || match assignment.workplace {
+        Workplace::Copy { .. } => Failure::new(
             "fleet_busy",
             "The command could not start within its hold limit; the workspace sync took too long.",
             "Retry: the copy is warm now, so the next sync is faster. Or pass a longer --hold-limit.",
-        )
+        ),
+        Workplace::Home(_) => Failure::new(
+            "fleet_busy",
+            "The command could not start within its hold limit.",
+            "Retry, or pass a longer --hold-limit.",
+        ),
     };
     // The hold limit bounds everything up to the start, so a caller cannot hold
     // this member's capacity by syncing or waiting forever.
     let deadline = tokio::time::Instant::from_std(assignment.start_by);
-    // What the previous run left running may still write in the copy: it ends,
-    // or is stopped, before the sync, so the copy matches the caller at the start.
-    if let Some(lingering) = assignment.claim.lingering() {
-        let waiting = Instant::now();
-        // Stopping them takes time too, within the hold limit.
-        let wait = leftovers_wait_budget(assignment.start_by.saturating_duration_since(waiting));
-        host.waiting_for_leftovers(&assignment.run_id);
-        lingering.settle(wait, &assignment.run_id.to_string()).await;
-        host.waited_for_leftovers(&assignment.run_id, waiting.elapsed());
-    }
-    let (copy, stats) = tokio::time::timeout_at(
-        deadline,
-        sync::receive(
-            &mut SyncOverLink(link),
-            &assignment.location,
-            &assignment.sources,
-        ),
-    )
-    .await
-    .unwrap_or_else(|_| Err(too_late()))
-    .map_err(at(Reached::Syncing))?;
-    host.synced(&assignment.run_id, &stats);
+    let copy = match &assignment.workplace {
+        Workplace::Copy { location, claim } => {
+            // What the previous run left running may still write in the copy: it
+            // ends, or is stopped, before the sync, so the copy matches the caller
+            // at the start.
+            if let Some(lingering) = claim.lingering() {
+                let waiting = Instant::now();
+                // Stopping them takes time too, within the hold limit.
+                let wait =
+                    leftovers_wait_budget(assignment.start_by.saturating_duration_since(waiting));
+                host.waiting_for_leftovers(&assignment.run_id);
+                lingering.settle(wait, &assignment.run_id.to_string()).await;
+                host.waited_for_leftovers(&assignment.run_id, waiting.elapsed());
+            }
+            let (copy, stats) = tokio::time::timeout_at(
+                deadline,
+                sync::receive(&mut SyncOverLink(link), location, &assignment.sources),
+            )
+            .await
+            .unwrap_or_else(|_| Err(too_late()))
+            .map_err(at(Reached::Syncing))?;
+            host.synced(&assignment.run_id, &stats);
+            Some(copy)
+        }
+        Workplace::Home(_) => None,
+    };
     let start = match tokio::time::timeout_at(deadline, link.receive())
         .await
         .unwrap_or_else(|_| Err(too_late()))
@@ -221,7 +244,11 @@ async fn execute(
         },
         _ => return Err((protocol("Start"), Reached::Synced)),
     };
-    let root = copy.root().to_owned();
+    let root = match (&copy, &assignment.workplace) {
+        (Some(copy), _) => copy.root().to_owned(),
+        (None, Workplace::Home(home)) => home.clone(),
+        (None, Workplace::Copy { .. }) => unreachable!("a copy's run syncs it first"),
+    };
     let prepared = start
         .validate()
         .map_err(not_startable)
@@ -246,9 +273,10 @@ async fn execute(
     );
     let before = tokio::task::block_in_place(|| output_survey::survey(&confined, &start.outputs));
     // Ready before the command starts, so the snapshot can be taken the moment it exits.
-    let staging = match start.outputs.is_empty() {
-        true => Ok(None),
-        false => tokio::task::block_in_place(|| {
+    // Outputs come back only from a copy; `Prepared` refuses them without one.
+    let staging = match copy.as_ref().filter(|_| !start.outputs.is_empty()) {
+        None => Ok(None),
+        Some(copy) => tokio::task::block_in_place(|| {
             copy.output_staging(&assignment.run_id.to_string())
                 .map(Some)
                 .map_err(|failure| failure.message)
@@ -639,6 +667,17 @@ struct Prepared {
 impl Prepared {
     fn new(start: &Start, root: &std::path::Path, assignment: &Assignment) -> Result<Self> {
         let root = root.to_owned();
+        let caller_workspace = match &assignment.workplace {
+            Workplace::Copy { location, .. } => Some(&location.caller_root),
+            // A run without a workspace has no relative directory to start in
+            // and nothing to return outputs to.
+            Workplace::Home(_) if start.directory.is_some() || !start.outputs.is_empty() => {
+                return Err(not_startable(
+                    "a run without a workspace starts in the home directory and returns no outputs",
+                ));
+            }
+            Workplace::Home(_) => None,
+        };
         let directory = match &start.directory {
             None => root.clone(),
             Some(prefix) => {
@@ -653,26 +692,26 @@ impl Prepared {
                 root.join(prefix.as_str())
             }
         };
+        let mut elsecall = vec![
+            ("ELSECALL_RUN_ID", assignment.run_id.to_string().into()),
+            ("ELSECALL_MEMBER", assignment.member.clone().into()),
+            // Placed work always has a grant of its own: nested work is never placed.
+            (run_admission::VARIABLE, Admission::Granted.as_str().into()),
+            (
+                "ELSECALL_CALLER_MEMBER",
+                assignment.calling_member.clone().into(),
+            ),
+        ];
+        if let Some(caller_workspace) = caller_workspace {
+            elsecall.push(("ELSECALL_CALLER_WORKSPACE", caller_workspace.clone().into()));
+        }
         let environment = Placed {
             target: std::env::vars_os().collect(),
             path: assignment.path.as_deref(),
             forwarded: &start.environment,
-            elsecall: vec![
-                ("ELSECALL_RUN_ID", assignment.run_id.to_string().into()),
-                ("ELSECALL_MEMBER", assignment.member.clone().into()),
-                // Placed work always has a grant of its own: nested work is never placed.
-                (run_admission::VARIABLE, Admission::Granted.as_str().into()),
-                (
-                    "ELSECALL_CALLER_MEMBER",
-                    assignment.calling_member.clone().into(),
-                ),
-                (
-                    "ELSECALL_CALLER_WORKSPACE",
-                    assignment.location.caller_root.clone().into(),
-                ),
-            ],
+            elsecall,
             working_directory: directory.as_os_str(),
-            copy: root.as_os_str(),
+            copy: caller_workspace.map(|_| root.as_os_str()),
         }
         .build();
         Ok(Self {

@@ -305,7 +305,7 @@ pub mod tests {
             side,
             calling_member: "mini".into(),
             member: "devbox".into(),
-            caller_workspace: "/w".into(),
+            caller_workspace: Some("/w".into()),
             repository: None,
             copy: None,
             location: None,

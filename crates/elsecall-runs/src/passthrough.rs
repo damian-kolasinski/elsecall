@@ -34,7 +34,7 @@ use elsecall_workload_config::workload_settings::WorkloadSettings;
 use elsecall_workspace::{self as workspace, push_cache::CacheFiles};
 use executor::{CommandLine, Executor, Exit, Finished, RunContext, RunFailure, Running};
 use local::LocalExecutor;
-use remote::RemoteExecutor;
+use remote::{Origin, RemoteExecutor};
 use serde::Serialize;
 use status_file::{Status, StatusFile, Subject};
 use std::{
@@ -62,8 +62,9 @@ pub struct RunArgs {
     /// May run on any member that can host it; with no fleet yet, runs here
     #[arg(long, conflicts_with = "member")]
     pub placeable: bool,
-    /// Must run on this member (placeable work); with no fleet yet, only this
-    /// machine is reachable
+    /// Must run on this member: in its copy of the working tree, or, outside a
+    /// working tree, in its home directory; with no fleet yet, only this machine
+    /// is reachable
     #[arg(long, value_name = "NAME")]
     pub member: Option<String>,
     /// Write the outcome as JSON here: `data.exit_code` for the command's exit,
@@ -291,13 +292,9 @@ async fn run(args: RunArgs, reports: &Reports) -> Result<Exit> {
     // What a placed run needs is ready before admission, so nothing can fail
     // between the grant and the start without the run's ID.
     let caches = paths.data.join("workspaces");
-    let copy_configuration = match &located {
-        Some(_) => {
-            elsecall_host::private_files::directory(&caches)?;
-            Some(configuration.clone())
-        }
-        None => None,
-    };
+    if located.is_some() {
+        elsecall_host::private_files::directory(&caches)?;
+    }
     // Work required on a named member is bound to it, so it never runs here unmanaged.
     let may_run_unmanaged = !matches!(request.placement, Placement::Member(_));
     let requested_at = std::time::Instant::now();
@@ -318,21 +315,29 @@ async fn run(args: RunArgs, reports: &Reports) -> Result<Exit> {
         let _ = file.record(Some(grant.run_id.as_str()));
     }
     let status = reports.status.as_ref();
-    match (&grant.placed, located, copy_configuration) {
-        (Some(placed), Some(located), Some(configuration)) => {
+    match &grant.placed {
+        // Work required on another member from outside a working tree runs in
+        // that member's home directory, with no copy.
+        Some(placed) => {
+            let origin = match located {
+                Some(located) => Origin::Tree {
+                    caches: CacheFiles::new(&caches, &located.root_text),
+                    located,
+                },
+                None => Origin::Outside(directory),
+            };
             let remote = RemoteExecutor {
                 workload: request.workload.clone(),
                 socket: socket.clone(),
-                caches: CacheFiles::new(&caches, &located.root_text),
+                origin,
                 configuration,
-                located,
                 start_by: placed.start_by,
                 calling_member: placed.calling_member.clone(),
                 synced_paths: placed.synced_paths.clone(),
             };
             execute(&remote, &command, &grant, &socket, status, requested_at).await
         }
-        _ => {
+        None => {
             if request.placement != Placement::Pinned
                 && let Err(failure) = local.preflight(&command)
             {

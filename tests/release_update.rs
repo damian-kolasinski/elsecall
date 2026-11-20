@@ -319,10 +319,10 @@ async fn install_waits_for_placed_runs_but_not_local_work_then_closes_admission_
         run_id: placed.clone(),
         size: Cores::from_millis(1000),
         label: Some("acme test Checkout".into()),
-        workspace: WorkspaceRef {
+        workspace: Some(WorkspaceRef {
             root: "/Users/me/acme".into(),
             common_dir: "/Users/me/acme/.git".into(),
-        },
+        }),
         start_within_ms: 10_000,
         size_basis: None,
         expected_run_ms: None,
@@ -334,7 +334,7 @@ async fn install_waits_for_placed_runs_but_not_local_work_then_closes_admission_
             true,
             "/tmp/copy",
             "mapped",
-            Warmth::Warm,
+            Some(Warmth::Warm),
         )
         .unwrap();
     assert!(matches!(reply, OfferReply::Accepted { .. }));

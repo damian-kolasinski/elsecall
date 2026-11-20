@@ -45,8 +45,8 @@ forbid = ["axum", "clap"]
 [crates.contract]
 band = "foundation"
 # The vocabulary every crate shares: failures, the wire forms and API envelope,
-# guidance, labels, build identity, the scheduler's request model and this
-# machine's facts. `rehearsal::identity` is `rehearsal_identity::identity`;
+# guidance, labels, build identity, the scheduler's request model, this
+# machine's facts and what in the fleet needs attention (`attention`). `rehearsal::identity` is `rehearsal_identity::identity`;
 # `scheduling::{request, settings, timestamp, capacity, gate, run_id, speed}`
 # and `workload_metadata` are under `scheduling_model::`.
 modules = ["failure", "api", "wire", "guidance", "run_admission", "labels", "rehearsal::identity", "build_identity", "executable_format", "version_skew", "scheduling::request", "scheduling::settings", "scheduling::timestamp", "scheduling::capacity", "scheduling::gate", "scheduling::run_id", "scheduling::speed", "workload_metadata", "inspection", "idle_load"]

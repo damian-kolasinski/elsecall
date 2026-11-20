@@ -104,6 +104,9 @@ pub struct FleetView {
     /// running and logged in, or `member_listener_unavailable` when it is but the
     /// member listener could not bind its port. Absent whenever there is a roster.
     pub roster_error: Option<Failure>,
+    /// What needs an agent or a person, derived from the members above:
+    /// `docs/fleet-attention.md`. Empty when nothing does.
+    pub attention: Vec<elsecall_contract::attention::Item>,
 }
 
 /// Each member's build and the fleet's skew, and the members outside pressure
@@ -270,6 +273,7 @@ pub async fn view(fleet: &Fleet, placed: &dyn PlacedRuns) -> FleetView {
         }
     }
     flag_skew(&mut view);
+    view.attention = crate::fleet_attention::items(&view.members, view.master.as_ref());
     view
 }
 
@@ -325,6 +329,7 @@ async fn members(fleet: &Fleet) -> FleetView {
         members,
         version_skew: None,
         roster_error: None,
+        attention: Vec::new(),
     }
 }
 
@@ -362,6 +367,7 @@ fn without_roster(
             })
             .collect(),
         roster_error: Some(error),
+        attention: Vec::new(),
     }
 }
 
@@ -439,6 +445,7 @@ mod tests {
             ],
             version_skew: None,
             roster_error: None,
+            attention: Vec::new(),
         };
         let rendered = serde_json::to_value(&view).unwrap();
         assert_eq!(rendered["members"][0]["outside_warnings"], json!([]));

@@ -1,4 +1,4 @@
 # <kind> <path> <ceiling>: violations older than scripts/module_shape.py, at the size
 # they stood at. `lines`: non-test lines of a Rust file; `files`: source files directly
 # in a folder. Ceilings only go down: scripts/module_shape.py --shrink lowers them.
-lines crates/elsecall-scheduling/src/service.rs 1794
+lines crates/elsecall-scheduling/src/service.rs 1723

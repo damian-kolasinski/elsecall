@@ -75,6 +75,16 @@ fn outcome<'a>(report: &'a Value, member: &str) -> &'a Value {
         .unwrap_or_else(|| panic!("no outcome for {member}: {report}"))
 }
 
+/// The IDs of what the fleet view says needs attention.
+fn attention(view: &Value) -> Vec<String> {
+    view["attention"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["id"].as_str().unwrap().to_owned())
+        .collect()
+}
+
 fn skewed(view: &Value) -> Vec<String> {
     view["version_skew"]["members"]
         .as_array()
@@ -110,6 +120,19 @@ fn the_master_upgrades_one_member_then_every_member_and_skew_clears() {
     assert_eq!(alpha.view_of("bravo")["build"]["build"], old);
     assert_eq!(alpha.view_of("bravo")["version_skew"], true);
     assert_eq!(alpha.view_of("alpha")["version_skew"], false);
+    // Each skewed member needs attention, resolved by upgrading it from the master.
+    assert_eq!(
+        attention(&view),
+        ["version_skew:bravo", "version_skew:charlie"],
+        "{view}"
+    );
+    let item = &view["attention"][0];
+    assert_eq!(item["code"], "version_skew");
+    assert_eq!(
+        item["actions"][0]["command"],
+        serde_json::json!(["elsecall", "fleet", "upgrade", "--member", "bravo"])
+    );
+    assert_eq!(item["actions"][0]["run_on"], "alpha");
     // Doctor flags it; its verdict stays about this machine (here unhealthy only
     // if this machine's firewall blocks the temporary installation).
     let doctor = json(&bravo.run(&["doctor"]));
@@ -154,6 +177,7 @@ fn the_master_upgrades_one_member_then_every_member_and_skew_clears() {
     assert!(!bravo.data().join("upgrade/incoming").exists());
     assert!(!bravo.data().join("upgrade/previous").exists());
     assert_eq!(skewed(&alpha.fleet()), ["charlie"]);
+    assert_eq!(attention(&alpha.fleet()), ["version_skew:charlie"]);
     let report = alpha.ok(&["report", "--since", "1h"]);
     assert!(
         report["members"]
@@ -181,6 +205,7 @@ fn the_master_upgrades_one_member_then_every_member_and_skew_clears() {
     );
     let view = alpha.fleet();
     assert!(view["version_skew"].is_null(), "{view}");
+    assert!(attention(&view).is_empty(), "{view}");
     for member in ["alpha", "bravo", "charlie"] {
         let seen = alpha.view_of(member);
         assert_eq!(seen["reachability"], "reachable");
