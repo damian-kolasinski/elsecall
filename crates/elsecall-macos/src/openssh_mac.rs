@@ -354,6 +354,28 @@ impl RemoteMac for OpensshMac {
         prerequisites::keep_awake_with_lid_closed(self).await
     }
 
+    async fn install_xcode_privileges(&mut self, script: &str) -> Result<()> {
+        // Root runs only the script the master rendered, like every other
+        // root step here; the installed Elsecall then reads the result.
+        let ran = self.sudo(script).await?;
+        if !ran.success {
+            return Err(remote_failure(
+                "Installing Elsecall's Xcode helper and its sudoers rule",
+                &ran,
+            ));
+        }
+        let status = self.elsecall(&["tools", "privileges"]).await?;
+        if status["ready"] == true {
+            Ok(())
+        } else {
+            Err(Failure::new(
+                "xcode_privileges_missing",
+                "Elsecall's Xcode helper or its sudoers rule is not in place on the Mac.",
+                "Run elsecall tools privileges there to see which, then elsecall tools privileges install with an administrator's password.",
+            ))
+        }
+    }
+
     async fn ensure_command_line_tools(&mut self) -> Result<bool> {
         prerequisites::ensure_command_line_tools(self).await
     }

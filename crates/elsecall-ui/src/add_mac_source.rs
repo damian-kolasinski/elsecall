@@ -115,6 +115,7 @@ impl CliSource {
             password,
             ssh_host_key,
             keep_awake_with_lid_closed,
+            xcode_privileges,
         } = request;
         let mut command = Command::new(self.executable()?);
         command
@@ -125,6 +126,9 @@ impl CliSource {
         }
         if keep_awake_with_lid_closed {
             command.arg("--keep-awake-with-lid-closed");
+        }
+        if xcode_privileges {
+            command.arg("--xcode-privileges");
         }
         command
             // The host is never read as an option.
@@ -340,6 +344,7 @@ print STDERR '{{"event":"approve","link":"https://login.tailscale.com/a/example"
             password: Arc::new(Zeroizing::new("s3cret pass".into())),
             ssh_host_key: Some("ssh-ed25519 ExampleKey".into()),
             keep_awake_with_lid_closed: true,
+            xcode_privileges: true,
         }
     }
 
@@ -361,7 +366,7 @@ print STDERR '{{"event":"approve","link":"https://login.tailscale.com/a/example"
         assert_eq!(updates.len(), 3, "a line that is not an event is skipped");
         assert_eq!(
             std::fs::read_to_string(directory.path().join("args")).unwrap(),
-            "fleet\nadd\n--progress\njson\n--user=devbox\n--ssh-host-key=ssh-ed25519 ExampleKey\n--keep-awake-with-lid-closed\n--\nmacbook-pro.local\n"
+            "fleet\nadd\n--progress\njson\n--user=devbox\n--ssh-host-key=ssh-ed25519 ExampleKey\n--keep-awake-with-lid-closed\n--xcode-privileges\n--\nmacbook-pro.local\n"
         );
         assert_eq!(
             std::fs::read_to_string(directory.path().join("password")).unwrap(),

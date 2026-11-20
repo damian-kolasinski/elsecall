@@ -34,6 +34,10 @@ impl AddMacSource for FakeCli {
     }
     fn add(&self, request: AddRequest, updates: &(dyn Fn(AddUpdate) + Sync)) {
         assert!(request.keep_awake_with_lid_closed);
+        assert!(
+            request.xcode_privileges,
+            "offered, and on unless turned off"
+        );
         let previous = self.added.lock().unwrap().replace((
             request.host.clone(),
             request.account.clone(),

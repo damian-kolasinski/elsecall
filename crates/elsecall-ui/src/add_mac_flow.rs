@@ -11,8 +11,9 @@ use elsecall_fleet::remote_mac::LoginLink;
 use rune::TextEdit;
 use zeroize::Zeroizing;
 
-/// The steps of an add, in the order the CLI runs them.
-pub(crate) const STEPS: [Step; 9] = [
+/// The steps of an add, in the order the CLI runs them; the last only when
+/// the operator lets Elsecall install Xcode.
+pub(crate) const STEPS: [Step; 10] = [
     Step::Check,
     Step::Tailnet,
     Step::Tools,
@@ -22,6 +23,7 @@ pub(crate) const STEPS: [Step; 9] = [
     Step::Enroll,
     Step::Verify,
     Step::Configuration,
+    Step::Privileges,
 ];
 
 /// The Mac being added, as the operator picked it.
@@ -41,6 +43,8 @@ pub(crate) struct AddRequest {
     pub password: Arc<Zeroizing<String>>,
     pub ssh_host_key: Option<String>,
     pub keep_awake_with_lid_closed: bool,
+    /// Install Elsecall's Xcode helper and its sudoers rule with the password.
+    pub xcode_privileges: bool,
 }
 
 struct Credentials {
@@ -117,6 +121,10 @@ pub(crate) struct AddMac {
     pub account: TextEdit,
     pub password: TextEdit,
     lid_closed_opt_out: HashSet<String>,
+    xcode_privileges_opt_out: HashSet<String>,
+    xcode_privileges_opt_in: HashSet<String>,
+    /// The fleet's members, as the window last read them.
+    members: Vec<String>,
     /// Kept only for retrying the same target in this sheet.
     credentials: Option<Credentials>,
     ssh_host_key: Option<String>,
@@ -132,6 +140,9 @@ impl Default for AddMac {
             account: TextEdit::default(),
             password: TextEdit::default().secure(),
             lid_closed_opt_out: HashSet::new(),
+            xcode_privileges_opt_out: HashSet::new(),
+            xcode_privileges_opt_in: HashSet::new(),
+            members: Vec::new(),
             credentials: None,
             ssh_host_key: None,
         }
@@ -345,6 +356,56 @@ impl AddMac {
         }
     }
 
+    /// Whether the add lets Elsecall install Xcode on `target`: on for a new
+    /// Mac unless the operator turned it off, off when repairing a member
+    /// unless the operator turned it on, so a member whose privileges a person
+    /// removed does not get them back unasked.
+    pub(crate) fn xcode_privileges_choice(&self, target: &Target) -> bool {
+        if self.is_member(target) {
+            self.xcode_privileges_opt_in.contains(&target.host)
+        } else {
+            !self.xcode_privileges_opt_out.contains(&target.host)
+        }
+    }
+
+    pub(crate) fn toggle_xcode_privileges(&mut self) {
+        let Page::SignIn { target } = &self.page else {
+            return;
+        };
+        let host = target.host.clone();
+        let chosen = if self.is_member(target) {
+            &mut self.xcode_privileges_opt_in
+        } else {
+            &mut self.xcode_privileges_opt_out
+        };
+        if !chosen.remove(&host) {
+            chosen.insert(host);
+        }
+    }
+
+    /// The fleet's members, so repairing one is told from adding a new Mac.
+    pub(crate) fn know_members(&mut self, names: impl IntoIterator<Item = String>) {
+        self.members = names.into_iter().collect();
+    }
+
+    /// Whether `target` is a fleet member already, by its name or its host
+    /// name's first label, or as the Macs nearby suggest.
+    fn is_member(&self, target: &Target) -> bool {
+        let label = target.host.split('.').next().unwrap_or_default();
+        let named = self.members.iter().any(|member| {
+            member.eq_ignore_ascii_case(label) || member.eq_ignore_ascii_case(&target.name)
+        });
+        named
+            || self.found().iter().any(|mac| {
+                mac.host.eq_ignore_ascii_case(&target.host)
+                    && matches!(
+                        mac.membership,
+                        elsecall_fleet::nearby_macs::Membership::Member { .. }
+                            | elsecall_fleet::nearby_macs::Membership::PossibleMember { .. }
+                    )
+            })
+    }
+
     pub(crate) fn back(&mut self) {
         self.forget_sign_in();
         self.page = match std::mem::replace(&mut self.page, Page::Closed) {
@@ -392,6 +453,7 @@ impl AddMac {
             password: Arc::clone(&credentials.password),
             ssh_host_key: self.ssh_host_key.clone(),
             keep_awake_with_lid_closed: self.lid_closed_choice(&target).unwrap_or(false),
+            xcode_privileges: self.xcode_privileges_choice(&target),
         };
         self.credentials = Some(credentials);
         self.page = Page::Adding {
@@ -574,6 +636,7 @@ pub(crate) fn step_label(step: Step) -> &'static str {
         Step::Enroll => "Enroll in the fleet",
         Step::Verify => "Verify it answers",
         Step::Configuration => "Sync fleet configuration",
+        Step::Privileges => "Let Elsecall install Xcode",
     }
 }
 
@@ -747,6 +810,36 @@ mod tests {
         flow.show_sign_in();
         flow.password.replace_text("another-example");
         assert!(flow.start().unwrap().ssh_host_key.is_none());
+    }
+
+    #[test]
+    fn xcode_privileges_are_offered_on_and_turned_off_per_mac() {
+        let mut flow = AddMac::default();
+        flow.show_choose();
+        flow.set_nearby(Ok(vec![mac("MacBook Pro", true, None)]));
+        flow.select("macbook-pro.local");
+        let target = flow.chosen().unwrap();
+        flow.show_sign_in();
+        assert!(flow.xcode_privileges_choice(&target));
+        flow.toggle_xcode_privileges();
+        assert!(!flow.xcode_privileges_choice(&target));
+        flow.account.replace_text("devbox");
+        flow.password.replace_text("example-password");
+        assert!(!flow.start().unwrap().xcode_privileges);
+
+        // Repairing a member by its address leaves its privileges as they are
+        // unless asked.
+        let mut flow = AddMac::default();
+        flow.open();
+        flow.set_nearby(Ok(vec![mac("Mac mini", true, Some("mac-mini"))]));
+        flow.know_members(["mac-mini".to_owned()]);
+        flow.show_choose();
+        flow.manual.replace_text("mac-mini.local");
+        let member = flow.chosen().unwrap();
+        flow.show_sign_in();
+        assert!(!flow.xcode_privileges_choice(&member));
+        flow.toggle_xcode_privileges();
+        assert!(flow.xcode_privileges_choice(&member));
     }
 
     #[test]

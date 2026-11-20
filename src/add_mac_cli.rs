@@ -35,6 +35,15 @@ pub enum Progress {
     Json,
 }
 
+/// What the operator chose beside the Mac itself.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Extras {
+    /// Keep a MacBook awake with its lid closed, once it joined.
+    pub keep_awake_with_lid_closed: bool,
+    /// Install Elsecall's Xcode helper and its sudoers rule, once it joined.
+    pub xcode_privileges: bool,
+}
+
 pub async fn run(
     paths: &Paths,
     host: String,
@@ -42,7 +51,7 @@ pub async fn run(
     approval_wait: Duration,
     format: Progress,
     mut ssh_host_key: Option<String>,
-    keep_awake_with_lid_closed: bool,
+    extras: Extras,
 ) -> Result<(Value, bool)> {
     // Watched from the start, so stopping is graceful at any point.
     let mut interrupt =
@@ -55,7 +64,7 @@ pub async fn run(
     // A program following the add keeps standard input open: when it closes,
     // whoever started the add is gone, and the add stops.
     let closed = (format == Progress::Json).then(watch_stdin);
-    let master = master(paths, approval_wait, keep_awake_with_lid_closed)?;
+    let master = master(paths, approval_wait, extras.keep_awake_with_lid_closed)?;
     let progress = |event: Event| report_progress(format, &host, event);
     // Stopping drops the flow, and with it the SSH connection.
     let flow = async {
@@ -70,7 +79,6 @@ pub async fn run(
         }
         let mut mac = connected?;
         let mut report = add_mac::add(&mut mac, &host, &master, &fleet, progress).await?;
-        let power_setup = master.keep_awake_with_lid_closed.then_some(mac);
         progress(Event::Step {
             step: Step::Configuration,
         });
@@ -79,7 +87,7 @@ pub async fn run(
             step: Step::Configuration,
             outcome,
         });
-        if let Some(mut mac) = power_setup {
+        if master.keep_awake_with_lid_closed {
             mac.keep_awake_with_lid_closed().await.map_err(|failure| {
                 Failure::new(
                     "member_lid_closed_setup_failed",
@@ -87,6 +95,34 @@ pub async fn run(
                     failure.hint,
                 )
             })?;
+        }
+        // The person who typed the Mac's password is here now; the provisioning
+        // loop copies Xcode there later without asking for it.
+        if extras.xcode_privileges {
+            progress(Event::Step {
+                step: Step::Privileges,
+            });
+            let script = elsecall_tools::privileges_cli::install_script(&account)?;
+            mac.install_xcode_privileges(&script)
+                .await
+                .map_err(|failure| {
+                    let mut joined = Failure::new(
+                        "member_xcode_privileges_failed",
+                        format!("{} joined the fleet. {}", report.member, failure.message),
+                        format!(
+                            "Run elsecall tools privileges install on {}, with an administrator's password, to see why; adding the Mac again repeats this step.",
+                            report.member
+                        ),
+                    );
+                    if let Some(details) = failure.details {
+                        joined = joined.with_details(details);
+                    }
+                    joined
+                })?;
+            report.steps.push(StepReport {
+                step: Step::Privileges,
+                outcome: add_mac::Outcome::Done,
+            });
         }
         Ok(report)
     };

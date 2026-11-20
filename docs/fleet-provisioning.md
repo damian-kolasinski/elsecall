@@ -1282,6 +1282,31 @@ The loop writes one service log line per plan and per action it takes,
 `provisioning_planned`, `provisioning_applied` and `provisioning_ready`, naming
 members and counts, never a path or version.
 
+### Person steps in Add Mac
+
+Two steps of provisioning need a person.
+
+- **Xcode privileges** on a member need its administrator's password once.
+  Add Mac already takes that password, so it offers the step there: "Let
+  Elsecall install Xcode on this Mac", selected for a new Mac, installs the
+  helper and its sudoers rule at the end of the add, through the same SSH
+  connection's sudo, with the script the master's build renders
+  ([adding a Mac](add-mac.md), step 11). The loop then sees the member's
+  privileges ready in its signal and copies Xcode there with no one present.
+  A member added without it gets the `provisioning_step_failed` item for its
+  Xcode step, whose first action, `person_only`, is `elsecall tools privileges
+  install` on that member.
+- **An Apple ID** is needed only when no member, the master included, has the
+  pinned Xcode. It is the `xcode_apple_id_required` item, which the loop never
+  acts on: a person downloads that Xcode onto the master, and the master's
+  changed signal makes the loop copy it to every member that needs it.
+
+In a macOS VM (macOS 26.6), `tests/openssh_mac.rs` ran against a fresh
+administrator account over SSH: the master's rendered script through the
+session's sudo installed the helper (`root:wheel`, 0755) and the drop-in
+(`root:wheel`, 0440), the Mac's own `elsecall tools privileges` read `ready:
+true` and `helper: current`, and installing them again changed nothing.
+
 ### Placement by pins
 
 Placeable work goes to a member that has the tools its workspace pins. What a
