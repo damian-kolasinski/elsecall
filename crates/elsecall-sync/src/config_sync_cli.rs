@@ -82,7 +82,7 @@ fn path(text: &str) -> Result<SyncedPath> {
     })
 }
 
-/// Refuses to confirm consent unless a terminal is attached to standard input
+/// Refuses to give consent unless a terminal is attached to standard input
 /// and error, as when a person types the command. An agent's tool calls run
 /// without one, so they stop here; this is a guard against confirming by
 /// accident, not a security boundary, since anything running as the same user
@@ -122,10 +122,33 @@ pub async fn run(paths: &Paths, args: SyncArgs) -> Result<(Value, bool)> {
             path: text,
             confirm,
         } => {
-            let request = PathRequest {
-                path: path(&text)?,
-                confirm,
-            };
+            let path = path(&text)?;
+            if confirm.is_some() {
+                // Enabling a plan syncs the secret-looking files it lists: that
+                // is consent, which only a person gives.
+                let shown: Value = client::post_large(
+                    &socket,
+                    "/v1/sync/enable",
+                    &PathRequest {
+                        path: path.clone(),
+                        confirm: None,
+                    },
+                )
+                .await?;
+                let secret = shown["plan"]["paths"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .any(|p| {
+                        p["secret_looking"]
+                            .as_array()
+                            .is_some_and(|f| !f.is_empty())
+                    });
+                if secret {
+                    person_present()?;
+                }
+            }
+            let request = PathRequest { path, confirm };
             client::post_large(&socket, "/v1/sync/enable", &request).await?
         }
         SyncCommand::Disable {

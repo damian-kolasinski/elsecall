@@ -22,10 +22,42 @@ fn read(member: &TestMember, relative: &str) -> Option<String> {
     std::fs::read_to_string(file(member, relative)).ok()
 }
 
+/// Enables `path` from its plan as a person does. The plan lists secret-looking
+/// files, so the CLI refuses to confirm it without a terminal, as an agent's
+/// tool call has none; the person's confirmation goes to the local route.
 fn enable(alpha: &TestMember, path: &str) -> Value {
     let planned = alpha.ok(&["sync", "enable", path]);
     let id = planned["plan"]["plan_id"].as_str().unwrap().to_owned();
-    alpha.ok(&["sync", "enable", path, "--confirm", &id])
+    let refused = alpha.run(&["sync", "enable", path, "--confirm", &id]);
+    assert_eq!(
+        json(&refused)["error"]["code"],
+        "person_required",
+        "{refused:?}"
+    );
+    local(
+        alpha,
+        "/v1/sync/enable",
+        json!({"path": path, "confirm": id}),
+    )
+    .unwrap()
+}
+
+/// A request to `member`'s local service, as its CLI sends it.
+fn local(
+    member: &TestMember,
+    route: &str,
+    body: Value,
+) -> Result<Value, elsecall_contract::failure::Failure> {
+    let socket = elsecall_host::paths::Paths::for_home(member.home.path())
+        .unwrap()
+        .socket();
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(elsecall_host::client::post_large::<Value, _>(
+            &socket, route, &body,
+        ))
 }
 
 fn consent_items(member: &TestMember) -> Vec<Value> {
@@ -46,19 +78,11 @@ fn confirm(
     id: &str,
     always: bool,
 ) -> Result<Value, elsecall_contract::failure::Failure> {
-    let socket = elsecall_host::paths::Paths::for_home(member.home.path())
-        .unwrap()
-        .socket();
-    let body = json!({"path": path, "confirm": id, "always": always});
-    tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(elsecall_host::client::post_large::<Value, _>(
-            &socket,
-            "/v1/sync/consent",
-            &body,
-        ))
+    local(
+        member,
+        "/v1/sync/consent",
+        json!({"path": path, "confirm": id, "always": always}),
+    )
 }
 
 #[test]
@@ -154,6 +178,31 @@ fn a_secret_change_waits_for_a_person_once_or_always() {
             "a value leaked"
         );
     }
+
+    // So does bringing one member up to date, as before a placed run.
+    alpha.ok(&["sync", "push", "--member", "beta"]);
+    assert!(
+        read(&beta, ".config/acme-ios/.env")
+            .unwrap()
+            .contains(&token)
+    );
+
+    // Planning the path again and enabling it from that plan holds the change
+    // too: a plan consents only to a path's first content.
+    let replanned = alpha.ok(&["sync", "enable", "~/.config/acme-ios"]);
+    let plan_id = replanned["plan"]["plan_id"].as_str().unwrap().to_owned();
+    local(
+        &alpha,
+        "/v1/sync/enable",
+        json!({"path": "~/.config/acme-ios", "confirm": plan_id}),
+    )
+    .unwrap();
+    assert!(
+        read(&beta, ".config/acme-ios/.env")
+            .unwrap()
+            .contains(&token)
+    );
+    assert_eq!(consent_items(&alpha), items);
 
     // An agent's command line has no terminal, so it cannot confirm.
     let id = item["actions"][0]["command"][5]

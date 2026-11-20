@@ -25,10 +25,14 @@ const MAXIMUM_LENGTH: usize = 1024;
 const MAXIMUM_COMPONENT: usize = 255;
 
 /// Locations no synced path may be, lie inside, or contain, relative to home:
-/// what lets other members in (`authorized_keys`), the login keychain, what
-/// starts at login, and Elsecall's own state and command.
+/// what lets others log in or runs at an SSH login (`authorized_keys`, which
+/// OpenSSH also reads as `authorized_keys2`, `rc` and `environment`), the login
+/// keychain, what starts at login, and Elsecall's own state and command.
 pub const HARD_BLOCKED: &[&str] = &[
     ".ssh/authorized_keys",
+    ".ssh/authorized_keys2",
+    ".ssh/rc",
+    ".ssh/environment",
     "Library/Keychains/login.keychain-db",
     "Library/Keychains/login.keychain",
     "Library/LaunchAgents",
@@ -264,6 +268,9 @@ mod tests {
             "~/.ssh",
             "~/.SSH/authorized_keys",
             "~/.ssh/authorized_keys/x",
+            "~/.ssh/authorized_keys2",
+            "~/.ssh/RC",
+            "~/.ssh/environment",
             "~/Library",
             "~/Library/Keychains",
             "~/library/keychains/login.keychain-db",
@@ -328,6 +335,12 @@ mod tests {
         assert_eq!(
             key.resolved_overlap(".gnupg/x", &[]).as_deref(),
             Some(".gnupg")
+        );
+        assert_eq!(
+            key.resolved_overlap(".ssh/authorized_keys2", &[])
+                .as_deref(),
+            Some(".ssh/authorized_keys2"),
+            "a key path whose link leads to a file that grants logins"
         );
     }
 

@@ -32,13 +32,14 @@ impl ConfigSync {
             Ok((trees, requests))
         })
         .await?;
-        if !requests.is_empty() {
+        let mut waiting = self.waiting.lock().expect("waiting lock");
+        if *waiting != requests && !requests.is_empty() {
             log(
                 "config_sync_consent_waiting",
                 serde_json::json!({ "paths": requests.iter().map(|r| r.path.to_string()).collect::<Vec<_>>() }),
             );
         }
-        *self.waiting.lock().expect("waiting lock") = requests;
+        *waiting = requests;
         Ok(trees)
     }
 
@@ -77,6 +78,9 @@ impl ConfigSync {
                 "Run elsecall sync status to see what is synced.",
             ));
         };
+        // A member that just became master restores its replica first, so its
+        // own drift is never shown, or confirmed, as the fleet's change.
+        self.ensure_source().await?;
         let replica = self.replica.clone();
         blocking(move || replica.reconcile_master()).await?;
         let active = self.active(&manifest)?;
@@ -125,7 +129,6 @@ impl ConfigSync {
             .with_details(serde_json::json!({ "request": request })));
         }
         self.refuse_while_held()?;
-        self.ensure_source().await?;
         let trees = self
             .hold_for_consent(&manifest, trees, Some((path.clone(), confirm)))
             .await?;

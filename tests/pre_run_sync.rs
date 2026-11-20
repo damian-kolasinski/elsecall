@@ -79,7 +79,7 @@ fn synced_pair() -> (TestMember, TestMember) {
     let alpha = TestMember::start_with("alpha", DECLARED, &[]);
     let bravo = TestMember::start_with("bravo", DECLARED, &[]);
     enrol(&alpha, &bravo);
-    write(&alpha, SECRET, "{\"token\":\"first\"}");
+    write(&alpha, SECRET, "{\"setting\":\"first\"}");
     write(&alpha, ".config/demo/sub/token", "alpha-token");
     // An unsynced location that differs between them still warns.
     write(&alpha, "unsynced.cfg", "alpha");
@@ -88,7 +88,7 @@ fn synced_pair() -> (TestMember, TestMember) {
     let id = planned["plan"]["plan_id"].as_str().unwrap().to_owned();
     let enabled = alpha.ok(&["sync", "enable", "~/.config/demo", "--confirm", &id]);
     assert_eq!(enabled["round"]["complete"], true, "{enabled}");
-    assert_eq!(read(&bravo, SECRET).unwrap(), "{\"token\":\"first\"}");
+    assert_eq!(read(&bravo, SECRET).unwrap(), "{\"setting\":\"first\"}");
     // Bravo's override (its directory exists after the first sync) makes its
     // token differ from alpha's on purpose; the next sync lays it.
     write(
@@ -157,9 +157,9 @@ fn a_stale_member_is_synced_before_the_run_and_a_current_one_costs_a_check() {
     let status = repo.root.parent().unwrap().join("status.json");
 
     // The master's file changes; nothing moves until a placed run needs it.
-    let value = format!("{{\"token\":\"{SENTINEL}\"}}");
+    let value = format!("{{\"setting\":\"{SENTINEL}\"}}");
     write(&alpha, SECRET, &value);
-    assert_eq!(read(&bravo, SECRET).unwrap(), "{\"token\":\"first\"}");
+    assert_eq!(read(&bravo, SECRET).unwrap(), "{\"setting\":\"first\"}");
     let bravo_history = history_len(&bravo);
 
     let output = placed(
@@ -230,7 +230,7 @@ fn a_stale_member_is_synced_before_the_run_and_a_current_one_costs_a_check() {
     write(
         &alpha,
         SECRET,
-        &format!("{{\"token\":\"{SENTINEL}-local\"}}"),
+        &format!("{{\"setting\":\"{SENTINEL}-local\"}}"),
     );
     let output = run(
         &alpha,
@@ -301,7 +301,7 @@ fn a_failed_sync_fails_the_run_with_its_code_and_line() {
     std::fs::create_dir_all(home.join(".ssh")).unwrap();
     std::fs::rename(home.join(".config"), home.join("config-moved")).unwrap();
     std::os::unix::fs::symlink(home.join(".ssh"), home.join(".config")).unwrap();
-    write(&alpha, SECRET, "{\"token\":\"second\"}");
+    write(&alpha, SECRET, "{\"setting\":\"second\"}");
 
     let marker = home.join("ran");
     let output = placed(
@@ -447,7 +447,7 @@ fn synced_fleet(machines: &[(&'static str, u32, f64)]) -> Vec<Scripted> {
     for other in &fleet[1..] {
         enrol(master, &other.member);
     }
-    write(master, SECRET, "{\"token\":\"first\"}");
+    write(master, SECRET, "{\"setting\":\"first\"}");
     let planned = master.ok(&["sync", "enable", "~/.config/demo"]);
     let id = planned["plan"]["plan_id"].as_str().unwrap().to_owned();
     let enabled = master.ok(&["sync", "enable", "~/.config/demo", "--confirm", &id]);
@@ -502,7 +502,7 @@ fn perf_a_failed_sync_falls_back_to_another_member_and_then_to_the_caller() {
         assert!(output.status.success(), "{output:?}");
     }
     break_sync(bravo);
-    write(alpha, SECRET, "{\"token\":\"second\"}");
+    write(alpha, SECRET, "{\"setting\":\"second\"}");
 
     // bravo is chosen, its sync fails, and the run goes to charlie instead.
     let started = Instant::now();
@@ -513,7 +513,7 @@ fn perf_a_failed_sync_falls_back_to_another_member_and_then_to_the_caller() {
     }
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
-        "charlie\n{\"token\":\"second\"}",
+        "charlie\n{\"setting\":\"second\"}",
         "charlie was brought up to date first"
     );
     let summary = latest_run(alpha);
@@ -558,12 +558,12 @@ fn perf_a_failed_sync_falls_back_to_another_member_and_then_to_the_caller() {
     // With charlie broken too, the next run tries bravo again (the exclusion
     // was that request's), then charlie, then runs on the caller.
     break_sync(charlie);
-    write(alpha, SECRET, "{\"token\":\"third\"}");
+    write(alpha, SECRET, "{\"setting\":\"third\"}");
     let output = where_and_what(alpha, &repo, &["--placeable", "--size", "2"]);
     assert!(output.status.success(), "{output:?}");
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
-        "alpha\n{\"token\":\"third\"}"
+        "alpha\n{\"setting\":\"third\"}"
     );
     let id = latest_run(alpha)["run_id"].as_str().unwrap().to_owned();
     let record = alpha.ok(&["explain", &id]);
@@ -622,7 +622,7 @@ fn perf_a_fallback_stays_within_the_hold_limit() {
     let output = run(alpha, &repo.root, &["--member", "bravo", "--", "true"]);
     assert!(output.status.success(), "{output:?}");
     break_sync(bravo);
-    write(alpha, SECRET, "{\"token\":\"second\"}");
+    write(alpha, SECRET, "{\"setting\":\"second\"}");
     // Both members are full for longer than the hold limit, so the request
     // waits undecided; bravo frees after 3 s and is chosen then, late.
     let here = hold(alpha, 2);
@@ -684,7 +684,7 @@ fn a_placeable_run_no_other_member_can_take_still_fails_with_config_sync_failed(
     let (alpha, bravo) = (&fleet[0].member, &fleet[1].member);
     let repo = repository(alpha);
     break_sync(bravo);
-    write(alpha, SECRET, "{\"token\":\"second\"}");
+    write(alpha, SECRET, "{\"setting\":\"second\"}");
     let output = run(
         alpha,
         &repo.root,
@@ -726,21 +726,21 @@ fn a_slow_push_to_one_member_does_not_delay_a_run_on_another() {
     let repo = repository(alpha);
 
     // `sync push` issues generation 2 and hangs pushing it to the paused bravo.
-    write(alpha, SECRET, "{\"token\":\"second\"}");
+    write(alpha, SECRET, "{\"setting\":\"second\"}");
     let gate = sync_gate::SyncGate::start(bravo);
     gate.enroll(alpha, bravo);
     gate.arm();
     let mut push = spawn_cli(alpha, &repo.root, &["sync", "push"]);
     gate.wait();
     let deadline = Instant::now() + crate::processes::WAIT;
-    while read(charlie, SECRET).as_deref() != Some("{\"token\":\"second\"}") {
+    while read(charlie, SECRET).as_deref() != Some("{\"setting\":\"second\"}") {
         assert!(Instant::now() < deadline, "the push reaches charlie");
         std::thread::sleep(Duration::from_millis(50));
     }
 
     // Meanwhile a run on charlie needs a newer generation: it is issued and
     // pushed while bravo's push still holds generation 2.
-    write(alpha, SECRET, "{\"token\":\"third\"}");
+    write(alpha, SECRET, "{\"setting\":\"third\"}");
     let output = where_and_what(alpha, &repo, &["--member", "charlie"]);
     let still_pushing = push.try_wait().unwrap().is_none();
     gate.release();
@@ -750,7 +750,7 @@ fn a_slow_push_to_one_member_does_not_delay_a_run_on_another() {
     assert!(output.status.success(), "{output:?}");
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
-        "charlie\n{\"token\":\"third\"}"
+        "charlie\n{\"setting\":\"third\"}"
     );
     let id = latest_run(alpha)["run_id"].as_str().unwrap().to_owned();
     let record = alpha.ok(&["explain", &id]);
@@ -769,7 +769,7 @@ fn a_slow_push_to_one_member_does_not_delay_a_run_on_another() {
         .cloned()
         .unwrap();
     assert_eq!(to_bravo["outcome"], "applied", "{round}");
-    assert_eq!(read(bravo, SECRET).unwrap(), "{\"token\":\"second\"}");
+    assert_eq!(read(bravo, SECRET).unwrap(), "{\"setting\":\"second\"}");
 }
 
 #[test]
@@ -779,7 +779,7 @@ fn pushes_to_the_same_member_stay_serialized() {
     let repo = repository(alpha);
     let pushes = history_len(bravo);
 
-    write(alpha, SECRET, "{\"token\":\"second\"}");
+    write(alpha, SECRET, "{\"setting\":\"second\"}");
     let gate = sync_gate::SyncGate::start(bravo);
     gate.enroll(alpha, bravo);
     gate.arm();
@@ -841,7 +841,7 @@ fn pushes_to_the_same_member_stay_serialized() {
     assert!(output.status.success(), "{output:?}");
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
-        "{\"token\":\"second\"}"
+        "{\"setting\":\"second\"}"
     );
     let id = latest_run(alpha)["run_id"].as_str().unwrap().to_owned();
     let record = alpha.ok(&["explain", &id]);

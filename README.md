@@ -2160,7 +2160,8 @@ paths = ["~/.config/acme-ios"]
 A path is refused (`invalid_configuration`, and again by every member on arrival)
 when it is home itself, not below home, not printable ASCII (APFS folds other
 letters onto ASCII ones), contains `.` or `..`, overlaps another declared path, or
-is, lies inside or contains `~/.ssh/authorized_keys`, the login keychain
+is, lies inside or contains `~/.ssh/authorized_keys` (or `authorized_keys2`, `rc`,
+`environment` there), the login keychain
 (`~/Library/Keychains/login.keychain-db`), `~/Library/LaunchAgents`,
 `~/Library/Application Support/Elsecall`, `~/.elsecall` or `~/.local/bin`, compared
 case-insensitively. A path inside `~/.ssh`, `~/.gnupg` or `~/Library/Keychains`,
@@ -2215,9 +2216,10 @@ elsecall sync consent ~/.config/acme-ios --confirm <consent_id> --always # and l
 
 Without `--always`, the next change to those files asks again; with it, they sync
 unasked from then on, and a new secret-looking file in the path is asked about. The
-consent travels with the synced set, so it survives a master move. `--confirm` needs
-a terminal on standard input and error, so an agent's tool call cannot confirm by
-accident (`person_required`); this is a guard, not a security boundary, since
+consent travels with the synced set, so it survives a master move. `sync consent
+--confirm`, and `sync enable --confirm` for a plan listing secret-looking files,
+need a terminal on standard input and error, so an agent's tool call cannot confirm
+by accident (`person_required`); this is a guard, not a security boundary, since
 anything running as the operator could attach one.
 
 **Status and pushing**, from any member:

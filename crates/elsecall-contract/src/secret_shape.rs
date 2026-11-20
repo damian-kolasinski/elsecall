@@ -78,6 +78,8 @@ pub fn secret_name(name: &str) -> bool {
         "private_key",
         "access_key",
         "credential",
+        "passphrase",
+        "authorization",
     ]
     .iter()
     .any(|word| name.contains(word))

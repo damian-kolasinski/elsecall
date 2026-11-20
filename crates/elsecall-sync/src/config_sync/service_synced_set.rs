@@ -143,7 +143,7 @@ impl ConfigSync {
         let _activity = self.activity.enter()?;
         let Planned {
             plan,
-            trees,
+            trees: trees_planned,
             enabled,
         } = self.planned(vec![path.clone()]).await?;
         let Some(confirm) = confirm else {
@@ -164,7 +164,7 @@ impl ConfigSync {
         if !self.declared()?.contains(&path) {
             return Err(not_declared(&path, &self.configuration));
         }
-        if trees.get(&path) == Some(&Tree::Absent) {
+        if trees_planned.get(&path) == Some(&Tree::Absent) {
             return Err(Failure::new(
                 "path_missing",
                 format!(
@@ -195,17 +195,20 @@ impl ConfigSync {
             }
             // Issued from the master's state now: anything issued since the plan
             // is kept, and the planned path's tree is exactly what was shown.
-            let mut paths = match self.replica.manifest() {
+            // Consent holds back secret changes in every path already synced,
+            // this one too when it is enabled again: a plan consents only to a
+            // path's first content.
+            let paths = match self.replica.manifest() {
                 Some(manifest) => {
                     let active = self.active(&manifest)?;
                     let replica = self.replica.clone();
                     let rescanned = blocking(move || replica.scan(&active)).await?;
-                    let trees = Self::with_paused(&manifest, rescanned);
+                    let mut trees = Self::with_paused(&manifest, rescanned);
+                    trees.insert(path.clone(), trees_planned[&path].clone());
                     self.hold_for_consent(&manifest, trees, None).await?
                 }
-                None => BTreeMap::new(),
+                None => BTreeMap::from([(path.clone(), trees_planned[&path].clone())]),
             };
-            paths.insert(path.clone(), trees[&path].clone());
             let manifest = self.issue(&roster, paths).await?;
             (roster, own, manifest)
         };

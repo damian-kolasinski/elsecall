@@ -30,6 +30,7 @@ enables. README "Configuration sync" is the operator's guide.
 - **Path rules** (`config_sync::synced_path`, unit-tested): home-relative, printable
   ASCII, plain components, not home itself, no overlap between declared paths, and
   never equal to, inside or containing a hard-blocked location: `~/.ssh/authorized_keys`,
+  `authorized_keys2`, `rc` and `environment` in `~/.ssh`,
   the login keychain (`~/Library/Keychains/login.keychain-db` and `login.keychain`),
   `~/Library/LaunchAgents`, `~/Library/Application Support/Elsecall`, `~/.elsecall`
   (workspaces, overrides) or `~/.local/bin` (the CLI), compared case-insensitively.
@@ -66,7 +67,9 @@ enables. README "Configuration sync" is the operator's guide.
   set, which travels with every replica, so consent moves with the master role; it is
   part of the manifest's id once given, and stays with its path until the path is
   disabled. Enabling a path from a plan syncs what the plan listed, secret-looking
-  files included, under `secret_looking`. The CLI sends `--confirm` only from a
+  files included, under `secret_looking`; enabling a path already synced holds its
+  secret changes as any scan does. The CLI sends `sync consent --confirm`, and
+  `sync enable --confirm` for a plan listing secret-looking files, only from a
   terminal (`person_required` otherwise).
 - **Replica store behind a port.** `ReplicaStore` holds content by keyed
   fingerprint; `FileStore` keeps owner-only files in `config-sync/objects/`. It is
@@ -303,9 +306,8 @@ The devbox's `config.toml` was restored to empty afterwards.
 ## Limits
 
 - Secret detection is by shape and leans towards asking. It misses a credential
-  with no known prefix in a file with an ordinary name, assigned to an ordinary key,
-  and a one-line JSON object (`{"key":"value"}`) is not read as assignments. Only
-  the first 256 KiB of a file is examined.
+  with no known prefix and an ordinary-looking value, in a file with an ordinary
+  name, assigned to an ordinary key. Only the first 256 KiB of a file is examined.
 - An open consent request lives in the master's memory: after a restart it shows
   again at the next sync event. A held change does not stop pre-run syncs, which
   push the path as last confirmed.

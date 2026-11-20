@@ -83,7 +83,7 @@ fn master_files(alpha: &TestMember) {
     write(
         alpha,
         ".config/demo/secret.json",
-        &format!("{{\"token\":\"{SENTINEL}\"}}"),
+        &format!("{{\"setting\":\"{SENTINEL}\"}}"),
     );
     write(alpha, ".config/demo/sub/token", "alpha-token");
     write(alpha, ".config/demo/run.sh", "#!/bin/sh\necho alpha\n");
@@ -153,7 +153,7 @@ fn plan_enable_push_overrides_and_local_edits() {
     write(
         &beta,
         ".config/demo/secret.json",
-        "{\"token\":\"beta-own\"}",
+        "{\"setting\":\"beta-own\"}",
     );
     write(&beta, ".config/demo/local-only.txt", "beta only");
     // ... and a link sync cannot carry.
@@ -187,7 +187,7 @@ fn plan_enable_push_overrides_and_local_edits() {
     // Planning changed nothing.
     assert_eq!(
         read(&beta, ".config/demo/secret.json").unwrap(),
-        "{\"token\":\"beta-own\"}"
+        "{\"setting\":\"beta-own\"}"
     );
     // Only the master plans; paths outside the rules are refused before anything.
     assert_eq!(beta.fails(&["sync", "plan"]), "not_master");
@@ -259,7 +259,7 @@ fn plan_enable_push_overrides_and_local_edits() {
         .unwrap();
     assert_eq!(
         std::fs::read_to_string(secret_backup["location"].as_str().unwrap()).unwrap(),
-        "{\"token\":\"beta-own\"}"
+        "{\"setting\":\"beta-own\"}"
     );
     assert_eq!(
         alpha.view_of("beta")["config_sync"],
@@ -272,7 +272,7 @@ fn plan_enable_push_overrides_and_local_edits() {
     write(
         &alpha,
         ".config/demo/secret.json",
-        &format!("{{\"token\":\"{SENTINEL}-2\"}}"),
+        &format!("{{\"setting\":\"{SENTINEL}-2\"}}"),
     );
     std::fs::remove_file(file(&alpha, ".config/demo/sub/token")).unwrap();
     chmod(&alpha, ".config/demo/run.sh", 0o644);
@@ -301,7 +301,7 @@ fn plan_enable_push_overrides_and_local_edits() {
     write(
         &beta,
         ".elsecall/sync-overrides/.config/demo/secret.json",
-        "{\"token\":\"beta-override\"}",
+        "{\"setting\":\"beta-override\"}",
     );
     // Syncing one member, as a placed run will: the override not yet laid is a
     // difference, so the member is pushed to and the override applied.
@@ -309,7 +309,7 @@ fn plan_enable_push_overrides_and_local_edits() {
     assert_eq!(one["deliveries"][0]["member"], "beta", "{one}");
     assert_eq!(
         read(&beta, ".config/demo/secret.json").as_deref(),
-        Some("{\"token\":\"beta-override\"}")
+        Some("{\"setting\":\"beta-override\"}")
     );
     // Already in sync: only its generation is asked, nothing is pushed.
     let again = alpha.ok(&["sync", "push", "--member", "beta"]);
@@ -320,14 +320,14 @@ fn plan_enable_push_overrides_and_local_edits() {
     write(
         &alpha,
         ".config/demo/secret.json",
-        &format!("{{\"token\":\"{SENTINEL}-3\"}}"),
+        &format!("{{\"setting\":\"{SENTINEL}-3\"}}"),
     );
     write(&alpha, ".config/demo/new.txt", "added later");
     push(&alpha);
     assert!(read(&beta, ".config/demo/new.txt").is_some());
     assert_eq!(
         read(&beta, ".config/demo/secret.json").as_deref(),
-        Some("{\"token\":\"beta-override\"}"),
+        Some("{\"setting\":\"beta-override\"}"),
         "an override is never overwritten by sync"
     );
     let beta_status = status_of(&beta, "beta");
@@ -447,7 +447,7 @@ async fn interrupted_pushes_change_nothing_and_only_the_master_pushes() {
     let before = read(&beta, ".config/demo/secret.json").unwrap();
     let held = beta.ok(&["sync", "status"])["members"].clone();
     let manifest = manifest_of(&alpha);
-    let content = b"{\"token\":\"never applied\"}";
+    let content = b"{\"setting\":\"never applied\"}";
     let next = changed(&manifest, content);
 
     // Cut off in the middle of the content.
@@ -506,7 +506,7 @@ async fn interrupted_pushes_change_nothing_and_only_the_master_pushes() {
     );
 
     // Content that does not match its fingerprint is refused.
-    let other = b"{\"token\":\"other content\"}";
+    let other = b"{\"setting\":\"other content\"}";
     let mut sealed = channel(&alpha, &beta).await.unwrap();
     protocol::send(
         &mut sealed,
@@ -599,12 +599,12 @@ fn moving_the_master_pushes_final_state_and_keeps_overrides_local() {
     write(
         &beta,
         ".elsecall/sync-overrides/.config/demo/secret.json",
-        "{\"token\":\"beta-override\"}",
+        "{\"setting\":\"beta-override\"}",
     );
     push(&alpha);
     assert_eq!(
         read(&beta, ".config/demo/secret.json").as_deref(),
-        Some("{\"token\":\"beta-override\"}")
+        Some("{\"setting\":\"beta-override\"}")
     );
     write(&beta, ".config/demo/run.sh", "beta drift before the move");
     // A change right before the move is pushed by the move itself.
@@ -678,7 +678,7 @@ fn moving_the_master_pushes_final_state_and_keeps_overrides_local() {
     );
     assert_eq!(
         read(&beta, ".config/demo/secret.json").as_deref(),
-        Some("{\"token\":\"beta-override\"}")
+        Some("{\"setting\":\"beta-override\"}")
     );
     assert!(
         read(&alpha, ".config/demo/secret.json")
@@ -848,12 +848,12 @@ fn a_masters_overrides_stay_local_and_never_rewrite_its_files() {
     write(
         &alpha,
         ".elsecall/sync-overrides/.config/demo/secret.json",
-        "{\"token\":\"alpha-only\"}",
+        "{\"setting\":\"alpha-only\"}",
     );
     push(&alpha);
     assert_eq!(
         read(&alpha, ".config/demo/secret.json").as_deref(),
-        Some("{\"token\":\"alpha-only\"}")
+        Some("{\"setting\":\"alpha-only\"}")
     );
     // Other changes on the master still go out, and its own tree is untouched.
     write(&alpha, ".config/demo/run.sh", "#!/bin/sh\necho changed\n");

@@ -189,9 +189,10 @@ it passes the member's streams through to its own. As they pass, it watches for:
   X@1.2`.
 
 A recognised line counts only when the command exits with a non-zero status; the
-last one before the exit wins. A program counts only if the caller's own `PATH`
-has it: a program the master lacks too is a typo, or missing everywhere, which no
-pin on the master would fix. Exit 127 without a recognised line names no tool, so
+last one before the exit wins. A program, or a tool mise named, counts only if the
+caller's own `PATH` has it: a program the master lacks too is a typo, or missing
+everywhere, which no pin on the master would fix, and a name the job's own output
+made up (`npm:anything`) is never suggested for installing. Exit 127 without a recognised line names no tool, so
 it raises nothing.
 
 **Privacy and speed.** Each stream's current line is held up to 512 bytes; a
@@ -202,7 +203,8 @@ of the output is stored or logged. Only the tool's name is kept, on the run's
 record, after validation: letters, digits and `-_.+@:/`, at most 64 characters,
 and never the shape of a credential (a token prefix, or a long segment mixing
 letters and digits), so a script that runs an unquoted `$TOKEN` as a command never
-leaves the token behind.
+leaves the token behind. A stored name a later build no longer accepts reads as
+none, so it never stops records from being read.
 
 **Where the item lives (decided).** The fact, the tool and its manager, is kept on
 the caller's record of the run (`placed.missing_tool`). The item is derived from
@@ -213,8 +215,9 @@ one per member and tool from the latest run that hit it. It clears when:
   it (a mise pin under a backend, such as `aqua:realm/SwiftLint`, counts for the
   program `swiftlint`). The pins are read as `tools pins` reads them, from files
   only, without resolving versions;
-- a later run of the same job (label and working tree) on that member exits 0: the
-  tool was installed by hand, or the job no longer needs it;
+- a later run of the same job (label and working tree; unlabelled runs are never
+  the same job) on that member exits 0: the tool was installed by hand, or the job
+  no longer needs it. Another job's earlier hit of the same tool then still stands;
 - the run ages out: it ended more than 7 days ago, or is not among the latest 500
   records.
 
@@ -286,7 +289,9 @@ These are implemented in later deliveries and recorded now.
   The prompt has a checkbox, "Sync changes to these automatically from now on".
   Unchecked, Elsecall asks again on the next change. Delivery 5 implements it; see
   "Consent for secret files" below.
-- **Hard blocks stay only for** `~/.ssh/authorized_keys`, the login keychain,
+- **Hard blocks stay only for** `~/.ssh/authorized_keys` (with `authorized_keys2`,
+  which OpenSSH also reads, and `rc` and `environment`, which act at every SSH
+  login), the login keychain,
   `~/Library/LaunchAgents` and Elsecall's own state (`~/.elsecall`,
   `~/Library/Application Support/Elsecall`, and `~/.local/bin`, where its command
   lives). The other paths [configuration sync](config-sync-slice.md) forbade (the
@@ -314,13 +319,16 @@ Delivery 5 decided the following.
   same with `--always`, the checkbox. Both are `person_only`. Without `--always` the
   next change asks again; with it, the files' later changes sync unasked, and a new
   secret-looking file in the path asks again. Enabling a path from a plan syncs the
-  secret-looking files the plan listed, since the person confirmed that plan.
+  secret-looking files the plan listed, since a person confirmed that plan; a plan
+  consents only to a path's first content, so enabling a path that is already
+  synced holds its secret changes like any other sync.
 - **Consent travels with the role.** It is stored in the synced set's manifest,
   which every member holds as a replica, so a new master has it.
 - **Agents cannot confirm by accident; they could on purpose.** The action is
   `person_only`, so a hand-off never runs it automatically, and the CLI sends
-  `--confirm` only from a terminal on standard input and error, which an agent's
-  tool calls do not have (`person_required`). Nothing in the CLI can tell a person
+  `sync consent --confirm`, and `sync enable --confirm` for a plan that lists
+  secret-looking files, only from a terminal on standard input and error, which an
+  agent's tool calls do not have (`person_required`). Nothing in the CLI can tell a person
   from a program running as the same user, which could attach a terminal or call
   the local service directly; the guard stops mistakes, not a determined process.
 - **Values stay out.** Plans, status, attention items, logs and history name files

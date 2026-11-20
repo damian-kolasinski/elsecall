@@ -86,23 +86,30 @@ fn words(text: &str) -> impl Iterator<Item = &str> {
         .filter(|word| !word.is_empty() && word.len() <= LONGEST_WORD)
 }
 
-/// `NAME=value`, `name: value` or `"name": "value"`, where the name is a
-/// secret's or the value looks generated.
+/// Any `NAME=value`, `name: value` or `"name":"value"` on the line, minified
+/// JSON included, where the name is a secret's or the value looks generated.
+/// A secret's name takes any value, spaces and all (`Authorization: Bearer …`,
+/// a passphrase).
 fn secret_assignment(line: &str) -> bool {
-    let line = line.trim().trim_start_matches("export ");
-    let Some(at) = line.find(['=', ':']) else {
-        return false;
-    };
-    let name = line[..at].trim().trim_matches(['"', '\'']);
-    let value = line[at + 1..].trim().trim_matches(['"', '\'', ',']);
-    let plain_name = !name.is_empty()
-        && name
+    let name_byte = |b: u8| b.is_ascii_alphanumeric() || b"_-.".contains(&b);
+    line.match_indices(['=', ':']).any(|(at, _)| {
+        let head = line[..at].trim_end().trim_end_matches(['"', '\'']);
+        let start = head
             .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b"_-.".contains(&b));
-    plain_name
-        && !value.is_empty()
-        && !value.contains(char::is_whitespace)
-        && (secret_shape::secret_name(name) || secret_shape::looks_generated(value))
+            .rposition(|b| !name_byte(b))
+            .map_or(0, |i| i + 1);
+        let name = &head[start..];
+        let rest = line[at + 1..].trim_start();
+        let value = rest.trim_start_matches(['"', '\'']);
+        let word = &value[..value
+            .find(['"', '\'', ',', '}', ']', ' '])
+            .unwrap_or(value.len())];
+        // `https://…` is a scheme, not an assignment.
+        !name.is_empty()
+            && !rest.starts_with("//")
+            && !word.is_empty()
+            && (secret_shape::secret_name(name) || secret_shape::looks_generated(word))
+    })
 }
 
 /// Whether `text` names `home` as a folder: followed by `/`, a quote, a space or
@@ -223,11 +230,23 @@ mod tests {
             reasons("~/.config/a", "x", 0o644, "DB_PASSWORD: hunter2\n"),
             [SecretAssignment]
         );
+        for minified in [
+            "{\"user\":\"x\",\"password\":\"hunter2\"}\n",
+            "Authorization: Bearer abc def\n",
+            "PASSPHRASE=correct horse battery\n",
+        ] {
+            assert_eq!(
+                reasons("~/.config/a", "x", 0o644, minified),
+                [SecretAssignment],
+                "{minified}"
+            );
+        }
         for plain in [
             "LOG_LEVEL=debug\n",
             "SCHEME=Acme Staging\n",
             "name: acme\n",
             "PASSWORD=\n",
+            "url = \"https://example.com/x\"\n",
         ] {
             assert!(
                 reasons("~/.config/a", "x", 0o644, plain).is_empty(),
