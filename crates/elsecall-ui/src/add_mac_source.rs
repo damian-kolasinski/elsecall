@@ -113,11 +113,20 @@ impl CliSource {
             host,
             account,
             password,
+            ssh_host_key,
+            keep_awake_with_lid_closed,
         } = request;
         let mut command = Command::new(self.executable()?);
         command
             .args(["fleet", "add", "--progress", "json"])
-            .arg(format!("--user={account}"))
+            .arg(format!("--user={account}"));
+        if let Some(key) = ssh_host_key {
+            command.arg(format!("--ssh-host-key={key}"));
+        }
+        if keep_awake_with_lid_closed {
+            command.arg("--keep-awake-with-lid-closed");
+        }
+        command
             // The host is never read as an option.
             .arg("--")
             .arg(&host)
@@ -219,7 +228,7 @@ fn envelope(stdout: &[u8]) -> Result<serde_json::Value, Failure> {
 impl AddMacSource for CliSource {
     fn nearby(&self) -> Result<Vec<NearbyMac>, Failure> {
         let output = Command::new(self.executable()?)
-            .args(["fleet", "nearby", "--browse", "2s"])
+            .args(["fleet", "nearby", "--browse", "2s", "--exclude-this-mac"])
             .stdin(Stdio::null())
             .stderr(Stdio::null())
             .output()
@@ -328,7 +337,9 @@ print STDERR '{{"event":"approve","link":"https://login.tailscale.com/a/example"
             run,
             host: "macbook-pro.local".into(),
             account: "devbox".into(),
-            password: Zeroizing::new("s3cret pass".into()),
+            password: Arc::new(Zeroizing::new("s3cret pass".into())),
+            ssh_host_key: Some("ssh-ed25519 ExampleKey".into()),
+            keep_awake_with_lid_closed: true,
         }
     }
 
@@ -350,7 +361,7 @@ print STDERR '{{"event":"approve","link":"https://login.tailscale.com/a/example"
         assert_eq!(updates.len(), 3, "a line that is not an event is skipped");
         assert_eq!(
             std::fs::read_to_string(directory.path().join("args")).unwrap(),
-            "fleet\nadd\n--progress\njson\n--user=devbox\n--\nmacbook-pro.local\n"
+            "fleet\nadd\n--progress\njson\n--user=devbox\n--ssh-host-key=ssh-ed25519 ExampleKey\n--keep-awake-with-lid-closed\n--\nmacbook-pro.local\n"
         );
         assert_eq!(
             std::fs::read_to_string(directory.path().join("password")).unwrap(),

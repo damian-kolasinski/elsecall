@@ -20,17 +20,60 @@ async fn the_adapter_reads_installs_and_authorizes_on_a_real_mac() {
     let password = std::fs::read_to_string(password_file).unwrap();
     let elsecall = Path::new(env!("CARGO_BIN_EXE_elsecall"));
 
-    let refused = OpensshMac::connect(host, account, Zeroizing::new("wrong".into()), elsecall)
-        .await
-        .err()
-        .unwrap();
+    let mut public_key = None;
+    let refused = OpensshMac::connect(
+        host,
+        account,
+        Zeroizing::new("wrong".into()),
+        elsecall,
+        &mut public_key,
+    )
+    .await
+    .err()
+    .unwrap();
     assert_eq!(refused.code, "ssh_password_refused");
+    assert!(
+        public_key.is_some(),
+        "a rejected sign-in still learns the host key"
+    );
+
+    let other = tempfile::tempdir().unwrap();
+    let key_path = other.path().join("other");
+    assert!(
+        std::process::Command::new("/usr/bin/ssh-keygen")
+            .args(["-q", "-t", "ed25519", "-N", "", "-f"])
+            .arg(&key_path)
+            .status()
+            .unwrap()
+            .success()
+    );
+    let other_key = std::fs::read_to_string(key_path.with_extension("pub")).unwrap();
+    let other_key = other_key
+        .splitn(3, ' ')
+        .take(2)
+        .collect::<Vec<_>>()
+        .join(" ");
+    let changed = OpensshMac::connect(
+        host,
+        account,
+        Zeroizing::new("wrong".into()),
+        elsecall,
+        &mut Some(other_key),
+    )
+    .await
+    .err()
+    .unwrap();
+    assert_eq!(
+        changed.code, "host_key_changed",
+        "the password is never tried against a different key"
+    );
 
     let mut mac = OpensshMac::connect(
         host,
         account,
         Zeroizing::new(password.trim().into()),
         elsecall,
+        &mut public_key,
     )
     .await
     .unwrap();

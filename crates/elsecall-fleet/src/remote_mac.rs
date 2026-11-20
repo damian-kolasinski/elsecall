@@ -151,6 +151,12 @@ pub trait RemoteMac {
     /// The installed Elsecall's build ID, or `None` when it is not installed or
     /// not running.
     async fn installed_build(&mut self) -> Result<Option<String>>;
+    /// Checks that a MacBook selected for lid-closed operation is on AC power.
+    async fn check_lid_closed_power(&mut self) -> Result<()>;
+    /// Configures a MacBook to stay awake with its lid closed.
+    async fn keep_awake_with_lid_closed(&mut self) -> Result<()>;
+    /// Ensures the active developer tools supply Git, reporting whether they were installed.
+    async fn ensure_command_line_tools(&mut self) -> Result<bool>;
     /// Copies `build` to the Mac and runs its `install`, returning its data.
     async fn install(&mut self, build: &Build) -> Result<serde_json::Value>;
     /// Runs the installed `elsecall` with `args`, returning its data, or its
@@ -158,7 +164,8 @@ pub trait RemoteMac {
     async fn elsecall(&mut self, args: &[&str]) -> Result<serde_json::Value>;
     /// What the Application Firewall does with incoming connections to `program`.
     async fn incoming(&mut self, program: &str) -> Result<Rule>;
-    /// Lets the Application Firewall pass incoming connections to `programs`.
+    /// Tries to allow incoming connections to `programs`. Read the rules afterward
+    /// to check whether the firewall applied the changes.
     async fn allow_incoming(&mut self, programs: &[String]) -> Result<()>;
     /// Keeps the Application Firewall passing incoming connections to `programs`
     /// from now on, whoever denies them later; true when that changed anything.

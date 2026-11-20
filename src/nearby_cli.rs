@@ -9,13 +9,14 @@ use elsecall_fleet::nearby_macs::{
 use elsecall_host::client;
 use elsecall_host::paths::Paths;
 use elsecall_macos::macos::dns_sd::Bonjour;
+use elsecall_macos::macos::{lan_addresses::lan_addresses, local_host_name::local_host_name};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{net::IpAddr, time::Duration};
 
 const FLEET_TIMEOUT: Duration = Duration::from_secs(15);
 
-pub async fn run(paths: &Paths, browse: Duration) -> Result<(Value, bool)> {
+pub async fn run(paths: &Paths, browse: Duration, exclude_this_mac: bool) -> Result<(Value, bool)> {
     // Asking every member for its state takes as long as browsing, so both run at once.
     let socket = paths.socket();
     let (view, advertisements) = tokio::join!(
@@ -23,9 +24,22 @@ pub async fn run(paths: &Paths, browse: Duration) -> Result<(Value, bool)> {
         tokio::task::spawn_blocking(move || Bonjour.advertisements(browse)),
     );
     let advertisements = advertisements.expect("browsing does not panic")?;
-    let macs = nearby(advertisements, &view?.known_members());
+    let mut macs = nearby(advertisements, &view?.known_members());
+    if exclude_this_mac {
+        let own_name = local_host_name().map(|name| format!("{name}.local"));
+        let own_addresses = lan_addresses();
+        macs.retain(|mac| !is_this_mac(mac, own_name.as_deref(), &own_addresses));
+    }
     let next_step = next_step(&macs);
     Ok((json!({ "macs": macs, "next_step": next_step }), true))
+}
+
+fn is_this_mac(mac: &NearbyMac, own_name: Option<&str>, own_addresses: &[IpAddr]) -> bool {
+    own_name.is_some_and(|name| mac.host.eq_ignore_ascii_case(name))
+        || mac
+            .addresses
+            .iter()
+            .any(|address| own_addresses.contains(address))
 }
 
 /// The parts of `/v1/fleet` that identify members on a local network.
@@ -111,6 +125,20 @@ mod tests {
             remote_login,
             membership,
         }
+    }
+
+    #[test]
+    fn the_current_mac_is_recognized_even_without_a_fleet_match() {
+        let mut discovered = mac("mini", RemoteLogin::Off, Membership::NotMember);
+        assert!(is_this_mac(&discovered, Some("Mini.local"), &[]));
+        let own_address = "192.168.1.20".parse().unwrap();
+        discovered.addresses.push(own_address);
+        assert!(is_this_mac(&discovered, None, &[own_address]));
+        assert!(!is_this_mac(
+            &discovered,
+            Some("studio.local"),
+            &["192.168.1.21".parse().unwrap()]
+        ));
     }
 
     #[test]

@@ -3,9 +3,10 @@
 use std::borrow::Cow;
 use std::num::NonZeroU32;
 
+use elsecall_peers::roster::Readiness;
 use rune::tok::TextStyle;
 use rune::{Align, Color, El, HelpLook, Span, col, rich, row, text};
-use rune_kit::{Button, Cell, Table, TableColumn};
+use rune_kit::{Button, ButtonVariant, Cell, ControlSize, Table, TableColumn};
 
 use crate::app::AppState;
 use crate::fleet_source::{
@@ -322,7 +323,7 @@ fn cell(member: &MemberRow, column: &str, paints: Paints, kit: &rune_kit::Kit) -
     match column {
         "member" => crate::resource_display::member_cell(member, kit),
         "role" => role_cell(member, paints),
-        "status" => status_cell(member, paints),
+        "status" => status_cell(member, paints, kit),
         "release" => release_cell(&member.release, paints),
         "cpu" => crate::resource_display::cell(member, crate::resource_details::Metric::Cpu, kit),
         "memory" => {
@@ -350,7 +351,7 @@ fn role_cell(member: &MemberRow, paints: Paints) -> Cell {
     }
 }
 
-fn status_cell(member: &MemberRow, paints: Paints) -> Cell {
+fn status_cell(member: &MemberRow, paints: Paints, kit: &rune_kit::Kit) -> Cell {
     let (label, fill, ink, detail) = match (&member.reach, &member.gate) {
         (Reachability::Unreachable, _) => {
             ("offline", paints.offline_fill, paints.offline_ink, None)
@@ -365,6 +366,31 @@ fn status_cell(member: &MemberRow, paints: Paints) -> Cell {
             ("online", paints.online_fill, paints.online_ink, None)
         }
     };
+    if member.readiness == Readiness::AwaitingProvisioning {
+        const EXPLANATION: &str =
+            "Automatic job placement skips this Mac until provisioning is complete.";
+        let connection = match (&member.reach, &member.gate) {
+            (Reachability::Unreachable, _) => "This Mac is offline.".to_owned(),
+            (Reachability::Reachable, Gate::Blocked { leading_process }) => match leading_process {
+                Some(process) => format!("Online. Outside work by {process} holds admission."),
+                None => "Online. Outside work holds admission.".to_owned(),
+            },
+            (Reachability::Reachable, Gate::Open) => "This Mac is online.".to_owned(),
+        };
+        return Cell::el(
+            Button::new("Provision")
+                .variant(ButtonVariant::Outline)
+                .control_size(ControlSize::Small)
+                .build(kit)
+                .px(theme::SPACE_2)
+                .description(EXPLANATION)
+                .help("Awaiting provisioning")
+                .help_row(EXPLANATION)
+                .help_row("You can still target this Mac by name.")
+                .help_row(connection)
+                .key(format!("provision-{}", member.name)),
+        );
+    }
     let mut line = row()
         .center_y()
         .gap(theme::SPACE_2)
@@ -584,6 +610,7 @@ mod tests {
                     this_member: false,
                     role: Role::Member,
                     reach: Reachability::Reachable,
+                    readiness: Readiness::Ready,
                     gate: Gate::Open,
                     cpu: None,
                     logical_cpus: None,

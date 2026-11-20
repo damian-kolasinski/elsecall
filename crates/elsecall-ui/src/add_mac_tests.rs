@@ -4,13 +4,14 @@
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
+use elsecall_contract::failure::Failure;
 use elsecall_fleet::add_mac::{AddReport, Approval, Event, Step};
 use elsecall_fleet::nearby_macs::NearbyMac;
 use elsecall_fleet::remote_mac::LoginLink;
 use rune::Tx;
 
 use super::{AppState, init, poll, render, scene_members};
-use crate::add_mac_flow::{AddRequest, AddUpdate, Page, mac};
+use crate::add_mac_flow::{Action, AddRequest, AddUpdate, Page, mac};
 use crate::add_mac_source::AddMacSource;
 use crate::theme;
 
@@ -20,35 +21,64 @@ const LINK: &str = "https://login.tailscale.com/a/example";
 struct FakeCli {
     added: Mutex<Option<(String, String, String)>>,
     stopped: Mutex<bool>,
+    fail_first: bool,
     /// Holds the add at its approval until the test lets it finish.
     approved: Mutex<mpsc::Receiver<()>>,
 }
 
 impl AddMacSource for FakeCli {
     fn nearby(&self) -> Result<Vec<NearbyMac>, elsecall_contract::failure::Failure> {
-        Ok(vec![
-            mac("MacBook Pro", true, None),
-            mac("Studio", false, None),
-        ])
+        let mut macbook = mac("MacBook Pro", true, None);
+        macbook.model = Some("MacBookPro18,4".into());
+        Ok(vec![macbook, mac("Studio", false, None)])
     }
     fn add(&self, request: AddRequest, updates: &(dyn Fn(AddUpdate) + Sync)) {
-        *self.added.lock().unwrap() = Some((
+        assert!(request.keep_awake_with_lid_closed);
+        let previous = self.added.lock().unwrap().replace((
             request.host.clone(),
             request.account.clone(),
             request.password.to_string(),
         ));
-        for step in [Step::Check, Step::Tailnet] {
-            updates(AddUpdate::Event(Event::Step { step }));
+        if previous.is_none() {
+            updates(AddUpdate::Event(Event::HostKey {
+                public_key: "ssh-ed25519 ExampleKey".into(),
+            }));
+            for step in [Step::Check, Step::Tailnet] {
+                updates(AddUpdate::Event(Event::Step { step }));
+            }
+            updates(AddUpdate::Event(Event::Approve {
+                link: LoginLink::parse(LINK).unwrap(),
+                approval: Approval::Login,
+            }));
+            let _ = self
+                .approved
+                .lock()
+                .unwrap()
+                .recv_timeout(Duration::from_secs(10));
+            if self.fail_first {
+                updates(AddUpdate::Event(Event::Step {
+                    step: Step::Firewall,
+                }));
+                updates(AddUpdate::Event(Event::FirewallApproval));
+                let _ = self
+                    .approved
+                    .lock()
+                    .unwrap()
+                    .recv_timeout(Duration::from_secs(10));
+                updates(AddUpdate::Finished(Err(Failure::new(
+                    "firewall_unchanged",
+                    "Firewall approval timed out.",
+                    "Click Allow on the new Mac.",
+                ))));
+                return;
+            }
+        } else {
+            assert_eq!(
+                request.ssh_host_key.as_deref(),
+                Some("ssh-ed25519 ExampleKey")
+            );
+            assert_eq!(request.password.as_str(), "s3cret");
         }
-        updates(AddUpdate::Event(Event::Approve {
-            link: LoginLink::parse(LINK).unwrap(),
-            approval: Approval::Login,
-        }));
-        let _ = self
-            .approved
-            .lock()
-            .unwrap()
-            .recv_timeout(Duration::from_secs(10));
         updates(AddUpdate::Event(Event::Step {
             step: Step::Install,
         }));
@@ -119,6 +149,7 @@ fn a_mac_is_added_from_the_header_through_every_page() {
     let cli = Arc::new(FakeCli {
         added: Mutex::new(None),
         stopped: Mutex::new(false),
+        fail_first: true,
         approved: Mutex::new(approved),
     });
     let mut rt = window(Arc::clone(&cli));
@@ -129,6 +160,11 @@ fn a_mac_is_added_from_the_header_through_every_page() {
         "the instructions show first"
     );
     click(&mut rt, "add-mac-continue");
+    assert!(rt.presented("add-mac-wifi-art").is_some());
+    click(&mut rt, "add-mac-back");
+    assert!(rt.presented("add-mac-settings-art").is_some());
+    click(&mut rt, "add-mac-continue");
+    click(&mut rt, "add-mac-continue");
     poll_until(&mut rt, "the Macs nearby", |state| {
         !state.add_mac().found().is_empty()
     });
@@ -138,8 +174,16 @@ fn a_mac_is_added_from_the_header_through_every_page() {
         rt.state.add_mac().chosen().unwrap().host,
         "macbook-pro.local"
     );
+    rt.state.add_mac_mut().manual.replace_text("studio.local");
+    rt.invalidate();
+    rt.frame(0.0);
+    click(&mut rt, "add-mac-continue");
+    assert!(rt.presented("add-mac-keep-awake").is_none());
+    click(&mut rt, "add-mac-back");
+    click(&mut rt, "add-mac-host-macbook-pro.local");
     click(&mut rt, "add-mac-continue");
     assert!(rt.presented("add-mac-password").is_some());
+    assert!(rt.presented("add-mac-keep-awake").is_some());
     assert!(
         rt.presented("add-mac-target").is_some(),
         "the exact Mac is shown"
@@ -154,7 +198,7 @@ fn a_mac_is_added_from_the_header_through_every_page() {
         matches!(
             state.add_mac().page,
             Page::Adding {
-                approval: Some(_),
+                action: Some(Action::Tailnet { .. }),
                 ..
             }
         )
@@ -172,10 +216,31 @@ fn a_mac_is_added_from_the_header_through_every_page() {
     );
 
     approve.send(()).unwrap();
+    poll_until(&mut rt, "firewall approval", |state| {
+        matches!(
+            state.add_mac().page,
+            Page::Adding {
+                action: Some(Action::Firewall),
+                ..
+            }
+        )
+    });
+    assert!(rt.presented("add-mac-firewall-art").is_some());
+    approve.send(()).unwrap();
+    poll_until(&mut rt, "the retry", |state| {
+        matches!(state.add_mac().page, Page::Failed { .. })
+    });
+    click(&mut rt, "add-mac-retry");
+    assert!(
+        rt.state.add_mac().adding(),
+        "retry starts directly from the failure"
+    );
+    assert!(rt.state.add_mac().password.text.is_empty());
     poll_until(&mut rt, "the end", |state| {
         matches!(state.add_mac().page, Page::Done { .. })
     });
     assert!(rt.presented("add-mac-done").is_some());
+    assert!(!rt.state.add_mac().has_credentials());
     click(&mut rt, "add-mac-close");
     assert!(!rt.state.add_mac().is_open());
     assert!(!*cli.stopped.lock().unwrap());
@@ -188,10 +253,12 @@ fn closing_the_sheet_while_adding_stops_the_add_and_keeps_the_sheet() {
     let cli = Arc::new(FakeCli {
         added: Mutex::new(None),
         stopped: Mutex::new(false),
+        fail_first: false,
         approved: Mutex::new(approved),
     });
     let mut rt = window(Arc::clone(&cli));
     click(&mut rt, "add-mac");
+    click(&mut rt, "add-mac-continue");
     click(&mut rt, "add-mac-continue");
     poll_until(&mut rt, "the Macs nearby", |state| {
         !state.add_mac().found().is_empty()
@@ -208,6 +275,7 @@ fn closing_the_sheet_while_adding_stops_the_add_and_keeps_the_sheet() {
     click(&mut rt, "close");
     assert!(*cli.stopped.lock().unwrap());
     assert!(rt.state.add_mac().is_open());
+    assert!(!rt.state.add_mac().has_credentials());
     drop(approve);
 }
 

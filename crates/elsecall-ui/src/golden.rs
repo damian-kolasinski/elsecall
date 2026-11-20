@@ -18,6 +18,7 @@ const SCENES: &[&str] = &[
     "no-tailnet",
     "members",
     "members-selected",
+    "members-awaiting-provisioning",
     "outdated-member",
     "upgrade",
     "upgrading",
@@ -33,17 +34,24 @@ const SCENES: &[&str] = &[
     "release-future",
     "release-fleet",
     "add-mac-prepare",
+    "add-mac-network",
     "add-mac-looking",
     "add-mac-choose",
     "add-mac-sign-in",
     "add-mac-adding",
     "add-mac-approve",
+    "add-mac-firewall",
+    "add-mac-firewall-failed",
     "add-mac-done",
     "add-mac-failed",
 ];
 /// Animated scenes again later in their loop: the switch turned on, and the
 /// browser's page after the click.
-const TIMED: &[(&str, f64)] = &[("add-mac-prepare", 2.8), ("add-mac-approve", 2.4)];
+const TIMED: &[(&str, f64)] = &[
+    ("add-mac-prepare", 2.8),
+    ("add-mac-network", 3.3),
+    ("add-mac-approve", 2.4),
+];
 const BLESS: &str =
     "ELSECALL_UI_BLESS=1 cargo test -p elsecall-ui --bin elsecall-ui scenes_match_goldens";
 const CONFIGURATION_SCENES: &[&str] = &[
@@ -109,6 +117,25 @@ fn fleet_scenes_match_goldens() {
             ],
         );
     }
+    let provision = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(
+        provision.path(),
+        r#"[{"t":0.1,"type":"move","x":360,"y":267}]"#,
+    )
+    .unwrap();
+    for appearance in APPEARANCES {
+        compare(
+            "members-awaiting-provisioning",
+            appearance,
+            "-hover",
+            &[
+                "--script",
+                provision.path().to_str().unwrap(),
+                "--at",
+                "1.5",
+            ],
+        );
+    }
     for (scene, at) in TIMED {
         let suffix = format!("-at{}", (at * 10.0).round() as u32);
         let at = at.to_string();
@@ -116,9 +143,11 @@ fn fleet_scenes_match_goldens() {
             compare(scene, appearance, &suffix, &["--at", &at]);
         }
     }
-    // The sheet's widest page at the window's minimum size.
+    // Sign-in and approval instructions at the window's minimum size.
     for appearance in APPEARANCES {
+        compare("add-mac-sign-in", appearance, "-minimum", MINIMUM_WINDOW);
         compare("add-mac-approve", appearance, "-minimum", MINIMUM_WINDOW);
+        compare("add-mac-firewall", appearance, "-minimum", MINIMUM_WINDOW);
     }
 }
 

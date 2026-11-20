@@ -7,10 +7,13 @@
 //! later commands never prompt, so a lost connection fails instead of asking.
 //! Commands run under `/bin/sh` on the Mac; sudo reads the password on standard
 //! input.
+mod connection;
+mod prerequisites;
+
+use self::connection::options;
 use crate::macos::application_firewall;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_fleet::{
-    askpass,
     inbound_firewall::Rule,
     remote_mac::{Build, Login, LoginLink, MacFacts, RemoteMac, RemoteTailnet, TailscaleVariant},
 };
@@ -24,8 +27,6 @@ use tokio::{
 use zeroize::Zeroizing;
 
 const SSH: &str = "/usr/bin/ssh";
-const SSH_KEYGEN: &str = "/usr/bin/ssh-keygen";
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 /// A command that runs longer than this, such as an install, has failed.
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(300);
 /// The most a command may print; Elsecall's own documents are far smaller.
@@ -60,83 +61,17 @@ struct Ran {
 }
 
 impl OpensshMac {
-    /// Connects to `host` as `account` and authenticates with `password`, which
-    /// `askpass`, an Elsecall executable, hands to OpenSSH.
-    pub async fn connect(
-        host: &str,
-        account: &str,
-        password: Zeroizing<String>,
-        askpass: &Path,
-    ) -> Result<Self> {
-        if !valid_name(host) || !valid_name(account) {
-            return Err(Failure::new(
-                "invalid_request",
-                "The host and account must be plain names or addresses.",
-                "Pass the host as elsecall fleet nearby lists it, and the account's short name.",
-            ));
-        }
-        // Short, so the control socket's path stays under the macOS limit.
-        let directory = tempfile::Builder::new()
-            .prefix("ec-add-")
-            .tempdir_in("/tmp")
-            .map_err(|error| Failure::io("Prepare the SSH session", error))?;
-        let server = askpass::Server::start(&directory.path().join("p"), password.clone())?;
-        let target = format!("{account}@{host}");
-        let mut command = Command::new(SSH);
-        command
-            // The first value of an option wins, so these come first.
-            .args(["-o", "StrictHostKeyChecking=accept-new"])
-            .args(["-o", "BatchMode=no"])
-            .args(options(directory.path()))
-            .args([
-                "-o",
-                "ControlMaster=yes",
-                "-o",
-                // Ends the connection a minute after its last command, should this
-                // process die without ending it.
-                "ControlPersist=60",
-                "-o",
-                "PreferredAuthentications=keyboard-interactive,password",
-                "-o",
-                "NumberOfPasswordPrompts=1",
-                "-o",
-                "ConnectTimeout=15",
-                "-N",
-                "-f",
-                &target,
-            ])
-            .env("SSH_ASKPASS", askpass)
-            .env("SSH_ASKPASS_REQUIRE", "force")
-            .env(askpass::SOCKET_VARIABLE, server.socket())
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::piped())
-            .kill_on_drop(true);
-        let output = tokio::time::timeout(CONNECT_TIMEOUT, command.output())
-            .await
-            .map_err(|_| unreachable(host, "the connection timed out"))?
-            .map_err(|error| Failure::io("Start ssh", error))?;
-        drop(server);
-        if !output.status.success() {
-            return Err(connect_failure(
-                host,
-                account,
-                &String::from_utf8_lossy(&output.stderr),
-            ));
-        }
-        // Built first, so a failure from here on ends the connection.
-        let mut mac = Self {
-            target,
-            directory,
-            password,
-            host_key: String::new(),
-        };
-        mac.host_key = fingerprint(mac.directory.path()).await?;
-        Ok(mac)
-    }
-
     /// Runs `script` with `/bin/sh` on the Mac, with `input` on its standard input.
     async fn run(&self, script: &str, input: Zeroizing<Vec<u8>>) -> Result<Ran> {
+        self.run_within(script, input, COMMAND_TIMEOUT).await
+    }
+
+    async fn run_within(
+        &self,
+        script: &str,
+        input: Zeroizing<Vec<u8>>,
+        timeout: Duration,
+    ) -> Result<Ran> {
         let wrapped = format!("PATH={SYSTEM_PATH}; export PATH; printf '%s\\n' {MARKER}; {script}");
         let mut child = Command::new(SSH)
             .args(["-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes"])
@@ -169,7 +104,7 @@ impl OpensshMac {
             let status = child.wait().await?;
             std::io::Result::Ok((status, out, err))
         };
-        let (status, stdout, stderr) = tokio::time::timeout(COMMAND_TIMEOUT, collected)
+        let (status, stdout, stderr) = tokio::time::timeout(timeout, collected)
             .await
             .map_err(|_| {
                 Failure::new(
@@ -199,15 +134,20 @@ impl OpensshMac {
     /// script gets no standard input and an environment of its own, with system
     /// directories only on its PATH.
     async fn sudo(&self, script: &str) -> Result<Ran> {
+        self.sudo_within(script, COMMAND_TIMEOUT).await
+    }
+
+    async fn sudo_within(&self, script: &str, timeout: Duration) -> Result<Ran> {
         let mut input = Zeroizing::new(self.password.as_bytes().to_vec());
         input.push(b'\n');
         let script = format!("exec </dev/null; {script}");
-        self.run(
+        self.run_within(
             &format!(
                 "/usr/bin/sudo -S -k -p '' -- /usr/bin/env -i PATH={SYSTEM_PATH} HOME=/var/root /bin/sh -c {}",
                 quote(&script)
             ),
             input,
+            timeout,
         )
         .await
     }
@@ -393,16 +333,29 @@ impl RemoteMac for OpensshMac {
             .iter()
             .map(|program| {
                 format!(
-                    "{tool} --add {0} >/dev/null && {tool} --unblockapp {0} >/dev/null",
+                    "{tool} --add {0} >/dev/null; {tool} --unblockapp {0} >/dev/null",
                     quote(program)
                 )
             })
             .collect();
-        let ran = self.sudo(&script.join(" && ")).await?;
-        if !ran.success {
-            return Err(remote_failure("Opening the firewall on the Mac", &ran));
-        }
+        // macOS can decline rule changes even as root. The caller reads the rules
+        // back and can wait for an approval on the new Mac's desktop.
+        self.sudo(&script.join("; ")).await?;
         Ok(())
+    }
+
+    async fn check_lid_closed_power(&mut self) -> Result<()> {
+        prerequisites::check_lid_closed_power(self)
+            .await
+            .map(|_| ())
+    }
+
+    async fn keep_awake_with_lid_closed(&mut self) -> Result<()> {
+        prerequisites::keep_awake_with_lid_closed(self).await
+    }
+
+    async fn ensure_command_line_tools(&mut self) -> Result<bool> {
+        prerequisites::ensure_command_line_tools(self).await
     }
 
     async fn guard_incoming(&mut self, programs: &[String]) -> Result<bool> {
@@ -510,67 +463,6 @@ if grep -qF -- {key} "$f"; then echo present; else
     ))
 }
 
-/// Options every ssh invocation of the session shares. Options whose first value
-/// differs between invocations are given before these.
-fn options(directory: &Path) -> Vec<String> {
-    let path = |name: &str| directory.join(name).to_string_lossy().into_owned();
-    [
-        "-F".into(),
-        "/dev/null".into(),
-        "-o".into(),
-        format!("ControlPath={}", path("c")),
-        "-o".into(),
-        format!("UserKnownHostsFile={}", path("known_hosts")),
-        "-o".into(),
-        "GlobalKnownHostsFile=/dev/null".into(),
-        "-o".into(),
-        "IdentityAgent=none".into(),
-        "-o".into(),
-        "PubkeyAuthentication=no".into(),
-        "-o".into(),
-        "ServerAliveInterval=15".into(),
-    ]
-    .into()
-}
-
-/// The fingerprint of the host key the session trusted, such as
-/// `SHA256:… (ED25519)`.
-async fn fingerprint(directory: &Path) -> Result<String> {
-    let output = Command::new(SSH_KEYGEN)
-        .arg("-l")
-        .arg("-f")
-        .arg(directory.join("known_hosts"))
-        .output()
-        .await
-        .map_err(|error| Failure::io("Read the Mac's host key", error))?;
-    let text = String::from_utf8_lossy(&output.stdout);
-    let fields: Vec<&str> = text
-        .lines()
-        .next()
-        .unwrap_or_default()
-        .split_whitespace()
-        .collect();
-    match fields.as_slice() {
-        [_, hash, .., kind] if hash.starts_with("SHA256:") => Ok(format!("{hash} {kind}")),
-        _ => Err(Failure::new(
-            "host_key_unreadable",
-            "The Mac's SSH host key could not be read.",
-            "Run Add Mac again.",
-        )),
-    }
-}
-
-/// Host and account names go into the ssh command line: letters, digits and the
-/// punctuation of host names, addresses and short account names only.
-fn valid_name(name: &str) -> bool {
-    !name.is_empty()
-        && !name.starts_with('-')
-        && name.len() <= 255
-        && name
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b'_' | b':' | b'%'))
-}
-
 /// `text` as one single-quoted shell word.
 fn quote(text: &str) -> String {
     format!("'{}'", text.replace('\'', r"'\''"))
@@ -583,43 +475,6 @@ fn after_marker(output: &[u8]) -> &[u8] {
         .windows(marker.len())
         .position(|window| window == marker.as_bytes())
         .map_or(output, |at| &output[at + marker.len()..])
-}
-
-fn connect_failure(host: &str, account: &str, stderr: &str) -> Failure {
-    if stderr.contains("Permission denied") {
-        return Failure::new(
-            "ssh_password_refused",
-            format!("{host} refused the password for {account}."),
-            "Check the account's short name and password on that Mac, and that Remote Login allows that account.",
-        );
-    }
-    if stderr.contains("Host key verification failed")
-        || stderr.contains("REMOTE HOST IDENTIFICATION")
-    {
-        return Failure::new(
-            "host_key_changed",
-            format!("{host} presented another host key than earlier in this session."),
-            "Make sure the host is the Mac you mean, then run Add Mac again.",
-        );
-    }
-    let why = if stderr.contains("Connection refused") {
-        "it refused SSH connections"
-    } else if stderr.contains("No route to host") {
-        "there is no route to it"
-    } else if stderr.contains("Could not resolve") || stderr.contains("nodename nor servname") {
-        "its name did not resolve"
-    } else {
-        "the connection failed"
-    };
-    unreachable(host, why)
-}
-
-fn unreachable(host: &str, why: &str) -> Failure {
-    Failure::new(
-        "ssh_unreachable",
-        format!("{host} could not be reached over SSH: {why}."),
-        "Turn on Remote Login on that Mac (System Settings > General > Sharing), check it is on this network, and run the command from Terminal or over SSH if macOS Local Network privacy blocks this process.",
-    )
 }
 
 /// A failed remote command, with the end of its error output, which never holds
@@ -810,6 +665,7 @@ mod tests {
 
     #[test]
     fn names_and_quoting_keep_the_command_line_safe() {
+        use super::connection::valid_name;
         for ok in [
             "macbook-pro.local",
             "192.168.64.30",
@@ -875,20 +731,6 @@ mod tests {
         let noisy = format!("Welcome!\n{MARKER}\n{{\"data\":1}}\n");
         assert_eq!(after_marker(noisy.as_bytes()), b"{\"data\":1}\n");
         assert_eq!(after_marker(b"plain"), b"plain");
-    }
-
-    #[test]
-    fn connection_failures_name_their_cause() {
-        let code = |stderr: &str| connect_failure("h", "a", stderr).code;
-        assert_eq!(
-            code("a@h: Permission denied (publickey,password)."),
-            "ssh_password_refused"
-        );
-        assert_eq!(
-            code("ssh: connect to host h port 22: Connection refused"),
-            "ssh_unreachable"
-        );
-        assert_eq!(code("Host key verification failed."), "host_key_changed");
     }
 
     #[test]

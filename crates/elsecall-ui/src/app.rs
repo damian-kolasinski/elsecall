@@ -1,12 +1,16 @@
 //! Window state, scenes and the rune app spec.
 
+mod add_mac_scenes;
+
+use self::add_mac_scenes::*;
+use elsecall_peers::roster::Readiness;
 use std::num::NonZeroU32;
 use std::sync::Arc;
 
 use rune::{App, AppSpec, Chrome, Latest, MenuItem, Tx, Waker, col};
 use rune_kit::{SegmentedControl, TableState, WindowTitlebar};
 
-use crate::add_mac_flow::{AddMac, AddUpdate, Page as AddMacPage, RunUpdate};
+use crate::add_mac_flow::{Action, AddMac, AddRequest, Page as AddMacPage, RunUpdate};
 use crate::add_mac_source::{self, AddMacSource, Inbox};
 use crate::configuration_view::{self, ConfigurationView, Tab};
 use crate::fleet_source::{
@@ -40,6 +44,10 @@ const SCENES: &[(&str, Scene)] = &[
     ("members", scene_members),
     ("resource-load", scene_resource_load),
     ("members-selected", scene_members_selected),
+    (
+        "members-awaiting-provisioning",
+        scene_members_awaiting_provisioning,
+    ),
     ("outdated-member", scene_outdated_member),
     ("upgrade", scene_upgrade),
     ("upgrading", scene_upgrading),
@@ -55,11 +63,14 @@ const SCENES: &[(&str, Scene)] = &[
     ("release-future", scene_release_future),
     ("release-fleet", scene_release_fleet),
     ("add-mac-prepare", scene_add_mac_prepare),
+    ("add-mac-network", scene_add_mac_network),
     ("add-mac-looking", scene_add_mac_looking),
     ("add-mac-choose", scene_add_mac_choose),
     ("add-mac-sign-in", scene_add_mac_sign_in),
     ("add-mac-adding", scene_add_mac_adding),
     ("add-mac-approve", scene_add_mac_approve),
+    ("add-mac-firewall", scene_add_mac_firewall),
+    ("add-mac-firewall-failed", scene_add_mac_firewall_failed),
     ("add-mac-done", scene_add_mac_done),
     ("add-mac-failed", scene_add_mac_failed),
     ("configuration-rules", scene_configuration_rules),
@@ -152,6 +163,7 @@ impl AppState {
     /// While an add runs, closing only stops it: the sheet stays to show how it
     /// ended.
     pub(crate) fn close_add_mac(&mut self) {
+        self.add_mac.forget_sign_in();
         if self.add_mac.adding() {
             self.add_source.stop(self.add_mac.run());
             return;
@@ -160,6 +172,7 @@ impl AppState {
     }
 
     pub(crate) fn stop_add_mac(&mut self) {
+        self.add_mac.forget_sign_in();
         self.add_source.stop(self.add_mac.run());
     }
 
@@ -170,11 +183,20 @@ impl AppState {
         }
     }
 
-    /// Starts the add on a thread of its own; its updates arrive in the inbox.
     pub(crate) fn start_add_mac(&mut self) {
-        let Some(request) = self.add_mac.start() else {
-            return;
-        };
+        if let Some(request) = self.add_mac.start() {
+            self.run_add_mac(request);
+        }
+    }
+
+    pub(crate) fn retry_add_mac(&mut self) {
+        if let Some(request) = self.add_mac.retry() {
+            self.run_add_mac(request);
+        }
+    }
+
+    /// Starts the add on a thread of its own; its updates arrive in the inbox.
+    fn run_add_mac(&self, request: AddRequest) {
         let source = Arc::clone(&self.add_source);
         let inbox = Arc::clone(&self.add_inbox);
         let run = request.run;
@@ -649,8 +671,9 @@ fn poll_add_mac(state: &mut AppState, now: f64, tx: &mut Tx) -> bool {
     let animated = matches!(
         state.add_mac.page,
         AddMacPage::Prepare
+            | AddMacPage::Network
             | AddMacPage::Adding {
-                approval: Some(_),
+                action: Some(Action::Tailnet { .. }),
                 ..
             }
     );
@@ -773,6 +796,23 @@ fn scene_members(state: &mut AppState) {
 fn scene_members_selected(state: &mut AppState) {
     scene_members(state);
     state.table.select("macbook-pro");
+}
+
+fn scene_members_awaiting_provisioning(state: &mut AppState) {
+    let mut snapshot = members_snapshot();
+    snapshot.members[0].release = Release::Matching {
+        version: "0.4.0".into(),
+    };
+    let mac = &mut snapshot.members[2];
+    mac.readiness = Readiness::AwaitingProvisioning;
+    mac.reach = Reachability::Reachable;
+    mac.gate = Gate::Open;
+    mac.release = Release::Matching {
+        version: "0.4.0".into(),
+    };
+    state.follow_service = false;
+    state.refreshed = Some("14:32:05".into());
+    state.phase = Phase::Ready(snapshot);
 }
 
 /// A member the master's last update left behind, as `elsecall fleet upgrade`
@@ -953,102 +993,6 @@ fn scene_release_offline(state: &mut AppState) {
     ));
 }
 
-fn scene_add_mac_prepare(state: &mut AppState) {
-    scene_members(state);
-    state.add_mac.open();
-}
-
-fn scene_add_mac_looking(state: &mut AppState) {
-    scene_add_mac_prepare(state);
-    state.add_mac.show_choose();
-}
-
-fn scene_add_mac_choose(state: &mut AppState) {
-    scene_add_mac_prepare(state);
-    state.add_mac.set_nearby(Ok(vec![
-        crate::add_mac_flow::mac("MacBook Pro", true, None),
-        crate::add_mac_flow::mac("Studio", false, None),
-        crate::add_mac_flow::mac("Mac mini", true, Some("mac-mini")),
-    ]));
-    state.add_mac.show_choose();
-}
-
-fn scene_add_mac_sign_in(state: &mut AppState) {
-    scene_add_mac_choose(state);
-    state.add_mac.show_sign_in();
-    state.add_mac.account.replace_text("devbox");
-    state.add_mac.password.replace_text("example");
-}
-
-fn scene_add_mac_adding(state: &mut AppState) {
-    scene_add_mac_sign_in(state);
-    state.add_mac.start();
-    for step in [
-        elsecall_fleet::add_mac::Step::Check,
-        elsecall_fleet::add_mac::Step::Tailnet,
-        elsecall_fleet::add_mac::Step::Install,
-    ] {
-        state
-            .add_mac
-            .apply_current(AddUpdate::Event(elsecall_fleet::add_mac::Event::Step {
-                step,
-            }));
-    }
-}
-
-fn scene_add_mac_approve(state: &mut AppState) {
-    scene_add_mac_sign_in(state);
-    state.add_mac.start();
-    for event in [
-        elsecall_fleet::add_mac::Event::Step {
-            step: elsecall_fleet::add_mac::Step::Check,
-        },
-        elsecall_fleet::add_mac::Event::Step {
-            step: elsecall_fleet::add_mac::Step::Tailnet,
-        },
-        elsecall_fleet::add_mac::Event::Approve {
-            link: elsecall_fleet::remote_mac::LoginLink::parse(
-                "https://login.tailscale.com/a/example",
-            )
-            .expect("a Tailscale link"),
-            approval: elsecall_fleet::add_mac::Approval::Login,
-        },
-    ] {
-        state.add_mac.apply_current(AddUpdate::Event(event));
-    }
-}
-
-fn scene_add_mac_done(state: &mut AppState) {
-    scene_add_mac_sign_in(state);
-    state.add_mac.start();
-    let report = serde_json::from_value(serde_json::json!({
-        "member": "macbook-pro",
-        "host": "macbook-pro.local",
-        "mac": {
-            "model": "Mac16,10",
-            "serial_number": null,
-            "macos_version": "26.1",
-            "ssh_host_key": "SHA256:exampleHostKeyFingerprint (ED25519)"
-        },
-        "readiness": "awaiting_provisioning",
-        "tailscale_key_expiry": null,
-        "steps": [],
-        "next_step": ""
-    }))
-    .expect("a report");
-    state.add_mac.apply_current(AddUpdate::Finished(Ok(report)));
-}
-
-fn scene_add_mac_failed(state: &mut AppState) {
-    scene_add_mac_sign_in(state);
-    state.add_mac.start();
-    state.add_mac.apply_current(AddUpdate::Finished(Err(elsecall_contract::failure::Failure::new(
-        "ssh_password_refused",
-        "macbook-pro.local refused the password for devbox.",
-        "Check the account's short name and password on that Mac, and that Remote Login allows that account.",
-    ))));
-}
-
 fn solo_snapshot() -> FleetSnapshot {
     FleetSnapshot {
         enrolled: false,
@@ -1147,6 +1091,7 @@ fn member(
         this_member: role == Role::Master,
         role,
         reach,
+        readiness: Readiness::Ready,
         gate,
         contributors: Default::default(),
         cpu: cpu.map(|(utilization, _)| utilization),

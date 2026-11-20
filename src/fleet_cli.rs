@@ -45,12 +45,22 @@ enum FleetCommand {
         /// event per line for a program (which then opens approval links itself)
         #[arg(long, value_enum, default_value_t = crate::add_mac_cli::Progress::Text)]
         progress: crate::add_mac_cli::Progress,
+        /// The SSH host key previously observed by the Add Mac window
+        #[arg(long, hide = true)]
+        ssh_host_key: Option<String>,
+        /// Disable system sleep on a plugged-in MacBook so it stays awake with its lid closed.
+        /// This setting also applies on battery.
+        #[arg(long)]
+        keep_awake_with_lid_closed: bool,
     },
     /// List the Macs on the local network, whether Remote Login is on, and which are members
     Nearby {
         /// How long to browse the network before resolving what answered
         #[arg(long, default_value = "2s", value_parser = humantime::parse_duration)]
         browse: Duration,
+        /// Omit the Mac running this command from discovery results.
+        #[arg(long)]
+        exclude_this_mac: bool,
     },
     /// Enrol another machine by the code its `fleet identity` printed (step 1 of 2)
     Enroll {
@@ -140,11 +150,25 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
             user,
             approval_wait,
             progress,
+            ssh_host_key,
+            keep_awake_with_lid_closed,
         }) => {
-            return crate::add_mac_cli::run(paths, host, user, approval_wait, progress).await;
+            return crate::add_mac_cli::run(
+                paths,
+                host,
+                user,
+                approval_wait,
+                progress,
+                ssh_host_key,
+                keep_awake_with_lid_closed,
+            )
+            .await;
         }
-        Some(FleetCommand::Nearby { browse }) => {
-            return crate::nearby_cli::run(paths, browse.min(MAX_BROWSE)).await;
+        Some(FleetCommand::Nearby {
+            browse,
+            exclude_this_mac,
+        }) => {
+            return crate::nearby_cli::run(paths, browse.min(MAX_BROWSE), exclude_this_mac).await;
         }
         Some(FleetCommand::Identity) => (Method::GET, "/v1/fleet/identity", None),
         Some(FleetCommand::Enroll {

@@ -20,6 +20,10 @@ use serde_json::Value;
 use std::{
     path::{Path, PathBuf},
     process::Output,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
     time::Duration,
 };
 
@@ -54,8 +58,12 @@ struct FakeMac {
     /// The bottle Add Mac installed, and the name it logged in with.
     installed_tailscale: Option<Bottle>,
     logged_in_as: Option<Option<String>>,
+    lid_closed_power_checked: bool,
+    git_available: bool,
     /// What the Mac's firewall does with incoming connections to Elsecall.
     firewall: Rule,
+    manual_firewall: Option<Arc<AtomicBool>>,
+    desktop_approval_checks: u8,
     opened: Vec<String>,
     /// The programs the root firewall guard keeps allowed, once installed.
     guarded: Option<Vec<String>>,
@@ -90,7 +98,11 @@ impl FakeMac {
             approves_after: Some(2),
             installed_tailscale: None,
             logged_in_as: None,
+            lid_closed_power_checked: false,
+            git_available: true,
             firewall: Rule::NotAllowed,
+            manual_firewall: None,
+            desktop_approval_checks: 0,
             opened: Vec::new(),
             guarded: None,
             starts_at_boot: None,
@@ -143,6 +155,19 @@ impl Drop for FakeMac {
 }
 
 impl RemoteMac for FakeMac {
+    async fn check_lid_closed_power(&mut self) -> Result<()> {
+        self.lid_closed_power_checked = true;
+        Ok(())
+    }
+
+    async fn keep_awake_with_lid_closed(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    async fn ensure_command_line_tools(&mut self) -> Result<bool> {
+        Ok(!std::mem::replace(&mut self.git_available, true))
+    }
+
     fn host_key(&self) -> &str {
         "SHA256:exampleHostKeyFingerprint (ED25519)"
     }
@@ -241,11 +266,21 @@ impl RemoteMac for FakeMac {
         Self::data(&self.command(&self.paths().executable(), args))
     }
     async fn incoming(&mut self, _: &str) -> Result<Rule> {
+        if self
+            .manual_firewall
+            .as_ref()
+            .is_some_and(|allowed| allowed.load(Ordering::Relaxed))
+        {
+            self.desktop_approval_checks += 1;
+            if self.desktop_approval_checks > 1 {
+                return Ok(Rule::Allowed);
+            }
+        }
         Ok(self.firewall)
     }
     async fn allow_incoming(&mut self, programs: &[String]) -> Result<()> {
         self.opened.extend(programs.iter().cloned());
-        if self.firewall == Rule::NotAllowed {
+        if self.firewall == Rule::NotAllowed && self.manual_firewall.is_none() {
             self.firewall = Rule::Allowed;
         }
         Ok(())
@@ -287,6 +322,7 @@ fn master(alpha: &TestMember, ssh_public_key: Option<&str>) -> Master {
         },
         tailnet_domain: DOMAIN.into(),
         approval_wait: Duration::from_secs(60),
+        keep_awake_with_lid_closed: false,
         ssh_public_key: ssh_public_key.map(Into::into),
     }
 }
@@ -314,7 +350,9 @@ fn outcomes(report: &add_mac::AddReport) -> Vec<(Step, Outcome)> {
 async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired() {
     let alpha = TestMember::install("alpha", Path::new(env!("CARGO_BIN_EXE_elsecall")));
     let mut mac = FakeMac::new("bravo");
-    let master = master(&alpha, Some(KEY));
+    mac.git_available = false;
+    let mut master = master(&alpha, Some(KEY));
+    master.keep_awake_with_lid_closed = true;
     let mut heard = Vec::new();
 
     let report = add(&mut mac, &master, |event| heard.push(event))
@@ -326,6 +364,7 @@ async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired(
         [
             (Step::Check, Outcome::Done),
             (Step::Tailnet, Outcome::Already),
+            (Step::Tools, Outcome::Done),
             (Step::Install, Outcome::Done),
             (Step::Firewall, Outcome::Done),
             (Step::SshKey, Outcome::Done),
@@ -333,7 +372,9 @@ async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired(
             (Step::Verify, Outcome::Done),
         ]
     );
-    assert_eq!(heard.len(), 7, "a step each, and no approval: {heard:?}");
+    assert_eq!(heard.len(), 8, "a step each, and no approval: {heard:?}");
+    assert!(mac.lid_closed_power_checked);
+    assert!(mac.git_available);
     let json = serde_json::to_value(&report).unwrap();
     assert_eq!(json["readiness"], "awaiting_provisioning");
     assert_eq!(json["mac"]["model"], "Mac16,10");
@@ -376,9 +417,10 @@ async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired(
     alpha.ok(&["fleet", "ready", "bravo"]);
     let again = add(&mut mac, &master, |_| ()).await.unwrap();
     let steps = outcomes(&again);
-    assert_eq!(steps[2], (Step::Install, Outcome::Already));
-    assert_eq!(steps[3], (Step::Firewall, Outcome::Already));
-    assert_eq!(steps[4], (Step::SshKey, Outcome::Already));
+    assert_eq!(steps[2], (Step::Tools, Outcome::Already));
+    assert_eq!(steps[3], (Step::Install, Outcome::Already));
+    assert_eq!(steps[4], (Step::Firewall, Outcome::Already));
+    assert_eq!(steps[5], (Step::SshKey, Outcome::Already));
     assert_eq!(mac.opened.len(), 1, "allowed once");
 
     // A member added before the boot starter existed gets it from Add Mac,
@@ -386,7 +428,7 @@ async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired(
     mac.starts_at_boot = None;
     let installs = mac.installs;
     let migrated = add(&mut mac, &master, |_| ()).await.unwrap();
-    assert_eq!(outcomes(&migrated)[2], (Step::Install, Outcome::Done));
+    assert!(outcomes(&migrated).contains(&(Step::Install, Outcome::Done)));
     assert!(mac.starts_at_boot.is_some());
     assert_eq!(mac.installs, installs);
 
@@ -394,7 +436,7 @@ async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired(
     // repairs a member: its rule is already allowed, so only the guard changes.
     mac.guarded = None;
     let repaired = add(&mut mac, &master, |_| ()).await.unwrap();
-    assert_eq!(outcomes(&repaired)[3], (Step::Firewall, Outcome::Done));
+    assert_eq!(outcomes(&repaired)[4], (Step::Firewall, Outcome::Done));
     assert_eq!(mac.opened.len(), 1, "still allowed once");
     assert!(mac.guarded.is_some());
     assert_eq!(serde_json::to_value(&again).unwrap()["readiness"], "ready");
@@ -439,8 +481,9 @@ async fn without_a_master_key_the_mac_still_joins() {
     let steps = outcomes(&report);
     // The firewall is off, so nothing is opened, but the guard is installed for
     // when someone turns it on.
-    assert_eq!(steps[3], (Step::Firewall, Outcome::Done));
-    assert!(matches!(steps[4], (Step::SshKey, Outcome::Skipped { .. })));
+    assert_eq!(steps[4], (Step::Firewall, Outcome::Done));
+    assert!(matches!(steps[5], (Step::SshKey, Outcome::Skipped { .. })));
+    assert!(!mac.lid_closed_power_checked);
     assert!(mac.opened.is_empty());
     assert!(mac.guarded.is_some());
     assert_eq!(alpha.view_of("bravo")["reachability"], "reachable");
@@ -458,6 +501,40 @@ async fn a_firewall_that_blocks_everything_is_refused_before_anything_changes() 
     assert!(!mac.paths().executable().exists());
     assert_eq!(mac.authorized_keys(), "");
     assert!(mac.guarded.is_none());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_mac_joins_after_the_operator_allows_the_firewall_on_its_desktop() {
+    let alpha = TestMember::install("alpha", Path::new(env!("CARGO_BIN_EXE_elsecall")));
+    let mut mac = FakeMac::new("bravo");
+    let allowed = Arc::new(AtomicBool::new(false));
+    mac.manual_firewall = Some(Arc::clone(&allowed));
+    let mut heard = Vec::new();
+    let report = add(&mut mac, &master(&alpha, None), |event| {
+        if event == Event::FirewallApproval {
+            allowed.store(true, Ordering::Relaxed);
+        }
+        heard.push(event);
+    })
+    .await
+    .unwrap();
+
+    assert_eq!(report.member, "bravo");
+    assert!(heard.windows(3).any(|events| events
+        == [
+            Event::Step {
+                step: Step::Firewall
+            },
+            Event::FirewallApproval,
+            Event::Step { step: Step::SshKey },
+        ]));
+    assert_eq!(mac.opened.len(), 1, "the automated rule change was tried");
+    assert!(
+        mac.desktop_approval_checks > 1,
+        "the firewall was checked again"
+    );
+    assert!(mac.guarded.is_some());
+    assert_eq!(alpha.view_of("bravo")["reachability"], "reachable");
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -517,7 +594,7 @@ async fn a_mac_without_tailscale_gets_it_and_joins_once_approved() {
     let again = add(&mut mac, &master(&alpha, Some(KEY)), |_| ())
         .await
         .unwrap();
-    assert_eq!(outcomes(&again)[3], (Step::Firewall, Outcome::Already));
+    assert_eq!(outcomes(&again)[4], (Step::Firewall, Outcome::Already));
     assert_eq!(mac.guarded.as_ref(), Some(&mac.opened));
 }
 

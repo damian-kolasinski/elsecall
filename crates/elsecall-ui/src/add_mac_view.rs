@@ -1,15 +1,16 @@
 //! The Add Mac sheet: what to do on the new Mac, which Mac, its account, and the
-//! add as it happens, with looping illustrations of the two things a person does:
-//! turning on Remote Login there, and approving it in the browser here.
+//! add as it happens, with looping illustrations of the operator's steps.
 
-use elsecall_fleet::add_mac::Approval;
 use rune::tok::TextStyle;
 use rune::{Color, El, Icon, col, icon, row, text};
-use rune_kit::{Button, ButtonVariant, Dialog, Kit, Spinner, TextInput};
+use rune_kit::{Button, ButtonVariant, Checkbox, Dialog, Kit, Spinner, TextInput};
 
-use crate::add_mac_flow::{
-    MacStatus, Nearby, NearbyMacExt, Page, STEPS, StepState, Target, step_label, step_state,
-};
+mod illustrations;
+mod progress;
+
+use self::illustrations::{firewall_art, settings_art, wifi_art};
+use self::progress::adding;
+use crate::add_mac_flow::{MacStatus, Nearby, NearbyMacExt, Page, Target, needs_new_target};
 use crate::app::AppState;
 use crate::theme;
 use elsecall_contract::failure::Failure;
@@ -19,18 +20,6 @@ use elsecall_fleet::remote_mac::LoginLink;
 use elsecall_peers::roster::Readiness;
 
 const SHEET_WIDTH: f32 = 680.0;
-const ART_WIDTH: f32 = 300.0;
-const ART_HEIGHT: f32 = 188.0;
-/// One loop of the Remote Login illustration, in seconds.
-const TOGGLE_LOOP: f64 = 4.5;
-/// One loop of the browser approval illustration, in seconds.
-const APPROVE_LOOP: f64 = 3.6;
-
-static POINTER: Icon = Icon {
-    name: "elsecall-pointer",
-    view: 16.0,
-    body: r#"<path d="M3 1.5V13.2L6.1 10.4L8.2 15L10.3 14L8.2 9.5H12.4Z" fill="currentColor" stroke="white" stroke-width="1" stroke-linejoin="round"/>"#,
-};
 static CHECK: Icon = Icon {
     name: "elsecall-check",
     view: 16.0,
@@ -105,6 +94,11 @@ pub(crate) fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut
     let (title, body, buttons) = match &flow.page {
         Page::Closed => return,
         Page::Prepare => ("Add a Mac", prepare(clock, &l), prepare_buttons(k)),
+        Page::Network => (
+            "Connect to the same network",
+            network(clock, &l),
+            network_buttons(k),
+        ),
         Page::Choose { selected } => (
             "Choose the new Mac",
             choose(state, selected.as_deref(), k, &l),
@@ -118,10 +112,10 @@ pub(crate) fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut
         Page::Adding {
             target,
             current,
-            approval,
+            action,
         } => (
             "Adding the Mac",
-            adding(&target.name, *current, approval.as_ref(), clock, k, &l),
+            adding(&target.name, *current, action.as_ref(), clock, k, &l),
             adding_buttons(k),
         ),
         Page::Done { report } => (
@@ -130,9 +124,18 @@ pub(crate) fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut
             done_buttons(k),
         ),
         Page::Failed { failure, .. } => (
-            "The Mac was not added",
-            failed(failure, k, &l),
-            failed_buttons(k),
+            match failure.code.as_str() {
+                "member_unverified" => "The Mac joined. Verification is pending.",
+                "member_configuration_sync_failed" => {
+                    "The Mac joined. Configuration needs attention."
+                }
+                "member_lid_closed_setup_failed" => {
+                    "The Mac joined. Lid-closed setup needs attention."
+                }
+                _ => "The Mac was not added",
+            },
+            failed(failure, flow.has_credentials(), k, &l),
+            failed_buttons(failure, flow.has_credentials(), k),
         ),
     };
     let content = col()
@@ -158,18 +161,25 @@ pub(crate) fn sheet(state: &AppState, k: &Kit, reduced_motion: bool, layer: &mut
         .build(k, layer);
 }
 
-/// Where the sheet is: four stages, the current one marked.
+/// The current stage of the sheet.
 fn stepper(page: &Page, l: &Look) -> El {
     let at = match page {
         Page::Closed | Page::Prepare => 0,
-        Page::Choose { .. } => 1,
-        Page::SignIn { .. } => 2,
-        Page::Adding { .. } | Page::Done { .. } | Page::Failed { .. } => 3,
+        Page::Network => 1,
+        Page::Choose { .. } => 2,
+        Page::SignIn { .. } => 3,
+        Page::Adding { .. } | Page::Done { .. } | Page::Failed { .. } => 4,
     };
     let mut line = row().center_y().gap(theme::SPACE_2);
-    for (index, label) in ["On the new Mac", "Choose it", "Sign in", "Add"]
-        .into_iter()
-        .enumerate()
+    for (index, label) in [
+        "On the new Mac",
+        "Connect to Wi-Fi",
+        "Choose it",
+        "Sign in",
+        "Add",
+    ]
+    .into_iter()
+    .enumerate()
     {
         if index > 0 {
             line = line.child(rune::el().size(18.0, 1.0).fill(l.border));
@@ -227,150 +237,40 @@ fn prepare(clock: f64, l: &Look) -> El {
                 l,
             ),
             l,
+        ));
+    row()
+        .w_full()
+        .gap(theme::SPACE_6)
+        .child(settings_art(clock, l))
+        .child(steps)
+}
+
+fn network(clock: f64, l: &Look) -> El {
+    let steps = col()
+        .grow(1.0)
+        .gap(theme::SPACE_3)
+        .child(numbered(
+            1,
+            paragraph("Check the Wi-Fi network this Mac is using.", l),
+            l,
         ))
         .child(numbered(
-            3,
+            2,
             paragraph(
-                "Keep it on the same network as this Mac. Everything else happens from here: Elsecall installs itself and Tailscale there, and you approve it once in your browser.",
+                "On the new Mac, open System Settings › Wi-Fi and join that same network.",
                 l,
             ),
+            l,
+        ))
+        .child(paragraph(
+            "Ethernet also works when both Macs are on the same local network.",
             l,
         ));
     row()
         .w_full()
         .gap(theme::SPACE_6)
-        .child(settings_art(phase(clock, TOGGLE_LOOP), l))
+        .child(wifi_art(clock, l))
         .child(steps)
-}
-
-/// Where a loop of `length` seconds is, from 0 to 1.
-fn phase(clock: f64, length: f64) -> f32 {
-    if clock == f64::MAX {
-        return 1.0;
-    }
-    ((clock.rem_euclid(length)) / length) as f32
-}
-
-/// `t` eased between `from` and `to` (both 0–1 within the loop).
-fn between(t: f32, from: f32, to: f32) -> f32 {
-    let x = ((t - from) / (to - from)).clamp(0.0, 1.0);
-    x * x * (3.0 - 2.0 * x)
-}
-
-fn mix(a: f32, b: f32, t: f32) -> f32 {
-    a + (b - a) * t
-}
-
-/// A small System Settings window whose Remote Login switch a pointer turns on.
-fn settings_art(t: f32, l: &Look) -> El {
-    let on = between(t, 0.48, 0.56);
-    let reach = between(t, 0.22, 0.46);
-    let leave = between(t, 0.84, 0.98);
-    let titlebar = row()
-        .h(22.0)
-        .w_full()
-        .px(theme::SPACE_2)
-        .center_y()
-        .gap(5.0)
-        .children(
-            [
-                rune::oklch(0.68, 0.19, 27.0),
-                rune::oklch(0.83, 0.16, 80.0),
-                rune::oklch(0.73, 0.19, 145.0),
-            ]
-            .map(|c| rune::el().size(8.0, 8.0).radius(4.0).fill(c)),
-        );
-    let mut sidebar = col()
-        .w(92.0)
-        .h_full()
-        .padding(theme::SPACE_2)
-        .gap(3.0)
-        .fill(l.raised);
-    for (label, selected) in [
-        ("Wi‑Fi", false),
-        ("Bluetooth", false),
-        ("Network", false),
-        ("General", true),
-        ("Appearance", false),
-    ] {
-        let item = row().w_full().h(17.0).px(5.0).center_y().radius(4.0).child(
-            text(label)
-                .font(l.small)
-                .color(if selected { l.accent_ink } else { l.secondary }),
-        );
-        sidebar = sidebar.child(if selected {
-            item.fill(l.accent.alpha(0.22))
-        } else {
-            item
-        });
-    }
-    let mut pane = col()
-        .grow(1.0)
-        .h_full()
-        .padding(theme::SPACE_2)
-        .gap(4.0)
-        .child(text("General › Sharing").font(l.label).color(l.text));
-    for (label, value) in [
-        ("Screen Sharing", 0.0),
-        ("File Sharing", 0.0),
-        ("Remote Login", on),
-        ("Remote Management", 0.0),
-    ] {
-        let focus = label == "Remote Login";
-        let line = row()
-            .w_full()
-            .h(22.0)
-            .px(6.0)
-            .center_y()
-            .radius(5.0)
-            .fill(l.card)
-            .child(
-                text(label)
-                    .font(l.small)
-                    .color(if focus { l.text } else { l.secondary }),
-            )
-            .child(rune::el().grow(1.0))
-            .child(switch(value, l));
-        pane = pane.child(if focus {
-            line.border(1.0, l.accent.alpha(0.35 + 0.4 * reach))
-        } else {
-            line
-        });
-    }
-    // The pointer comes from the lower left to the switch, clicks, and fades.
-    let (x, y) = (mix(120.0, 262.0, reach), mix(176.0, 112.0, reach));
-    let pointer = icon(&POINTER, 16.0)
-        .color(l.text)
-        .opacity(1.0 - leave)
-        .absolute(x, y)
-        .key("add-mac-pointer");
-    rune::el()
-        .size(ART_WIDTH, ART_HEIGHT)
-        .child(
-            col()
-                .size(ART_WIDTH, ART_HEIGHT)
-                .radius(10.0)
-                .fill(l.card)
-                .border(1.0, l.border)
-                .clip_rounded(10.0)
-                .shadow(6.0, 18.0, Color::BLACK.alpha(0.16))
-                .child(titlebar)
-                .child(row().w_full().grow(1.0).child(sidebar).child(pane)),
-        )
-        .child(pointer)
-        .key("add-mac-settings-art")
-}
-
-/// A switch, `on` from 0 (off) to 1 (on).
-fn switch(on: f32, l: &Look) -> El {
-    let track = if on > 0.5 { l.good } else { l.track };
-    rune::el().size(26.0, 15.0).radius(7.5).fill(track).child(
-        rune::el()
-            .size(11.0, 11.0)
-            .radius(5.5)
-            .fill(l.knob)
-            .absolute(2.0 + 11.0 * on, 2.0),
-    )
 }
 
 fn choose(state: &AppState, selected: Option<&str>, k: &Kit, l: &Look) -> El {
@@ -397,7 +297,7 @@ fn choose(state: &AppState, selected: Option<&str>, k: &Kit, l: &Look) -> El {
             trouble = now.as_ref();
             if macs.is_empty() {
                 list = list.child(paragraph(
-                    "No Mac on this network advertises itself yet. When Remote Login is on, the new Mac shows up here within a few seconds; you can also type its address below.",
+                    "No new Macs found yet. Check the new Mac's network and Remote Login, or type its address below.",
                     l,
                 ));
             }
@@ -477,8 +377,7 @@ fn mac_row(mac: &NearbyMac, selected: bool, l: &Look) -> El {
         MacStatus::Ready => ("Ready to add", l.good_fill, l.good),
         MacStatus::RemoteLoginOff => ("Turn on Remote Login", l.warn_fill, l.warn_ink),
         MacStatus::Unknown => ("Not sure it is a Mac", l.raised, l.secondary),
-        MacStatus::Member(_) => ("Member · repair", l.raised, l.secondary),
-        MacStatus::PossibleMember(_) => ("May be a member", l.raised, l.secondary),
+        MacStatus::PossibleMember => ("May be a member", l.raised, l.secondary),
     };
     let detail = describe(mac.model.as_deref(), &mac.host, mac.addresses.first());
     let mut line = row()
@@ -549,7 +448,7 @@ fn sign_in(state: &AppState, target: &Target, k: &Kit, l: &Look) -> El {
         .iter()
         .find(|mac| mac.host == target.host)
         .and_then(|mac| mac.addresses.first());
-    col()
+    let page = col()
         .w_full()
         .gap(theme::SPACE_4)
         .child(
@@ -575,194 +474,59 @@ fn sign_in(state: &AppState, target: &Target, k: &Kit, l: &Look) -> El {
                 .key("add-mac-target"),
         )
         .child(paragraph(
-            "An administrator account on that Mac. The password is used only while Elsecall sets it up, and is never stored.",
+            "Use an administrator account on the new Mac. The password stays in memory for retries.",
             l,
         ))
-        .child(field(
-            "Account",
-            TextInput::new(&flow.account)
-                .label("Account")
-                .placeholder("Its short name, such as devbox")
-                .on_edit(|state: &mut AppState| &mut state.add_mac_mut().account)
-                .build(k)
-                .key("add-mac-account"),
-            l,
-        ))
-        .child(field(
-            "Password",
-            TextInput::new(&flow.password)
-                .label("Password")
-                .secure()
-                .on_edit(|state: &mut AppState| &mut state.add_mac_mut().password)
-                .on_submit(|state: &mut AppState, _| state.start_add_mac())
-                .build(k)
-                .key("add-mac-password"),
-            l,
-        ))
-}
-
-fn adding(
-    name: &str,
-    current: Option<elsecall_fleet::add_mac::Step>,
-    approval: Option<&(elsecall_fleet::remote_mac::LoginLink, Approval)>,
-    clock: f64,
-    k: &Kit,
-    l: &Look,
-) -> El {
-    let mut steps = col().w(250.0).gap(theme::SPACE_2).key("add-mac-steps");
-    for step in STEPS {
-        let state = step_state(step, current);
-        let mark = match state {
-            StepState::Done => icon(&CHECK, 16.0).color(l.good),
-            StepState::Running => Spinner::new().size(14.0).build(k),
-            StepState::Pending => rune::el().size(6.0, 6.0).radius(3.0).fill(l.border),
-        };
-        steps = steps.child(
-            row()
-                .h(22.0)
-                .gap(theme::SPACE_2)
-                .center_y()
-                .child(row().size(16.0, 16.0).center().child(mark))
-                .child(text(step_label(step)).font(l.body).color(match state {
-                    StepState::Done => l.secondary,
-                    StepState::Running => l.text,
-                    StepState::Pending => l.subtle,
-                })),
-        );
-    }
-    let side = match approval {
-        Some((link, approval)) => approve(name, link, *approval, clock, k, l),
-        None => col()
-            .grow(1.0)
-            .gap(theme::SPACE_3)
-            .child(paragraph(
-                &format!("Elsecall is setting up {name} over SSH. This takes a minute or two."),
-                l,
-            ))
-            .child(paragraph(
-                "If Tailscale needs your approval, its page opens in your browser and this sheet shows what to click.",
-                l,
-            )),
-    };
-    row().w_full().gap(theme::SPACE_6).child(steps).child(side)
-}
-
-fn approve(
-    name: &str,
-    link: &elsecall_fleet::remote_mac::LoginLink,
-    approval: Approval,
-    clock: f64,
-    k: &Kit,
-    l: &Look,
-) -> El {
-    let (lead, button) = match approval {
-        Approval::Login => (
-            format!(
-                "Approve {name} in your browser: Tailscale's page is open there. Click Connect to let it join your tailnet."
-            ),
-            "Connect",
-        ),
-        Approval::Device => (
-            format!(
-                "Your tailnet approves new devices: in the admin console that opened, approve {name}."
-            ),
-            "Approve",
-        ),
-    };
-    let link = link.as_str().to_owned();
-    col()
-        .grow(1.0)
-        .gap(theme::SPACE_3)
-        .child(browser_art(name, button, phase(clock, APPROVE_LOOP), l))
-        .child(text(lead).wrap().w_full().font(l.body).color(l.text))
-        .child(
-            row().child(
-                Button::new("Open the page again")
-                    .variant(ButtonVariant::Outline)
-                    .on_press_tx(move |_: &mut AppState, tx| {
-                        let _ = tx.open_url(&link);
-                    })
-                    .build(k)
-                    .key("add-mac-open-link"),
-            ),
-        )
-        .key("add-mac-approve")
-}
-
-/// A browser page whose button a pointer clicks, which then shows a check.
-fn browser_art(name: &str, button: &str, t: f32, l: &Look) -> El {
-    let reach = between(t, 0.12, 0.42);
-    let pressed = between(t, 0.44, 0.5) * (1.0 - between(t, 0.5, 0.56));
-    let joined = between(t, 0.55, 0.65);
-    let leave = between(t, 0.85, 0.98);
-    let address = row()
-        .h(26.0)
-        .w_full()
-        .px(theme::SPACE_2)
-        .gap(theme::SPACE_2)
-        .center_y()
         .child(
             row()
-                .grow(1.0)
-                .h(16.0)
-                .px(theme::SPACE_2)
-                .center_y()
-                .radius(8.0)
-                .fill(l.raised)
-                .child(text("login.tailscale.com").font(l.small).color(l.secondary)),
+                .w_full()
+                .gap(theme::SPACE_4)
+                .child(field(
+                    "Account",
+                    TextInput::new(&flow.account)
+                        .label("Account")
+                        .placeholder("Its short name, such as devbox")
+                        .on_edit(|state: &mut AppState| &mut state.add_mac_mut().account)
+                        .build(k)
+                        .key("add-mac-account"),
+                    l,
+                ))
+                .child(field(
+                    "Password",
+                    TextInput::new(&flow.password)
+                        .label("Password")
+                        .secure()
+                        .on_edit(|state: &mut AppState| &mut state.add_mac_mut().password)
+                        .on_submit(|state: &mut AppState, _| state.start_add_mac())
+                        .build(k)
+                        .key("add-mac-password"),
+                    l,
+                )),
         );
-    let action: El = if joined > 0.5 {
-        row()
-            .gap(theme::SPACE_1)
-            .center_y()
-            .opacity(joined)
-            .child(icon(&CHECK, 16.0).color(l.good))
-            .child(text("Connected").font(l.label).color(l.good))
-    } else {
-        row()
-            .h(26.0)
-            .px(theme::SPACE_4)
-            .center()
-            .radius(6.0)
-            .fill(l.accent.alpha(1.0 - 0.25 * pressed))
-            .child(text(button).font(l.label).color(Color::WHITE))
-    };
-    let page = col()
-        .w_full()
-        .grow(1.0)
-        .center()
-        .gap(theme::SPACE_2)
-        .child(text("Connect device").font(l.label).color(l.secondary))
-        .child(text(name.to_owned()).font(l.mono).color(l.text))
-        .child(action);
-    let (x, y) = (mix(40.0, 160.0, reach), mix(138.0, 112.0, reach));
-    rune::el()
-        .size(ART_WIDTH, ART_HEIGHT - 28.0)
-        .child(
+    match flow.lid_closed_choice(target) {
+        Some(checked) => page.child(
             col()
-                .size(ART_WIDTH, ART_HEIGHT - 28.0)
-                .radius(10.0)
-                .fill(l.card)
-                .border(1.0, l.border)
-                .clip_rounded(10.0)
-                .child(address)
-                .child(rune::el().h(1.0).w_full().fill(l.border))
-                .child(page),
-        )
-        .child(
-            icon(&POINTER, 16.0)
-                .color(l.text)
-                .opacity(1.0 - leave)
-                .absolute(x, y),
-        )
-        .key("add-mac-browser-art")
+                .w_full()
+                .gap(theme::SPACE_1)
+                .child(Checkbox::new(checked)
+                    .label("Keep this MacBook awake with its lid closed")
+                    .on_toggle(|state: &mut AppState| state.add_mac_mut().toggle_lid_closed())
+                    .build(k)
+                    .key("add-mac-keep-awake"))
+                .child(paragraph(
+                    "Plug in the MacBook and leave its lid open until setup finishes. This option disables system sleep, including on battery.",
+                    l,
+                )),
+        ),
+        None => page,
+    }
 }
 
 fn done(report: &AddReport, l: &Look) -> El {
     let model = report.mac.model.as_deref().unwrap_or("Mac");
     let standing = match report.readiness {
         Readiness::AwaitingProvisioning => {
-            "It is a member awaiting provisioning: you can run work on it by name, and it takes no other work until its tools are installed."
+            "Automatic jobs wait for provisioning. Set up the projects and tools this Mac will run, including full Xcode for Xcode builds. You can still send jobs directly to this Mac."
         }
         Readiness::Ready => "It is a member and takes work; adding it again repaired it.",
     };
@@ -811,7 +575,7 @@ fn done(report: &AddReport, l: &Look) -> El {
     page.key("add-mac-done")
 }
 
-fn failed(failure: &Failure, k: &Kit, l: &Look) -> El {
+fn failed(failure: &Failure, has_credentials: bool, k: &Kit, l: &Look) -> El {
     let mut card = col()
         .w_full()
         .gap(theme::SPACE_2)
@@ -832,6 +596,9 @@ fn failed(failure: &Failure, k: &Kit, l: &Look) -> El {
                 .font(l.small)
                 .color(l.secondary),
         );
+    if failure.code == "firewall_unchanged" {
+        card = card.child(firewall_art(l));
+    }
     // Still waiting for the approval: the page can be opened again from here.
     let pending = failure
         .details
@@ -853,14 +620,16 @@ fn failed(failure: &Failure, k: &Kit, l: &Look) -> El {
             ),
         );
     }
-    card.child(
-        text("Trying again continues where it stopped.")
-            .wrap()
-            .w_full()
-            .font(l.small)
-            .color(l.subtle),
-    )
-    .key("add-mac-failed")
+    if has_credentials {
+        card = card.child(
+            text("Trying again continues where it stopped.")
+                .wrap()
+                .w_full()
+                .font(l.small)
+                .color(l.subtle),
+        );
+    }
+    card.key("add-mac-failed")
 }
 
 fn prepare_buttons(k: &Kit) -> Vec<El> {
@@ -871,6 +640,21 @@ fn prepare_buttons(k: &Kit) -> Vec<El> {
             .build(k)
             .key("add-mac-cancel"),
         Button::new("Remote Login is on")
+            .variant(ButtonVariant::Contrast)
+            .on_press(|state: &mut AppState| state.add_mac_mut().show_network())
+            .build(k)
+            .key("add-mac-continue"),
+    ]
+}
+
+fn network_buttons(k: &Kit) -> Vec<El> {
+    vec![
+        Button::new("Back")
+            .variant(ButtonVariant::Ghost)
+            .on_press(|state: &mut AppState| state.add_mac_mut().back())
+            .build(k)
+            .key("add-mac-back"),
+        Button::new("On the same network")
             .variant(ButtonVariant::Contrast)
             .on_press(|state: &mut AppState| state.add_mac_mut().show_choose())
             .build(k)
@@ -930,17 +714,26 @@ fn done_buttons(k: &Kit) -> Vec<El> {
     ]
 }
 
-fn failed_buttons(k: &Kit) -> Vec<El> {
-    vec![
+fn failed_buttons(failure: &Failure, has_credentials: bool, k: &Kit) -> Vec<El> {
+    let mut buttons = vec![
         Button::new("Back")
             .variant(ButtonVariant::Ghost)
             .on_press(|state: &mut AppState| state.add_mac_mut().back())
             .build(k)
             .key("add-mac-back"),
-        Button::new("Try again")
+    ];
+    if !needs_new_target(failure) {
+        buttons.push(
+            Button::new(if has_credentials {
+                "Try again"
+            } else {
+                "Edit sign-in"
+            })
             .variant(ButtonVariant::Contrast)
-            .on_press(|state: &mut AppState| state.add_mac_mut().retry())
+            .on_press(|state: &mut AppState| state.retry_add_mac())
             .build(k)
             .key("add-mac-retry"),
-    ]
+        );
+    }
+    buttons
 }
