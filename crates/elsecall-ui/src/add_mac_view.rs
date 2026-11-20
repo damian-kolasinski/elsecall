@@ -555,7 +555,7 @@ fn done(report: &AddReport, l: &Look) -> El {
     let model = report.mac.model.as_deref().unwrap_or("Mac");
     let standing = match report.readiness {
         Readiness::AwaitingProvisioning => {
-            "Automatic jobs wait until the master has installed the tools the fleet's projects pin, which it does by itself, and then marks it ready. You can still send jobs directly to this Mac."
+            "Automatic jobs wait until the master has installed the tools the fleet's projects pin, which it does by itself, and then marks it ready; Setup on its row shows how far it got. You can still send jobs directly to this Mac."
         }
         Readiness::Ready => "It is a member and takes work; adding it again repaired it.",
     };
