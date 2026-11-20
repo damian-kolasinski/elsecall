@@ -429,7 +429,7 @@ Each is one pull request, verifiable on its own.
 | 1 | This document, and reading pins: the `PinSource` port, its four adapters, `elsecall tools pins` | Inventory (fleet-tools Slice 1) |
 | 2 | A plan per member: pins from the workspaces jobs ran in, minus what the member has installed, minus the exceptions; `fleet-tools.toml` narrowed to exceptions; simulator runtime inventory | 1 |
 | 3 | Running commands on a member, and "needs attention" items (in progress in parallel) | — |
-| 4 | Installing: mise tools, Xcode copied from the master, simulator runtimes, as admitted work | 2, 3 |
+| 4 | Installing: mise tools, Xcode copied from the master, simulator runtimes, as admitted work; `elsecall tools apply` | 2, 3 |
 | 5 | A warning when a run fails on a missing tool ("not pinned, pin it here"), and consent for secret files | 1, 3 |
 | 6 | The automatic loop: drift detection, automatic installs, placement by pins, automatic ready; and the UI | 2, 4, 5 |
 
@@ -603,6 +603,169 @@ each real workspace on the master: `acme-ios` and this repository.
   → zulu-17.54.21, `node = "22"` → 22.19.0, the latter also pinned exactly by
   `acme-ios`). Nothing unresolved, no warnings.
 - The plan took 0.7 and 1.0 seconds in two runs, mise's `ls` included.
+
+## Delivery 4: installing
+
+`elsecall tools apply [--member NAME] [--dry-run] [--wait]` carries out the plan
+on the master. It plans the fleet exactly as `tools plan` does
+(`POST /v1/tools/apply` with `{member}`, `not_master` elsewhere,
+`invalid_request` for an unknown `--member`) and then sends each planned member
+its steps, the members with nothing to install too: their apply has no steps and
+finishes at once, so their last apply's failures stop standing. The command
+waits 200 seconds, for the plan's 150 and a member's 20. The sends run on their
+own in the service, so a caller that gives up never leaves some members asked
+and others not. `--dry-run` sends nothing and prints the plan: it
+reads `GET /v1/tools/plan`, so its `data` is the `tools plan` document, field
+for field. Agents may run it: a tool plan follows
+from pins, so it needs no person, and nothing in it is `person_only`.
+
+A member answers as soon as its apply has started, and installs its steps as its
+own work (below). Without `--wait` the command returns then, and `data` is
+`{master, members}`, one entry per planned member in plan order:
+
+- `{member, state: "started", apply, unresolved}`: `apply` is the member's new
+  apply (below), every step `queued`; `unresolved` counts the plan's
+  unresolved requests, which are not installed.
+- `{member, state: "nothing_to_install", unresolved}`: the plan has no steps;
+  the member recorded an empty apply.
+- `{member, state: "unavailable", error}`: its inventory could not be read, so
+  it has no plan, with the fleet inventory's codes.
+- `{member, state: "refused", error}`: it did not start, as `apply_in_progress`
+  (an apply already runs there), `plan_too_large` (more than 256 steps or
+  60 KiB, beyond what one request to a member carries), `version_skew`,
+  `member_unreachable` and the like. Another member's text is not copied.
+
+`elsecall tools applied [--member NAME] [--wait]` reads each member's latest
+apply (`GET /v1/tools/apply`), this member first, on any member: `{members:
+[{member, state, apply?, error?}]}` with `state` `none` (it never applied a
+plan), `running`, `finished` or `unavailable` (with `error`). `--wait` reads
+again every two seconds until no member it read is `running`; `tools apply
+--wait` does that for the members it started, replacing each of their entries
+with its finished read and keeping every other entry as it was. Both exit 0 when a step failed:
+that is data, in `apply` and in the fleet's attention.
+
+An `apply` is `{started_at, finished_at, steps}`, `finished_at` null while it
+runs. Each step is `{manager, tool, version, options, state}` in plan order,
+with `state`:
+
+- `queued`, or `running` with `since`;
+- `installed` with `at`;
+- `skipped` with `reason` `not_supported`: its manager does not install yet;
+  it is skipped when the apply starts, and nothing runs;
+- `failed` with `stage`, `code` and `at`.
+
+A failure's `stage` is the part of the step that failed (`admission`,
+`install`, `apply`) and its `code` why. They are never what a command printed:
+an install's output is discarded, never captured, so a token in a download URL
+never reaches a record, a status, an item or a log. The codes so far:
+
+| Stage | Code | When |
+| --- | --- | --- |
+| `admission` | `install_not_admitted` | The member's scheduler refused the step, as while it stops. |
+| `install` | `mise_missing` | The member has no mise. |
+| `install` | `mise_unusable` | mise could not be started, or `HOME` is not set. |
+| `install` | `tool_install_failed` | `mise install` exited with an error. |
+| `install` | `tool_install_timeout` | It ran for 30 minutes. |
+| `admission` or `apply` | `apply_interrupted` | The service stopped while the step waited or ran. |
+| `apply` | `apply_failed` | The apply stopped unexpectedly; its unfinished steps fail with it. |
+
+### On the member
+
+`POST /peer/v1/tools/apply` takes `{steps}`, 1 to 256 of `{manager, tool,
+version, options}`. Only the member's recorded master may send it (`not_master`,
+403, from anyone else), and each step is checked against its manager's grammar
+before anything runs, as a member's pin report is on the master: a tool or
+version that could read as an option, a mise tool holding brackets, a mise
+version that is a selector (`latest`, `ref:`, `path:`…), a version outside
+Xcode's or a runtime's digits and dots, options on anything but mise, or an
+option Elsecall does not carry is `invalid_request`. 0 to 256 steps, at most
+the listener's 64 KiB. One apply runs at a time; another is
+`apply_in_progress` (409). `GET /peer/v1/tools/apply` is its latest
+apply, `{apply}`, null when there is none; any enrolled member may read it. Both
+are refused across builds.
+
+The member runs the steps one at a time, in order. Each asks the member's own
+scheduler for a deferrable, pinned run of 2 cores labelled
+`elsecall tools install`: it starts only while the member has room beyond its
+reserve and no interactive work waits, so it never takes room from running work,
+and it shows in `elsecall runs` and `explain` like any job, as Elsecall's own
+work. After an hour of waiting it starts at its deadline anyway, still only
+when it fits. Each command the step runs is started in its own process group,
+with no input and its output discarded, and bound to the run as its holder; when
+the step times out or is dropped while it runs, the group is killed; a command
+that exits by itself leaves its group alone, since the group's ID may then be
+reused. The run ends exactly once, with exit 0 when the step installed and 1
+otherwise, also when the step is dropped or its task panics: its room is never
+held past the step. A panicking apply finishes with its unfinished steps failed
+as `apply_failed`, so the member is never stuck `apply_in_progress`. One failed step does not stop the
+next: tools do not depend on each other. Nothing is ever uninstalled.
+
+The latest apply is kept in `tools-apply.json` in the member's data directory,
+owner-only, after every change. Running work does not survive a restart, so an
+apply that was running when the service stopped reads back finished, its
+unfinished steps `failed` with `apply_interrupted`, and is kept that way at
+once, so their times do not move with later restarts.
+
+**mise tools.** A step is `mise install '<tool>[<options>]@<version>'`: the
+version named explicitly, never `mise install` in a workspace, so no
+repository's config is read and no hook, task or `postinstall` a repository
+wrote runs. The backend mise uses for the tool does run: a tool that builds from
+source, or that an asdf or vfox plugin installs, runs that upstream's code, as
+it did when the master installed it. The
+[install options](#install-options) go in mise's bracket syntax, which their
+values cannot end. mise runs as the inventory runs it: the executable the
+inventory finds (`ELSECALL_MISE` or the usual places), in the home folder, with
+`MISE` and `MISE_*` removed and `MISE_YES=1` set, for up to 30 minutes. A tool a
+mise plugin backs needs the plugin on the member, as on the master.
+
+### Attention: a failed step
+
+The member's status carries its latest apply as `provisioning`: `{state
+(running or finished), started_at, finished_at, steps, installed, failed}`,
+where `failed` lists each failed step as `{manager, tool, version, stage, code,
+failed_at}`; `elsecall fleet` shows it under each member's `status`. Every
+member's fleet view derives one `provisioning_step_failed` item per failed step
+of every member's latest apply:
+
+```json
+{
+  "id": "provisioning_step_failed:macbook-pro:mise:node@22.19.0",
+  "member": "macbook-pro",
+  "category": "provisioning_step_failed",
+  "subject": "mise:node@22.19.0",
+  "code": "tool_install_failed",
+  "message": "Installing mise node 22.19.0 on macbook-pro failed at its install stage: mise install exited with an error.",
+  "hint": "Install node 22.19.0 with mise on macbook-pro, with the options elsecall tools plan lists, to see why; fix the cause, then run elsecall tools apply --member macbook-pro on the master to retry.",
+  "since": 1763600000000,
+  "actions": [{
+    "summary": "Apply macbook-pro's plan again, which retries this step.",
+    "command": ["elsecall", "tools", "apply", "--member", "macbook-pro"],
+    "run_on": "mac-mini",
+    "person_only": false
+  }]
+}
+```
+
+The `subject` is `<manager>:<tool>@<version>`, and `since` is when the step
+failed. The item stands until the member's next apply, which retries the step,
+or no longer needs it and ends it with an empty apply. The text is written by the reading member from the code;
+another member's report is read leniently, and a failed step it cannot read is
+left out.
+
+### Evidence: mise tools
+
+In a macOS VM (`docs/e2e-vm.md`), a fleet of one named `mac-mini` running this
+build, with mise 2026.11.3: a workspace pinning `github:nextest-rs/nextest` with
+`version_prefix = "cargo-nextest-"` and a `postinstall`, and an exception giving
+the VM 0.9.149 so its plan has a step. `tools plan` listed the step with
+`options: {version_prefix: "cargo-nextest-"}`; `tools apply --wait` installed it
+in 5 seconds, mise recorded the option in the install's own `.mise.backend.toml`,
+the `postinstall` did not run, `elsecall runs` showed one `elsecall tools
+install` run that exited 0, and the next `tools apply` had nothing to install.
+On the host, `tests/tools_apply.rs` covers two enrolled members with a fake mise:
+the dry run equals the plan, steps run in the home folder with `MISE_*` removed,
+a failed step becomes a `provisioning_step_failed` item in the master's fleet
+view, and a retry that fails again keeps it.
 
 ## Open questions for later deliveries
 

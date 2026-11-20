@@ -13,28 +13,28 @@ use std::{
     time::{Duration, Instant},
 };
 
-fn utf8(path: &Path) -> String {
+pub(crate) fn utf8(path: &Path) -> String {
     path.to_str().expect("utf-8 path").to_owned()
 }
 
-fn write(path: &Path, text: &str) {
+pub(crate) fn write(path: &Path, text: &str) {
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, text).unwrap();
 }
 
-fn executable(path: &Path, body: &str) {
+pub(crate) fn executable(path: &Path, body: &str) {
     write(path, body);
     fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
 }
 
 /// Fake managers for a member: what mise, Xcode and simctl report.
-struct Managers {
+pub(crate) struct Managers {
     _root: tempfile::TempDir,
-    env: Vec<(String, String)>,
+    pub(crate) env: Vec<(String, String)>,
 }
 
 impl Managers {
-    fn pairs(&self) -> Vec<(&str, &str)> {
+    pub(crate) fn pairs(&self) -> Vec<(&str, &str)> {
         self.env
             .iter()
             .map(|(key, value)| (key.as_str(), value.as_str()))
@@ -44,7 +44,7 @@ impl Managers {
 
 /// The master: node 22.19.0 (the global default), two buns, Xcode 26.2 and
 /// the iOS 26.2 runtime.
-fn equipped() -> Managers {
+pub(crate) fn equipped() -> Managers {
     let root = tempfile::Builder::new()
         .prefix("ec-plan-")
         .tempdir_in("/tmp")
@@ -111,7 +111,7 @@ fn equipped() -> Managers {
 }
 
 /// A bare Mac: Command Line Tools only, so no mise, no Xcode, no simctl.
-fn bare() -> Managers {
+pub(crate) fn bare() -> Managers {
     let root = tempfile::Builder::new()
         .prefix("ec-plan-")
         .tempdir_in("/tmp")
@@ -148,7 +148,7 @@ fn plist(pairs: &[(&str, &str)]) -> String {
 }
 
 /// A git repository under the member's home with `files`, where a run then starts.
-fn workspace(member: &TestMember, name: &str, files: &[(&str, &str)]) -> PathBuf {
+pub(crate) fn workspace(member: &TestMember, name: &str, files: &[(&str, &str)]) -> PathBuf {
     let root = member.home().join("Developer").join(name);
     for (file, text) in files {
         write(&root.join(file), text);
@@ -170,7 +170,7 @@ fn workspace(member: &TestMember, name: &str, files: &[(&str, &str)]) -> PathBuf
 }
 
 /// The plan once both workspaces are known: admission records them aside.
-fn plan_with(master: &TestMember, workspaces: usize, args: &[&str]) -> Value {
+pub(crate) fn plan_with(master: &TestMember, workspaces: usize, args: &[&str]) -> Value {
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         let plan = master.ok(args);
