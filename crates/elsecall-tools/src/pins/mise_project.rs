@@ -1,27 +1,44 @@
 //! The mise project config a repository keeps at its root.
 //!
 //! These are the files mise reads for a directory, in its order from lowest
-//! precedence: `.tool-versions`, `.config/mise/conf.d/*.toml`,
-//! `.config/mise/config.toml`, `.config/mise.toml`, `mise/config.toml`,
-//! `mise.toml`, `.mise/config.toml` and `.mise.toml`. Each config name also has
-//! environment variants, `mise.<env>.toml`, which mise reads only with
-//! `MISE_ENV=<env>`; their pins carry that environment. `*.local.toml` files
-//! are one machine's overrides, not the repository's, and are not read. Parent
-//! directories are the member's, not the repository's, and are not read either.
+//! precedence (as `mise config ls` lists them, checked with mise 2026.10):
+//!
+//! 1. `.tool-versions`
+//! 2. `.config/mise/conf.d/*.toml`
+//! 3. `.config/mise/config.toml`, `.config/mise/mise.toml`, `.config/mise.toml`,
+//!    `.mise/config.toml`, `mise/config.toml`, `mise.toml`, `.mise.toml`
+//! 4. Environment variants, read only with `MISE_ENV=<env>`:
+//!    `.config/mise/config.<env>.toml`, `.config/mise.<env>.toml`,
+//!    `mise/config.<env>.toml`, `mise.<env>.toml`, `.mise/config.<env>.toml`,
+//!    `.mise.<env>.toml`. Their pins carry that environment.
+//!
+//! `*.local.toml` files, including in `conf.d`, are one machine's overrides,
+//! not the repository's, and are not read. Parent directories are the
+//! member's, not the repository's, and are not read either.
 use crate::pins::{
-    Environment, Pin, PinSource, Reading, SourceFile, SourceKind, Target, invalid,
-    mise_config::{self, ToolRequests},
-    source_file::{Confinement, list_names, read_text},
+    Environment, PinSource, Reading, SourceFile, SourceKind,
+    mise_config::{self, push_pins},
+    source_file::{list_workspace_directory, read_workspace_file},
     tool_versions,
 };
 use elsecall_contract::failure::Result;
 use std::path::Path;
 
-const MAX_CONF_D: usize = 64;
+/// conf.d files, and environment files per name pattern, a workspace may have.
+const MAX_LISTED: usize = 64;
 
-/// Config files named `<stem>.toml` in `directory`, with their `<stem>.<env>.toml`
-/// variants.
-const LAYOUTS: [(&str, &str); 6] = [
+const BASE: [&str; 7] = [
+    ".config/mise/config.toml",
+    ".config/mise/mise.toml",
+    ".config/mise.toml",
+    ".mise/config.toml",
+    "mise/config.toml",
+    "mise.toml",
+    ".mise.toml",
+];
+
+/// `(directory, stem)`: environment files are `<directory>/<stem>.<env>.toml`.
+const ENVIRONMENT_FILES: [(&str, &str); 6] = [
     (".config/mise", "config"),
     (".config", "mise"),
     ("mise", "config"),
@@ -36,57 +53,45 @@ impl PinSource for MiseProject {
     fn read(&self, workspace: &Path) -> Result<Reading> {
         let mut reading = Reading::default();
         read_file(workspace, ".tool-versions", None, &mut reading)?;
-        for name in conf_d(workspace)? {
-            read_file(workspace, &name, None, &mut reading)?;
+        let conf_d = ".config/mise/conf.d";
+        let names = list_workspace_directory(
+            workspace,
+            conf_d,
+            |name| name.ends_with(".toml") && !name.ends_with(".local.toml"),
+            MAX_LISTED,
+        )?;
+        for name in names {
+            read_file(workspace, &format!("{conf_d}/{name}"), None, &mut reading)?;
         }
-        for (directory, stem) in LAYOUTS {
-            for (file, environment) in config_files(workspace, directory, stem)? {
-                read_file(workspace, &file, environment, &mut reading)?;
+        for file in BASE {
+            read_file(workspace, file, None, &mut reading)?;
+        }
+        for (directory, stem) in ENVIRONMENT_FILES {
+            let names = list_workspace_directory(
+                workspace,
+                directory,
+                |name| environment(name, stem).is_some(),
+                MAX_LISTED,
+            )?;
+            for name in names {
+                let file = if directory.is_empty() {
+                    name.clone()
+                } else {
+                    format!("{directory}/{name}")
+                };
+                read_file(workspace, &file, environment(&name, stem), &mut reading)?;
             }
         }
         Ok(reading)
     }
 }
 
-fn conf_d(workspace: &Path) -> Result<Vec<String>> {
-    let directory = ".config/mise/conf.d";
-    let names: Vec<String> = list_names(&workspace.join(directory), directory)?
-        .into_iter()
-        .filter(|name| name.ends_with(".toml") && printable(name))
-        .map(|name| format!("{directory}/{name}"))
-        .collect();
-    if names.len() > MAX_CONF_D {
-        return Err(invalid(directory, "", "at most 64 config files"));
-    }
-    Ok(names)
-}
-
-/// `<directory>/<stem>.toml`, then its environment variants by name.
-fn config_files(
-    workspace: &Path,
-    directory: &str,
-    stem: &str,
-) -> Result<Vec<(String, Option<Environment>)>> {
-    let display_directory = if directory.is_empty() { "." } else { directory };
-    let prefix = |name: &str| {
-        if directory.is_empty() {
-            name.to_owned()
-        } else {
-            format!("{directory}/{name}")
-        }
-    };
-    let mut files = vec![(prefix(&format!("{stem}.toml")), None)];
-    for name in list_names(&workspace.join(directory), display_directory)? {
-        let environment = name
-            .strip_prefix(stem)
-            .and_then(|rest| rest.strip_prefix('.'))
-            .and_then(|rest| rest.strip_suffix(".toml"))
-            .and_then(Environment::new);
-        if let Some(environment) = environment {
-            files.push((prefix(&name), Some(environment)));
-        }
-    }
-    Ok(files)
+/// The environment of `<stem>.<env>.toml`; `local` and dotted names are not one.
+fn environment(name: &str, stem: &str) -> Option<Environment> {
+    name.strip_prefix(stem)?
+        .strip_prefix('.')?
+        .strip_suffix(".toml")
+        .and_then(Environment::new)
 }
 
 fn read_file(
@@ -95,7 +100,7 @@ fn read_file(
     environment: Option<Environment>,
     reading: &mut Reading,
 ) -> Result<()> {
-    let Some(text) = read_text(&workspace.join(file), file, Confinement::Within(workspace))? else {
+    let Some(text) = read_workspace_file(workspace, file)? else {
         return Ok(());
     };
     let requests = if file == ".tool-versions" {
@@ -110,29 +115,6 @@ fn read_file(
     push_pins(requests, environment, &source, reading);
     reading.files.push(source);
     Ok(())
-}
-
-/// One pin per requested version, in the order written.
-pub(super) fn push_pins(
-    requests: Vec<ToolRequests>,
-    environment: Option<Environment>,
-    source: &SourceFile,
-    reading: &mut Reading,
-) {
-    for request in requests {
-        for version in request.versions {
-            reading.pins.push(Pin {
-                target: Target::Mise(request.tool.clone()),
-                version,
-                environment: environment.clone(),
-                source: source.clone(),
-            });
-        }
-    }
-}
-
-fn printable(name: &str) -> bool {
-    name.chars().all(|c| !c.is_control())
 }
 
 #[cfg(test)]
@@ -160,7 +142,7 @@ mod tests {
                 (
                     pin.target.tool().to_owned(),
                     pin.version.as_str().to_owned(),
-                    pin.environment.as_ref().map(|env| env.as_str().to_owned()),
+                    pin.target.environment().map(|env| env.as_str().to_owned()),
                     pin.source.file.clone(),
                 )
             })
@@ -174,7 +156,67 @@ mod tests {
     }
 
     #[test]
-    fn every_project_file_is_read_in_mise_order_with_environments() {
+    fn every_file_mise_reads_is_read_in_its_order() {
+        let (_dir, root) = workspace();
+        let files = [
+            ".tool-versions",
+            ".config/mise/conf.d/a.toml",
+            ".config/mise/conf.d/b.toml",
+            ".config/mise/config.toml",
+            ".config/mise/mise.toml",
+            ".config/mise.toml",
+            ".mise/config.toml",
+            "mise/config.toml",
+            "mise.toml",
+            ".mise.toml",
+            ".config/mise/config.ci.toml",
+            ".config/mise.ci.toml",
+            "mise/config.ci.toml",
+            "mise.ci.toml",
+            "mise.signing.toml",
+            ".mise/config.ci.toml",
+            ".mise.ci.toml",
+        ];
+        for file in files {
+            let text = if file == ".tool-versions" {
+                ""
+            } else {
+                "[tools]\n"
+            };
+            write(&root, file, text);
+        }
+        let ignored = [
+            ".config/mise/mise.ci.toml",
+            ".config/mise/conf.d/me.local.toml",
+            ".config/mise/config.local.toml",
+            "mise.local.toml",
+            "mise.ci.local.toml",
+            ".mise.local.toml",
+            "mise.a.b.toml",
+            "mise..toml",
+            "notmise.ci.toml",
+        ];
+        for file in ignored {
+            write(&root, file, "[tools]\nignored = \"1.0.0\"\n");
+        }
+        let reading = MiseProject.read(&root).unwrap();
+        let read: Vec<&str> = reading
+            .files
+            .iter()
+            .map(|file| file.file.as_str())
+            .collect();
+        assert_eq!(read, files);
+        assert!(reading.pins.is_empty());
+        assert!(
+            reading
+                .files
+                .iter()
+                .all(|file| file.kind == SourceKind::MiseProject)
+        );
+    }
+
+    #[test]
+    fn pins_carry_their_file_and_environment() {
         let (_dir, root) = workspace();
         write(
             &root,
@@ -186,36 +228,16 @@ mod tests {
             "mise.signing.toml",
             "[tools]\n\"packslip:example/crem\" = \"0.2.0\"\n",
         );
-        write(&root, "mise.local.toml", "[tools]\nlocal = \"1.0.0\"\n");
-        write(
-            &root,
-            "mise.signing.local.toml",
-            "[tools]\nlocal = \"1.0.0\"\n",
-        );
-        write(&root, ".tool-versions", "swiftgen 6.6.3\n");
-        write(
-            &root,
-            ".config/mise/conf.d/extra.toml",
-            "[tools]\njq = \"1.7.1\"\n",
-        );
-        write(&root, ".config/mise/conf.d/notes.txt", "not a config");
-        write(&root, ".mise/config.toml", "[tools]\ntuist = \"4.205.0\"\n");
-        write(&root, ".mise.toml", "[settings]\njobs = 1\n");
+        write(&root, ".tool-versions", "nodejs 22.19.0\n");
         let reading = MiseProject.read(&root).unwrap();
         assert_eq!(
             summary(&reading),
             [
                 (
-                    "swiftgen".into(),
-                    "6.6.3".into(),
+                    "node".into(),
+                    "22.19.0".into(),
                     None,
                     ".tool-versions".into()
-                ),
-                (
-                    "jq".into(),
-                    "1.7.1".into(),
-                    None,
-                    ".config/mise/conf.d/extra.toml".into()
                 ),
                 ("bun".into(), "latest".into(), None, "mise.toml".into()),
                 ("python".into(), "3.10.4".into(), None, "mise.toml".into()),
@@ -225,36 +247,18 @@ mod tests {
                     Some("signing".into()),
                     "mise.signing.toml".into()
                 ),
-                (
-                    "tuist".into(),
-                    "4.205.0".into(),
-                    None,
-                    ".mise/config.toml".into()
-                ),
             ]
         );
-        let files: Vec<&str> = reading
-            .files
-            .iter()
-            .map(|file| file.file.as_str())
-            .collect();
-        assert_eq!(
-            files,
-            [
-                ".tool-versions",
-                ".config/mise/conf.d/extra.toml",
-                "mise.toml",
-                "mise.signing.toml",
-                ".mise/config.toml",
-                ".mise.toml",
-            ]
-        );
-        assert!(
-            reading
-                .files
-                .iter()
-                .all(|file| file.kind == SourceKind::MiseProject)
-        );
+    }
+
+    #[test]
+    fn too_many_environment_files_are_refused() {
+        let (_dir, root) = workspace();
+        for index in 0..=MAX_LISTED {
+            write(&root, &format!("mise.e{index}.toml"), "");
+        }
+        let error = MiseProject.read(&root).unwrap_err();
+        assert_eq!(error.message, ".: at most 64 mise config files.");
     }
 
     #[test]

@@ -1,8 +1,9 @@
 //! `.tool-versions`, the asdf format mise also reads: one tool per line, its
-//! name and then one or more versions, `#` starting a comment.
-use crate::{
-    pins::{invalid, literal_version, mise_config::ToolRequests},
-    tool_inventory::ToolName,
+//! name and then one or more versions, `#` starting a comment. Names follow
+//! `mise_config::tool_name`, so `nodejs` is `node`.
+use crate::pins::{
+    invalid, literal_version,
+    mise_config::{ToolRequests, add, tool_name},
 };
 use elsecall_contract::failure::Result;
 
@@ -21,7 +22,7 @@ pub(super) fn tools(text: &str, file: &str) -> Result<Vec<ToolRequests>> {
         let Some(name) = words.next() else {
             continue;
         };
-        let tool = ToolName::new(name)
+        let tool = tool_name(name)
             .ok_or_else(|| invalid(file, &key, "tool names cannot contain control characters"))?;
         let versions = words
             .map(|word| literal_version(file, &key, word))
@@ -32,7 +33,7 @@ pub(super) fn tools(text: &str, file: &str) -> Result<Vec<ToolRequests>> {
         if requests.iter().any(|request| request.tool == tool) {
             return Err(invalid(file, &key, "a tool is listed on two lines"));
         }
-        requests.push(ToolRequests { tool, versions });
+        add(&mut requests, tool, versions);
     }
     Ok(requests)
 }

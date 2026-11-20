@@ -2,7 +2,7 @@
 //! `26.2`, as xcodes and fastlane read it.
 use crate::pins::{
     Pin, PinSource, Reading, SourceFile, SourceKind, Target, dotted_version, invalid,
-    source_file::{Confinement, read_text},
+    source_file::read_workspace_file,
 };
 use elsecall_contract::failure::Result;
 use std::path::Path;
@@ -14,8 +14,7 @@ pub(super) struct XcodeVersionFile;
 impl PinSource for XcodeVersionFile {
     fn read(&self, workspace: &Path) -> Result<Reading> {
         let mut reading = Reading::default();
-        let Some(text) = read_text(&workspace.join(FILE), FILE, Confinement::Within(workspace))?
-        else {
+        let Some(text) = read_workspace_file(workspace, FILE)? else {
             return Ok(reading);
         };
         let mut lines = text.lines().map(str::trim).filter(|line| !line.is_empty());
@@ -37,7 +36,6 @@ impl PinSource for XcodeVersionFile {
         reading.pins.push(Pin {
             target: Target::Xcode,
             version,
-            environment: None,
             source: source.clone(),
         });
         reading.files.push(source);

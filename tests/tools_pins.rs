@@ -260,13 +260,36 @@ fn broken_and_conflicting_workspaces_fail_without_echoing_values() {
         "mise.toml: it resolves outside the workspace."
     );
 
+    let locked = layout.home.path().join("locked");
+    fs::create_dir(&locked).unwrap();
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+    let home = utf8(layout.home.path());
     for output in [
         pins(&layout, &layout.workspace, &["missing"]),
         pins(&layout, &layout.workspace, &[".xcode-version"]),
+        pins(&layout, &layout.workspace, &[&utf8(&locked)]),
+        pins(&layout, &layout.workspace, &[&home]),
     ] {
         assert_eq!(output.status.code(), Some(2), "{output:?}");
         assert_eq!(document(&output)["error"]["code"], "invalid_request");
     }
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o700)).unwrap();
+
+    // A directory link out of the workspace is refused before anything behind
+    // it is listed or read.
+    fs::remove_file(&mise).unwrap();
+    let outside = layout.home.path().join("dotfiles");
+    write(&outside.join("mise/conf.d/private-name.toml"), "[tools]\n");
+    std::os::unix::fs::symlink(&outside, layout.workspace.join(".config")).unwrap();
+    let output = pins(&layout, &layout.workspace, &[]);
+    assert_eq!(output.status.code(), Some(1));
+    let error = &document(&output)["error"];
+    assert_eq!(error["code"], "pin_source_unreadable");
+    assert_eq!(
+        error["message"],
+        ".config/mise/conf.d: it resolves outside the workspace."
+    );
+    fs::remove_file(layout.workspace.join(".config")).unwrap();
 
     let printed = String::from_utf8_lossy(&output_of_all(&layout)).into_owned();
     assert!(!printed.contains("SECRET_TOKEN"), "{printed}");

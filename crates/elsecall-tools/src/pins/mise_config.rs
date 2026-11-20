@@ -3,11 +3,14 @@
 //! The whole file must be TOML; only `[tools]` is looked at. `[env]`, `[hooks]`,
 //! `[tasks]` and the rest are never evaluated. A tool's value is a version, a
 //! list of versions, a table with `version`, or a list mixing both. A table
-//! whose `os` leaves out macOS pins nothing here. Its other options, such as
+//! whose `os` leaves out Apple Silicon macOS (`macos`, `macos/arm64`) pins
+//! nothing here: every member runs on it. Its other options, such as
 //! `postinstall`, are ignored: reading never runs them. Versions must be
-//! literal, so a template is an error rather than something to render.
+//! literal, so a template is an error rather than something to render. A
+//! version repeated for one tool is one pin. The asdf names mise accepts for
+//! its own tools (`nodejs`, `golang`) are read as the names inventory reports.
 use crate::{
-    pins::{invalid, literal_version},
+    pins::{Environment, Pin, Reading, SourceFile, Target, invalid, literal_version},
     tool_inventory::{ToolName, ToolVersion},
 };
 use elsecall_contract::failure::Result;
@@ -35,7 +38,7 @@ pub(super) fn tools(text: &str, file: &str) -> Result<Vec<ToolRequests>> {
     let mut requests = Vec::new();
     let mut count = 0;
     for (name, value) in tools {
-        let tool = ToolName::new(name.as_str()).ok_or_else(|| {
+        let tool = tool_name(name).ok_or_else(|| {
             invalid(
                 file,
                 "tools",
@@ -48,11 +51,63 @@ pub(super) fn tools(text: &str, file: &str) -> Result<Vec<ToolRequests>> {
         if count > MAX_PINS {
             return Err(invalid(file, "tools", "at most 1024 versions in one file"));
         }
-        if !versions.is_empty() {
-            requests.push(ToolRequests { tool, versions });
-        }
+        add(&mut requests, tool, versions);
     }
     Ok(requests)
+}
+
+/// A tool name as written, with mise's asdf aliases replaced by its own names.
+pub(super) fn tool_name(name: &str) -> Option<ToolName> {
+    let name = match name {
+        "nodejs" => "node",
+        "golang" => "go",
+        other => other,
+    };
+    ToolName::new(name)
+}
+
+/// Adds `versions` to `tool`'s request, keeping the first of any repeat.
+pub(super) fn add(requests: &mut Vec<ToolRequests>, tool: ToolName, versions: Vec<ToolVersion>) {
+    let index = match requests.iter().position(|request| request.tool == tool) {
+        Some(index) => index,
+        None => {
+            requests.push(ToolRequests {
+                tool,
+                versions: Vec::new(),
+            });
+            requests.len() - 1
+        }
+    };
+    let request = &mut requests[index];
+    for version in versions {
+        if !request.versions.contains(&version) {
+            request.versions.push(version);
+        }
+    }
+    if request.versions.is_empty() {
+        requests.remove(index);
+    }
+}
+
+/// One pin per requested version, in the order written.
+pub(super) fn push_pins(
+    requests: Vec<ToolRequests>,
+    environment: Option<Environment>,
+    source: &SourceFile,
+    reading: &mut Reading,
+) {
+    for request in requests {
+        for version in request.versions {
+            reading.pins.push(Pin {
+                target: Target::Mise {
+                    tool: request.tool.clone(),
+                    environment: environment.clone(),
+                },
+                version,
+                source: source.clone(),
+            });
+        }
+    }
 }
 
 fn tool_versions(file: &str, key: &str, value: &toml::Value) -> Result<Vec<ToolVersion>> {
@@ -90,7 +145,8 @@ fn one_version(file: &str, key: &str, value: &toml::Value) -> Result<Option<Tool
     }
 }
 
-/// Whether a tool table applies on macOS: no `os`, or an `os` naming it.
+/// Whether a tool table applies on an Apple Silicon Mac: no `os`, or an `os`
+/// naming macOS with no architecture or with `arm64`.
 fn for_macos(file: &str, key: &str, os: Option<&toml::Value>) -> Result<bool> {
     let Some(os) = os else {
         return Ok(true);
@@ -104,7 +160,10 @@ fn for_macos(file: &str, key: &str, os: Option<&toml::Value>) -> Result<bool> {
             .ok_or_else(|| invalid(file, key, "os must list operating system names"))?,
         _ => return Err(invalid(file, key, "os must list operating system names")),
     };
-    Ok(names.iter().any(|name| matches!(*name, "macos" | "darwin")))
+    Ok(names.iter().any(|name| {
+        let (system, architecture) = name.split_once('/').unwrap_or((name, "arm64"));
+        matches!(system, "macos" | "darwin") && matches!(architecture, "arm64" | "aarch64")
+    }))
 }
 
 #[cfg(test)]
@@ -172,13 +231,33 @@ mod tests {
             both = { version = "2.0.0", os = ["linux", "macos"] }
             darwin = { version = "3.0.0", os = "darwin" }
             mixed = ["4.0.0", { version = "5.0.0", os = ["windows"] }]
+            arm = { version = "6.0.0", os = ["macos/arm64"] }
+            intel = { version = "7.0.0", os = ["macos/x64", "linux/arm64"] }
         "#;
         assert_eq!(
             pinned(text),
             [
+                ("arm".into(), vec!["6.0.0".into()]),
                 ("both".into(), vec!["2.0.0".into()]),
                 ("darwin".into(), vec!["3.0.0".into()]),
                 ("mixed".into(), vec!["4.0.0".into()]),
+            ]
+        );
+    }
+
+    #[test]
+    fn aliases_take_mise_names_and_repeats_are_one_pin() {
+        let text = r#"
+            [tools]
+            nodejs = ["22.19.0", "22.19.0"]
+            node = ["20.19.5", "22.19.0"]
+            golang = "1.24.1"
+        "#;
+        assert_eq!(
+            pinned(text),
+            [
+                ("go".into(), vec!["1.24.1".into()]),
+                ("node".into(), vec!["20.19.5".into(), "22.19.0".into()]),
             ]
         );
     }

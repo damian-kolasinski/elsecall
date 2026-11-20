@@ -6,13 +6,13 @@
 //! runtimes = ["iOS 26.2"]
 //! ```
 //!
-//! The schema is strict: unknown keys are refused, so a pin another source owns
-//! (a mise tool, the Xcode version) cannot be repeated here. Versions are exact
-//! from the start, since this file is Elsecall's own. `.elsecall.toml`, the
+//! The schema is strict: unknown keys are refused, without echoing them, so a
+//! pin another source owns (a mise tool, the Xcode version) cannot be repeated
+//! here. Versions are exact from the start, since this file is Elsecall's own. `.elsecall.toml`, the
 //! legacy workload file, is a different file and is not read.
 use crate::pins::{
     Pin, PinSource, Platform, Reading, SourceFile, SourceKind, Target, dotted_version, invalid,
-    source_file::{Confinement, read_text},
+    source_file::read_workspace_file,
 };
 use elsecall_contract::failure::Result;
 use std::path::Path;
@@ -25,8 +25,7 @@ pub(super) struct ElsecallToolsFile;
 impl PinSource for ElsecallToolsFile {
     fn read(&self, workspace: &Path) -> Result<Reading> {
         let mut reading = Reading::default();
-        let Some(text) = read_text(&workspace.join(FILE), FILE, Confinement::Within(workspace))?
-        else {
+        let Some(text) = read_workspace_file(workspace, FILE)? else {
             return Ok(reading);
         };
         let source = SourceFile {
@@ -37,7 +36,6 @@ impl PinSource for ElsecallToolsFile {
             reading.pins.push(Pin {
                 target: Target::SimulatorRuntime(platform),
                 version,
-                environment: None,
                 source: source.clone(),
             });
         }
@@ -54,8 +52,8 @@ fn runtimes(text: &str) -> Result<Vec<(Platform, crate::tool_inventory::ToolVers
         if key != "simulators" {
             return Err(invalid(
                 FILE,
-                key,
-                "unknown key; the file holds only [simulators]",
+                "",
+                "an unknown key; the file holds only [simulators]",
             ));
         }
         let Some(table) = value.as_table() else {
@@ -65,8 +63,8 @@ fn runtimes(text: &str) -> Result<Vec<(Platform, crate::tool_inventory::ToolVers
             if key != "runtimes" {
                 return Err(invalid(
                     FILE,
-                    &format!("simulators.{key}"),
-                    "unknown key; [simulators] holds only runtimes",
+                    "simulators",
+                    "an unknown key; [simulators] holds only runtimes",
                 ));
             }
             let Some(items) = value.as_array() else {
@@ -80,7 +78,7 @@ fn runtimes(text: &str) -> Result<Vec<(Platform, crate::tool_inventory::ToolVers
                     invalid(
                         FILE,
                         "simulators.runtimes",
-                        "each runtime is a platform and an exact version, such as \"iOS 26.2\"; platforms are iOS, tvOS, watchOS and visionOS",
+                        "each runtime is a platform and an exact version, such as \"iOS 26.2\"; platforms are iOS, tvOS, visionOS and watchOS",
                     )
                 })?;
                 if found.contains(&runtime) {
@@ -151,11 +149,11 @@ mod tests {
         for (text, message) in [
             (
                 "[xcode]\nversion = \"26.2\"\n",
-                ".elsecall-tools.toml: xcode: unknown key; the file holds only [simulators].",
+                ".elsecall-tools.toml: an unknown key; the file holds only [simulators].",
             ),
             (
                 "[simulators]\nruntime = [\"iOS 26.2\"]\n",
-                ".elsecall-tools.toml: simulators.runtime: unknown key; [simulators] holds only runtimes.",
+                ".elsecall-tools.toml: simulators: an unknown key; [simulators] holds only runtimes.",
             ),
             (
                 "[simulators]\nruntimes = [\"iOS 26.2\", \"iOS 26.2\"]\n",

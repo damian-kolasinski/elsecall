@@ -39,11 +39,11 @@ pub(super) fn classify(
 ) -> Exactness {
     let text = version.as_str();
     match target {
-        Target::Mise(_) if text == "latest" => Exactness::Inexact {
+        Target::Mise { .. } if text == "latest" => Exactness::Inexact {
             resolved: newest(installed.iter()),
         },
-        Target::Mise(_) if version_selector(text) => Exactness::Inexact { resolved: None },
-        Target::Mise(_) => {
+        Target::Mise { .. } if version_selector(text) => Exactness::Inexact { resolved: None },
+        Target::Mise { .. } => {
             let same = installed
                 .iter()
                 .any(|candidate| compare_versions(candidate.as_str(), text) == Ordering::Equal);
@@ -90,7 +90,10 @@ mod tests {
 
     fn mise(version: &str, installed: &[&str]) -> Exactness {
         classify(
-            &Target::Mise(ToolName::new("node").unwrap()),
+            &Target::Mise {
+                tool: ToolName::new("node").unwrap(),
+                environment: None,
+            },
             &ToolVersion::new(version).unwrap(),
             &versions(installed),
         )

@@ -1,25 +1,21 @@
 //! Joining pin sources into one report for a workspace.
 //!
-//! Two workspace files that pin the same tool for the same mise environment
-//! conflict unless both are mise project files asking for the same versions,
-//! which is one pin. The master's global config is a layer under the project,
-//! as mise treats it, so a global pin never conflicts with a project one: both
-//! are reported. Each pin is then classified against the versions this machine
-//! has installed. A tool manager that cannot be read is a warning, not a
-//! failure: its plain versions count as exact and nothing is resolved.
+//! The sources' pins are checked for conflicts (`conflicts`), ordered by
+//! manager, tool, environment and source, and classified against the versions
+//! this machine has installed (`exactness`). A tool manager that cannot be read
+//! is a warning, not a failure: its plain versions count as exact and nothing
+//! is resolved.
 use crate::{
     pins::{
-        Environment, Pin, PinSource, SourceFile, SourceKind, Target,
+        Pin, PinSource, Target,
+        conflicts::without_conflicts,
         exactness::{Exactness, classify},
     },
     tool_inventory::{InventoryFailure, Manager, ToolManager, ToolVersion},
 };
-use elsecall_contract::failure::{Failure, Result};
+use elsecall_contract::failure::Result;
 use serde::{Serialize, ser::SerializeMap};
-use std::{
-    collections::BTreeMap,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 /// Everything a workspace pins, as `elsecall tools pins` prints it.
 #[derive(Debug, Serialize)]
@@ -64,13 +60,7 @@ pub(crate) fn read(
         pins.extend(reading.pins);
     }
     let mut pins = without_conflicts(pins)?;
-    pins.sort_by(|left, right| {
-        (&left.target, &left.environment, &left.source).cmp(&(
-            &right.target,
-            &right.environment,
-            &right.source,
-        ))
-    });
+    pins.sort_by(|left, right| (&left.target, &left.source).cmp(&(&right.target, &right.source)));
     let mut warnings = Vec::new();
     let mise = installed(Manager::Mise, needs_mise(&pins), managers, &mut warnings);
     let xcode = installed(Manager::Xcodes, needs_xcode(&pins), managers, &mut warnings);
@@ -78,7 +68,7 @@ pub(crate) fn read(
         .into_iter()
         .map(|pin| {
             let installed = match &pin.target {
-                Target::Mise(name) => tool_versions(&mise, name.as_str()),
+                Target::Mise { tool, .. } => tool_versions(&mise, tool.as_str()),
                 Target::Xcode => tool_versions(&xcode, "xcode"),
                 Target::SimulatorRuntime(_) => Vec::new(),
             };
@@ -101,7 +91,8 @@ pub(crate) fn read(
 }
 
 fn needs_mise(pins: &[Pin]) -> bool {
-    pins.iter().any(|pin| matches!(pin.target, Target::Mise(_)))
+    pins.iter()
+        .any(|pin| matches!(pin.target, Target::Mise { .. }))
 }
 
 /// Only a one-segment Xcode version needs the installed Xcodes to resolve.
@@ -144,65 +135,6 @@ fn tool_versions(installed: &[(String, ToolVersion)], tool: &str) -> Vec<ToolVer
         .collect()
 }
 
-/// Refuses two workspace files pinning one tool, keeping identical mise project
-/// pins once, from the first file that declares them.
-fn without_conflicts(pins: Vec<Pin>) -> Result<Vec<Pin>> {
-    type Key = (Target, Option<Environment>);
-    let mut groups: BTreeMap<Key, Vec<(SourceFile, Vec<ToolVersion>)>> = BTreeMap::new();
-    for pin in pins
-        .iter()
-        .filter(|pin| pin.source.kind != SourceKind::MiseGlobal)
-    {
-        let files = groups
-            .entry((pin.target.clone(), pin.environment.clone()))
-            .or_default();
-        match files.iter_mut().find(|(source, _)| *source == pin.source) {
-            Some((_, versions)) => versions.push(pin.version.clone()),
-            None => files.push((pin.source.clone(), vec![pin.version.clone()])),
-        }
-    }
-    for ((target, environment), files) in &groups {
-        let (first, first_versions) = &files[0];
-        for (other, versions) in &files[1..] {
-            let repeated = first.kind == SourceKind::MiseProject
-                && other.kind == SourceKind::MiseProject
-                && versions == first_versions;
-            if !repeated {
-                return Err(conflict(target, environment.as_ref(), first, other));
-            }
-        }
-    }
-    Ok(pins
-        .into_iter()
-        .filter(|pin| {
-            pin.source.kind == SourceKind::MiseGlobal
-                || groups[&(pin.target.clone(), pin.environment.clone())][0].0 == pin.source
-        })
-        .collect())
-}
-
-fn conflict(
-    target: &Target,
-    environment: Option<&Environment>,
-    first: &SourceFile,
-    second: &SourceFile,
-) -> Failure {
-    let environment = environment
-        .map(|environment| format!(" for MISE_ENV={}", environment.as_str()))
-        .unwrap_or_default();
-    Failure::new(
-        "pins_conflict",
-        format!(
-            "{} {} is pinned in both {} and {}{environment}.",
-            target.manager(),
-            target.tool(),
-            first.file,
-            second.file,
-        ),
-        "Pin each tool in one file of the workspace. Values are omitted from this error.",
-    )
-}
-
 impl Serialize for ReportedPin {
     fn serialize<S: serde::Serializer>(
         &self,
@@ -226,8 +158,8 @@ impl Serialize for ReportedPin {
         }
         map.serialize_entry(
             "environment",
-            &pin.environment
-                .as_ref()
+            &pin.target
+                .environment()
                 .map(|environment| environment.as_str()),
         )?;
         map.serialize_entry(
@@ -244,7 +176,7 @@ impl Serialize for ReportedPin {
 #[cfg(test)]
 mod tests {
     use crate::{
-        pins::{Platform, Reading, report::*},
+        pins::{Environment, Platform, Reading, SourceFile, SourceKind, report::*},
         tool_inventory::{Executable, InstalledTool, ManagerInventory, ToolName},
     };
     use serde_json::json;
@@ -318,10 +250,16 @@ mod tests {
         version: &str,
         environment: Option<&str>,
     ) -> Pin {
+        let target = match target {
+            Target::Mise { tool, .. } => Target::Mise {
+                tool,
+                environment: environment.map(|value| Environment::new(value).unwrap()),
+            },
+            other => other,
+        };
         Pin {
             target,
             version: ToolVersion::new(version).unwrap(),
-            environment: environment.map(|value| Environment::new(value).unwrap()),
             source: SourceFile {
                 kind,
                 file: file.to_owned(),
@@ -330,7 +268,10 @@ mod tests {
     }
 
     fn mise(name: &str) -> Target {
-        Target::Mise(ToolName::new(name).unwrap())
+        Target::Mise {
+            tool: ToolName::new(name).unwrap(),
+            environment: None,
+        }
     }
 
     fn project(file: &str, tool: &str, version: &str) -> Pin {
@@ -463,103 +404,5 @@ mod tests {
         let value = report(Vec::new(), &[&mise_tools]).unwrap();
         assert_eq!(value["pins"], json!([]));
         assert_eq!(mise_tools.reads.load(Ordering::Relaxed), 0);
-    }
-
-    #[test]
-    fn identical_project_pins_are_one_and_different_ones_conflict() {
-        let same = report(
-            vec![
-                project(".tool-versions", "node", "22.19.0"),
-                project("mise.toml", "node", "22.19.0"),
-            ],
-            &[],
-        )
-        .unwrap();
-        assert_eq!(same["pins"].as_array().unwrap().len(), 1);
-        assert_eq!(same["pins"][0]["source"]["file"], ".tool-versions");
-        assert_eq!(same["sources"].as_array().unwrap().len(), 2);
-
-        for second in [
-            vec![project("mise.toml", "node", "24.0.1")],
-            vec![
-                project("mise.toml", "node", "22.19.0"),
-                project("mise.toml", "node", "20.19.5"),
-            ],
-        ] {
-            let mut pins = vec![project(".tool-versions", "node", "22.19.0")];
-            pins.extend(second);
-            let error = report(pins, &[]).unwrap_err();
-            assert_eq!(error.code, "pins_conflict");
-            assert_eq!(
-                error.message,
-                "mise node is pinned in both .tool-versions and mise.toml."
-            );
-            assert!(!error.message.contains("22.19.0"));
-        }
-    }
-
-    #[test]
-    fn environments_and_the_global_layer_do_not_conflict_with_the_project() {
-        let value = report(
-            vec![
-                project("mise.toml", "node", "22.19.0"),
-                pin(
-                    SourceKind::MiseProject,
-                    "mise.ci.toml",
-                    mise("node"),
-                    "24.0.1",
-                    Some("ci"),
-                ),
-                pin(
-                    SourceKind::MiseGlobal,
-                    "~/.config/mise/config.toml",
-                    mise("node"),
-                    "20.19.5",
-                    None,
-                ),
-            ],
-            &[],
-        )
-        .unwrap();
-        assert_eq!(value["pins"].as_array().unwrap().len(), 3);
-
-        let error = report(
-            vec![
-                pin(
-                    SourceKind::MiseProject,
-                    "mise.ci.toml",
-                    mise("node"),
-                    "24.0.1",
-                    Some("ci"),
-                ),
-                pin(
-                    SourceKind::MiseProject,
-                    ".mise.ci.toml",
-                    mise("node"),
-                    "24.0.2",
-                    Some("ci"),
-                ),
-            ],
-            &[],
-        )
-        .unwrap_err();
-        assert_eq!(
-            error.message,
-            "mise node is pinned in both mise.ci.toml and .mise.ci.toml for MISE_ENV=ci."
-        );
-    }
-
-    #[test]
-    fn another_source_repeating_a_pin_conflicts_even_when_equal() {
-        let xcode = |kind, file: &str| pin(kind, file, Target::Xcode, "26.2", None);
-        let error = report(
-            vec![
-                xcode(SourceKind::XcodeVersion, ".xcode-version"),
-                xcode(SourceKind::ElsecallTools, ".elsecall-tools.toml"),
-            ],
-            &[],
-        )
-        .unwrap_err();
-        assert_eq!(error.code, "pins_conflict");
     }
 }

@@ -39,19 +39,27 @@ wanted anywhere. The pin sources are:
 | Xcode | `.xcode-version` at the workspace's root | the Xcode version |
 | Elsecall | `.elsecall-tools.toml` at the workspace's root | what no convention covers |
 
-**mise project.** The files mise reads for a directory, from lowest precedence:
-`.tool-versions`, `.config/mise/conf.d/*.toml`, `.config/mise/config.toml`,
-`.config/mise.toml`, `mise/config.toml`, `mise.toml`, `.mise/config.toml` and
-`.mise.toml`. Each config name has environment variants (`mise.signing.toml`),
-which mise reads only with `MISE_ENV=signing`. Their pins carry that environment:
-a job that sets it needs them, so the planner installs them too. `*.local.toml`
-files are one machine's overrides, not the repository's, and are not read. Parent
-directories belong to the member, not the repository, and are not read either.
-Idiomatic version files (`.nvmrc`, `.python-version`) are off by default in mise
-and are not read.
+**mise project.** The files mise reads for a directory, in mise's order from
+lowest precedence (as `mise config ls` lists them, checked with mise 2026.10):
+`.tool-versions`; `.config/mise/conf.d/*.toml`; `.config/mise/config.toml`,
+`.config/mise/mise.toml`, `.config/mise.toml`, `.mise/config.toml`,
+`mise/config.toml`, `mise.toml`, `.mise.toml`; then the environment variants
+`.config/mise/config.<env>.toml`, `.config/mise.<env>.toml`,
+`mise/config.<env>.toml`, `mise.<env>.toml`, `.mise/config.<env>.toml` and
+`.mise.<env>.toml`, which mise reads only with `MISE_ENV=<env>`. Their pins carry
+that environment: a job that sets it needs them, so the planner installs them
+too. `*.local.toml` files, in `conf.d` too, are one machine's overrides, not the
+repository's, and are not read, though mise reads them. Parent directories belong
+to the member, not the repository, and are not read either. Idiomatic version
+files (`.nvmrc`, `.python-version`) are off by default in mise and are not read.
+The asdf names mise accepts for its own tools are read as mise's names (`nodejs`
+is `node`, `golang` is `go`), so they compare with inventory.
 
 **mise global.** Only the master's `~/.config/mise/config.toml`. Its pins are
-the defaults every member's shell gets outside a project. Like mise, they are a
+the defaults every member's shell gets outside a project. mise's other global
+files (`~/.config/mise/conf.d/*.toml`, `config.local.toml`, environment
+variants) are not read, so a default pinned only there is not seen. The home
+folder is not a workspace: its mise config is this global layer. Like mise, they are a
 layer under the project: a project pinning another version of the same tool is
 not a conflict, and both versions are wanted.
 
@@ -92,15 +100,20 @@ that code on every member that reads the workspace.
 It parses each file as TOML and looks only at `[tools]`. `[env]`, `[hooks]`,
 `[tasks]` and the rest are never evaluated. A tool's value is a version, a list
 of versions, a table with `version`, or a list mixing them. A table whose `os`
-leaves out macOS pins nothing on a Mac. Other per-tool options are ignored
+leaves out Apple Silicon macOS (`macos`, `darwin`, or either with `/arm64`)
+pins nothing, since every member runs Elsecall's arm64 build. Other per-tool options are ignored
 (see "Open questions" for those the installer needs). A version must be literal:
 one containing `{{`, `{%` or `{#` is an error, not something to render.
 
-The reader also does not trust the files themselves. Only a regular UTF-8 file of
-at most 1 MiB is read. A workspace file must resolve inside the workspace once
-links are followed, so `mise.toml` linking to `~/.ssh/id_ed25519` is refused. A
-FIFO is opened non-blocking and refused. Errors name the file, the key and the
-rule, and never a value.
+The reader also does not trust the files themselves. A workspace path is
+resolved one component at a time from each link's text, so nothing outside the
+workspace is touched, not even to refuse it: `mise.toml` linking to
+`~/.ssh/id_ed25519`, or `.config` linking to another folder, is refused by the
+link. The resolved file is opened without following links and without blocking,
+so a FIFO is refused rather than waited on. Only a regular UTF-8 file of at most
+1 MiB is read, and at most 64 `conf.d` files and 64 environment files per name
+pattern are listed. Errors name the file, the key and the rule, and never a
+value or an unknown key.
 
 mise runs only to resolve inexact pins against this machine, as the inventory
 already runs it: in the home folder, with `MISE_*` removed, never in the
@@ -127,8 +140,13 @@ versions installed: mise chose the newest by version order, as Elsecall does.
   to the newest installed `26.x`.
 - Simulator runtimes: always exact; `.elsecall-tools.toml` accepts nothing else.
 
+`exact` is therefore relative to the machine that read the pins. `node = "22"`
+reads as exact where no 22.x is installed, as on a bare Mac, although mise would
+install the newest 22.x upstream. Pins are read on the master, where jobs run and
+the tools are installed; delivery 2 must still not plan a plain version the
+master has not installed as if it were exact, since members would then drift.
 When a manager cannot be read here, the report carries a warning and its plain
-versions count as exact. The planner (PR 2) plans an inexact pin as its resolved
+versions count as exact. The planner (delivery 2) plans an inexact pin as its resolved
 version on the master and shows it as such. An unresolved inexact pin is not
 installed; it is shown with its hint.
 
@@ -150,7 +168,7 @@ workspace files are relative to the workspace.
 ### When a job needs something unpinned
 
 It fails on a member that lacks the tool. Elsecall then attaches a "not pinned,
-pin it here" attention item to the run (PR 5), naming the tool and the file to
+pin it here" attention item to the run (delivery 5), naming the tool and the file to
 pin it in. The user either pins it (recommended: every member gets it) or
 installs it on that member by hand (not recommended: the next member fails the
 same way). A later agent hand-off offers the pin as a change to the repository.
@@ -159,12 +177,12 @@ same way). A later agent hand-off offers the pin as a change to the repository.
 
 - **`PinSource`**: what a workspace needs. Adapters: mise project, mise global,
   `.xcode-version`, `.elsecall-tools.toml`. Lives in `elsecall-tools`
-  (`pins`), shipped in PR 1.
-- **`ToolManager`**: how a manager reads what is installed and, from PR 4,
+  (`pins`), shipped in delivery 1.
+- **`ToolManager`**: how a manager reads what is installed and, from delivery 4,
   installs. Adapters: mise, Xcode, simulator runtimes. Today's
   `tool_inventory::ToolManager` is its read half, with mise and Xcode adapters;
-  PR 2 adds a simulator runtime reader and PR 4 adds installing.
-- **The planner** (PR 2) joins them: pins from the workspaces jobs ran in, minus
+  delivery 2 adds a simulator runtime reader and delivery 4 adds installing.
+- **The planner** (delivery 2) joins them: pins from the workspaces jobs ran in, minus
   what the member has installed, minus the exceptions. Neither port knows about
   the other.
 
@@ -173,7 +191,7 @@ same way). A later agent hand-off offers the pin as a change to the repository.
 [Slice 2b-1](fleet-tools.md#slice-2b-1-desired-state) made `fleet-tools.toml`
 the hand-written desired state. Pins replace that role. The file now holds only
 exceptions: tools to leave out, and intended per-member differences, such as a
-member kept on an older Xcode on purpose. PR 2 implements this and settles the
+member kept on an older Xcode on purpose. Delivery 2 implements this and settles the
 format; the intent is the existing shape, where an empty entry wants nothing:
 
 ```toml
@@ -183,7 +201,7 @@ format; the intent is the existing shape, where an empty entry wants nothing:
 default = "26.3"                          # this member intentionally differs
 ```
 
-Until PR 2 lands, the file and its commands work as Slice 2b-1 describes.
+Until delivery 2 lands, the file and its commands work as Slice 2b-1 describes.
 
 ### Provisioning
 
@@ -200,14 +218,14 @@ These are implemented in later deliveries and recorded now.
 - **Nothing is ever uninstalled automatically.** A version nothing pins is
   reported, not removed.
 - **Agents may confirm tool plans; humans confirm file and credential plans.**
-  From PR 6, a tool plan that follows from pins is applied without asking.
+  From delivery 6, a tool plan that follows from pins is applied without asking.
 - **Secret-looking files are detected, then asked about rather than blocked.**
   The prompt has a checkbox, "Sync changes to these automatically from now on".
   Unchecked, Elsecall asks again on the next change.
 - **Hard blocks stay only for** `~/.ssh/authorized_keys`, the login keychain,
   `~/Library/LaunchAgents` and Elsecall's own state. The other paths
   [configuration sync](config-sync-slice.md) forbids today (the rest of `~/.ssh`,
-  `~/.gnupg`, other keychains) become asks (PR 5).
+  `~/.gnupg`, other keychains) become asks (delivery 5).
 - **Steps only a person can do**, which the UI guides: macOS privacy prompts on
   the member's own screen; an Apple ID, only when no member has the pinned Xcode;
   and exporting a signing identity from the master's keychain, once.
@@ -252,13 +270,14 @@ It prints the standard JSON envelope. `data` is:
 - `warnings`: managers that could not be read, as `{manager, error}`, with the
   inventory's error codes.
 
-Errors exit 1, except a PATH that is not a readable directory, which is
-`invalid_request` and exits 2:
+Errors exit 1, except a PATH that is not a readable directory, or is the home
+folder, which is `invalid_request` and exits 2:
 
-- `pin_source_unreadable`: a file that is not a regular file, is larger than
-  1 MiB, is not UTF-8, resolves outside the workspace, or cannot be opened.
-- `pin_source_invalid`: a file that breaks a rule above. The message names the
-  file, the key (or line) and the rule.
+- `pin_source_unreadable`: a file or directory that resolves outside the
+  workspace, passes through more than 32 links, is not a regular file, is larger
+  than 1 MiB, is not UTF-8, or cannot be opened.
+- `pin_source_invalid`: a file that breaks a rule above, or more files than
+  the listing bounds. The message names the file, the key (or line) and the rule.
 - `pins_conflict`: two files pin one tool. The message names both files.
 
 No message contains a value from a file.
@@ -289,12 +308,14 @@ the master's.
 
 ## Open questions for later deliveries
 
-- **Which workspaces.** PR 2 decides which directories count as "repos jobs ran
+- **Which workspaces.** Delivery 2 decides which directories count as "repos jobs ran
   in": a run's working directory or its repository root, and for how long one
-  stays in the set.
+  stays in the set. `tools pins` prints the workspace as this machine's
+  absolute path; delivery 2 decides how a workspace is named across members,
+  whose home folders differ.
 - **Install options.** Some tables carry options the installer needs
   (`version_prefix` for a GitHub release, verification identities for a package
-  backend). PR 4 decides which to carry, as an allowlist; `postinstall` is never
+  backend). Delivery 4 decides which to carry, as an allowlist; `postinstall` is never
   one of them, and installs name `tool@version` explicitly instead of running
   `mise install` in a workspace.
 - **mise lockfiles.** A `mise.lock` records exact resolved versions and would make

@@ -6,6 +6,7 @@
 //! Reading parses files and never runs code a repository controls: no mise, no
 //! templates, no hooks. [`report`] joins the sources, refuses conflicts and marks
 //! which pins are exact, against what this machine has installed.
+mod conflicts;
 mod elsecall_tools_file;
 mod exactness;
 mod mise_config;
@@ -53,30 +54,35 @@ pub(crate) struct SourceFile {
 
 /// A simulator runtime's platform, as `simctl` names it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+/// Variants are in name order, which is how pins sort.
 pub(crate) enum Platform {
     Ios,
     Tvos,
-    Watchos,
     Visionos,
+    Watchos,
 }
 
 impl Platform {
-    pub(crate) const ALL: [Self; 4] = [Self::Ios, Self::Tvos, Self::Watchos, Self::Visionos];
+    pub(crate) const ALL: [Self; 4] = [Self::Ios, Self::Tvos, Self::Visionos, Self::Watchos];
 
     pub(crate) fn as_str(self) -> &'static str {
         match self {
             Self::Ios => "iOS",
             Self::Tvos => "tvOS",
-            Self::Watchos => "watchOS",
             Self::Visionos => "visionOS",
+            Self::Watchos => "watchOS",
         }
     }
 }
 
 /// What a pin asks to have installed. The manager follows from the variant.
+/// Only mise has environments.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Target {
-    Mise(ToolName),
+    Mise {
+        tool: ToolName,
+        environment: Option<Environment>,
+    },
     Xcode,
     SimulatorRuntime(Platform),
 }
@@ -85,7 +91,7 @@ impl Target {
     /// The manager and tool names inventory and `fleet-tools.toml` use.
     pub(crate) fn manager(&self) -> &'static str {
         match self {
-            Self::Mise(_) => "mise",
+            Self::Mise { .. } => "mise",
             Self::Xcode => "xcodes",
             Self::SimulatorRuntime(_) => "simulators",
         }
@@ -93,9 +99,17 @@ impl Target {
 
     pub(crate) fn tool(&self) -> &str {
         match self {
-            Self::Mise(name) => name.as_str(),
+            Self::Mise { tool, .. } => tool.as_str(),
             Self::Xcode => "xcode",
             Self::SimulatorRuntime(platform) => platform.as_str(),
+        }
+    }
+
+    /// The mise environment whose files pinned this, if any.
+    pub(crate) fn environment(&self) -> Option<&Environment> {
+        match self {
+            Self::Mise { environment, .. } => environment.as_ref(),
+            Self::Xcode | Self::SimulatorRuntime(_) => None,
         }
     }
 }
@@ -126,7 +140,6 @@ impl Environment {
 pub(crate) struct Pin {
     pub(crate) target: Target,
     pub(crate) version: ToolVersion,
-    pub(crate) environment: Option<Environment>,
     pub(crate) source: SourceFile,
 }
 
@@ -148,7 +161,6 @@ pub(crate) trait PinSource {
 /// Reads a workspace with the production adapters, resolving inexact pins
 /// against this machine's mise and Xcode.
 pub(crate) fn read_workspace(workspace: &Path) -> Result<report::PinReport> {
-    let workspace = workspace_root(workspace)?;
     let home = std::env::var_os("HOME")
         .filter(|home| !home.is_empty())
         .map(PathBuf::from)
@@ -159,6 +171,7 @@ pub(crate) fn read_workspace(workspace: &Path) -> Result<report::PinReport> {
                 "Run elsecall from a login shell, where HOME names your home folder.",
             )
         })?;
+    let workspace = workspace_root(workspace, &home)?;
     let global = mise_global::MiseGlobal::new(home);
     let sources: [&dyn PinSource; 4] = [
         &mise_project::MiseProject,
@@ -170,15 +183,27 @@ pub(crate) fn read_workspace(workspace: &Path) -> Result<report::PinReport> {
     report::read(&workspace, &sources, &managers)
 }
 
-fn workspace_root(path: &Path) -> Result<PathBuf> {
-    match std::fs::canonicalize(path) {
-        Ok(root) if root.is_dir() => Ok(root),
-        _ => Err(Failure::new(
+/// The canonical workspace: a directory that can be listed, and not the home
+/// folder, whose mise config is the global layer rather than a project's.
+fn workspace_root(path: &Path, home: &Path) -> Result<PathBuf> {
+    let root = std::fs::canonicalize(path)
+        .ok()
+        .filter(|root| std::fs::read_dir(root).is_ok())
+        .ok_or_else(|| {
+            Failure::new(
+                "invalid_request",
+                "The workspace path does not name a readable directory.",
+                "Pass a repository directory, such as elsecall tools pins ~/Developer/acme-ios.",
+            )
+        })?;
+    if std::fs::canonicalize(home).is_ok_and(|home| home == root) {
+        return Err(Failure::new(
             "invalid_request",
-            "The workspace path does not name a readable directory.",
+            "The home folder is not a workspace; its mise config is the global one.",
             "Pass a repository directory, such as elsecall tools pins ~/Developer/acme-ios.",
-        )),
+        ));
     }
+    Ok(root)
 }
 
 /// A file that exists but cannot be read as a pin source.
@@ -242,6 +267,21 @@ mod tests {
     use crate::pins::*;
 
     #[test]
+    fn a_workspace_is_a_listable_directory_other_than_home() {
+        let home = tempfile::tempdir().unwrap();
+        let workspace = home.path().join("acme-ios");
+        std::fs::create_dir(&workspace).unwrap();
+        assert!(workspace_root(&workspace, home.path()).is_ok());
+        for path in [home.path().to_owned(), workspace.join("missing")] {
+            let error = workspace_root(&path, home.path()).unwrap_err();
+            assert_eq!(error.code, "invalid_request");
+        }
+        let file = workspace.join("mise.toml");
+        std::fs::write(&file, "").unwrap();
+        assert!(workspace_root(&file, home.path()).is_err());
+    }
+
+    #[test]
     fn environments_are_plain_names_and_never_local() {
         assert!(Environment::new("signing").is_some());
         assert!(Environment::new("ci_2-x").is_some());
@@ -277,7 +317,10 @@ mod tests {
 
     #[test]
     fn targets_use_inventory_manager_and_tool_names() {
-        let node = Target::Mise(ToolName::new("node").unwrap());
+        let node = Target::Mise {
+            tool: ToolName::new("node").unwrap(),
+            environment: None,
+        };
         assert_eq!((node.manager(), node.tool()), ("mise", "node"));
         assert_eq!(
             (Target::Xcode.manager(), Target::Xcode.tool()),

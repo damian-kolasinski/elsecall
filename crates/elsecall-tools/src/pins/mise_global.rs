@@ -3,11 +3,13 @@
 //!
 //! Only that file is read, under the home folder of whoever runs the read, so the
 //! path means the same on every member whatever its home folder is called. It
-//! is the operator's own file, so it may link anywhere.
+//! is the operator's own file, so it may link anywhere. mise's other global
+//! files (`~/.config/mise/conf.d`, `config.local.toml`, environment variants)
+//! are not read.
 use crate::pins::{
-    PinSource, Reading, SourceFile, SourceKind, mise_config,
-    mise_project::push_pins,
-    source_file::{Confinement, read_text},
+    PinSource, Reading, SourceFile, SourceKind,
+    mise_config::{self, push_pins},
+    source_file::read_home_file,
 };
 use elsecall_contract::failure::Result;
 use std::path::{Path, PathBuf};
@@ -28,7 +30,7 @@ impl PinSource for MiseGlobal {
     fn read(&self, _workspace: &Path) -> Result<Reading> {
         let display = format!("~/{FILE}");
         let mut reading = Reading::default();
-        let Some(text) = read_text(&self.home.join(FILE), &display, Confinement::Anywhere)? else {
+        let Some(text) = read_home_file(&self.home.join(FILE), &display)? else {
             return Ok(reading);
         };
         let source = SourceFile {
@@ -71,7 +73,12 @@ mod tests {
             .map(|pin| (pin.target.tool(), pin.version.as_str()))
             .collect();
         assert_eq!(pins, [("java", "zulu-17"), ("node", "22")]);
-        assert!(reading.pins.iter().all(|pin| pin.environment.is_none()));
+        assert!(
+            reading
+                .pins
+                .iter()
+                .all(|pin| pin.target.environment().is_none())
+        );
 
         fs::write(&path, "[tools]\nnode = \"{{ env.HOME }}\"\n").unwrap();
         let error = source.read(workspace.path()).unwrap_err();
