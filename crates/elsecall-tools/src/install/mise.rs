@@ -71,13 +71,25 @@ impl Installer for MiseInstaller {
                 command.env_remove(name);
             }
             command.env("MISE_YES", "1");
-            match work.run(command, LIMIT).await {
+            match work.run_reporting(command, LIMIT, Some(classify)).await {
                 Ran::Ended(status) if status.success() => Ok(()),
                 Ran::Ended(_) => Err(failed("tool_install_failed")),
+                Ran::FailedWith(code) => Err(failed(code)),
                 Ran::TimedOut => Err(failed("tool_install_timeout")),
                 Ran::NotStarted => Err(failed("mise_unusable")),
             }
         })
+    }
+}
+
+fn classify(line: &[u8]) -> Option<&'static str> {
+    let contains = |needle: &[u8]| line.windows(needle.len()).any(|window| window == needle);
+    if contains(b"No GitHub artifact attestations found") {
+        Some("mise_attestation_missing")
+    } else if contains(b"ext/psych/mkmf.log") {
+        Some("mise_ruby_psych_failed")
+    } else {
+        None
     }
 }
 
@@ -194,8 +206,20 @@ pub(crate) fn spec(step: &InstallStep) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::install::{mise::spec, request::WireStep};
+    use crate::install::{
+        mise::{classify, spec},
+        request::WireStep,
+    };
     use serde_json::json;
+
+    #[test]
+    fn identifies_the_ruby_psych_build_log() {
+        assert_eq!(
+            classify(b"Check /tmp/build/ext/psych/mkmf.log for details"),
+            Some("mise_ruby_psych_failed")
+        );
+        assert_eq!(classify(b"Check /tmp/build/ext/foo/mkmf.log"), None);
+    }
 
     #[test]
     fn a_step_names_its_tool_options_and_version() {

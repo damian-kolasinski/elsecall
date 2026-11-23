@@ -125,6 +125,16 @@ fn step_failure(member: &MemberName, failed: &FailedStep) -> (&'static str, Stri
     let tool = format!("{} {}", failed.tool, failed.version);
     let retry = format!("then run elsecall tools apply --member {member} on the master to retry");
     match failed.code.as_str() {
+        "mise_attestation_missing" => (
+            "the prebuilt artifact has no GitHub attestation",
+            format!(
+                "On {member}, install {tool} from a verified source build if its mise backend supports it, {retry}."
+            ),
+        ),
+        "mise_ruby_psych_failed" => (
+            "the Ruby build could not configure its Psych YAML extension",
+            format!("Check for libyaml and its headers on {member}, {retry}."),
+        ),
         "tool_install_failed" => (
             "mise install exited with an error",
             format!(

@@ -10,6 +10,7 @@
 //! ([`record`]). Nothing is ever uninstalled.
 pub(crate) mod applier;
 pub(crate) mod mise;
+mod output;
 pub(crate) mod record;
 pub(crate) mod request;
 mod runtimes;
@@ -44,13 +45,23 @@ pub(crate) trait Installer: Send + Sync {
 pub(crate) trait Work: Send + Sync {
     /// Starts `command` with no input and its output discarded, binds it to the
     /// run, and waits for it; past `limit` its process group is killed.
-    fn run(&self, command: tokio::process::Command, limit: Duration) -> BoxFuture<'_, Ran>;
+    fn run(&self, command: tokio::process::Command, limit: Duration) -> BoxFuture<'_, Ran> {
+        self.run_reporting(command, limit, None)
+    }
+
+    fn run_reporting(
+        &self,
+        command: tokio::process::Command,
+        limit: Duration,
+        classify: Option<output::Classify>,
+    ) -> BoxFuture<'_, Ran>;
 }
 
 /// How a command ended.
 #[derive(Debug)]
 pub(crate) enum Ran {
     Ended(ExitStatus),
+    FailedWith(&'static str),
     TimedOut,
     NotStarted,
 }
