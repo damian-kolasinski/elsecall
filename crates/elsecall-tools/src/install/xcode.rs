@@ -280,7 +280,7 @@ async fn run(
     match work.run(command, limit).await {
         Ran::Ended(status) if status.success() => Ok(()),
         Ran::Ended(status) => Err(status.code()),
-        Ran::TimedOut | Ran::NotStarted => Err(None),
+        Ran::TimedOut | Ran::NotStarted | Ran::FailedWith(_) => Err(None),
     }
 }
 

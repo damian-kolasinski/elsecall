@@ -59,7 +59,9 @@ impl Installer for RuntimeInstaller {
                 .current_dir("/");
             match work.run(command, LIMIT).await {
                 Ran::Ended(status) if status.success() => Ok(()),
-                Ran::Ended(_) | Ran::NotStarted => Err(failed("runtime_download_failed")),
+                Ran::Ended(_) | Ran::NotStarted | Ran::FailedWith(_) => {
+                    Err(failed("runtime_download_failed"))
+                }
                 Ran::TimedOut => Err(failed("runtime_download_timeout")),
             }
         })

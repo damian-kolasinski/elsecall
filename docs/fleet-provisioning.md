@@ -658,8 +658,9 @@ with `state`:
 
 A failure's `stage` is the part of the step that failed (`admission`,
 `install`, `apply`) and its `code` why. They are never what a command printed:
-an install's output is discarded, never captured, so a token in a download URL
-never reaches a record, a status, an item or a log. The codes so far:
+mise output is scanned in memory for fixed diagnostics. Other output is
+discarded and no command text reaches a record, a status, an item or a log.
+The codes so far:
 
 | Stage | Code | When |
 | --- | --- | --- |
@@ -687,6 +688,8 @@ never reaches a record, a status, an item or a log. The codes so far:
 | `bootstrap` | `mise_copy_unusable` | The copied mise did not say its version. |
 | `install` | `mise_unusable` | mise could not be started, or `HOME` is not set. |
 | `install` | `tool_install_failed` | `mise install` exited with an error. |
+| `install` | `mise_attestation_missing` | mise could not find the prebuilt artifact's GitHub attestation. |
+| `install` | `mise_ruby_psych_failed` | The Ruby build reported its Psych YAML extension configuration log. Check libyaml. |
 | `install` | `tool_install_timeout` | It ran for 30 minutes. |
 | `admission` or `apply` | `apply_interrupted` | The service stopped while the step waited or ran. |
 | `apply` | `apply_failed` | The apply stopped unexpectedly; its unfinished steps fail with it. |
@@ -743,7 +746,8 @@ reserve and no interactive work waits, so it never takes room from running work,
 and it shows in `elsecall runs` and `explain` like any job, as Elsecall's own
 work. After an hour of waiting it starts at its deadline anyway, still only
 when it fits. Each command the step runs is started in its own process group,
-with no input and its output discarded, and bound to the run as its holder; when
+with no input, and bound to the run as its holder. Only fixed diagnostic codes
+can be retained from its output. When
 the step times out or is dropped while it runs, the group is killed; a command
 that exits by itself leaves its group alone, since the group's ID may then be
 reused. The run ends exactly once, with exit 0 when the step installed and 1

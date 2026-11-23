@@ -17,6 +17,10 @@ struct Mise {
 }
 
 fn fake_mise() -> Mise {
+    fake_mise_with_failure("exit 1")
+}
+
+fn fake_mise_with_failure(failure: &str) -> Mise {
     let root = tempfile::Builder::new()
         .prefix("ec-apply-")
         .tempdir_in("/tmp")
@@ -26,7 +30,7 @@ fn fake_mise() -> Mise {
     executable(
         &executable_path,
         &format!(
-            "#!/bin/sh\ncase \"$1\" in\n  --version) echo 2026.10.11 ;;\n  ls) echo '{{}}' ;;\n  install)\n    echo \"$*|$PWD|$(env | grep '^MISE' | sort | tr '\\n' ' ')\" >> '{log}'\n    case \"$2\" in node@*) exit 1 ;; esac ;;\n  *) exit 2 ;;\nesac\n",
+            "#!/bin/sh\ncase \"$1\" in\n  --version) echo 2026.10.11 ;;\n  ls) echo '{{}}' ;;\n  install)\n    echo \"$*|$PWD|$(env | grep '^MISE' | sort | tr '\\n' ' ')\" >> '{log}'\n    case \"$2\" in node@*) {failure} ;; esac ;;\n  *) exit 2 ;;\nesac\n",
             log = utf8(&log)
         ),
     );
@@ -35,6 +39,44 @@ fn fake_mise() -> Mise {
         executable: executable_path,
         log,
     }
+}
+
+#[test]
+fn installer_diagnostic_crosses_the_fleet_without_command_output() {
+    let master_tools = equipped();
+    let mut bare_tools = bare();
+    let sentinel = "unpublished-diagnostic-sentinel";
+    let mise = fake_mise_with_failure(&format!(
+        "printf '%s\\n' 'No GitHub artifact attestations found: {sentinel}' >&2; (sleep 1 >&1 2>/dev/null) & exit 1"
+    ));
+    for (key, value) in &mut bare_tools.env {
+        if key == "ELSECALL_MISE" {
+            *value = utf8(&mise.executable);
+        }
+    }
+    let alpha = TestMember::start_with("alpha", "", &master_tools.pairs());
+    let bravo = TestMember::start_with("bravo", "", &bare_tools.pairs());
+    enrol(&alpha, &bravo);
+    write(
+        &alpha.home().join(".config/mise/config.toml"),
+        "[tools]\nnode = \"22\"\n",
+    );
+    let result = alpha.ok(&["tools", "apply", "--member", "bravo", "--wait"]);
+    assert_eq!(
+        result["members"][0]["apply"]["steps"][0]["code"],
+        "mise_attestation_missing"
+    );
+    let view = alpha.fleet();
+    assert!(view["attention"].as_array().unwrap().iter().any(|item| {
+        item["code"] == "mise_attestation_missing"
+            && item["hint"]
+                .as_str()
+                .unwrap()
+                .contains("verified source build")
+    }));
+    assert!(!result.to_string().contains(sentinel));
+    assert!(!view.to_string().contains(sentinel));
+    assert!(!bravo.log().contains(sentinel));
 }
 
 fn steps(apply: &Value) -> Vec<(String, String, String)> {
