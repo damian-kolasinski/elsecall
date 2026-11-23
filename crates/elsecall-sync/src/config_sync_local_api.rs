@@ -62,6 +62,7 @@ pub fn routes(sync: Arc<ConfigSync>) -> Router {
         .route("/v1/sync/service", post(service))
         .route("/v1/sync/rehearsal", post(rehearsal_settings))
         .route("/v1/sync/plan", post(plan))
+        .route("/v1/sync/declare", post(declare))
         .route("/v1/sync/enable", post(enable))
         .route("/v1/sync/disable", post(disable))
         .route("/v1/sync/consent", post(consent))
@@ -115,6 +116,12 @@ async fn plan(State(sync): State<Arc<ConfigSync>>, body: Bytes) -> Response {
 async fn enable(State(sync): State<Arc<ConfigSync>>, body: Bytes) -> Response {
     match parse::<PathRequest>(&body) {
         Ok(request) => respond(sync.enable(request.path, request.confirm).await),
+        Err(error) => respond::<()>(Err(error)),
+    }
+}
+async fn declare(State(sync): State<Arc<ConfigSync>>, body: Bytes) -> Response {
+    match parse::<SyncedPath>(&body) {
+        Ok(path) => respond(sync.declare(path).await),
         Err(error) => respond::<()>(Err(error)),
     }
 }

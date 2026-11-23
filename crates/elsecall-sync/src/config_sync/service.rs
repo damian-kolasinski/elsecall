@@ -10,6 +10,8 @@
 //! over the mirrored files each time.
 #[path = "service_consent.rs"]
 mod consent;
+#[path = "service_declaration.rs"]
+mod declaration;
 #[path = "service_configuration.rs"]
 mod service_configuration;
 #[path = "service_synced_set.rs"]
@@ -164,6 +166,7 @@ struct Planned {
     plan: Plan,
     trees: BTreeMap<SyncedPath, Tree>,
     enabled: BTreeSet<SyncedPath>,
+    roster: Roster,
 }
 
 #[derive(Debug, Serialize)]
@@ -194,6 +197,7 @@ pub struct MemberStatus {
 #[derive(Debug, Serialize)]
 pub struct FleetSync {
     pub master: MemberName,
+    pub local_member: MemberName,
     pub generation: Option<u64>,
     pub manifest_id: Option<String>,
     /// Paths `[sync] paths` declares on this member.
@@ -881,7 +885,7 @@ impl ConfigSync {
         let mut found: BTreeMap<MemberName, Result<SyncSummary>> =
             others.iter().map(|m| m.name.clone()).zip(answers).collect();
         let own_name = self.fleet.name_in(&roster);
-        found.insert(own_name, Ok(own_summary));
+        found.insert(own_name.clone(), Ok(own_summary));
         let master_name = roster.master().name.clone();
         let master_summary = found
             .get(&master_name)
@@ -949,6 +953,7 @@ impl ConfigSync {
             generation: master_summary.as_ref().and_then(|s| s.generation),
             manifest_id: master_summary.as_ref().and_then(|s| s.manifest_id.clone()),
             master: master_name,
+            local_member: own_name,
             declared_here: self.declared().unwrap_or_default(),
             members,
             next_step,

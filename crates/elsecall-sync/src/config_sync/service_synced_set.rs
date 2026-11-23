@@ -108,10 +108,11 @@ impl ConfigSync {
                 path,
             })
             .collect();
-        let plan_id =
-            Digest::of(&serde_json::to_vec(&(&planned, &members)).expect("plans serialize")).hex()
-                [..16]
-                .to_owned();
+        let plan_id = Digest::of(
+            &serde_json::to_vec(&(&roster, &planned, &members, &trees)).expect("plans serialize"),
+        )
+        .hex()[..16]
+            .to_owned();
         let next_step = match planned.iter().find(|p| !p.enabled) {
             Some(path) => format!(
                 "Review the changes, then run: elsecall sync enable {} --confirm {plan_id}",
@@ -130,6 +131,7 @@ impl ConfigSync {
             },
             trees,
             enabled,
+            roster,
         })
     }
 
@@ -145,6 +147,7 @@ impl ConfigSync {
             plan,
             trees: trees_planned,
             enabled,
+            roster: planned_roster,
         } = self.planned(vec![path.clone()]).await?;
         let Some(confirm) = confirm else {
             return Ok(serde_json::json!({ "status": "planned", "plan": plan,
@@ -186,10 +189,10 @@ impl ConfigSync {
                 .iter()
                 .flat_map(|m| m.paths.keys().cloned())
                 .collect();
-            if now_enabled != enabled {
+            if now_enabled != enabled || roster != planned_roster {
                 return Err(Failure::new(
                     "plan_changed",
-                    "The synced set changed while enabling (another path was enabled or disabled); nothing was enabled.",
+                    "The synced set or fleet membership changed while enabling. Nothing was enabled.",
                     format!("Run elsecall sync enable {path} again to see the current plan."),
                 ));
             }

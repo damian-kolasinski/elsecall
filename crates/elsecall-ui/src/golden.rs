@@ -65,6 +65,7 @@ const BLESS: &str =
     "ELSECALL_UI_BLESS=1 cargo test -p elsecall-ui --bin elsecall-ui scenes_match_goldens";
 const CONFIGURATION_SCENES: &[&str] = &[
     "configuration-rules",
+    "configuration-sync-review",
     "configuration-search",
     "configuration-no-matches",
     "configuration-toml",

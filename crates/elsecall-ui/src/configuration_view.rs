@@ -20,10 +20,11 @@ use crate::{
 pub(crate) enum Tab {
     Rules,
     Toml,
+    Sync,
 }
 
 impl Tab {
-    const ALL: [Self; 2] = [Self::Rules, Self::Toml];
+    const ALL: [Self; 3] = [Self::Rules, Self::Toml, Self::Sync];
 }
 
 #[derive(Default)]
@@ -35,6 +36,10 @@ pub(crate) struct ConfigurationView {
 }
 
 impl ConfigurationView {
+    pub(crate) fn select(&mut self, tab: Tab) {
+        self.tab = Some(tab);
+    }
+
     pub(crate) fn visible(&self) -> bool {
         self.tab.is_some()
     }
@@ -85,23 +90,43 @@ pub(crate) fn render(state: &AppState, kit: &Kit) -> El {
         .center_y()
         .gap(theme::SPACE_3)
         .child(
-            text(FILE_NAME)
-                .font(theme::scale().mono)
-                .color(kit.c.text_base),
+            text(if tab == Tab::Sync {
+                "Configuration sync"
+            } else {
+                FILE_NAME
+            })
+            .font(theme::scale().mono)
+            .color(kit.c.text_base),
         )
         .child(el().grow(1.0))
         .child(
             Button::new("Reload")
                 .variant(ButtonVariant::Ghost)
-                .disabled(config.result.is_none())
-                .on_press(|state: &mut AppState| state.configuration.reload())
+                .disabled(if tab == Tab::Sync {
+                    crate::config_sync_view::busy(state)
+                } else {
+                    config.result.is_none()
+                })
+                .on_press(|state: &mut AppState| {
+                    if state.configuration.tab == Some(Tab::Sync) {
+                        state.config_sync.refresh();
+                    } else {
+                        state.configuration.reload();
+                    }
+                })
                 .build(kit)
                 .key("configuration-reload"),
         );
-    let tabs = SegmentedControl::new(&["Rules", "TOML"], Some(tab as usize))
+    let tabs = SegmentedControl::new(&["Rules", "TOML", "File sync"], Some(tab as usize))
         .label("Configuration view")
-        .width(Some(172.0))
-        .on_pick(|state: &mut AppState, index, _| state.configuration.tab = Some(Tab::ALL[index]))
+        .width(Some(248.0))
+        .on_pick(|state: &mut AppState, index, _| {
+            let tab = Tab::ALL[index];
+            state.configuration.select(tab);
+            if tab == Tab::Sync {
+                state.config_sync.refresh();
+            }
+        })
         .build(kit)
         .key("configuration-tabs");
     let mut controls = row().w_full().center_y().gap(theme::SPACE_3).child(tabs);
@@ -124,22 +149,27 @@ pub(crate) fn render(state: &AppState, kit: &Kit) -> El {
                 .key("configuration-search"),
         );
     }
-    let content = match config.result.as_ref() {
-        None => message("Reading workloads.toml…", kit),
-        Some(Err(ReadError::Unreadable)) => message(
-            "Couldn’t read workloads.toml. Check access and reload.",
-            kit,
-        ),
-        Some(Err(ReadError::Invalid)) => {
-            message("Invalid workloads.toml. Fix the file and reload.", kit)
+    let content = if tab == Tab::Sync {
+        crate::config_sync_view::render(state, kit)
+    } else {
+        match config.result.as_ref() {
+            None => message("Reading workloads.toml…", kit),
+            Some(Err(ReadError::Unreadable)) => message(
+                "Couldn’t read workloads.toml. Check access and reload.",
+                kit,
+            ),
+            Some(Err(ReadError::Invalid)) => {
+                message("Invalid workloads.toml. Fix the file and reload.", kit)
+            }
+            Some(Ok(policy)) => match tab {
+                Tab::Rules => rules(policy, &config.search.text, kit),
+                Tab::Toml => source(policy, kit),
+                Tab::Sync => unreachable!("the file sync tab has its own source"),
+            },
         }
-        Some(Ok(policy)) => match tab {
-            Tab::Rules => rules(policy, &config.search.text, kit),
-            Tab::Toml => source(policy, kit),
-        },
     };
     let mut body = col().w_full().gap(theme::SPACE_3).child(content);
-    if tab != Tab::Toml
+    if tab == Tab::Rules
         && config
             .result
             .as_ref()

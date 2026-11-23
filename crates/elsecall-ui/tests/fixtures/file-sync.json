@@ -1,0 +1,31 @@
+{
+  "status": {
+    "master": "mac-mini",
+    "local_member": "mac-mini",
+    "declared_here": ["~/.config/acme-ios"],
+    "members": [
+      {"member": "mac-mini", "sync": {"paths": [], "applying": false, "service": {"pending": false}}},
+      {"member": "macbook-pro", "sync": {"paths": [], "applying": false, "service": {"pending": false}}}
+    ]
+  },
+  "plan": {
+    "plan_id": "0123456789abcdef",
+    "paths": [{
+      "path": "~/.config/acme-ios",
+      "enabled": false,
+      "present": true,
+      "files": 1,
+      "secret_looking": [{"file": "~/.config/acme-ios/.env", "reasons": ["name"]}]
+    }],
+    "members": [{
+      "member": "macbook-pro",
+      "paths": [{
+        "unchanged": 0,
+        "files": [
+          {"file": "~/.config/acme-ios/.env", "change": "added", "backup": false},
+          {"file": "~/.config/acme-ios/old.env", "change": "removed", "backup": true}
+        ]
+      }]
+    }]
+  }
+}

@@ -3,6 +3,8 @@ mod add_mac_source;
 mod add_mac_view;
 mod app;
 mod attention_view;
+mod config_sync_source;
+mod config_sync_view;
 mod configuration_view;
 mod fleet_source;
 mod load_dialog;

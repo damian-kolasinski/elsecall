@@ -121,6 +121,47 @@ fn enable(alpha: &TestMember) -> Value {
     alpha.ok(&["sync", "enable", "~/.config/demo", "--confirm", &id])
 }
 
+#[test]
+fn initial_plan_changes_when_secret_bytes_change_with_recipient_offline() {
+    let alpha = TestMember::start_with("alpha", "", &[]);
+    let mut beta = TestMember::start_with("beta", "", &[]);
+    enrol(&alpha, &beta);
+    let socket = Paths::for_home(alpha.home()).unwrap().socket();
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    write(&alpha, ".config/demo/.env", "NAME=first\n");
+    runtime
+        .block_on(elsecall_host::client::post_large::<Value, _>(
+            &socket,
+            "/v1/sync/declare",
+            &"~/.config/demo",
+        ))
+        .unwrap();
+    assert_eq!(read(&beta, ".config/demo/.env"), None);
+    beta.stop();
+    let shown = alpha.ok(&["sync", "enable", "~/.config/demo"]);
+    let id = shown["plan"]["plan_id"].as_str().unwrap();
+    write(&alpha, ".config/demo/.env", "NAME=other\n");
+    let updated = alpha.ok(&["sync", "enable", "~/.config/demo"]);
+    assert_ne!(updated["plan"]["plan_id"], id);
+    let rejected = runtime
+        .block_on(elsecall_host::client::post_large::<Value, _>(
+            &socket,
+            "/v1/sync/enable",
+            &serde_json::json!({"path": "~/.config/demo", "confirm": id}),
+        ))
+        .unwrap_err();
+    assert_eq!(rejected.code, "plan_changed");
+    assert!(
+        alpha.ok(&["sync", "status"])["members"][0]["sync"]["paths"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+}
+
 fn status_of(member: &TestMember, of: &str) -> Value {
     member.ok(&["sync", "status"])["members"]
         .as_array()
