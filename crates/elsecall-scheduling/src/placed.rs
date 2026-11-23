@@ -114,6 +114,11 @@ pub trait Members: Send + Sync {
     -> BoxFuture<'static, Result<OfferReply>>;
     /// Asks `member` for its state and its copies of `request`'s workspaces.
     fn quote(&self, member: &str, request: &QuoteRequest) -> BoxFuture<'static, Result<Quote>>;
+    /// The members that lack tools `workspace` pins, as the master's
+    /// provisioning loop last planned them; none known by default.
+    fn lacking(&self, _workspace: &WorkspaceRef) -> crate::pin_fit::Lacking {
+        crate::pin_fit::Lacking::default()
+    }
 }
 
 /// Neither in a fleet nor able to place: a machine on its own.
@@ -307,6 +312,10 @@ pub struct PlacedGrant {
     /// consistency check of a location within one is current by construction.
     #[serde(default)]
     pub synced_paths: Vec<String>,
+    /// Warnings the run carries from its placement, such as a member that
+    /// lacks tools the workspace pins.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<String>,
 }
 
 #[cfg(test)]

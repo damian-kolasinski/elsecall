@@ -290,6 +290,7 @@ fn recorded(observations: Vec<Observation>, parameters: &Parameters, form: Form)
         size: wanted.size,
         hold_left: wanted.hold_left,
         winner: verdict.winner.clone(),
+        passed_over: Vec::new(),
     };
     let mut arrival = Arrival::of(&verdict, &scoring);
     let mut candidates: Vec<Candidate> = verdict

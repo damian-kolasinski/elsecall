@@ -37,6 +37,7 @@ mod nearby;
 mod openssh_mac;
 mod peer_io;
 mod placement;
+mod placement_pins;
 mod pre_run_sync;
 mod preflight;
 mod protocol;

@@ -228,6 +228,10 @@ pub struct Scoring {
     /// The member the scoring chose. A request already waiting somewhere moves
     /// to it only by the moving margin, so it can differ from where it ran.
     pub winner: Option<String>,
+    /// Members that answered but were left out because they lack what the
+    /// workspace pins, and what; absent when none were.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub passed_over: Vec<crate::placement::Unreachable>,
 }
 
 /// What placement expected when a request arrived: the scoring that decided

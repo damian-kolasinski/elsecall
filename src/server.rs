@@ -188,7 +188,12 @@ pub async fn serve_with_updates(
         .ok()
         .and_then(|f| f.roster().ok().map(|r| f.name_in(&r)));
     let mut configuration = elsecall_sync::service_configuration::load(&paths, name.as_ref())?;
-    let members = Arc::new(FleetMembers::new(fleet.as_ref().ok().cloned()));
+    // Placement prefers members that have what a workspace pins, as the
+    // provisioning loop, started below, finds them.
+    let members = Arc::new(crate::placement_pins::PinnedMembers {
+        members: Arc::new(FleetMembers::new(fleet.as_ref().ok().cloned())),
+        provisioning: std::sync::OnceLock::new(),
+    });
     let load_log = Arc::new(elsecall_scheduling::load_log::LoadLog::open(
         &paths.load_history(),
     )?);
@@ -247,7 +252,7 @@ pub async fn serve_with_updates(
         &paths.records(),
         (&configuration).into(),
         scheduling,
-        members,
+        members.clone(),
         pre_run,
         load_log.clone(),
     )?;
@@ -504,6 +509,7 @@ pub async fn serve_with_updates(
         drift.clone(),
     );
     let _provisioning = AbortOnDrop(provisioning.start().abort_handle());
+    let _ = members.provisioning.set(provisioning.clone());
     let tools_routes = elsecall_tools::tools_api::routes(fleet.clone())
         .merge(elsecall_tools::plan_api::routes(planning(
             recent_workspaces.clone(),

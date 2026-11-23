@@ -31,7 +31,7 @@ fn git(dir: &Path, args: &[&str]) {
 }
 
 /// A fresh caller repository with a commit and an uncommitted change.
-fn repository() -> (tempfile::TempDir, PathBuf) {
+pub(crate) fn repository() -> (tempfile::TempDir, PathBuf) {
     let temp = tempfile::Builder::new()
         .prefix("ec-place-")
         .tempdir_in("/tmp")
@@ -47,15 +47,15 @@ fn repository() -> (tempfile::TempDir, PathBuf) {
 }
 
 /// A member whose cores, load and speed the test scripts.
-struct Machine {
-    member: TestMember,
+pub(crate) struct Machine {
+    pub(crate) member: TestMember,
     load: PathBuf,
     cores: u32,
     _dir: tempfile::TempDir,
 }
 
 impl Machine {
-    fn start(name: &'static str, cores: u32, reserve: f64, speed: f64) -> Self {
+    pub(crate) fn start(name: &'static str, cores: u32, reserve: f64, speed: f64) -> Self {
         Self::configured(
             name,
             cores,
@@ -66,20 +66,31 @@ impl Machine {
 
     /// A member whose service has `configuration` as its config.toml.
     fn configured(name: &'static str, cores: u32, speed: f64, configuration: &str) -> Self {
+        Self::with_environment(name, cores, speed, configuration, &[])
+    }
+
+    /// A member with `environment` added to its service's, such as fake tools.
+    pub(crate) fn with_environment(
+        name: &'static str,
+        cores: u32,
+        speed: f64,
+        configuration: &str,
+        environment: &[(&str, &str)],
+    ) -> Self {
         let dir = tempfile::Builder::new()
             .prefix("ec-load-")
             .tempdir_in("/tmp")
             .unwrap();
         let load = dir.path().join("load.json");
         std::fs::write(&load, json!({"performance_cores": cores}).to_string()).unwrap();
-        let member = TestMember::start_with(
-            name,
-            configuration,
-            &[
-                ("ELSECALL_MACHINE_LOAD", &format!("file:{}", load.display())),
-                ("ELSECALL_MACHINE_SPEED", &speed.to_string()),
-            ],
-        );
+        let load_file = format!("file:{}", load.display());
+        let speed_text = speed.to_string();
+        let mut all = vec![
+            ("ELSECALL_MACHINE_LOAD", load_file.as_str()),
+            ("ELSECALL_MACHINE_SPEED", speed_text.as_str()),
+        ];
+        all.extend_from_slice(environment);
+        let member = TestMember::start_with(name, configuration, &all);
         Self {
             member,
             load,
@@ -89,7 +100,7 @@ impl Machine {
     }
 
     /// Scripts the machine's CPU utilization, and waits until admission sees it.
-    fn set_utilization(&self, utilization: f64) {
+    pub(crate) fn set_utilization(&self, utilization: f64) {
         std::fs::write(
             &self.load,
             json!({"performance_cores": self.cores, "cpu_utilization": utilization}).to_string(),
@@ -131,7 +142,7 @@ fn run(caller: &TestMember, cwd: &Path, args: &[&str]) -> Output {
 
 /// Runs `args` and the command after them, which prints its run ID and member;
 /// returns both.
-fn placed(caller: &TestMember, cwd: &Path, args: &[&str]) -> (String, String) {
+pub(crate) fn placed(caller: &TestMember, cwd: &Path, args: &[&str]) -> (String, String) {
     let mut all = args.to_vec();
     all.extend([
         "--",
@@ -200,7 +211,7 @@ fn release_work(mut child: Child) {
     }
 }
 
-fn explain(member: &TestMember, run_id: &str) -> Value {
+pub(crate) fn explain(member: &TestMember, run_id: &str) -> Value {
     member.ok(&["explain", run_id])
 }
 
