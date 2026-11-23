@@ -1,10 +1,13 @@
 //! Window state, scenes and the rune app spec.
 
 mod add_mac_scenes;
+mod provisioning_scenes;
+pub(crate) mod scene_fleets;
 
 use self::add_mac_scenes::*;
+use self::provisioning_scenes::*;
+use self::scene_fleets::*;
 use elsecall_peers::roster::Readiness;
-use std::num::NonZeroU32;
 use std::sync::Arc;
 
 use rune::{App, AppSpec, Chrome, Latest, MenuItem, Tx, Waker, col};
@@ -14,8 +17,7 @@ use crate::add_mac_flow::{Action, AddMac, AddRequest, Page as AddMacPage, RunUpd
 use crate::add_mac_source::{self, AddMacSource, Inbox};
 use crate::configuration_view::{self, ConfigurationView, Tab};
 use crate::fleet_source::{
-    FleetSnapshot, Gate, LoadAverages, MemberRow, MemoryUse, Reachability, Release, Role,
-    SourceFailure, Standing,
+    FleetSnapshot, Gate, LoadAverages, MemberRow, Reachability, Release, Role, SourceFailure,
 };
 use crate::refresh::{self, Update};
 use crate::release_source::{self, ReleaseSnapshot};
@@ -48,6 +50,21 @@ const SCENES: &[(&str, Scene)] = &[
         "members-awaiting-provisioning",
         scene_members_awaiting_provisioning,
     ),
+    ("provisioning-starting", scene_provisioning_starting),
+    ("provisioning-running", scene_provisioning_running),
+    ("provisioning-needs-you", scene_provisioning_needs_you),
+    ("provisioning-ready", scene_provisioning_ready),
+    ("provisioning-setup", scene_provisioning_setup),
+    (
+        "provisioning-setup-apple-id",
+        scene_provisioning_setup_apple_id,
+    ),
+    ("provisioning-setup-member", scene_provisioning_setup_member),
+    (
+        "provisioning-setup-loading",
+        scene_provisioning_setup_loading,
+    ),
+    ("attention-consent", scene_attention_consent),
     ("outdated-member", scene_outdated_member),
     ("upgrade", scene_upgrade),
     ("upgrading", scene_upgrading),
@@ -125,6 +142,7 @@ pub(crate) struct AppState {
     last_look: Option<f64>,
     /// The window's clock at the last poll, which drives the sheet's animations.
     clock: f64,
+    pub(crate) provisioning: crate::provisioning_state::ProvisioningState,
 }
 
 /// How often the sheet looks for Macs nearby while it lists them.
@@ -425,6 +443,17 @@ impl AppState {
                 }
                 self.add_mac
                     .know_members(snapshot.members.iter().map(|m| m.name.clone()));
+                // An open Setup dialog follows its member's apply as it moves.
+                let applying = |fleet: Option<&FleetSnapshot>, name: &str| {
+                    fleet
+                        .and_then(|fleet| fleet.members.iter().find(|m| m.name == name))
+                        .and_then(|m| m.provisioning.clone())
+                };
+                if let Some(name) = self.provisioning.setup.clone()
+                    && applying(self.shown(), &name) != applying(Some(&snapshot), &name)
+                {
+                    self.provisioning.reload_apply();
+                }
                 self.phase = Phase::Ready(snapshot);
             }
             Err(failure) => {
@@ -527,6 +556,7 @@ fn render(state: &AppState, cx: &mut rune::Cx<AppState>) -> rune::El {
     let mut overlays = Vec::new();
     if !state.configuration.visible() && !state.add_mac.is_open() {
         crate::load_dialog::overlay(state, &kit, &mut overlays);
+        crate::setup_dialog::overlay(state, &kit, &mut overlays);
     }
     crate::add_mac_view::sheet(state, &kit, cx.is_reduced_motion(), &mut overlays);
     rune_kit::root(base, overlays)
@@ -571,6 +601,9 @@ fn init() -> AppState {
         add_inbox: Arc::new(Inbox::default()),
         last_look: None,
         clock: 0.0,
+        provisioning: crate::provisioning_state::ProvisioningState::new(
+            crate::provisioning_source::production(),
+        ),
     }
 }
 
@@ -588,6 +621,7 @@ fn setup(state: &mut AppState, waker: Waker) {
     state.release_feed.set_waker(waker.clone());
     state.release_start.set_waker(waker.clone());
     state.nearby_feed.set_waker(waker.clone());
+    state.provisioning.set_waker(waker.clone());
     state.add_inbox.set_waker(waker);
     if state.follow_service {
         refresh::start(Arc::clone(&state.feed), socket_source::shared());
@@ -601,6 +635,12 @@ fn setup(state: &mut AppState, waker: Waker) {
 fn poll(state: &mut AppState, now: f64, tx: &mut Tx) -> bool {
     let mut changed = poll_add_mac(state, now, tx);
     changed |= state.configuration.poll();
+    let shown = match &state.phase {
+        Phase::Ready(snapshot) => Some(snapshot),
+        Phase::Unavailable { last, .. } => last.as_ref(),
+        Phase::Loading => None,
+    };
+    changed |= state.provisioning.poll(now, shown);
     if let Some(update) = state.feed.take() {
         state.apply_refresh(update);
         changed = true;
@@ -995,125 +1035,13 @@ fn scene_release_offline(state: &mut AppState) {
     ));
 }
 
-fn solo_snapshot() -> FleetSnapshot {
-    FleetSnapshot {
-        enrolled: false,
-        members: vec![member(
-            "mac-mini",
-            Role::Master,
-            Reachability::Reachable,
-            Gate::Open,
-            Some((0.18, 8)),
-            Some(gigabytes(18, 64)),
-            Some(LoadAverages {
-                one: 1.4,
-                five: 1.6,
-                fifteen: 1.5,
-            }),
-        )],
-        standing: Standing::Rostered,
-    }
-}
-
-/// A fresh Mac whose Tailscale is not running: no presence, so no roster.
-fn no_tailnet_snapshot() -> FleetSnapshot {
-    FleetSnapshot {
-        enrolled: false,
-        members: Vec::new(),
-        standing: Standing::OffTailnet {
-            hint: "Make sure Tailscale is running and logged in on this machine; the service retries every 30 seconds.".into(),
-        },
-    }
-}
-
-fn members_snapshot() -> FleetSnapshot {
-    FleetSnapshot {
-        enrolled: true,
-        members: vec![
-            member(
-                "mac-mini",
-                Role::Master,
-                Reachability::Reachable,
-                Gate::Open,
-                Some((0.42, 12)),
-                Some(gigabytes(36, 64)),
-                Some(LoadAverages {
-                    one: 4.8,
-                    five: 4.5,
-                    fifteen: 4.2,
-                }),
-            ),
-            member(
-                "macbook",
-                Role::Member,
-                Reachability::Unreachable,
-                Gate::Open,
-                None,
-                None,
-                None,
-            ),
-            member(
-                "macbook-pro",
-                Role::Member,
-                Reachability::Reachable,
-                Gate::Blocked {
-                    leading_process: Some("Xcode".into()),
-                },
-                Some((0.91, 8)),
-                Some(gigabytes(52, 64)),
-                Some(LoadAverages {
-                    one: 12.0,
-                    five: 9.4,
-                    fifteen: 7.2,
-                }),
-            ),
-        ],
-        standing: Standing::Rostered,
-    }
-}
-
-fn member(
-    name: &str,
-    role: Role,
-    reach: Reachability,
-    gate: Gate,
-    cpu: Option<(f64, u32)>,
-    memory: Option<MemoryUse>,
-    load: Option<LoadAverages>,
-) -> MemberRow {
-    let release = match reach {
-        Reachability::Reachable => Release::Matching {
-            version: "0.2.2".into(),
-        },
-        Reachability::Unreachable => Release::Unknown { version: None },
-    };
-    MemberRow {
-        name: name.into(),
-        // The scenes' master is this Mac.
-        this_member: role == Role::Master,
-        role,
-        reach,
-        readiness: Readiness::Ready,
-        gate,
-        contributors: Default::default(),
-        cpu: cpu.map(|(utilization, _)| utilization),
-        logical_cpus: cpu.and_then(|(_, count)| NonZeroU32::new(count)),
-        memory,
-        load,
-        release,
-    }
-}
-
-fn gigabytes(used: u64, total: u64) -> MemoryUse {
-    MemoryUse {
-        used_bytes: used << 30,
-        total_bytes: total << 30,
-    }
-}
-
 #[cfg(test)]
 #[path = "add_mac_tests.rs"]
 mod add_mac_tests;
+
+#[cfg(test)]
+#[path = "provisioning_tests.rs"]
+mod provisioning_tests;
 
 #[cfg(test)]
 mod tests {

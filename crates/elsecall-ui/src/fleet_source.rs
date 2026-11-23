@@ -15,6 +15,8 @@ pub(crate) struct FleetSnapshot {
     pub enrolled: bool,
     pub members: Vec<MemberRow>,
     pub standing: Standing,
+    /// What needs an agent or a person, as the service derives it.
+    pub attention: Vec<elsecall_contract::attention::Item>,
 }
 
 impl FleetSnapshot {
@@ -61,6 +63,9 @@ pub(crate) struct MemberRow {
     pub load: Option<LoadAverages>,
     pub release: Release,
     pub contributors: crate::resource_details::Contributors,
+    /// The member's latest apply of its tool plan; none when it never applied
+    /// one or did not say.
+    pub provisioning: Option<elsecall_fleet::provisioning_model::ProvisioningSummary>,
 }
 
 /// How a member's release compares with the master's. Work moves between members
