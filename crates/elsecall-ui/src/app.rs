@@ -91,6 +91,7 @@ const SCENES: &[(&str, Scene)] = &[
     ("add-mac-done", scene_add_mac_done),
     ("add-mac-failed", scene_add_mac_failed),
     ("configuration-rules", scene_configuration_rules),
+    ("configuration-sync-review", scene_configuration_sync_review),
     ("configuration-search", scene_configuration_search),
     ("configuration-no-matches", scene_configuration_no_matches),
     ("configuration-toml", scene_configuration_toml),
@@ -143,6 +144,7 @@ pub(crate) struct AppState {
     /// The window's clock at the last poll, which drives the sheet's animations.
     clock: f64,
     pub(crate) provisioning: crate::provisioning_state::ProvisioningState,
+    pub(crate) config_sync: crate::config_sync_view::SyncView,
 }
 
 /// How often the sheet looks for Macs nearby while it lists them.
@@ -604,6 +606,7 @@ fn init() -> AppState {
         provisioning: crate::provisioning_state::ProvisioningState::new(
             crate::provisioning_source::production(),
         ),
+        config_sync: crate::config_sync_view::SyncView::default(),
     }
 }
 
@@ -616,6 +619,7 @@ fn own_build() -> Option<String> {
 
 fn setup(state: &mut AppState, waker: Waker) {
     state.configuration.set_waker(waker.clone());
+    state.config_sync.set_waker(waker.clone());
     state.feed.set_waker(waker.clone());
     state.upgrade_feed.set_waker(waker.clone());
     state.release_feed.set_waker(waker.clone());
@@ -635,6 +639,7 @@ fn setup(state: &mut AppState, waker: Waker) {
 fn poll(state: &mut AppState, now: f64, tx: &mut Tx) -> bool {
     let mut changed = poll_add_mac(state, now, tx);
     changed |= state.configuration.poll();
+    changed |= state.config_sync.poll();
     let shown = match &state.phase {
         Phase::Ready(snapshot) => Some(snapshot),
         Phase::Unavailable { last, .. } => last.as_ref(),
@@ -737,6 +742,12 @@ fn sample_policy() -> Result<Policy, ReadError> {
 fn scene_configuration_rules(state: &mut AppState) {
     scene_loading(state);
     state.configuration.scene(Tab::Rules, sample_policy(), "");
+}
+
+fn scene_configuration_sync_review(state: &mut AppState) {
+    scene_configuration_rules(state);
+    state.configuration.select(Tab::Sync);
+    state.config_sync.scene();
 }
 
 fn scene_configuration_search(state: &mut AppState) {

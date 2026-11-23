@@ -79,6 +79,86 @@ fn add_mac_keeps_configuration_closed_until_the_sheet_is_dismissed() {
     assert!(!visible(&dismissed, "Remote Login is on"));
 }
 
+#[test]
+fn file_sync_approval_sends_the_plan_shown_and_reports_pending_delivery() {
+    if std::env::var_os("ELSECALL_UI_SKIP_GOLDENS").is_some() {
+        return;
+    }
+    use std::io::{BufRead, BufReader, Read, Write};
+    use std::os::unix::net::UnixListener;
+    use std::time::Duration;
+
+    let home = tempfile::Builder::new()
+        .prefix("ec-ui-")
+        .tempdir_in("/tmp")
+        .unwrap();
+    let socket = home
+        .path()
+        .join("Library/Application Support/Elsecall/service.sock");
+    fs::create_dir_all(socket.parent().unwrap()).unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(socket.parent().unwrap(), fs::Permissions::from_mode(0o700)).unwrap();
+    let listener = UnixListener::bind(socket).unwrap();
+    listener.set_nonblocking(true).unwrap();
+    let requests = std::thread::spawn(move || {
+        let fixture: Value = serde_json::from_str(include_str!("fixtures/file-sync.json")).unwrap();
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        for (route, expected, data) in [
+            (
+                "/v1/sync/enable",
+                json!({"path": "~/.config/acme-ios", "confirm": "0123456789abcdef"}),
+                json!({"round": {"complete": false}}),
+            ),
+            ("/v1/sync", json!({}), fixture["status"].clone()),
+        ] {
+            let mut connection = loop {
+                match listener.accept() {
+                    Ok((stream, _)) => break stream,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        assert!(
+                            std::time::Instant::now() < deadline,
+                            "UI did not send {route}"
+                        );
+                        std::thread::sleep(Duration::from_millis(10));
+                    }
+                    Err(error) => panic!("socket accept failed: {error}"),
+                }
+            };
+            connection
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut reader = BufReader::new(&mut connection);
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            assert!(line.starts_with(&format!("POST {route} ")), "{line}");
+            let mut length = 0;
+            loop {
+                line.clear();
+                assert!(reader.read_line(&mut line).unwrap() > 0);
+                if line == "\r\n" {
+                    break;
+                }
+                if let Some(value) = line.to_ascii_lowercase().strip_prefix("content-length:") {
+                    length = value.trim().parse().unwrap();
+                }
+            }
+            let mut body = vec![0; length];
+            reader.read_exact(&mut body).unwrap();
+            assert_eq!(serde_json::from_slice::<Value>(&body).unwrap(), expected);
+            let response = json!({"schema_version": 1, "data": data}).to_string();
+            write!(connection, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response}", response.len()).unwrap();
+        }
+    });
+    let script = home.path().join("input.json");
+    fs::write(&script, r#"[{"t":0.35,"key":"file-sync-enable"}]"#).unwrap();
+    let tree = snapshot(home.path(), &script, "configuration-sync-review", "1.4");
+    requests.join().unwrap();
+    assert!(visible(
+        &tree,
+        "Configuration sync is enabled. Delivery is pending on some members."
+    ));
+}
+
 fn snapshot(home: &Path, script: &Path, scene: &str, at: &str) -> Value {
     let tree = home.join("tree.json");
     let output = Command::new(env!("CARGO_BIN_EXE_elsecall-ui"))

@@ -2189,7 +2189,10 @@ it no longer declares, for example on a member that just became master, is
 **paused**: members keep it as last synced, and `sync status` lists it under the
 master's `paused`, until it is declared there again or disabled.
 
-**Plan, then enable.** On the master:
+**Plan, then enable.** The fleet window's **Configuration → File sync** tab
+can declare a path, review the fleet-wide plan, and approve it. It shows
+secret-looking file names, planned changes and backups, and delivery status.
+The equivalent commands on the master are:
 
 ```sh
 elsecall sync plan                                   # every declared or enabled path
