@@ -115,13 +115,29 @@ fn home_dir() -> Option<PathBuf> {
 }
 
 fn locate_mise() -> command_capture::Located {
+    command_capture::locate(
+        command_capture::path_override("ELSECALL_MISE"),
+        &default_candidates(),
+    )
+}
+
+fn default_candidates() -> Vec<PathBuf> {
     let mut candidates = Vec::new();
     if let Some(home) = home_dir() {
         candidates.push(home.join(".local/bin/mise"));
     }
     candidates.push(PathBuf::from("/opt/homebrew/bin/mise"));
     candidates.push(PathBuf::from("/usr/local/bin/mise"));
-    command_capture::locate(command_capture::path_override("ELSECALL_MISE"), &candidates)
+    candidates
+}
+
+/// Every path the inventory may run mise from: the override, or the usual
+/// places in the order it tries them.
+pub(crate) fn candidates() -> Vec<PathBuf> {
+    match command_capture::path_override("ELSECALL_MISE") {
+        Some(path) => vec![path],
+        None => default_candidates(),
+    }
 }
 
 fn is_mise_variable(name: &OsStr) -> bool {

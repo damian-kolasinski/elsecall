@@ -75,7 +75,7 @@ pub(crate) fn installed() -> Result<Vec<InstalledTool>, InventoryFailure> {
 /// Where Xcodes are installed: `/Applications`, and the store Elsecall's helper
 /// places them in, which the link in `/Applications` may be missing from. An
 /// `ELSECALL_XCODE_APPLICATIONS` override replaces both.
-fn directories() -> Result<Vec<PathBuf>, InventoryFailure> {
+pub(crate) fn directories() -> Result<Vec<PathBuf>, InventoryFailure> {
     let unset = command_capture::path_override("ELSECALL_XCODE_APPLICATIONS").is_none();
     let mut directories = vec![applications_dir()?];
     if unset {

@@ -30,6 +30,9 @@ pub(crate) struct Document {
     pub(crate) unread_members: Vec<(MemberName, Failure)>,
     pub(crate) warnings: Vec<(Manager, InventoryFailure)>,
     pub(crate) members: Vec<(MemberName, Result<MemberPlan, MemberUnavailable>)>,
+    /// The Xcode versions the master has installed, none when it could not
+    /// read them; not printed, the provisioning loop holds steps by them.
+    pub(crate) master_xcodes: Option<Vec<crate::tool_inventory::ToolVersion>>,
 }
 
 impl Document {

@@ -348,7 +348,7 @@ pub async fn add<M: RemoteMac>(
     Ok(AddReport {
         next_step: match readiness {
             Readiness::AwaitingProvisioning => format!(
-                "{member} awaits provisioning. You can run work there with elsecall run --member {member}. After its project tools and configuration are ready, run elsecall fleet ready {member} to enable automatic placement."
+                "{member} awaits provisioning: the master installs the tools the fleet's work pins there and then marks it ready for placed work, by itself. Follow it with elsecall tools provisioning --member {member}; work that names it with elsecall run --member {member} runs there already."
             ),
             Readiness::Ready => format!("{member} is a member and takes placed work."),
         },

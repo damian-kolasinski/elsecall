@@ -40,6 +40,7 @@ mod placement;
 mod pre_run_sync;
 mod preflight;
 mod protocol;
+mod provisioning_loop;
 mod rehearsal_diagnosis;
 mod rehearse;
 mod release_update;

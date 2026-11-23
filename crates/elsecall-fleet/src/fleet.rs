@@ -664,6 +664,15 @@ impl Fleet {
         }
     }
 
+    /// Marks `name` ready on every member, as `elsecall fleet ready` does
+    /// without `--force`: refused while a member is unreachable. Whether every
+    /// other member now records it.
+    pub async fn mark_ready(&self, name: &MemberName) -> Result<bool> {
+        crate::fleet_changes::mark_ready(self, name, false)
+            .await
+            .map(|report| report.complete)
+    }
+
     pub fn own_name(&self, roster: &Roster) -> MemberName {
         roster
             .member_by_key(&self.key.public())

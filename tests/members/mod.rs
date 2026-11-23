@@ -352,6 +352,9 @@ impl TestMember {
             // high-priority benchmarks competes with peer I/O, not the
             // membership behavior these fixtures test.
             .env("ELSECALL_MACHINE_SPEED", "1")
+            // The provisioning loop looks once an hour unless a test follows it,
+            // so it never applies plans behind a test's back.
+            .env("ELSECALL_PROVISIONING_POLL_MS", "3600000")
             .envs(self.environment.iter().map(|(k, v)| (k, v)));
         if self.tailnet {
             command

@@ -383,7 +383,7 @@ async fn a_mac_on_the_tailnet_joins_awaiting_provisioning_and_again_is_repaired(
         json["next_step"]
             .as_str()
             .unwrap()
-            .contains("fleet ready bravo")
+            .contains("tools provisioning --member bravo")
     );
 
     // The master reaches it as a member that takes no placed work.

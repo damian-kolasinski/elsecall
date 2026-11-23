@@ -68,6 +68,19 @@ enum ToolsCommand {
         #[arg(long, conflicts_with = "dry_run")]
         wait: bool,
     },
+    /// On the master, what the provisioning loop knows of each member: whether it
+    /// is in step with the pins, applying, waiting or needs a person
+    Provisioning {
+        /// Only this member
+        #[arg(long, value_name = "NAME")]
+        member: Option<String>,
+    },
+    /// On the master, plan and apply one member's tools now instead of at the
+    /// loop's next look; it is marked ready once nothing is left to install
+    Provision {
+        /// The member, by its fleet name
+        member: String,
+    },
     /// Show what each member's latest apply installed, or is installing
     Applied {
         /// Only this member
@@ -196,6 +209,26 @@ pub async fn run(
             dry_run,
             wait,
         } => crate::apply_cli::apply(paths, member, dry_run, wait).await,
+        ToolsCommand::Provisioning { member } => {
+            let route = match &member {
+                Some(name) => format!(
+                    "{}?member={}",
+                    crate::provisioning_api::ROUTE,
+                    escaped(name)
+                ),
+                None => crate::provisioning_api::ROUTE.to_owned(),
+            };
+            client::get_large(&paths.socket(), &route).await
+        }
+        ToolsCommand::Provision { member } => {
+            client::post(
+                &paths.socket(),
+                crate::provisioning_api::ROUTE,
+                &crate::provisioning_api::ProvisionBody { member },
+                client::Wait::Bounded,
+            )
+            .await
+        }
         ToolsCommand::Applied { member, wait } => {
             crate::apply_cli::applied(paths, member.as_deref(), wait).await
         }

@@ -1073,6 +1073,215 @@ build on:
   master. Add Mac already takes the new Mac's administrator password for its
   own root steps; offering the first there is delivery 6's to wire.
 
+## Delivery 6: keeping members in step
+
+Delivery 6 lands as several pull requests: the automatic loop and automatic
+ready first, then placement by pins, then the window. This section grows with
+each.
+
+### The loop
+
+The master's service follows the fleet by itself: it notices what changed,
+plans the members it affects, and applies their plans, with no command. It is
+the same plan and the same apply as `tools plan` and `tools apply`; nothing in
+the loop installs anything those would not. It runs only on the master, so a
+`fleet move-master` moves it, and it never applies to the master itself: the
+master is what every member is kept in step with, and a pin it cannot satisfy
+is a person's to fix there (`tools apply --member` still installs the master's
+own plan when asked). A machine that has not joined a fleet has no other member,
+so its loop does nothing.
+
+**Noticing is cheap.** Planning reads every member's inventory, which runs mise
+and `simctl`. The loop does not plan to find out whether anything changed: every
+minute it asks each member for its **drift signal** (`GET
+/peer/v1/tools/drift`, enrolled members only, 10 seconds), and computes its own.
+A signal is two SHA-256 hashes, read without running any tool:
+
+- **pins**: the pins of the member's recent workspaces, read as data exactly
+  as `GET /peer/v1/tools/workspace-pins` reads them, without when each last
+  ran; on the master also its global mise config's pins and
+  `fleet-tools.toml`. Every member's plan reads them.
+- **tools**: where its tools live, by name, size and modification time, one
+  level deep, never their content: mise's installs (`installs/` in the data
+  folder mise uses as the inventory runs it, with `MISE_*` removed:
+  `$XDG_DATA_HOME/mise`, else `~/.local/share/mise`), the mise executables
+  the inventory would try, the `Xcode*.app` bundles in `/Applications` (or
+  `ELSECALL_XCODE_APPLICATIONS`) and `/Library/Elsecall/Xcodes`, and the
+  simulator runtimes' `Images` (stamped) and `Volumes` (by name only, since
+  mount points change as they mount) in `/Library/Developer/CoreSimulator`;
+  plus its build and whether its Xcode privileges are ready. Dotfiles and
+  other applications do not count, so an application updating itself is no
+  change. A member's own plan reads its tools, and the master's resolve every
+  member's pins.
+
+The signal also carries whether the member's Xcode privileges are ready and the
+state of its latest apply (`running` or `finished`, and when it started), read
+before the hashes, so an apply that ends meanwhile is seen at the next look. No
+path, pin or version leaves the member in it, only the hashes: the plan reads
+those when it runs. A member whose signal cannot be read (asleep, unreachable,
+on another build) is skipped and asked again next minute; its last pins still
+count. With nothing changed, a minute costs each member a signed request and a
+few directory reads, and the master nothing else.
+
+While an apply runs on any member, the loop looks every five seconds instead,
+so the member whose apply finished is checked, and marked ready, seconds after
+its last step. The minute comes back once no apply runs.
+
+**Acting.** A member's plan depends on every member's pins, the master's tools
+and its own tools. It is due when:
+
+- **any of those changed** since the loop last planned it: a pin changed in a
+  workspace runs started in, on any member, or the master's global config or
+  exceptions; a tool appeared on or disappeared from the member, as when
+  someone removes one by hand; a tool appeared on the master, which an
+  unresolved pin or an Xcode that needed an Apple ID may be waiting for;
+  privileges were installed; the member was upgraded;
+- **it is new**: enrolled since the loop last looked, as Add Mac enrols a Mac;
+- **its latest apply finished**, whoever started it, so the loop checks the
+  result (and marks the member ready, below);
+- **a person or agent asked**: `elsecall tools provision MEMBER` on the master,
+  which the window's Provision button runs;
+- **its last plan, apply or ready mark failed**, after a wait that starts at a
+  minute and doubles up to ten, so a lasting failure costs a plan every ten
+  minutes, not every minute;
+- **six hours passed** since it was last planned, which catches anything the
+  signal cannot see.
+
+A change waits until the signals have stayed the same for one more minute, and
+at most ten minutes in all, so a branch switch or a `mise use` followed by its
+install is planned once, at the end. Asking skips the wait, and an ask that
+arrives while a plan for the member runs is kept for the next. The loop then
+plans the due members at once (one `tools plan` of those members, reading
+every member's workspaces but only their inventories and the master's), and
+for each:
+
+- **an apply still runs there**: nothing; the loop checks again when it finishes;
+- **the plan has steps**: it applies them, as `tools apply --member` would, with
+  the exceptions under "Failed steps" below;
+- **no steps**, while the member's latest apply still shows failures: an empty
+  apply, which ends them, as `tools apply` does;
+- **no steps and nothing standing**: nothing.
+
+A step the member's latest apply installed that the plan still lists (its
+inventory does not see what was installed) is sent again only when something
+changed or someone asks, not after every apply.
+
+Tool plans follow from pins, so the loop applies them without asking anyone.
+Installs are admitted work on each member, as from `tools apply`: a member
+busy with jobs installs later, never at their expense. Nothing is ever
+uninstalled: a version nothing pins any more stays, and only the plan stops
+asking for it.
+
+### Failed steps
+
+A failed step stands as its attention item until the member's next apply, as in
+delivery 4. The loop does not resend it with every apply, and it never retries
+on its own what only a person can fix. It sends a member's plan with each step
+that failed in the member's latest apply either **retried** or **held**: a held
+step is not run, and the member records it failed again with its own stage,
+code and time, so its item stands with the same `since`. The loop sends a
+member nothing at all while what it would send matches the latest apply.
+
+- `xcode_privileges_missing` is held until the member's signal says its
+  privileges are ready, which `elsecall tools privileges install`, a person's
+  step, makes them.
+- `xcode_not_on_master` is held until the master's inventory has that Xcode,
+  which only a person with an Apple ID gives it. Its item is
+  `xcode_apple_id_required`, and the loop leaves it for that person.
+- Any other failure, which retrying can fix (a download that broke, a member
+  that was stopping), is retried once something changed since the apply that
+  failed it finished (either signal), six hours after it failed, or when asked;
+  otherwise it is held. So a tool that fails to build is not rebuilt every few
+  minutes.
+
+`tools provision`, asked by a person or an agent, retries every failure but the
+two held for a person while their cause stands, since retrying those would fail
+at once. `tools apply` is unchanged: it sends the whole plan and retries
+everything, as a repair a person or agent chose.
+
+The member route carries held steps: `POST /peer/v1/tools/apply` takes
+`{steps, held}`, `held` 0 to 256 of `{manager, tool, version, options, stage,
+code, failed_at}`, checked like a step, with `stage` and `code` lowercase words
+of at most 64 characters, and both lists together at most 256 steps naming no
+step twice; the master refuses a plan over that as `plan_too_large` before
+sending it. Held steps go first in the record, already `failed`.
+
+### Ready by itself
+
+A member awaiting provisioning becomes ready once the loop plans it and its plan
+has no steps, no unresolved requests and no unread managers, and every pin was
+read: no member's workspaces went unreported, no workspace failed to read, and
+the master's global config was read. Everything the fleet's pins ask of it is
+then installed, or an exception says it differs on purpose. The loop marks it
+ready as `elsecall fleet ready` does, through a roster change delivered to every
+member, and never forces it:
+
+- **refused**, as while a member is unreachable: the member is planned again
+  after the failure's wait, and marked only if it is still complete, so a
+  member that was asleep and comes back with pins of its own is counted first;
+- **recorded, but not delivered to every member**: the same mark is delivered
+  again after the wait until every member has it.
+
+Nobody runs `fleet ready` by hand, though it still works, for a member a person
+wants to use before it is complete.
+
+A fleet whose workspaces pin nothing makes a new member ready at its first
+plan, a minute or two after Add Mac. A pin the master cannot resolve (an
+unresolved request) keeps every member awaiting provisioning waiting, since
+none of them can be told complete: the plan names it with its hint. Ready is
+only ever set, never taken back: a ready member that later lacks a tool gets it
+installed, and placement by pins (below) keeps work off it meanwhile.
+
+The `awaiting_provisioning` item says so: its action is now `elsecall tools
+provision <member>` on the master, which plans and applies at once, not
+`fleet ready`.
+
+### Following the loop
+
+`elsecall tools provisioning [--member NAME]` on the master prints the loop's
+view (`GET /v1/tools/provisioning`), from memory, without asking any member:
+
+```json
+{
+  "master": "mac-mini",
+  "following": true,
+  "members": [{
+    "member": "macbook-pro",
+    "state": "applying",
+    "readiness": "awaiting_provisioning",
+    "planned_at": "2026-11-20T09:31:12.000Z",
+    "signal_at": "2026-11-20T09:40:02.000Z",
+    "plan": {"steps": 3, "unresolved": 0},
+    "held": [],
+    "error": null
+  }]
+}
+```
+
+`state` is one of:
+
+- `master`: the master itself, which the loop never applies to;
+- `unknown`: not planned yet, as just after the service started;
+- `waiting`: a change was seen and the loop waits for it to settle;
+- `applying`: an apply runs there;
+- `in_step`: its last plan has no steps and nothing unresolved;
+- `needs_person`: its last plan holds steps only a person can unblock (`held`
+  lists them as `{manager, tool, version, code}`);
+- `behind`: its last plan is not complete (steps, unresolved requests, unread
+  managers or pins), or the last plan, apply or ready mark failed (`error`
+  says why, such as `apply_in_progress` or an unreadable inventory);
+- `unreachable`: its signal could not be read (`error`).
+
+`plan` is null before the first plan. On any other member the route is
+`not_master`, as `tools plan` is. `elsecall tools provision MEMBER` (`POST
+/v1/tools/provisioning` with `{member}`) marks the member due now and returns
+at once with its entry; agents may run it, since it applies only a tool plan.
+Naming the master is `invalid_request`.
+
+The loop writes one service log line per plan and per action it takes,
+`provisioning_planned`, `provisioning_applied` and `provisioning_ready`, naming
+members and counts, never a path or version.
+
 ## Open questions for later deliveries
 
 - **Exceptions through config sync.** `fleet-tools.toml` lives on the master

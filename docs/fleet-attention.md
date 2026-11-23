@@ -15,12 +15,12 @@ categories to it.
   "category": "awaiting_provisioning",
   "subject": null,
   "code": "member_awaiting_provisioning",
-  "message": "macbook-pro is awaiting provisioning: placement gives it no work until it is marked ready. Work required on it by name still runs there.",
-  "hint": "Install the tools the fleet's work pins on macbook-pro, then run elsecall fleet ready macbook-pro on mac-mini.",
+  "message": "macbook-pro is awaiting provisioning: placement gives it no work until the tools the fleet's work pins are installed there. Work required on it by name still runs there.",
+  "hint": "The master, mac-mini, installs them and marks macbook-pro ready by itself; elsecall tools provisioning --member macbook-pro on mac-mini shows how far it got and what waits for a person.",
   "since": null,
   "actions": [{
-    "summary": "Mark macbook-pro ready once its tools are installed, so placement may give it work.",
-    "command": ["elsecall", "fleet", "ready", "macbook-pro"],
+    "summary": "Plan and install macbook-pro's tools now, instead of at the loop's next look; it becomes ready once nothing is left to install.",
+    "command": ["elsecall", "tools", "provision", "macbook-pro"],
     "run_on": "mac-mini",
     "person_only": false
   }]
@@ -61,7 +61,7 @@ category it does not know but never accepts it automatically (this build reads o
 
 | Category | Code | When | Action |
 |---|---|---|---|
-| `awaiting_provisioning` | `member_awaiting_provisioning` | The member was enrolled before its tools were installed, as Add Mac does; placement leaves it out. | `elsecall fleet ready <member>` on the master, once its tools are installed. |
+| `awaiting_provisioning` | `member_awaiting_provisioning` | The member was enrolled before its tools were installed, as Add Mac does; placement leaves it out. The master's provisioning loop installs its plan and marks it ready by itself ([fleet provisioning](fleet-provisioning.md), "Delivery 6"). | `elsecall tools provision <member>` on the master plans and applies it now. |
 | `version_skew` | `version_skew` | The member runs another build than the master; work between them is refused. | `elsecall fleet upgrade --member <member>` on the master. When the member runs a later version than the master, this installs an older build on it, so the action is `person_only` and the hint offers updating the master first. |
 | `missing_tool_pin` | `missing_tool_pin` | A run this member placed failed on `member` because a tool it called (the `subject`) is missing there, and nothing pins it. One item per member and tool, from the latest such run; `since` is when that run ended. | Pin the tool in the file the hint names: `elsecall tools pins <workspace>` on the member that placed the run shows the pin. Second, `person_only` and not recommended: install it on that member alone. |
 | `secret_consent` | `secret_consent` | A change to files in a synced path (the `subject`) that look like secrets waits on the master, `member`, until a person confirms it. One item per path; the message names the files, never their content. | `elsecall sync consent <path> --confirm <id>` on the master syncs this change; the second action adds `--always`, so later changes to those files sync unasked. Both are `person_only`, and the CLI refuses `--confirm` without a terminal. |
