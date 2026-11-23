@@ -104,6 +104,9 @@ pub struct Health {
     pub build: Option<crate::build_identity::BuildId>,
     pub pid: u32,
     pub uptime_seconds: u64,
+    /// Effective soft descriptor limit of the service, when reported.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub open_file_limit: Option<u64>,
 }
 
 pub struct Inspection {
@@ -124,6 +127,7 @@ impl Inspection {
             build: crate::build_identity::this_build().ok().map(|b| b.build),
             pid: std::process::id(),
             uptime_seconds: self.started.elapsed().as_secs(),
+            open_file_limit: None,
         }
     }
     pub fn machine(&self) -> Result<Machine> {

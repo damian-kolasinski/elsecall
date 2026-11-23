@@ -1,3 +1,4 @@
+use super::open_files;
 use elsecall_contract::failure::{Failure, Result};
 use elsecall_host::{
     local_access::user_id,
@@ -144,6 +145,11 @@ fn configuration(paths: &Paths, session: Session) -> Result<Vec<u8>> {
     // and the commands it runs for other members, which inherit its class, would
     // run below the work they coordinate and stall behind its disk traffic.
     values.insert("ProcessType".into(), "Interactive".into());
+    let resources = plist::Dictionary::from_iter([(
+        "NumberOfFiles",
+        plist::Value::from(open_files::SERVICE_LIMIT),
+    )]);
+    values.insert("SoftResourceLimits".into(), resources.into());
     values.insert("Umask".into(), 0o077i64.into());
     values.insert("StandardOutPath".into(), "/dev/null".into());
     values.insert("StandardErrorPath".into(), "/dev/null".into());
@@ -185,6 +191,8 @@ mod tests {
         assert_eq!(config["RunAtLoad"].as_boolean(), Some(true));
         assert_eq!(config["KeepAlive"].as_boolean(), Some(true));
         assert_eq!(config["ProcessType"].as_string(), Some("Interactive"));
+        let limits = config["SoftResourceLimits"].as_dictionary().unwrap();
+        assert_eq!(limits["NumberOfFiles"].as_unsigned_integer(), Some(65_536));
         assert_eq!(config["Umask"].as_unsigned_integer(), Some(0o077));
         let args = config["ProgramArguments"].as_array().unwrap();
         assert_eq!(args[0].as_string(), paths.executable().to_str());

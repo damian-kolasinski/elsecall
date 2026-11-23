@@ -662,6 +662,7 @@ async fn run(cli: Cli) -> Result<bool> {
             command: ServiceCommand::StartAtBoot,
         } => output(elsecall::boot_start_cli::run(&paths, manager)?),
         Command::Serve => {
+            elsecall_macos::macos::open_files::raise_service_limit();
             // After an upgrade, the stubs an older build wrote point at this one.
             elsecall_lifecycle::agent_skill::refresh_if_installed(&paths);
             let machine: Arc<dyn elsecall_contract::inspection::MachineInspector> =
