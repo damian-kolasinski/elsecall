@@ -12,6 +12,7 @@ use rune_kit::{Button, ButtonVariant, Kit, Spinner};
 
 pub(super) fn adding(
     name: &str,
+    xcode_privileges: bool,
     current: Option<Step>,
     action: Option<&Action>,
     clock: f64,
@@ -19,7 +20,10 @@ pub(super) fn adding(
     l: &Look,
 ) -> El {
     let mut steps = col().w(250.0).gap(theme::SPACE_2).key("add-mac-steps");
-    for step in STEPS {
+    for step in STEPS
+        .into_iter()
+        .filter(|step| xcode_privileges || *step != Step::Privileges)
+    {
         let state = step_state(step, current);
         let mark = match state {
             StepState::Done => icon(&CHECK, 16.0).color(l.good),
@@ -60,6 +64,8 @@ pub(super) fn adding(
                     "If Git is missing, Elsecall installs Apple's Command Line Tools. The download may take several minutes."
                 } else if current == Some(Step::Configuration) {
                     "Elsecall is applying the fleet's configuration. The new Mac may restart its Elsecall service."
+                } else if current == Some(Step::Privileges) {
+                    "Elsecall installs its Xcode helper and a sudoers rule for it alone with the password you gave."
                 } else {
                     "If Tailscale needs your approval, its page opens in your browser and this sheet shows what to click."
                 },

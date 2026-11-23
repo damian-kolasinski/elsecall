@@ -423,6 +423,8 @@ impl AppState {
                 }) {
                     self.load_member = None;
                 }
+                self.add_mac
+                    .know_members(snapshot.members.iter().map(|m| m.name.clone()));
                 self.phase = Phase::Ready(snapshot);
             }
             Err(failure) => {

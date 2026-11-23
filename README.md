@@ -295,7 +295,7 @@ its executable, so two machines with the same build ID run byte-identical builds
 | `elsecall copies` | The copies of other members' workspaces this machine holds, their object stores and sizes, free space and recent removals (see "Housekeeping of copies") |
 | `elsecall copies prune [--dry-run]` | Run a housekeeping pass now, or report what it would remove |
 | `elsecall fleet identity` | This member's name, public key, tailnet endpoints and member code |
-| `elsecall fleet add <host> --user <account> [--approval-wait 10m]` | On the master: add a Mac over SSH, with the account's password on standard input (see "Adding a Mac") |
+| `elsecall fleet add <host> --user <account> [--approval-wait 10m] [--xcode-privileges]` | On the master: add a Mac over SSH, with the account's password on standard input; `--xcode-privileges` also lets Elsecall install Xcode there (see "Adding a Mac") |
 | `elsecall fleet nearby [--browse 2s] [--exclude-this-mac]` | The Macs on the local network, whether Remote Login is on, and which are members (see "Finding Macs nearby") |
 | `elsecall fleet enroll <code> [--awaiting-provisioning]` / `join <code>` | Enrol another machine (on a member), then join (on that machine) |
 | `elsecall fleet ready <name>` | Mark a member awaiting provisioning ready, so placement may give it work |
@@ -1772,7 +1772,11 @@ the Mac's host key for the rest of the command, it:
 6. enrolls the Mac awaiting provisioning, verifies that the master can reach it,
    and syncs the fleet's configuration to it. With `--keep-awake-with-lid-closed`,
    it also requires the MacBook to be on AC power and disables system sleep after
-   the other setup steps finish. This setting applies on battery too.
+   the other setup steps finish. This setting applies on battery too. With
+   `--xcode-privileges`, it last installs Elsecall's Xcode helper and its
+   sudoers rule on the Mac with the same password, as `elsecall tools privileges
+   install` there would, so the master can copy Xcode there later
+   (`member_xcode_privileges_failed` when that alone fails: the Mac has joined).
 
 Progress lines go to standard error. The result names the `member`, the Mac's `model`,
 `serial_number`, `macos_version` and `ssh_host_key` fingerprint (to compare with

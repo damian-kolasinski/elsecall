@@ -105,6 +105,17 @@ async fn the_adapter_reads_installs_and_authorizes_on_a_real_mac() {
     let status = mac.elsecall(&["status"]).await.unwrap();
     assert_eq!(status["status"], "ready", "{status}");
 
+    // Xcode's privileges, as Add Mac installs them: the master's script
+    // through the session's sudo, then the Mac's own Elsecall reads them.
+    let script = elsecall_tools::privileges_cli::install_script(account).unwrap();
+    mac.install_xcode_privileges(&script).await.unwrap();
+    let privileges = mac.elsecall(&["tools", "privileges"]).await.unwrap();
+    assert_eq!(privileges["ready"], true, "{privileges}");
+    assert_eq!(privileges["helper"], "current", "{privileges}");
+    mac.install_xcode_privileges(&script)
+        .await
+        .expect("installing them again changes nothing");
+
     // The boot starter, installed once; the Mac's doctor then finds it.
     assert!(facts.uid > 0);
     let agent = elsecall_host::paths::Paths::for_home(Path::new(&facts.home))

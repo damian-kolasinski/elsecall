@@ -52,6 +52,11 @@ enum FleetCommand {
         /// This setting also applies on battery.
         #[arg(long)]
         keep_awake_with_lid_closed: bool,
+        /// Once it joined, let Elsecall place, select and license Xcode on the Mac:
+        /// installs its helper and a sudoers rule for it alone with the same password,
+        /// as `elsecall tools privileges install` there does
+        #[arg(long)]
+        xcode_privileges: bool,
     },
     /// List the Macs on the local network, whether Remote Login is on, and which are members
     Nearby {
@@ -152,6 +157,7 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
             progress,
             ssh_host_key,
             keep_awake_with_lid_closed,
+            xcode_privileges,
         }) => {
             return crate::add_mac_cli::run(
                 paths,
@@ -160,7 +166,10 @@ pub async fn run(paths: &Paths, args: FleetArgs) -> Result<(Value, bool)> {
                 approval_wait,
                 progress,
                 ssh_host_key,
-                keep_awake_with_lid_closed,
+                crate::add_mac_cli::Extras {
+                    keep_awake_with_lid_closed,
+                    xcode_privileges,
+                },
             )
             .await;
         }
