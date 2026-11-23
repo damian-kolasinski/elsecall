@@ -645,7 +645,9 @@ pub async fn serve_with_updates(
 async fn health(
     State(inspection): State<Arc<Inspection>>,
 ) -> Json<api::Response<elsecall_contract::inspection::Health>> {
-    Json(api::Response::new(inspection.health()))
+    let mut health = inspection.health();
+    health.open_file_limit = elsecall_macos::macos::open_files::soft_limit();
+    Json(api::Response::new(health))
 }
 async fn machine(State(inspection): State<Arc<Inspection>>) -> Response {
     match tokio::task::spawn_blocking(move || inspection.machine()).await {

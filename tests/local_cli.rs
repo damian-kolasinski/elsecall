@@ -42,7 +42,7 @@ fn free_port() -> u16 {
 }
 fn start(home: &std::path::Path) -> Service {
     let service = Service(
-        crate::processes::command(env!("CARGO_BIN_EXE_elsecall"))
+        crate::processes::command("/bin/sh")
             .env("HOME", home)
             .current_dir(home)
             // Loopback stands in for the tailnet so tests never bind real addresses.
@@ -50,7 +50,12 @@ fn start(home: &std::path::Path) -> Service {
             .env("ELSECALL_TAILNET_ADDRESSES", "127.0.0.1")
             .env("ELSECALL_FLEET_PORT", free_port().to_string())
             .env("ELSECALL_MACHINE_SPEED", "1")
-            .arg("serve")
+            .args([
+                "-c",
+                "ulimit -Sn 256 && exec \"$1\" serve",
+                "sh",
+                env!("CARGO_BIN_EXE_elsecall"),
+            ])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
@@ -82,6 +87,7 @@ fn real_cli_and_service_inspect_restart_after_crash_and_report_unavailability() 
     assert_eq!(health["schema_version"], 1);
     assert_eq!(health["data"]["status"], "ready");
     assert_eq!(health["data"]["pid"], service.0.id());
+    assert!(health["data"]["open_file_limit"].as_u64().unwrap() > 256);
     let result = cli(home.path(), &["machine"]);
     assert!(result.status.success());
     let machine = json(&result);

@@ -9,6 +9,7 @@ pub mod launch_agent;
 mod launch_daemon;
 pub mod local_host_name;
 pub mod machine;
+pub mod open_files;
 pub mod process_sampler;
 pub mod sudo;
 mod sysctl;

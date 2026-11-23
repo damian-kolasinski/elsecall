@@ -191,7 +191,9 @@ export PATH="$HOME/.local/bin:$PATH"
 A per-user LaunchAgent starts the service immediately, keeps it alive and restarts it
 after a crash. Its `ProcessType` is `Interactive`, so launchd does not throttle the
 service's CPU and disk I/O below the user's own processes; commands the service runs
-for other members inherit that class. A fleet upgrade installs through the build it
+for other members inherit that class. The service and its placed commands get a
+65,536-file soft limit within the machine's hard limits. `elsecall doctor` reports
+the running service's effective limit as `service.open_file_limit`. A fleet upgrade installs through the build it
 replaces, so a LaunchAgent change reaches a member only with its next install:
 `elsecall doctor` reports `launch_agent_current: false` until `elsecall install` runs
 there. It runs in one of two **sessions**:
