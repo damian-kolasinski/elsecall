@@ -78,12 +78,12 @@ fn hold_limit_passed(origin: &Origin) -> Failure {
         Origin::Tree { .. } => Failure::new(
             "fleet_busy",
             "The command could not start on the member within its hold limit, which includes the workspace sync.",
-            "Retry: the copy stays warm, so the next sync moves only what changed. Or pass a longer --hold-limit.",
+            "Retry: the copy stays warm, so the next sync moves only what changed. Interactive runs can also pass a longer --hold-limit.",
         ),
         Origin::Outside(_) => Failure::new(
             "fleet_busy",
             "The command could not start on the member within its hold limit.",
-            "Retry, or pass a longer --hold-limit.",
+            "Retry. Interactive runs can also pass a longer --hold-limit.",
         ),
     }
 }

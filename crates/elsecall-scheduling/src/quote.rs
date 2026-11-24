@@ -33,9 +33,21 @@ pub struct HeldWork {
     pub expected_remaining_ms: Option<u64>,
 }
 
+/// Service order on a member. Earlier variants take precedence.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum QueuePriority {
+    Promoted,
+    #[default]
+    Interactive,
+    Deferrable,
+}
+
 /// A request waiting in a member's own queue, in order.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WaitingWork {
+    #[serde(default)]
+    pub priority: QueuePriority,
     pub size: Cores,
     pub expected_run_ms: Option<u64>,
 }

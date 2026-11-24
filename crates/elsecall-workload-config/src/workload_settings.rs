@@ -491,14 +491,6 @@ fn parse_rule(number: usize, rule: RawRule) -> std::result::Result<LabelRule, Pr
             )),
         })
         .transpose()?;
-    if placement == Some(RulePlacement::Placeable)
-        && matches!(urgency, Some(RuleUrgency::Deferrable { .. }))
-    {
-        return Err(problem(
-            "deferrable work is pinned only, so it cannot be placeable.",
-            "Remove placement = \"placeable\" or the deferrable urgency",
-        ));
-    }
     Ok(LabelRule {
         number,
         pattern: rule.pattern,
@@ -766,11 +758,6 @@ mod tests {
                 "placement = \"anywhere\"",
                 "is not pinned or placeable",
                 "Set placement",
-            ),
-            (
-                "placement = \"placeable\"\nurgency = \"deferrable\"\ndeadline = \"30m\"\nat_deadline = \"skip\"",
-                "pinned only",
-                "Remove placement",
             ),
         ] {
             let text = format!("[[labels]]\nmatch = \"a\"\n[[labels]]\nmatch = \"x *\"\n{rule}\n");

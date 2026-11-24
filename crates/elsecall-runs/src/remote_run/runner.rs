@@ -196,12 +196,12 @@ async fn execute(
         Workplace::Copy { .. } => Failure::new(
             "fleet_busy",
             "The command could not start within its hold limit; the workspace sync took too long.",
-            "Retry: the copy is warm now, so the next sync is faster. Or pass a longer --hold-limit.",
+            "Retry: the copy is warm now, so the next sync is faster. Interactive runs can also pass a longer --hold-limit.",
         ),
         Workplace::Home(_) => Failure::new(
             "fleet_busy",
             "The command could not start within its hold limit.",
-            "Retry, or pass a longer --hold-limit.",
+            "Retry. Interactive runs can also pass a longer --hold-limit.",
         ),
     };
     // The hold limit bounds everything up to the start, so a caller cannot hold

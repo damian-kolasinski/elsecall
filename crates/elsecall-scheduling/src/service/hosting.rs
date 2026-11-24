@@ -1,7 +1,6 @@
 //! Runs another member placed here. The member admits a placed run at once or
-//! refuses it, so the request can wait on its master; it refuses while its own
-//! interactive requests wait. Its own deferrable work, which waits behind
-//! interactive work, never keeps placed work out. An admitted run keeps its
+//! refuses it, so the request can wait on its master; it gives precedence to local requests
+//! of equal or higher urgency. An admitted run keeps its
 //! capacity until its runner ends it.
 use super::{Entry, OnHandover, Phase, Scheduler};
 use crate::{
@@ -104,7 +103,9 @@ impl Scheduler {
         if book.stopping
             || book.update_held > 0
             || book.hosting_held > 0
-            || queued.interactive > 0
+            || book
+                .admission
+                .has_precedence_over(offer.deferred.map(|d| d.priority()).unwrap_or_default())
             || !self.gate(&book).admits()
             || size > book.admission.free()
         {
@@ -139,9 +140,12 @@ impl Scheduler {
                 workload: offer.workload.clone(),
                 plan_observation: None,
                 placement: Placement::Member(member.clone()),
-                urgency: Urgency::Interactive {
-                    hold_limit_ms: Some(offer.start_within_ms),
-                },
+                urgency: offer.deferred.map_or(
+                    Urgency::Interactive {
+                        hold_limit_ms: Some(offer.start_within_ms),
+                    },
+                    |d| d.urgency(),
+                ),
                 size,
                 size_basis: Some(basis),
                 calling_member: from.into(),
@@ -163,7 +167,7 @@ impl Scheduler {
                 run_ms: None,
                 run_phases: None,
                 cpu_ms: None,
-                hold_limit: Some(HoldLimitRecord {
+                hold_limit: offer.deferred.is_none().then_some(HoldLimitRecord {
                     seconds: Duration::from_millis(offer.start_within_ms),
                     basis: HoldBasis::Requested,
                     expected_run_seconds: None,
@@ -247,6 +251,7 @@ impl Scheduler {
             .admission
             .waiting()
             .map(|(id, size)| WaitingWork {
+                priority: book.entries[id].queue_order().0,
                 size,
                 expected_run_ms: book
                     .entries

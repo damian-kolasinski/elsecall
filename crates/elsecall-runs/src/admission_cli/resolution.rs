@@ -158,15 +158,6 @@ pub fn resolve(layers: Layers<'_>, now: Timestamp) -> Result<Resolved> {
         (Kind::Run, None, None) => (Placement::Pinned, Source::Default),
     };
     settings.placement = placement_source;
-    if let (Urgency::Deferrable { .. }, Placement::Placeable, Source::Rule, Some(rule)) =
-        (&urgency, &placement, placement_source, rule)
-    {
-        return Err(invalid(format!(
-            "Deferrable work is pinned only, and {} makes this label placeable; add --pinned.",
-            named(rule)
-        )));
-    }
-
     let request = AdmissionRequest {
         kind,
         holder_pid,
@@ -511,7 +502,7 @@ mod tests {
             "{}",
             hold.message
         );
-        let placeable = failure(Case {
+        let placeable = resolve_case(Case {
             cli: Declared {
                 urgency: Some(UrgencyChoice::Deferrable),
                 deadline: Some(now().after(Duration::from_secs(60))),
@@ -519,12 +510,9 @@ mod tests {
                 ..label("build App")
             },
             ..Default::default()
-        });
-        assert!(
-            placeable.message.contains("rule 1") && placeable.message.contains("--pinned"),
-            "{}",
-            placeable.message
-        );
+        })
+        .unwrap();
+        assert_eq!(placeable.request.placement, Placement::Placeable);
         let incomplete = failure(Case {
             cli: Declared {
                 urgency: Some(UrgencyChoice::Deferrable),

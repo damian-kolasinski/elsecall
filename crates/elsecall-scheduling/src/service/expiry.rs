@@ -50,6 +50,9 @@ impl Scheduler {
         {
             return;
         }
+        if self.expire_deferred(book, id) {
+            return;
+        }
         match book.entries.get(id) {
             Some(Entry {
                 phase: Phase::Placing(_),
@@ -63,7 +66,6 @@ impl Scheduler {
             _ => (),
         }
         let Some(Entry {
-            record,
             phase: Phase::Waiting(waiting),
             ..
         }) = book.entries.get_mut(id)
@@ -73,31 +75,62 @@ impl Scheduler {
         if waiting.expires_at.is_none() {
             return;
         }
-        match record.urgency {
-            Urgency::Deferrable {
-                at_deadline: AtDeadline::Start,
-                ..
-            } => {
-                waiting.expires_at = None;
-                book.admission.promote(id);
-                self.pump(book);
-            }
-            Urgency::Deferrable {
-                at_deadline: AtDeadline::Skip,
-                ..
-            } => {
+        let failure = self.busy(book, id);
+        self.fail(book, id, Verdict::FleetBusy, failure);
+    }
+
+    /// Returns true for a deferrable request whose deadline is already
+    /// dealt with, including when a timer races with a completed promotion.
+    fn expire_deferred(&self, book: &mut Book, id: &RunId) -> bool {
+        let Some(entry) = book.entries.get_mut(id) else {
+            return false;
+        };
+        if matches!(entry.phase, Phase::Active { .. }) {
+            return false;
+        }
+        let Urgency::Deferrable { at_deadline, .. } = entry.record.urgency else {
+            return false;
+        };
+        if entry.waiting_deadline().is_none() {
+            return true;
+        }
+        match at_deadline {
+            AtDeadline::Skip => {
                 let failure = Failure::new(
                     "deadline_skipped",
-                    "The deadline passed before the member had room, and the request chose to skip.",
-                    "Nothing ran. Request again later, or use --at-deadline start.",
+                    "The deadline passed before the request was admitted.",
+                    "Request again later, or use --at-deadline start.",
                 );
-                self.fail(book, id, Verdict::DeadlineSkipped, failure);
+                if entry.auto.is_some() || matches!(entry.phase, Phase::Placing(_)) {
+                    self.fail_waiting_placement(book, id, Verdict::DeadlineSkipped, failure);
+                } else {
+                    self.fail(book, id, Verdict::DeadlineSkipped, failure);
+                }
             }
-            Urgency::Interactive { .. } => {
-                let failure = self.busy(book, id);
-                self.fail(book, id, Verdict::FleetBusy, failure);
+            AtDeadline::Start => {
+                match &mut entry.phase {
+                    Phase::Placing(p) => {
+                        p.expires_at = None;
+                        if let Some(timer) = p.timer.take() {
+                            timer.abort();
+                        }
+                        if let Some(target) = p.target.clone() {
+                            Self::order_offers(book, &target);
+                        }
+                    }
+                    Phase::Waiting(w) => {
+                        w.expires_at = None;
+                        if let Some(timer) = w.timer.take() {
+                            timer.abort();
+                        }
+                        book.admission.promote(id);
+                    }
+                    Phase::Active { .. } => unreachable!(),
+                }
+                self.pump(book);
             }
         }
+        true
     }
 
     /// Expires waiting work on the wall clock. Timers measure time the machine is
@@ -111,7 +144,7 @@ impl Scheduler {
                     expires_at: Some(at),
                     ..
                 }) => *at <= now,
-                Phase::Placing(placing) => placing.expires_at <= now,
+                Phase::Placing(placing) => placing.expires_at.is_some_and(|at| at <= now),
                 _ => false,
             })
             .map(|(id, e)| (e.record.requested_at, id.clone()))

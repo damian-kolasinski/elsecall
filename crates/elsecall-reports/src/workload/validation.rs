@@ -68,6 +68,7 @@ pub fn page(mut page: Page, window: Window, before: Option<&Cursor>, member: &st
             })
             || matches!(&r.outcome,Some(TraceOutcome::Failed{code}) if !is_code(code))
             || matches!(&r.placement_request,Placement::Member(m) if !name(m))
+            || f.kind == elsecall_contract::scheduling_model::request::Kind::Lease && r.placement_request != Placement::Pinned
             || r.hold_limit.is_some_and(|h| h.seconds > MAXIMUM_HOLD_LIMIT)
             || r.workspace.as_ref().is_some_and(|w| {
                 [&w.workspace, &w.repository]
@@ -90,9 +91,8 @@ pub fn page(mut page: Page, window: Window, before: Option<&Cursor>, member: &st
             return Err(bad());
         }
         if let Urgency::Deferrable { deadline, .. } = r.urgency
-            && (deadline.since(f.requested_at)
+            && deadline.since(f.requested_at)
                 > elsecall_contract::scheduling_model::request::MAXIMUM_DEADLINE
-                || r.placement_request != Placement::Pinned)
         {
             return Err(bad());
         }

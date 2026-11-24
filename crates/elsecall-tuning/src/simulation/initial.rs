@@ -483,6 +483,7 @@ mod tests {
                 root: "/virtual/new".into(),
                 common_dir: "/virtual/new/.git".into(),
             }),
+            deferred: None,
             start_within_ms: 0,
             size_basis: None,
             expected_run_ms: None,

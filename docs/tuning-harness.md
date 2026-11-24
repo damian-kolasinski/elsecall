@@ -289,7 +289,7 @@ history. **Current is recommended for tuning workloads**: supply
 `--placement current --rules PATH` with the consumer's current `.elsecall.toml`.
 Elsecall reads and validates that file, at most 64 KiB, and never modifies it.
 It uses the first matching label rule's placement for each source request; no
-matching placement means the consumer default, pinned. Leases and deferrable work
+matching placement means the consumer default, pinned. Leases
 remain pinned under the admission contract. Internal and already-synthetic records
 retain their placement. A supplied rules file with historical mode, or current
 mode without a file, is an error.

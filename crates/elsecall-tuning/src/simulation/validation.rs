@@ -314,9 +314,7 @@ pub(super) fn trace(t: &Trace) -> Result<()> {
                 return Err(bad("interactive urgency or hold limit is inconsistent"));
             }
         } else if let Urgency::Deferrable { deadline, .. } = r.urgency
-            && (!f.deferrable
-                || r.placement_request != Placement::Pinned
-                || deadline.since(f.requested_at) > MAXIMUM_DEADLINE)
+            && (!f.deferrable || deadline.since(f.requested_at) > MAXIMUM_DEADLINE)
         {
             return Err(bad("deferrable urgency is inconsistent"));
         }

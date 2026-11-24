@@ -73,13 +73,11 @@ impl Admission {
     pub(crate) fn waiting(&self) -> impl Iterator<Item = (&RunId, Cores)> {
         self.queues().map(|w| (&w.id, w.size))
     }
-    /// Waiting requests that start before new interactive work, in order:
-    /// deferrable work waits behind it.
-    pub(crate) fn waiting_interactive(&self) -> impl Iterator<Item = (&RunId, Cores)> {
-        self.promoted
-            .iter()
-            .chain(&self.interactive)
-            .map(|w| (&w.id, w.size))
+    pub(crate) fn has_precedence_over(&self, incoming: crate::quote::QueuePriority) -> bool {
+        use crate::quote::QueuePriority;
+        !self.promoted.is_empty()
+            || incoming >= QueuePriority::Interactive && !self.interactive.is_empty()
+            || incoming == QueuePriority::Deferrable && !self.deferrable.is_empty()
     }
     pub(crate) fn is_live(&self, id: &RunId) -> bool {
         self.root_of.contains_key(id)

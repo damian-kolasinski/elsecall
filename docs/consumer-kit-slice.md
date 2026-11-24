@@ -27,8 +27,7 @@ tests, and keep per-operation sizes and deadlines. Elsecall now does each of the
 - **Modules.**
   - `consumer_configuration` parses label rules into types that cannot hold a
     contradiction: `RuleUrgency::Interactive { hold_limit }` or
-    `Deferrable { deadline, at_deadline }`, with both deadline fields required, and
-    a deferrable rule never placeable. Errors carry the rule's number and pattern
+    `Deferrable { deadline, at_deadline }`, with both deadline fields required. Errors carry the rule's number and pattern
     and a specific fix, which becomes the failure's hint.
   - `admission_cli::environment` reads `ELSECALL`, `ELSECALL_HOLD_LIMIT` and
     `ELSECALL_WHEN_UNAVAILABLE` once, as untrusted input, never echoing values.

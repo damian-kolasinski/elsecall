@@ -469,7 +469,11 @@ hold limit.
 Runs default to pinned, unless the label rule sets `placement = "placeable"`;
 `--pinned` overrides the rule. `--placeable` (or such a rule) lets the master choose
 the member (see "Placement"); `--member NAME` requires one (see "Running on another
-member"). Deferrable runs are pinned only.
+member"). Deferrable runs can use either placement option. The master tracks one deadline across member changes. At the deadline, `skip` ends a waiting run and `start` raises its priority until a member has room.
+
+For deferrable work, placement prefers a member that can admit it now. The
+deadline applies until admission. An admitted remote run has up to 24 hours to
+finish workspace transfer and start its command.
 
 If `elsecall` itself is killed with SIGKILL while the command runs, the command
 keeps its capacity until it exits.
@@ -1098,7 +1102,7 @@ at_deadline = "start"     # or "skip"
 
 **Label rules.** A rule may set `size`, `urgency`, `hold_limit` (interactive only),
 `deadline` and `at_deadline` (deferrable only, both required) and `placement`.
-A deferrable rule cannot be placeable. Rules apply to `run` and `lease acquire`;
+Rules apply to `run` and `lease acquire`;
 a lease is always pinned, so `placement` does not apply to it. A request without
 `--label` matches no rule. `elsecall explain RUN_ID` shows the applied rule and
 where each property came from, as `settings`:
@@ -1410,7 +1414,7 @@ For tuning workloads, `--placement current --rules PATH` reads the placement
 component of the personal policy selected for the current directory and applies
 it to replayed labels, so older pinned builds/tests can exercise remote placement.
 It never changes the personal configuration file, measured work, sizes or urgency.
-Leases and deferrable work remain pinned. All four commands support this mode;
+Leases remain pinned. All four commands support this mode;
 `historical` remains the default for fidelity against history. Mode, the selected
 policy's digest and placement counts are reported. Selecting different directory
 policies changes the digest without exposing directory paths.

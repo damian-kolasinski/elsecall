@@ -15,6 +15,37 @@ use std::collections::BTreeMap;
 
 pub use elsecall_contract::scheduling_model::request::WorkspaceRef;
 
+/// The master owns the queue and applies its deadline once. The worker uses
+/// that decision even when its own clock differs from the master's.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeferredOffer {
+    SkipAt(Timestamp),
+    StartAt(Timestamp),
+    Promoted(Timestamp),
+}
+
+impl DeferredOffer {
+    pub(crate) fn priority(self) -> crate::quote::QueuePriority {
+        match self {
+            Self::Promoted(_) => crate::quote::QueuePriority::Promoted,
+            Self::SkipAt(_) | Self::StartAt(_) => crate::quote::QueuePriority::Deferrable,
+        }
+    }
+
+    pub(crate) fn urgency(self) -> elsecall_contract::scheduling_model::request::Urgency {
+        use elsecall_contract::scheduling_model::request::{AtDeadline, Urgency};
+        let (deadline, at_deadline) = match self {
+            Self::SkipAt(at) => (at, AtDeadline::Skip),
+            Self::StartAt(at) | Self::Promoted(at) => (at, AtDeadline::Start),
+        };
+        Urgency::Deferrable {
+            deadline,
+            at_deadline,
+        }
+    }
+}
+
 /// What the master asks a member to admit.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -32,6 +63,8 @@ pub struct PlacementOffer {
     pub workspace: Option<WorkspaceRef>,
     /// How long the request may still take to start, sync included.
     pub start_within_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deferred: Option<DeferredOffer>,
     /// Where the size came from; a learned size shrinks to fit the member.
     #[serde(default)]
     pub size_basis: Option<SizeBasis>,
