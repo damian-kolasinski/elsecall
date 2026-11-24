@@ -1394,7 +1394,7 @@ every member is a later change.
 
 - **Preferred.** The members lacking something are left out of the first
   scoring, each named in the reason: `bravo was left out: it lacks bun 1.3.5,
-  which the workspace pins; the master is installing them.` The decision's
+  which the workspace pins.` The decision's
   `scoring.passed_over` lists them with that reason, apart from `unreachable`,
   which keeps meaning members placement could not ask. The calling member is
   never left out: the work comes from there, with its own tools. The usual
@@ -1417,6 +1417,16 @@ lacking a tool only where it would otherwise wait past its hold limit or fail
 `fleet_busy`, and the warning names what to expect. `elsecall replay` scores
 recorded decisions again with the candidates they recorded, so a what-if under
 other parameters does not bring passed-over members back in.
+
+In `elsecall fleet`, a member's optional `pin_exclusions` summarizes the placement
+decisions that passed it over for missing tools among this caller's latest 500
+requests. It includes the count (`decisions`), the first and last scoring times
+(`first_at`, `last_at`), and the last decision's reason and run ID
+(`last_reason`, `last_run_id`). Use `elsecall explain <last_run_id>` on the
+caller to inspect that decision. Each request counts once per excluded member,
+even if several tools were missing. Named placements, fallbacks, synthetic
+requests and service-owned work do not contribute. The history remains visible
+after repair until those requests leave the window.
 
 ## Open questions for later deliveries
 

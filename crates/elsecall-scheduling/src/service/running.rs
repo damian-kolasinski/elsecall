@@ -64,14 +64,13 @@ impl Scheduler {
         }
     }
 
-    /// Missing tools that still stand among the latest records: runs this
-    /// member placed that failed for lack of a tool on their member.
-    pub fn missing_tools(&self) -> Vec<crate::missing_tool::Standing> {
+    /// Missing tools in recent runs and members passed over for missing pins.
+    pub fn tool_history(&self) -> crate::tool_history::ToolHistory {
         let records = self
             .records
-            .recent(crate::missing_tool::RECORDS_READ)
+            .recent(crate::tool_history::RECORD_LIMIT)
             .unwrap_or_default();
-        crate::missing_tool::standing(&records, self.clock.now())
+        crate::tool_history::ToolHistory::from_records(&records, self.clock.now())
     }
 
     /// What the caller of a placed run learned about it, for its record here.

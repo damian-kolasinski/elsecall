@@ -13,8 +13,6 @@ use std::{collections::BTreeMap, fmt, time::Duration};
 
 /// How long a missing tool stays worth attention after the run that hit it.
 pub const STANDS_FOR: Duration = Duration::from_secs(7 * 24 * 60 * 60);
-/// How many of the latest records are read for missing tools.
-pub const RECORDS_READ: u32 = 500;
 
 /// The longest tool name kept.
 const MAXIMUM_NAME: usize = 64;

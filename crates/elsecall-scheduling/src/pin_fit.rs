@@ -43,12 +43,8 @@ impl Lacking {
 
     /// Why placement passed `member` over.
     fn why(&self, member: &str) -> Option<String> {
-        self.of(member).map(|tools| {
-            format!(
-                "It lacks {}, which the workspace pins; the master is installing them.",
-                Self::named(tools)
-            )
-        })
+        self.of(member)
+            .map(|tools| format!("It lacks {}, which the workspace pins.", Self::named(tools)))
     }
 
     /// What `member` lacks, and what that means for a run there.
@@ -236,7 +232,7 @@ mod tests {
         ]));
         assert_eq!(
             lacking.why("bravo").unwrap(),
-            "It lacks node 22.19.0, which the workspace pins; the master is installing them."
+            "It lacks node 22.19.0, which the workspace pins."
         );
         assert!(
             lacking

@@ -30,3 +30,4 @@ pub mod run_phases;
 pub mod service;
 pub mod settings_identity;
 mod sync_history;
+pub mod tool_history;

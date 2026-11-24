@@ -76,11 +76,12 @@ impl elsecall_reports::report_api::TrustEvidence for TuningTrust {
 /// global mise config under `home`) covers yet.
 struct PlacedRunsOf(Arc<Scheduler>, std::path::PathBuf);
 impl elsecall_fleet::fleet_view::PlacedRuns for PlacedRunsOf {
-    fn unpinned_tools(&self) -> Vec<elsecall_fleet::fleet_view::UnpinnedTool> {
+    fn tool_history(&self) -> elsecall_fleet::fleet_view::PlacementTools {
         use elsecall_tools::pins::lookup;
         let mut lookups = std::collections::BTreeMap::new();
-        self.0
-            .missing_tools()
+        let history = self.0.tool_history();
+        let unpinned = history
+            .missing
             .into_iter()
             .filter_map(|standing| {
                 let workspace = standing.workspace.clone();
@@ -97,7 +98,11 @@ impl elsecall_fleet::fleet_view::PlacedRuns for PlacedRunsOf {
                 };
                 Some(elsecall_fleet::fleet_view::UnpinnedTool { standing, pin_in })
             })
-            .collect()
+            .collect();
+        elsecall_fleet::fleet_view::PlacementTools {
+            unpinned,
+            exclusions: history.exclusions,
+        }
     }
 
     fn latest_with(&self, member: &str) -> Option<elsecall_fleet::fleet_view::PlacedRunSummary> {

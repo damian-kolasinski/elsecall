@@ -102,6 +102,41 @@ fn work_goes_where_the_pinned_tools_are_and_elsewhere_only_with_a_warning() {
         "bravo answered: {record}"
     );
 
+    let exclusions = || {
+        let fleet = alpha.member.ok(&["fleet"]);
+        let members = fleet["members"].as_array().unwrap();
+        assert!(
+            members
+                .iter()
+                .filter(|m| m["name"] != "bravo")
+                .all(|m| m.get("pin_exclusions").is_none())
+        );
+        members.iter().find(|m| m["name"] == "bravo").unwrap()["pin_exclusions"].clone()
+    };
+    let impact = exclusions();
+    assert_eq!(impact["decisions"], 1);
+    assert_eq!(
+        impact["first_at"],
+        record["decision"]["scoring"]["scored_at"]
+    );
+    assert_eq!(impact["last_at"], impact["first_at"]);
+    assert_eq!(impact["last_run_id"], id.as_str());
+
+    assert_eq!(
+        impact["last_reason"],
+        record["decision"]["scoring"]["passed_over"][0]["why"]
+    );
+    let (second_id, member) = placed(&alpha.member, &repo, &["--placeable"]);
+    assert_eq!(member, "charlie");
+    let more = exclusions();
+    assert_eq!(more["decisions"], 2);
+    assert_eq!(more["first_at"], impact["first_at"]);
+    assert_eq!(more["last_run_id"], second_id);
+    assert_eq!(
+        more["last_at"],
+        explain(&alpha.member, &second_id)["decision"]["scoring"]["scored_at"]
+    );
+
     // With charlie saturated too, bravo is the only member that can start it.
     charlie.set_utilization(0.97);
     let (id, member) = placed(&alpha.member, &repo, &["--placeable"]);
@@ -127,5 +162,10 @@ fn work_goes_where_the_pinned_tools_are_and_elsewhere_only_with_a_warning() {
     assert!(
         record.contains("It runs there because it was asked to."),
         "{record}"
+    );
+    assert_eq!(
+        exclusions(),
+        more,
+        "fallback and named placements did not pass bravo over"
     );
 }
