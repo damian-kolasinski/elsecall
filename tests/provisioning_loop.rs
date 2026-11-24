@@ -266,3 +266,129 @@ fn a_pin_changed_on_any_member_reaches_every_member() {
         charlie_mise.installs().contains(&"bun@1.3.14".to_owned())
     });
 }
+
+#[test]
+fn signed_release_and_signer_drift_heal_without_a_provision_command() {
+    const TOOL: &str = "packslip:github.com/acme/tool";
+    const ISSUER: &str = "https://token.actions.githubusercontent.com";
+    let identity = |version: &str, workflow: &str| {
+        format!("https://github.com/acme/tool/.github/workflows/{workflow}@refs/tags/v{version}")
+    };
+    let config = |version: &str, workflow: &str| {
+        format!(
+            "[tools]\n\"{TOOL}\" = {{ version = \"{version}\", identity = \"{}\", issuer = \"{ISSUER}\" }}\n",
+            identity(version, workflow)
+        )
+    };
+    let managers = equipped();
+    let mut env = managers.pairs();
+    env.push(("ELSECALL_PROVISIONING_POLL_MS", POLL));
+    let master = TestMember::start_with("alpha", "", &env);
+    let fixtures = tempfile::tempdir().unwrap();
+    let listing = fixtures.path().join("ls.json");
+    let installed =
+        format!(r#"{{"{TOOL}":[{{"version":"2.0.0","installed":true,"active":true}}]}}"#);
+    write(&listing, &installed);
+    let master_mise = Path::new(
+        env.iter()
+            .find(|(key, _)| *key == "ELSECALL_MISE")
+            .unwrap()
+            .1,
+    );
+    for name in ["ls.json", "ls-global.json"] {
+        write(&master_mise.with_file_name(name), &installed);
+    }
+    let global = ".config/mise/config.toml";
+    let approved = config("2.0.0", "release.yml");
+    write(&master.home().join(global), &approved);
+    let allow = format!("managed_packslip = [\"{TOOL}\"]\n");
+    let policy = master.data().join("fleet-tools.toml");
+    write(&policy, &allow);
+    let source = fixtures.path().join("approved.toml");
+    write(&source, &approved);
+    let log = fixtures.path().join("use.log");
+    let mise = fixtures.path().join("mise");
+    let spec = format!(
+        "{TOOL}[identity={},issuer={ISSUER}]@2.0.0",
+        identity("2.0.0", "release.yml")
+    );
+    executable(
+        &mise,
+        &format!(
+            r#"#!/bin/sh
+set -eu
+case "$1" in
+  --version) echo 2026.10.11 ;;
+  ls) if [ -e "$HOME/installed" ]; then cat '{listing}'; else echo '{{}}'; fi ;;
+  use)
+    [ "$#" = 6 ] && [ "$2 $3 $4" = '--pin --force --path' ] && [ "$5" = "$HOME/{global}" ] && [ "$6" = '{spec}' ] || exit 2
+    cp '{source}' "$5"
+    touch "$HOME/installed"
+    echo use >> '{log}' ;;
+  *) exit 2 ;;
+esac
+"#,
+            listing = listing.display(),
+            source = source.display(),
+            log = log.display()
+        ),
+    );
+    let member_managers = bare();
+    let mut env = member_managers.pairs();
+    env.retain(|(key, _)| *key != "ELSECALL_MISE");
+    let program = utf8(&mise);
+    env.push(("ELSECALL_MISE", &program));
+    let member = TestMember::start_with("bravo", "", &env);
+    let member_file = member.home().join(global);
+    write(&member_file, &config("1.0.0", "release.yml"));
+    enrol_awaiting(&master, &member);
+    wait_for(
+        "signed installation and readiness",
+        Duration::from_secs(60),
+        || master.view_of("bravo")["readiness"] == "ready",
+    );
+    assert_eq!(fs::read_to_string(&member_file).unwrap(), approved);
+    let calls = || fs::read_to_string(&log).unwrap_or_default().lines().count();
+    assert_eq!(calls(), 1);
+
+    // A ready Mac already has the right version. An explicit exception keeps
+    // its local workflow until the operator removes that exception.
+    write(
+        &policy,
+        &format!("{allow}\n[members.bravo.mise.tools.\"{TOOL}\"]\n"),
+    );
+    let alternate = config("2.0.0", "other.yml");
+    write(&member_file, &alternate);
+    let excepted = master.ok(&["tools", "plan", "--member", "bravo"]);
+    assert!(
+        excepted["members"][0]["steps"]
+            .as_array()
+            .unwrap()
+            .is_empty(),
+        "{excepted}"
+    );
+    assert_eq!(fs::read_to_string(&member_file).unwrap(), alternate);
+    let local = alternate.replace(" }", ", postinstall = 'exit 1' }");
+    write(&member_file, &local);
+    write(&policy, &allow);
+    let blocked = master.ok(&["tools", "plan", "--member", "bravo"]);
+    assert!(
+        blocked["members"][0]["unresolved"][0]["hint"]
+            .as_str()
+            .unwrap()
+            .contains("additional local mise settings"),
+        "{blocked}"
+    );
+    assert_eq!(calls(), 1);
+    write(&member_file, &alternate);
+    wait_for("signer-only drift to heal", Duration::from_secs(60), || {
+        calls() == 2
+    });
+    wait_for(
+        "the repaired member to converge",
+        Duration::from_secs(30),
+        || provisioning(&master, "bravo")["state"] == "in_step",
+    );
+    assert_eq!(fs::read_to_string(member_file).unwrap(), approved);
+    assert_eq!(calls(), 2);
+}

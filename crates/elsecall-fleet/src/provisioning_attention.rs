@@ -125,6 +125,16 @@ fn step_failure(member: &MemberName, failed: &FailedStep) -> (&'static str, Stri
     let tool = format!("{} {}", failed.tool, failed.version);
     let retry = format!("then run elsecall tools apply --member {member} on the master to retry");
     match failed.code.as_str() {
+        "signed_config_unread" => (
+            "the global mise configuration could not be read",
+            format!("Check ~/.config/mise/config.toml on {member}, {retry}."),
+        ),
+        "signed_config_local_options" => (
+            "the member has additional local settings for the managed tool",
+            format!(
+                "Keep these settings with a member exception, or remove them on {member}, {retry}."
+            ),
+        ),
         "mise_attestation_missing" => (
             "the prebuilt artifact has no GitHub attestation",
             format!(

@@ -29,10 +29,48 @@ master's global mise config. Elsecall installs exactly what is pinned and never
 copies what the master happens to have installed. `elsecall tools pins` reads
 them; [Fleet provisioning](fleet-provisioning.md) has the sources and rules.
 
-The master also holds `fleet-tools.toml` beside `fleet-config.toml`: the
-**exceptions** to the pins, tools to leave out and intended per-member
-differences. A missing file means no exceptions. [Exceptions](#exceptions) has
-its format and commands.
+The master holds `fleet-tools.toml` beside `fleet-config.toml`. It records
+[exceptions](#exceptions) and which signed tools Elsecall keeps selected globally.
+
+## Automatically repair a signed Packslip tool
+
+Add the tool to the top level of the master’s `fleet-tools.toml`, before any
+table headers. This opt-in is needed once per tool.
+
+```toml
+managed_packslip = ["packslip:github.com/acme/tool"]
+```
+
+Install the approved release on the master and pin it in
+`~/.config/mise/config.toml`. Use the repository’s exact workflow and release tag.
+
+```toml
+[tools."packslip:github.com/acme/tool"]
+version = "2.0.0"
+identity = "https://github.com/acme/tool/.github/workflows/release.yml@refs/tags/v2.0.0"
+issuer = "https://token.actions.githubusercontent.com"
+```
+
+The provisioning loop repairs a missing release, an inactive global version,
+or a different signer on a member. It asks mise to reinstall through Packslip
+with the approved identity and issuer and select the release globally. The
+next plan checks the member’s declaration and installed default. Failed
+installs appear in Setup and follow the usual provisioning retry schedule.
+A failed verification leaves the signing declaration in place. During a
+forced reinstall mise can remove the cached copy of that same version, so
+the tool may be unavailable until verification succeeds.
+
+If a member already has extra settings for the tool, the plan reports them and
+waits for the operator to keep them with a member exception or remove them.
+Only the authenticated master can request this global configuration change.
+
+Update the version and corresponding signing tag on the master for the next
+release. Managed entries support exactly the three fields shown above, a
+three-part numeric version, and a tag of the form `v<version>`. A missing or
+invalid declaration on the master stops planning and identifies the key to fix. Each managed
+tool follows the master’s global pin across the fleet. A fleet or member
+exception takes precedence. Update members to a supporting Elsecall version
+so they can report their signing declarations.
 
 ## Plan and apply
 
@@ -251,7 +289,7 @@ member is given. Exit 0 when some members are unavailable: that is data. Exit
 
 ## Exceptions
 
-`fleet-tools.toml` holds only exceptions to the pins. Slice 2b-1 made it the
+The `defaults` and `members` tables hold exceptions to the pins. Slice 2b-1 made it the
 hand-written desired state; provisioning delivery 2 narrowed it, and a file in
 that older shape is refused, never read with a new meaning.
 
@@ -274,7 +312,7 @@ install = ["3.8.0"]                       # and keeps a tool the others leave ou
 [members.mac-mini.simulators.tools.iOS]   # no iOS runtimes on this member
 ```
 
-- The top level allows only `defaults` and `members`. A manager table allows
+- The top level allows `managed_packslip`, `defaults`, and `members`. A manager table allows
   only `tools`. Under `xcodes` the only tool is `xcode`; under `simulators` the
   tools are the platforms `iOS`, `tvOS`, `visionOS` and `watchOS`.
 - A tool entry under `[defaults]` must be empty: it leaves that tool out on
@@ -294,8 +332,7 @@ Versions are exact. They follow the inventory's version rules and also reject
 `prefix:`, or `sub-`; the failure says versions must be exact, for example
 `22.19.0`. The older shape is refused with the key that holds it: a version
 under `[defaults]` ("a [defaults] entry only leaves a tool out…"), and a
-manager's executable `version` ("fleet-tools.toml holds only exceptions to the
-pins and no longer sets a manager's executable"). The hint names this section.
+manager's executable `version` ("fleet-tools.toml no longer sets a manager's executable"). The hint names this section.
 
 Member names in the file use roster syntax. A hand-edited section for someone
 who is not in the roster still parses; `tools exceptions` lists those names in

@@ -22,6 +22,7 @@ use crate::{
     artifact::Artifact,
     install::{Installer, Ran, StepFailure, Work, request::InstallStep, source::Source},
     mise_cli,
+    pins::packslip,
     tool_inventory::Manager,
 };
 use futures_util::future::BoxFuture;
@@ -66,7 +67,24 @@ impl Installer for MiseInstaller {
                 None => self.bootstrap(work).await?,
             };
             let mut command = tokio::process::Command::new(program);
-            command.args(["install", &spec(step)]).current_dir(&home);
+            if step.options.signer().is_some() {
+                // The local declaration may have changed since the master planned it.
+                let directory = home.clone();
+                let pins = tokio::task::spawn_blocking(move || packslip::fingerprints(&directory))
+                    .await
+                    .ok()
+                    .and_then(Result::ok)
+                    .ok_or_else(|| failed("signed_config_unread"))?;
+                if pins.contains(&packslip::local_options(step.tool.as_str())) {
+                    return Err(failed("signed_config_local_options"));
+                }
+                command
+                    .args(["use", "--pin", "--force", "--path"])
+                    .arg(home.join(packslip::CONFIG));
+            } else {
+                command.arg("install");
+            }
+            command.arg(spec(step)).current_dir(&home);
             for name in mise_cli::variables_to_remove() {
                 command.env_remove(name);
             }

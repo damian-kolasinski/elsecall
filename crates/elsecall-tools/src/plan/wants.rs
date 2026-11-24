@@ -94,6 +94,8 @@ pub(crate) enum Unresolved {
     OlderXcode,
     /// Pins ask for one version with different install options.
     OptionsDiffer,
+    SigningPolicyUnread,
+    LocalSigningOptions,
 }
 
 impl Reason {
@@ -119,6 +121,8 @@ impl Unresolved {
             Self::MasterUnread => format!(
                 "The master, {master}, could not report this manager's tools; run elsecall tools inventory there, then retry."
             ),
+            Self::LocalSigningOptions => "The member has additional local mise settings for this tool. Keep them with a member exception, or remove the extra settings to allow automatic repair.".into(),
+            Self::SigningPolicyUnread => "Check the member’s global mise config and update Elsecall there so it can report its signing policy.".into(),
             Self::OptionsDiffer => "Pins ask for this version with different install options; pin it with the same options everywhere, as tools pins shows them.".into(),
             Self::OlderXcode => "Before Xcode 26 the runtime's version differs from Xcode's; pin the runtime in .elsecall-tools.toml, such as runtimes = [\"iOS 18.5\"].".into(),
         }
@@ -225,6 +229,16 @@ fn judge(master: &MasterTools, pin: &Pin) -> Outcome {
                 .filter(|(name, _)| name == tool)
                 .map(|(_, version)| version.clone())
                 .collect();
+            if pin.options.signer().is_some() {
+                return if versions.contains(&pin.version) {
+                    Outcome::Planned {
+                        version: pin.version.clone(),
+                        exact: true,
+                    }
+                } else {
+                    unresolved(Unresolved::NotOnMaster)
+                };
+            }
             match classify(&pin.target, &pin.version, &versions) {
                 Exactness::Exact if has(&versions, &pin.version) => Outcome::Planned {
                     version: pin.version.clone(),
