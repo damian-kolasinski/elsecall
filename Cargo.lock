@@ -1058,7 +1058,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -1099,7 +1099,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-api-response"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "axum",
  "elsecall-contract",
@@ -1107,7 +1107,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-contract"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "base64 0.22.1",
  "humantime",
@@ -1120,7 +1120,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-fleet"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "axum",
  "elsecall-api-response",
@@ -1140,7 +1140,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-host"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "elsecall-contract",
  "getrandom 0.3.4",
@@ -1157,7 +1157,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-lifecycle"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -1187,7 +1187,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-macos"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "base64 0.22.1",
  "elsecall-contract",
@@ -1208,7 +1208,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-peers"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "base64 0.22.1",
  "chacha20poly1305",
@@ -1234,7 +1234,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-reports"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "axum",
  "clap",
@@ -1255,7 +1255,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-runs"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -1284,7 +1284,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-scheduling"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "elsecall-contract",
  "elsecall-host",
@@ -1303,7 +1303,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-sync"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -1333,7 +1333,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-tools"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -1361,7 +1361,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-tuning"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "axum",
  "clap",
@@ -1389,7 +1389,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-ui"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "elsecall-contract",
  "elsecall-fleet",
@@ -1411,7 +1411,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-workload-config"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "elsecall-contract",
  "elsecall-host",
@@ -1426,7 +1426,7 @@ dependencies = [
 
 [[package]]
 name = "elsecall-workspace"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "axum",
  "clap",
