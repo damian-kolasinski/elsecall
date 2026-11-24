@@ -52,6 +52,8 @@ const SCENES: &[(&str, Scene)] = &[
     ),
     ("provisioning-starting", scene_provisioning_starting),
     ("provisioning-running", scene_provisioning_running),
+    ("tool-install-failed", scene_tool_install_failed),
+    ("tool-placement-history", scene_tool_placement_history),
     ("provisioning-needs-you", scene_provisioning_needs_you),
     ("provisioning-ready", scene_provisioning_ready),
     ("provisioning-setup", scene_provisioning_setup),
@@ -451,10 +453,17 @@ impl AppState {
                         .and_then(|fleet| fleet.members.iter().find(|m| m.name == name))
                         .and_then(|m| m.provisioning.clone())
                 };
-                if let Some(name) = self.provisioning.setup.clone()
-                    && applying(self.shown(), &name) != applying(Some(&snapshot), &name)
-                {
-                    self.provisioning.reload_apply();
+                if let Some(name) = &self.provisioning.setup {
+                    let next = applying(Some(&snapshot), name);
+                    if applying(self.shown(), name) != next {
+                        if next.is_some_and(|apply| {
+                            apply.state == elsecall_fleet::provisioning_model::ApplyState::Finished
+                        }) {
+                            self.provisioning.reload();
+                        } else {
+                            self.provisioning.reload_apply();
+                        }
+                    }
                 }
                 self.phase = Phase::Ready(snapshot);
             }

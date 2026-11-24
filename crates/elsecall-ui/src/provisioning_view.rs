@@ -43,6 +43,17 @@ pub(crate) fn status_cell(member: &MemberRow, state: &AppState, kit: &Kit) -> Op
             .help_row(message)
             .help_row("Open it to see what to do and where.")
             .key(format!("needs-you-{}", member.name)),
+        Badge::InstallFailed { message } => Button::new("Install failed")
+            .variant(ButtonVariant::Warning)
+            .control_size(ControlSize::Small)
+            .on_press(move |state: &mut AppState| state.provisioning.open_setup(&name))
+            .build(kit)
+            .px(theme::SPACE_2)
+            .description(message.clone())
+            .help("Tool installation failed")
+            .help_row(message)
+            .help_row("Open Setup to inspect the failed step and recent placement decisions.")
+            .key(format!("install-failed-{}", member.name)),
         Badge::Starting => Button::new("Starting…")
             .variant(ButtonVariant::Loading)
             .control_size(ControlSize::Small)

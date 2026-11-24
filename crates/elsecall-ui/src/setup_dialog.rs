@@ -30,6 +30,22 @@ pub(crate) fn overlay(state: &AppState, kit: &Kit, layers: &mut Vec<El>) {
         .gap(theme::SPACE_4)
         .padding(theme::SPACE_3)
         .child(note(&standing(member, state), kit));
+    if let Some(history) = &member.pin_exclusions {
+        let count = history.decisions;
+        let decisions = if count == 1 { "decision" } else { "decisions" };
+        let limit = elsecall_fleet::fleet_view::TOOL_HISTORY_LIMIT;
+        let last = history.last_at.to_string();
+        let date = &last[..10];
+        let time = &last[11..16];
+        body = body.child(
+            section("Placement history", kit.c.info.icon, kit)
+                .key("setup-placement-history")
+                .child(note(&format!(
+                    "Missing tools excluded this Mac from {count} placement {decisions} in the latest {limit} requests on this machine."
+                ), kit))
+                .child(note(&format!("Last skipped {date} at {time} UTC · {}", history.last_reason), kit)),
+        );
+    }
     let person = person_steps(member, attention, details);
     if !person.is_empty() {
         let mut steps = section("For you", kit.c.warning.icon, kit);

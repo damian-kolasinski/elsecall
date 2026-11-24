@@ -303,6 +303,7 @@ mod tests {
                 error: Failure::new("member_unavailable", "gone", "check"),
             },
             latest_placed_run: None,
+            pin_exclusions: None,
             config_sync: None,
             build: Some(Build {
                 version: version.into(),

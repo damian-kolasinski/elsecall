@@ -115,6 +115,7 @@ pub(super) fn member(
         load,
         release,
         provisioning: None,
+        pin_exclusions: None,
     }
 }
 

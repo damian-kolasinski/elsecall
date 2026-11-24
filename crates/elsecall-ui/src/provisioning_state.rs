@@ -29,6 +29,7 @@ const STARTING_FOR: f64 = 200.0;
 struct Asked {
     at: f64,
     before: Option<Timestamp>,
+    retrying_ready_member: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -83,12 +84,17 @@ impl ProvisioningState {
 
     /// Asks the master to provision `member` now, off the UI thread.
     pub(crate) fn provision(&mut self, member: &str, now: f64, fleet: Option<&FleetSnapshot>) {
-        let before = fleet
-            .and_then(|fleet| fleet.members.iter().find(|row| row.name == member))
-            .and_then(|row| row.provisioning.as_ref())
-            .map(|summary| summary.started_at);
-        self.requested
-            .insert(member.to_owned(), Asked { at: now, before });
+        let row = fleet.and_then(|fleet| fleet.members.iter().find(|row| row.name == member));
+        let previous = row.and_then(|row| row.provisioning.as_ref());
+        self.requested.insert(
+            member.to_owned(),
+            Asked {
+                at: now,
+                before: previous.map(|apply| apply.started_at),
+                retrying_ready_member: row.is_some_and(|row| row.readiness == Readiness::Ready)
+                    && previous.is_some_and(|apply| !apply.failed.is_empty()),
+            },
+        );
         self.refused = None;
         let source = Arc::clone(&self.source);
         let answers = Arc::clone(&self.answers);
@@ -199,7 +205,8 @@ impl ProvisioningState {
             let moved = row
                 .and_then(|row| row.provisioning.as_ref())
                 .is_some_and(|summary| Some(summary.started_at) != asked.before);
-            let ready = row.is_some_and(|row| row.readiness == Readiness::Ready);
+            let ready = !asked.retrying_ready_member
+                && row.is_some_and(|row| row.readiness == Readiness::Ready);
             !moved && !ready && now - asked.at < STARTING_FOR
         });
         changed | (self.requested.len() != before)
@@ -218,6 +225,7 @@ impl ProvisioningState {
             Asked {
                 at: 0.0,
                 before: None,
+                retrying_ready_member: false,
             },
         );
     }

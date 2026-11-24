@@ -9,8 +9,10 @@ use elsecall_peers::{
     membership_store::Membership,
     roster::{MemberName, Readiness},
 };
+pub use elsecall_scheduling::tool_history::{PinExclusions, RECORD_LIMIT as TOOL_HISTORY_LIMIT};
 use hyper::Method;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::net::SocketAddr;
 
 #[derive(Debug, Serialize)]
@@ -48,6 +50,9 @@ pub struct MemberView {
     /// consistency warnings; absent when there was none.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub latest_placed_run: Option<PlacedRunSummary>,
+    /// Decisions in this caller's recent history that excluded this member for missing pins.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pin_exclusions: Option<PinExclusions>,
     /// The member's configuration sync state against the master's; its details
     /// are `status.config_sync`.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -95,12 +100,16 @@ pub struct UnpinnedTool {
     pub pin_in: String,
 }
 
+/// Tool evidence after checking whether a failed run's tool has since been pinned.
+pub struct PlacementTools {
+    pub unpinned: Vec<UnpinnedTool>,
+    pub exclusions: BTreeMap<String, PinExclusions>,
+}
+
 /// Where the fleet view learns about placed runs.
 pub trait PlacedRuns: Send + Sync {
     fn latest_with(&self, member: &str) -> Option<PlacedRunSummary>;
-    /// Runs this member placed that still stand as failed for lack of a tool
-    /// that no pin covers, the latest per member and tool.
-    fn unpinned_tools(&self) -> Vec<UnpinnedTool>;
+    fn tool_history(&self) -> PlacementTools;
 }
 
 #[derive(Debug, Serialize)]
@@ -288,9 +297,13 @@ pub async fn view(fleet: &Fleet, placed: &dyn PlacedRuns) -> FleetView {
     view.attention = crate::fleet_attention::items(&view.members, view.master.as_ref());
     if let Some(own) = view.members.iter().find(|m| m.this_member) {
         let own = own.name.clone();
+        let mut tools = placed.tool_history();
+        for member in &mut view.members {
+            member.pin_exclusions = tools.exclusions.remove(member.name.as_str());
+        }
         let names: Vec<&MemberName> = view.members.iter().map(|m| &m.name).collect();
-        let unpinned: Vec<_> = placed
-            .unpinned_tools()
+        let unpinned: Vec<_> = tools
+            .unpinned
             .into_iter()
             .filter(|tool| {
                 names
@@ -342,6 +355,7 @@ async fn members(fleet: &Fleet) -> FleetView {
                 Err(error) => Reach::Unreachable { error },
             },
             latest_placed_run: None,
+            pin_exclusions: None,
             config_sync: None,
             build: None,
             version_skew: None,
@@ -386,6 +400,7 @@ fn without_roster(
                     error: error.clone(),
                 },
                 latest_placed_run: None,
+                pin_exclusions: None,
                 config_sync: None,
                 build: None,
                 version_skew: None,
@@ -434,6 +449,7 @@ mod tests {
                 error: Failure::new("member_unavailable", "gone", "check"),
             },
             latest_placed_run: None,
+            pin_exclusions: None,
             config_sync: None,
             build: None,
             version_skew: None,

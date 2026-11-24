@@ -118,6 +118,11 @@ now (`POST /v1/tools/provisioning`, as `elsecall tools provision` does); the cel
 reads **Starting…**, then **Installing 2 of 5** while the member's apply runs, and
 **Needs you** when a step waits for a person, which opens the member's setup. The
 master provisions new members by itself as well; the button only skips its wait.
+An otherwise online, ready Mac shows **Install failed** when its latest tool
+installation failed. Click it to open **Setup**. **Placement history** shows how
+often missing pins excluded this Mac from automatic placement and the last
+decision's time and reason. It remains available in Setup after a successful
+repair while those decisions are in recent history.
 
 **Setup**, beside Load details, opens a member's setup: what waits for a person and
 the command to run where, what its latest apply did with each failure's hint, and
