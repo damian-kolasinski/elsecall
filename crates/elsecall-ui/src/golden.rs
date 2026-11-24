@@ -21,6 +21,8 @@ const SCENES: &[&str] = &[
     "members-awaiting-provisioning",
     "provisioning-starting",
     "provisioning-running",
+    "tool-install-failed",
+    "tool-placement-history",
     "provisioning-needs-you",
     "provisioning-ready",
     "provisioning-setup",

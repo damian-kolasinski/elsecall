@@ -150,3 +150,54 @@ fn one_click_provisions_a_member_until_it_is_ready() {
         assert!(rt.presented(gone).is_none(), "{gone} after it became ready");
     }
 }
+
+#[test]
+fn a_ready_members_install_failure_opens_its_placement_history() {
+    let _guard = theme::serial_render();
+    let mut state = init();
+    super::scene_tool_install_failed(&mut state);
+    let service = Arc::new(FakeService::default());
+    state.provisioning =
+        ProvisioningState::new(Arc::clone(&service) as Arc<dyn ProvisioningSource>);
+    let mut rt = rune::Runtime::new(state, render, (1120.0, 700.0), rune::Env::new(false, 1.0));
+    rt.frame(0.0);
+
+    click(&mut rt, "install-failed-macbook-pro");
+    assert_eq!(rt.state.provisioning.setup.as_deref(), Some("macbook-pro"));
+    assert!(rt.presented("setup-placement-history").is_some());
+    poll_until(&mut rt, "the failed member’s plan", |state| {
+        state.provisioning.details.plan.is_some()
+    });
+    click(&mut rt, "setup-provision");
+    poll_until(&mut rt, "the retry request", |_| {
+        !service.asked.lock().unwrap().is_empty()
+    });
+    assert!(rt.state.provisioning.requested("macbook-pro"));
+    click(&mut rt, "setup-provision");
+    let mut repaired = fleet_of(scene_provisioning_ready);
+    let apply = repaired.members[2].provisioning.as_mut().unwrap();
+    apply.started_at = apply.started_at.after(Duration::from_secs(60));
+    apply.finished_at = Some(apply.started_at);
+
+    repaired.members[2].pin_exclusions =
+        rt.state.shown().unwrap().members[2].pin_exclusions.clone();
+    refresh(&mut rt, repaired);
+    poll_until(&mut rt, "the updated plan", |state| {
+        state.provisioning.details.plan.is_some()
+    });
+    assert_eq!(service.asked.lock().unwrap().as_slice(), ["macbook-pro"]);
+    assert_eq!(
+        service.read.lock().unwrap().len(),
+        2,
+        "the completed install refreshes the plan"
+    );
+    assert!(!rt.state.provisioning.requested("macbook-pro"));
+    assert!(
+        rt.presented("setup-placement-history").is_some(),
+        "past decisions survive repair"
+    );
+    rt.state.provisioning.close_setup();
+    rt.invalidate();
+    rt.frame(1.0);
+    assert!(rt.presented("install-failed-macbook-pro").is_none());
+}

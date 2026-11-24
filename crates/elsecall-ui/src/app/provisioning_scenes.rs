@@ -180,6 +180,63 @@ pub(super) fn scene_provisioning_needs_you(state: &mut AppState) {
     show(state, waiting_for_privileges());
 }
 
+pub(super) fn scene_tool_install_failed(state: &mut AppState) {
+    let step = failed("mise", "node", "22.19.0", "install", "tool_install_failed");
+    let mut snapshot = fleet(
+        Readiness::Ready,
+        Some(summary(ApplyState::Finished, 1, 0, vec![step])),
+    );
+    snapshot.members[2].pin_exclusions = Some(elsecall_fleet::fleet_view::PinExclusions {
+        decisions: 12,
+        first_at: Timestamp::parse_rfc3339("2026-11-19T12:00:00Z").unwrap(),
+        last_at: at(),
+        last_run_id: elsecall_contract::scheduling_model::run_id::RunId::parse("r-00000000000c")
+            .unwrap(),
+        last_reason: "It lacks node 22.19.0, which the workspace pins.".into(),
+    });
+    let category = Category::ProvisioningStepFailed;
+    snapshot.attention = vec![Item {
+        id: Item::id(category, "macbook-pro", Some("mise:node@22.19.0")),
+        member: "macbook-pro".into(),
+        category,
+        subject: Some("mise:node@22.19.0".into()),
+        code: "tool_install_failed".into(),
+        message: "Installing mise node 22.19.0 on macbook-pro failed at its install stage: mise install exited with an error.".into(),
+        hint: "Check the mise install on macbook-pro, then retry provisioning.".into(),
+        since: Some(at()),
+        actions: vec![Action {
+            summary: "Retry the install.".into(),
+            command: command(&["elsecall", "tools", "apply", "--member", "macbook-pro"]),
+            run_on: "mac-mini".into(),
+            person_only: false,
+        }],
+    }];
+    show(state, snapshot);
+}
+
+pub(super) fn scene_tool_placement_history(state: &mut AppState) {
+    scene_tool_install_failed(state);
+    state.provisioning.show(
+        "macbook-pro",
+        Setup {
+            plan: Some(Ok(Plan {
+                steps: vec![tool("mise", "node", "22.19.0")],
+                unresolved: Vec::new(),
+                partial: false,
+            })),
+            apply: Some(Ok(Some(Apply {
+                finished: true,
+                steps: vec![applied(
+                    "mise",
+                    "node",
+                    "22.19.0",
+                    failure("install", "tool_install_failed"),
+                )],
+            }))),
+        },
+    );
+}
+
 pub(super) fn scene_provisioning_ready(state: &mut AppState) {
     show(
         state,

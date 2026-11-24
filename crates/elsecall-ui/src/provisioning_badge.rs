@@ -1,7 +1,7 @@
 //! What a member's status cell says about installing its tools: the step an
 //! apply is on, a step that waits for a person, the Provision button of a
 //! member awaiting provisioning, or nothing, which leaves the usual status.
-use crate::fleet_source::MemberRow;
+use crate::fleet_source::{Gate, MemberRow, Reachability};
 use elsecall_contract::attention::{Category, Item};
 use elsecall_fleet::provisioning_model::ApplyState;
 use elsecall_peers::roster::Readiness;
@@ -9,14 +9,24 @@ use elsecall_peers::roster::Readiness;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Badge {
     /// An apply runs there: the step it is on, of how many.
-    Installing { step: usize, of: usize },
+    Installing {
+        step: usize,
+        of: usize,
+    },
     /// A provisioning step waits for a person, as the item's message says.
-    NeedsYou { message: String },
+    NeedsYou {
+        message: String,
+    },
+    InstallFailed {
+        message: String,
+    },
     /// Provisioning was asked for from this window and has not started yet.
     Starting,
     /// Awaiting provisioning and nothing runs: the Provision button, which
     /// also retries `failed` steps.
-    Provision { failed: usize },
+    Provision {
+        failed: usize,
+    },
 }
 
 /// The badge for `member`, given the fleet's attention and whether this
@@ -36,6 +46,18 @@ pub(crate) fn badge(member: &MemberRow, attention: &[Item], requested: bool) -> 
         });
     }
     let awaiting = member.readiness == Readiness::AwaitingProvisioning;
+    if !awaiting
+        && member.reach == Reachability::Reachable
+        && member.gate == Gate::Open
+        && let Some(failed) = summary.and_then(|summary| summary.failed.first())
+    {
+        return Some(Badge::InstallFailed {
+            message: format!(
+                "{} {} failed to install on {}.",
+                failed.tool, failed.version, member.name
+            ),
+        });
+    }
     if requested && awaiting {
         return Some(Badge::Starting);
     }
@@ -96,6 +118,7 @@ mod tests {
             release: Release::Unknown { version: None },
             contributors: Default::default(),
             provisioning,
+            pin_exclusions: None,
         }
     }
 

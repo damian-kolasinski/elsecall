@@ -606,6 +606,7 @@ mod tests {
                     release: release.clone(),
                     contributors: Default::default(),
                     provisioning: None,
+                    pin_exclusions: None,
                 })
                 .collect(),
             standing: Standing::Rostered,

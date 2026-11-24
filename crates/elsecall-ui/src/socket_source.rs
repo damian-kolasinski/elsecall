@@ -287,6 +287,7 @@ fn map_member(mut member: WireMember, master: Option<&str>) -> Result<MemberRow,
         release,
         contributors,
         provisioning,
+        pin_exclusions: member.pin_exclusions,
     })
 }
 
@@ -331,6 +332,8 @@ struct WireMember {
     reachability: String,
     #[serde(default)]
     readiness: Readiness,
+    #[serde(default)]
+    pin_exclusions: Option<elsecall_fleet::fleet_view::PinExclusions>,
     #[serde(default)]
     status: Option<WireStatus>,
     #[serde(default)]

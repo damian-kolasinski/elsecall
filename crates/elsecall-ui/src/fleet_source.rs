@@ -66,6 +66,7 @@ pub(crate) struct MemberRow {
     /// The member's latest apply of its tool plan; none when it never applied
     /// one or did not say.
     pub provisioning: Option<elsecall_fleet::provisioning_model::ProvisioningSummary>,
+    pub pin_exclusions: Option<elsecall_fleet::fleet_view::PinExclusions>,
 }
 
 /// How a member's release compares with the master's. Work moves between members
