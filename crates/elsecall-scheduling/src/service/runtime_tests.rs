@@ -1323,3 +1323,5 @@ async fn no_offer_leaves_while_an_update_holds_admission() {
         "update_in_progress"
     );
 }
+
+mod deferred_offers;

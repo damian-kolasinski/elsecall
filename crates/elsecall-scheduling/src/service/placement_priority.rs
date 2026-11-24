@@ -56,7 +56,7 @@ impl Entry {
         }
     }
 
-    /// Once granted, a deferred job has the ordinary bounded workspace-start window.
+    /// Once granted, a deferred job has up to 24 hours to transfer the workspace and start.
     pub(super) fn transfer_window(&self, placing: &Placing, now: Timestamp) -> Duration {
         match self.record.urgency {
             Urgency::Interactive { .. } => placing

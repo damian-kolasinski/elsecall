@@ -472,7 +472,10 @@ the member (see "Placement"); `--member NAME` requires one (see "Running on anot
 member"). Deferrable runs can use either placement option. The master tracks one deadline across member changes. At the deadline, `skip` ends a waiting run and `start` raises its priority until a member has room.
 
 For deferrable work, placement prefers a member that can admit it now. The
-deadline applies until admission. An admitted remote run has up to 24 hours to
+master must grant a `skip` run before its deadline. If a worker has reserved
+capacity but its acceptance arrives late, the caller receives `deadline_skipped`.
+The command never runs and the unattached reservation lapses after 15 seconds.
+An admitted remote run has up to 24 hours to
 finish workspace transfer and start its command.
 
 If `elsecall` itself is killed with SIGKILL while the command runs, the command

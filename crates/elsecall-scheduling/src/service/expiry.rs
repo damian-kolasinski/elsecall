@@ -1,4 +1,5 @@
 //! Hold limits and deadlines of waiting requests.
+use super::placing::InFlight;
 use super::{Book, Entry, OnHandover, Phase, Scheduler, Waiting, update_in_progress};
 use crate::record::Verdict;
 use elsecall_contract::failure::Failure;
@@ -79,6 +80,20 @@ impl Scheduler {
         self.fail(book, id, Verdict::FleetBusy, failure);
     }
 
+    /// Capture how long admission waited for configuration I/O before its cutoff.
+    pub(super) fn record_interrupted_sync(&self, book: &mut Book, id: &RunId, cause: &str) {
+        let interrupted = book.entries.get(id).and_then(|entry| match &entry.phase {
+            Phase::Placing(placing) => match (&placing.target, placing.in_flight) {
+                (Some(target), Some(InFlight::Syncing { since })) => Some((target.clone(), since)),
+                _ => None,
+            },
+            _ => None,
+        });
+        if let Some((target, since)) = interrupted {
+            self.record_pre_run_attempt(book, id, &target, since, Some(cause.into()));
+        }
+    }
+
     /// Returns true for a deferrable request whose deadline is already
     /// dealt with, including when a timer races with a completed promotion.
     fn expire_deferred(&self, book: &mut Book, id: &RunId) -> bool {
@@ -102,6 +117,7 @@ impl Scheduler {
                     "Request again later, or use --at-deadline start.",
                 );
                 if entry.auto.is_some() || matches!(entry.phase, Phase::Placing(_)) {
+                    self.record_interrupted_sync(book, id, "deadline_passed");
                     self.fail_waiting_placement(book, id, Verdict::DeadlineSkipped, failure);
                 } else {
                     self.fail(book, id, Verdict::DeadlineSkipped, failure);

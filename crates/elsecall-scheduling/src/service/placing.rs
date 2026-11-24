@@ -43,8 +43,8 @@ pub(super) struct Placing {
     /// What the member last answered, for the decision and `fleet_busy`.
     pub refusal: Option<(MemberState, Option<Failure>)>,
     /// The target's configuration is being synced, or an offer is on its way to
-    /// it; the request does not move until the answer is in, so no admission is
-    /// made for a request that left.
+    /// it. The master keeps the target fixed during the offer. If the caller
+    /// leaves or its deadline passes, an unclaimed worker reservation lapses.
     pub in_flight: Option<InFlight>,
     /// The configuration sync before the latest offer to the target.
     pub config_sync: Option<Done>,
@@ -73,7 +73,7 @@ enum AfterSync {
 }
 
 impl Scheduler {
-    fn record_pre_run_attempt(
+    pub(super) fn record_pre_run_attempt(
         &self,
         book: &mut Book,
         id: &RunId,
@@ -393,16 +393,7 @@ impl Scheduler {
 
     /// The hold limit of a placed request passed.
     pub(super) fn expire_placing(&self, book: &mut Book, id: &RunId) {
-        let interrupted = book.entries.get(id).and_then(|entry| match &entry.phase {
-            Phase::Placing(placing) => match (&placing.target, placing.in_flight) {
-                (Some(target), Some(InFlight::Syncing { since })) => Some((target.clone(), since)),
-                _ => None,
-            },
-            _ => None,
-        });
-        if let Some((target, since)) = interrupted {
-            self.record_pre_run_attempt(book, id, &target, since, Some("hold_limit_passed".into()));
-        }
+        self.record_interrupted_sync(book, id, "hold_limit_passed");
         let Some(Entry {
             phase: Phase::Placing(placing),
             record,
@@ -495,7 +486,7 @@ fn decision(
 /// request refused for room blocks those behind it, so large requests are not
 /// starved; one refused because its copy is in use lets the next one try.
 async fn offer(scheduler: Weak<Scheduler>, target: String) {
-    loop {
+    'rescan: loop {
         let (members, queue) = {
             let Some(scheduler) = scheduler.upgrade() else {
                 return;
@@ -519,7 +510,7 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
             // First the target's synced configuration, for a request still queued
             // here; the request stays put meanwhile.
             let since = Instant::now();
-            let (expires_at, pre_run, clock) = {
+            let (cutoff, pre_run, clock) = {
                 let Some(scheduler) = scheduler.upgrade() else {
                     return;
                 };
@@ -532,12 +523,11 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
                 }
                 if scheduler.due_placement(&book, id) {
                     scheduler.expire(&mut book, id);
-                    refused = true;
+                    refused = scheduler.due_placement(&book, id);
                     break;
                 }
                 if Scheduler::higher_priority_waits(&book, &target, id, &queue[..index]) {
-                    refused = true;
-                    break;
+                    continue 'rescan;
                 }
                 let Some(Entry {
                     phase: Phase::Placing(placing),
@@ -559,15 +549,22 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
                         at_deadline: AtDeadline::Start,
                         ..
                     } => None,
-                    _ => placing.expires_at,
+                    Urgency::Deferrable { .. } => {
+                        placing.expires_at.map(|at| (at, "deadline_passed"))
+                    }
+                    Urgency::Interactive { .. } => {
+                        placing.expires_at.map(|at| (at, "hold_limit_passed"))
+                    }
                 };
                 (cutoff, scheduler.pre_run.clone(), scheduler.clock.clone())
             };
             // The sync runs as its own task, so a hold limit that passes stops the
             // waiting, never a sync halfway through; it then finishes on its own.
             let sync = tokio::spawn(pre_run.bring_up_to_date_for(&target, id));
-            let synced = match expires_at {
-                Some(at) => tokio::time::timeout(at.since(clock.now()), sync).await,
+            let synced = match cutoff {
+                Some((at, cause)) => tokio::time::timeout(at.since(clock.now()), sync)
+                    .await
+                    .map_err(|_| cause),
                 None => Ok(sync.await),
             };
             // Then the offer, built just before it is sent; a member that could not
@@ -581,7 +578,7 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
                     Ok(Ok(Ok(_))) => None,
                     Ok(Ok(Err(cause))) => Some(pre_run_sync::cause_code(cause)),
                     Ok(Err(_)) => Some("internal_error".into()),
-                    Err(_) => Some("hold_limit_passed".into()),
+                    Err(cause) => Some((*cause).into()),
                 };
                 scheduler.record_pre_run_attempt(&mut book, id, &target, since, cause);
                 if scheduler.due_placement(&book, id)
@@ -594,7 +591,9 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
                     if scheduler.due_placement(&book, id) {
                         scheduler.expire(&mut book, id);
                     }
-                    refused = true;
+                    // A changed queue can be offered immediately. A paused deadline
+                    // that is still due must wait before trying again.
+                    refused = scheduler.due_placement(&book, id);
                     break;
                 }
                 let Some(Entry {

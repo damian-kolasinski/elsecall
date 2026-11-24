@@ -215,3 +215,62 @@ fn deferrable_placement_observes_an_expired_deadline_on_local_fallback() {
     assert!(result.stdout.is_empty());
     assert_eq!(envelope(&result)["error"]["code"], "deadline_skipped");
 }
+
+#[test]
+fn skipped_late_acceptance_never_executes_and_the_worker_releases_its_reservation() {
+    let alpha = Machine::start("alpha", 2, 0.0, 1.0);
+    let bravo = Machine::start("bravo", 2, 0.0, 1.0);
+    enrol(&alpha.member, &bravo.member);
+    let (temp, repo) = repository();
+    let marker = temp.path().join("executed");
+    let gate = crate::sync_gate::SyncGate::start_offer(&bravo.member);
+    gate.enroll(&alpha.member, &bravo.member);
+    gate.arm();
+    let child = spawn(
+        &alpha.member,
+        &repo,
+        &[
+            "--member",
+            "bravo",
+            "--size",
+            "2",
+            "--deferrable",
+            "--deadline",
+            "3s",
+            "--at-deadline",
+            "skip",
+            "--label",
+            "late offer",
+            "--",
+            "/usr/bin/touch",
+            marker.to_str().unwrap(),
+        ],
+    );
+    gate.wait();
+    let held = bravo.member.ok(&["runs", "--limit", "1"]);
+    assert_eq!(held["member"]["in_use"], 2.0, "{held}");
+    let result = child.wait_with_output().unwrap();
+    gate.release();
+    assert_eq!(result.status.code(), Some(125), "{result:?}");
+    let error = envelope(&result);
+    assert_eq!(error["error"]["code"], "deadline_skipped", "{error}");
+    let id = error["error"]["run_id"].as_str().unwrap();
+    until(
+        "the unattached reservation to lapse",
+        crate::processes::WAIT,
+        || explain(&bravo.member, id)["outcome"]["code"] == "cancelled",
+    );
+    let worker = explain(&bravo.member, id);
+    assert_eq!(worker["placed"]["reached"], "placed");
+    assert_eq!(
+        bravo.member.ok(&["runs", "--limit", "1"])["member"]["in_use"],
+        0.0
+    );
+    let caller = explain(&alpha.member, id);
+    assert_eq!(caller["decision"]["verdict"], "deadline_skipped");
+    assert!(
+        caller["started_at"].is_null() && caller["placed"].is_null(),
+        "{caller}"
+    );
+    assert!(!marker.exists(), "the skipped command executed");
+}

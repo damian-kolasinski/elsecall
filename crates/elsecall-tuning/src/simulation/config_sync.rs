@@ -76,6 +76,9 @@ impl PreRunSync for ConfigurationSync {
             if cause.as_deref() == Some("hold_limit_passed") {
                 world.missing_pre_run.insert(format!("requests[{id}].pre_run_attempts[{member}].duration_ms is right-censored at the recorded hold limit"));
             }
+            if cause.as_deref() == Some("deadline_passed") {
+                world.missing_pre_run.insert(format!("requests[{id}].pre_run_attempts[{member}].duration_ms is right-censored at the recorded admission deadline"));
+            }
             let deadline = world.clock.now().millis().saturating_add(duration);
             world
                 .pending_pre_run

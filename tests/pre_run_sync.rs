@@ -914,3 +914,55 @@ fn service_configuration_waits_for_placed_leftovers_to_finish_without_stopping_t
         "{record}"
     );
 }
+
+#[test]
+fn skipped_config_sync_is_recorded_once_even_when_the_transfer_finishes_later() {
+    let (alpha, bravo) = synced_pair();
+    let repo = repository(&alpha);
+    write(&alpha, SECRET, "{\"setting\":\"changed\"}");
+    let gate = sync_gate::SyncGate::start(&bravo);
+    gate.enroll(&alpha, &bravo);
+    gate.arm();
+    let caller = spawn_cli(
+        &alpha,
+        &repo.root,
+        &[
+            "run",
+            "--member",
+            "bravo",
+            "--deferrable",
+            "--deadline",
+            "3s",
+            "--at-deadline",
+            "skip",
+            "--",
+            "/usr/bin/true",
+        ],
+    );
+    gate.wait();
+    let result = caller.wait_with_output().unwrap();
+    gate.release();
+    assert_eq!(result.status.code(), Some(125), "{result:?}");
+    let error = envelope(&result);
+    assert_eq!(error["error"]["code"], "deadline_skipped");
+    let id = error["error"]["run_id"].as_str().unwrap();
+    let skipped = alpha.ok(&["explain", id]);
+    assert_eq!(skipped["decision"]["verdict"], "deadline_skipped");
+    let attempts = skipped["pre_run_history"]["attempts"].as_array().unwrap();
+    assert_eq!(attempts.len(), 1, "{skipped}");
+    assert_eq!(attempts[0]["member"], "bravo");
+    assert_eq!(attempts[0]["cause"], "deadline_passed");
+    assert!(attempts[0]["duration_ms"].as_u64().unwrap() > 0);
+    // A second placement completes after the previously gated sync has released
+    // the per-member lock. Its completion must not rewrite the skipped record.
+    let next = run(
+        &alpha,
+        &repo.root,
+        &["--member", "bravo", "--", "/usr/bin/true"],
+    );
+    assert!(next.status.success(), "{next:?}");
+    assert_eq!(
+        alpha.ok(&["explain", id])["pre_run_history"],
+        skipped["pre_run_history"]
+    );
+}
