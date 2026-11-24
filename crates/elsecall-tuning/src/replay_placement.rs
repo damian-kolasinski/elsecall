@@ -71,11 +71,8 @@ impl ReplayPlacement {
                         .label
                         .as_deref()
                         .and_then(|l| configuration.rule_for(l));
-                    // Consumer default placement is pinned. Deferrable work is
-                    // pinned by the admission contract even in a counterfactual.
                     r.placement_request = if r.fact.kind
                         == elsecall_contract::scheduling_model::request::Kind::Run
-                        && !r.fact.deferrable
                         && rule.and_then(|r| r.placement) == Some(RulePlacement::Placeable)
                     {
                         Placement::Placeable
@@ -235,8 +232,7 @@ mod tests {
         }
     }
     #[test]
-    fn unmatched_and_deferrable_requests_use_consumer_pinned_default_and_internal_work_is_preserved()
-     {
+    fn deferrable_runs_follow_placement_rules_and_unmatched_runs_stay_pinned() {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("rules.toml");
         std::fs::write(
@@ -252,7 +248,7 @@ mod tests {
         }
         .apply(&mut t)
         .unwrap();
-        assert_eq!(t.requests[0].placement_request, Placement::Pinned);
+        assert_eq!(t.requests[0].placement_request, Placement::Placeable);
         t.requests[0].fact.deferrable = false;
         t.requests[0].fact.label = Some("unmatched".into());
         t.requests[0].placement_request = Placement::Member("devbox".into());

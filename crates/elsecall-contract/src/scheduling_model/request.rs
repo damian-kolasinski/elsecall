@@ -138,11 +138,6 @@ impl AdmissionRequest {
             } if Duration::from_millis(limit) > MAXIMUM_HOLD_LIMIT => {
                 return Err(invalid("The hold limit may be at most 24 hours."));
             }
-            Urgency::Deferrable { .. } if self.placement != Placement::Pinned => {
-                return Err(invalid(
-                    "Deferrable work is pinned only; drop --placeable or --member.",
-                ));
-            }
             Urgency::Deferrable { deadline, .. } if deadline.since(now) > MAXIMUM_DEADLINE => {
                 return Err(invalid("The deadline may be at most 7 days ahead."));
             }
@@ -238,10 +233,6 @@ mod tests {
 
     #[test]
     fn rejects_contradictory_or_out_of_range_properties() {
-        let deferrable = Urgency::Deferrable {
-            deadline: Timestamp::from_millis(1000),
-            at_deadline: AtDeadline::Skip,
-        };
         rejects(|r| r.size = Some(Cores::ZERO));
         rejects(|r| r.label = Some(String::new()));
         rejects(|r| r.label = Some("a\nb".into()));
@@ -254,13 +245,6 @@ mod tests {
             r.placement = Placement::Placeable;
         });
         rejects(|r| r.placement = Placement::Member("../x".into()));
-        assert!(
-            rejects(|r| {
-                r.placement = Placement::Placeable;
-                r.urgency = deferrable;
-            })
-            .contains("pinned only")
-        );
         rejects(|r| {
             r.urgency = Urgency::Interactive {
                 hold_limit_ms: Some(MAXIMUM_HOLD_LIMIT.as_millis() as u64 + 1),

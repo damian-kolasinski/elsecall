@@ -16,7 +16,6 @@
 //! same hold limit. The caller needs no sync, so it always remains a candidate.
 use super::{Book, Entry, Phase, Scheduler, Waiting, placing::Placing, running_estimates};
 use crate::{
-    admission::Class,
     busy::{self, MemberSituation, RunningOn},
     estimates,
     learning::{self, RunHistory, ratios::SpeedRatios},
@@ -224,11 +223,11 @@ impl Scheduler {
 
     /// Scores every waiting placeable request again, oldest first.
     pub(super) fn reconsider(&self, book: &mut Book) {
-        let mut waiting: Vec<(Timestamp, RunId)> = book
+        let mut waiting: Vec<_> = book
             .entries
             .iter()
             .filter(|(_, e)| e.auto.is_some() && !matches!(e.phase, Phase::Active { .. }))
-            .map(|(id, e)| (e.record.requested_at, id.clone()))
+            .map(|(id, e)| (e.queue_order(), id.clone()))
             .collect();
         waiting.sort();
         for (_, id) in waiting {
@@ -250,6 +249,9 @@ impl Scheduler {
 
     /// Scores one waiting placeable request and moves it if it should move.
     fn settle(&self, book: &mut Book, id: &RunId) {
+        if self.due_placement(book, id) {
+            self.expire(book, id);
+        }
         let Some((verdict, scoring)) = self.score(book, id) else {
             return;
         };
@@ -285,6 +287,9 @@ impl Scheduler {
                     (None, Some(_)) => true,
                     (Some(current), Some(better)) => {
                         !current.eligible
+                            || (entry.deferred_offer().is_some()
+                                && current.start != Start::Now
+                                && better.start == Start::Now)
                             || (better.start == Start::Now
                                 && match (current.completion_seconds, better.completion_seconds) {
                                     (Some(now), Some(then)) => then + margin(now) <= now,
@@ -341,13 +346,12 @@ impl Scheduler {
         entry.phase = Phase::Waiting(Waiting {
             requester: placing.requester,
             holder: placing.requester,
-            expires_at: Some(placing.expires_at),
+            expires_at: placing.expires_at,
             responder: placing.responder,
-            timer: Some(placing.timer),
+            timer: placing.timer,
         });
-        let size = entry.record.size;
+        entry.enqueue_local(&mut book.admission);
         self.persist(entry);
-        book.admission.enqueue(id.clone(), size, Class::Interactive);
     }
 
     /// Moves a waiting placeable request to the queue of requests offered to
@@ -369,11 +373,9 @@ impl Scheduler {
                     requester: waiting.requester,
                     target: Some(member.clone()),
                     workspace: Some(workspace),
-                    expires_at: waiting
-                        .expires_at
-                        .expect("interactive work has a hold limit"),
+                    expires_at: waiting.expires_at,
                     responder: waiting.responder,
-                    timer: waiting.timer.expect("interactive work has a timer"),
+                    timer: waiting.timer,
                     refusal: None,
                     in_flight: None,
                     config_sync: None,
@@ -497,7 +499,7 @@ impl Scheduler {
         let entry = book.entries.get(id)?;
         let auto = entry.auto.as_ref()?;
         let expires_at = match &entry.phase {
-            Phase::Waiting(waiting) => waiting.expires_at?,
+            Phase::Waiting(waiting) => waiting.expires_at,
             Phase::Placing(placing) => placing.expires_at,
             Phase::Active { .. } => return None,
         };
@@ -541,8 +543,12 @@ impl Scheduler {
             &auto.losses,
         );
         let wanted = Wanted {
+            deferrable: entry.deferred_offer().is_some(),
             size: entry.record.size,
-            hold_left: expires_at.since(now),
+            hold_left: expires_at.map_or(
+                elsecall_contract::scheduling_model::request::MAXIMUM_DEADLINE,
+                |at| at.since(now),
+            ),
             parameters: &self.parameters().placement,
         };
         let lacking = self.members.lacking(&auto.workspace);
@@ -576,8 +582,11 @@ impl Scheduler {
             .collect();
         let ahead = book
             .admission
-            .waiting_interactive()
+            .waiting()
             .take_while(|(queued, _)| *queued != id)
+            .filter(|(queued, _)| {
+                book.entries[*queued].queue_order().0 <= book.entries[id].queue_order().0
+            })
             .map(|(queued, size)| Ahead {
                 size,
                 run: book.entries.get(queued).and_then(|e| e.expected_run),
@@ -610,6 +619,7 @@ impl Scheduler {
         let mut ahead: Vec<Ahead> = quote
             .waiting
             .iter()
+            .filter(|work| work.priority <= book.entries[id].queue_order().0)
             .map(|w| Ahead {
                 size: w.size,
                 run: w.expected_run_ms.map(Duration::from_millis),
@@ -621,6 +631,7 @@ impl Scheduler {
                     .iter()
                     .take_while(|queued| *queued != id)
                     .filter_map(|queued| book.entries.get(queued))
+                    .filter(|e| e.queue_order().0 <= book.entries[id].queue_order().0)
                     .map(|e| Ahead {
                         size: e.record.size,
                         run: e.expected_run,

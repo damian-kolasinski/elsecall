@@ -1,4 +1,4 @@
-//! Requests this master places on a required member. They wait here, in arrival
+//! Requests this master places on a required member. They wait here, in priority
 //! order per member; a task offers them to the member, which admits one at once or
 //! refuses it, until each starts or reaches its hold limit. Before each offer the
 //! task brings the member's synced configuration up to date, so a run never starts
@@ -15,7 +15,11 @@ use crate::{
     record::{Candidate, Decision, Outcome, SizeBasis, Verdict},
 };
 use elsecall_contract::failure::Failure;
-use elsecall_contract::scheduling_model::{run_id::RunId, timestamp::Timestamp};
+use elsecall_contract::scheduling_model::{
+    request::{AtDeadline, Urgency},
+    run_id::RunId,
+    timestamp::Timestamp,
+};
 use elsecall_host::processes::ProcessIdentity;
 use std::{collections::BTreeSet, sync::Weak, time::Duration};
 use tokio::time::Instant;
@@ -33,14 +37,14 @@ pub(super) struct Placing {
     /// a member from outside a working tree, which runs in its home directory.
     pub workspace: Option<WorkspaceRef>,
     /// The hold limit, on the wall clock; the sync must finish before it too.
-    pub expires_at: Timestamp,
+    pub expires_at: Option<Timestamp>,
     pub responder: oneshot::Sender<Result<Grant, Failure>>,
-    pub timer: AbortHandle,
+    pub timer: Option<AbortHandle>,
     /// What the member last answered, for the decision and `fleet_busy`.
     pub refusal: Option<(MemberState, Option<Failure>)>,
     /// The target's configuration is being synced, or an offer is on its way to
-    /// it; the request does not move until the answer is in, so no admission is
-    /// made for a request that left.
+    /// it. The master keeps the target fixed during the offer. If the caller
+    /// leaves or its deadline passes, an unclaimed worker reservation lapses.
     pub in_flight: Option<InFlight>,
     /// The configuration sync before the latest offer to the target.
     pub config_sync: Option<Done>,
@@ -69,7 +73,7 @@ enum AfterSync {
 }
 
 impl Scheduler {
-    fn record_pre_run_attempt(
+    pub(super) fn record_pre_run_attempt(
         &self,
         book: &mut Book,
         id: &RunId,
@@ -105,6 +109,29 @@ impl Scheduler {
         });
     }
 
+    pub(super) fn new_placing(
+        &self,
+        entry: &Entry,
+        target: Option<String>,
+        workspace: Option<WorkspaceRef>,
+        expires_at: Timestamp,
+        responder: oneshot::Sender<Result<Grant, Failure>>,
+    ) -> Placing {
+        Placing {
+            requester: entry.record.requested_by,
+            target,
+            workspace,
+            expires_at: Some(expires_at),
+            responder,
+            timer: Some(self.timer(&entry.record.run_id, expires_at.since(self.clock.now()))),
+            refusal: None,
+            in_flight: None,
+            config_sync: None,
+            offered: false,
+            pre_run_recorded: false,
+        }
+    }
+
     /// Queues `entry` for `target` and makes sure someone offers it.
     pub(super) fn place(
         &self,
@@ -116,19 +143,13 @@ impl Scheduler {
         responder: oneshot::Sender<Result<Grant, Failure>>,
     ) {
         let id = entry.record.run_id.clone();
-        entry.phase = Phase::Placing(Box::new(Placing {
-            requester: entry.record.requested_by,
-            target: Some(target.clone()),
+        entry.phase = Phase::Placing(Box::new(self.new_placing(
+            &entry,
+            Some(target.clone()),
             workspace,
             expires_at,
             responder,
-            timer: self.timer(&id, expires_at.since(self.clock.now())),
-            refusal: None,
-            in_flight: None,
-            config_sync: None,
-            offered: false,
-            pre_run_recorded: false,
-        }));
+        )));
         self.persist(&mut entry);
         book.entries.insert(id.clone(), entry);
         self.queue_for(book, &id, target);
@@ -137,17 +158,11 @@ impl Scheduler {
     /// Adds `id` to the requests offered to `target`, in arrival order, and makes
     /// sure a task offers them.
     pub(super) fn queue_for(&self, book: &mut Book, id: &RunId, target: String) {
-        let requested_at = |id: &RunId| book.entries.get(id).map(|e| e.record.requested_at);
-        let at = requested_at(id);
-        let queue = book.placing.get(&target).cloned().unwrap_or_default();
-        let position = queue
-            .iter()
-            .position(|queued| requested_at(queued) > at)
-            .unwrap_or(queue.len());
         book.placing
             .entry(target.clone())
             .or_default()
-            .insert(position, id.clone());
+            .push_back(id.clone());
+        Self::order_offers(book, &target);
         if book.offering.insert(target.clone()) {
             tokio::spawn(offer(self.this.clone(), target));
         }
@@ -164,7 +179,8 @@ impl Scheduler {
             label: entry.record.label.clone(),
             workload: entry.record.workload.clone(),
             workspace: placing.workspace.clone(),
-            start_within_ms: placing.expires_at.since(self.clock.now()).as_millis() as u64,
+            start_within_ms: entry.transfer_window(placing, self.clock.now()).as_millis() as u64,
+            deferred: entry.deferred_offer(),
             size_basis: entry.record.size_basis,
             expected_run_ms: entry.expected_run.map(quote::millis),
         })
@@ -191,7 +207,11 @@ impl Scheduler {
         ) else {
             unreachable!("checked by the caller")
         };
-        placing.timer.abort();
+        let now = self.clock.now();
+        let start_by = now.after(entry.transfer_window(&placing, now));
+        if let Some(timer) = &placing.timer {
+            timer.abort();
+        }
         let target = placing
             .target
             .clone()
@@ -265,7 +285,7 @@ impl Scheduler {
             &mut entry,
             target,
             Some(PlacedGrant {
-                start_by: placing.expires_at,
+                start_by,
                 copy,
                 calling_member: self.name(),
                 synced_paths,
@@ -345,11 +365,17 @@ impl Scheduler {
                 cause,
             ));
         }
-        self.fail_before_offer(book, id, Verdict::ConfigSyncFailed, failure);
+        self.fail_waiting_placement(book, id, Verdict::ConfigSyncFailed, failure);
     }
 
     /// Fails a placed request before it could be offered, placeable or not.
-    fn fail_before_offer(&self, book: &mut Book, id: &RunId, verdict: Verdict, failure: Failure) {
+    pub(super) fn fail_waiting_placement(
+        &self,
+        book: &mut Book,
+        id: &RunId,
+        verdict: Verdict,
+        failure: Failure,
+    ) {
         let Some(entry) = book.entries.get_mut(id) else {
             return;
         };
@@ -367,16 +393,7 @@ impl Scheduler {
 
     /// The hold limit of a placed request passed.
     pub(super) fn expire_placing(&self, book: &mut Book, id: &RunId) {
-        let interrupted = book.entries.get(id).and_then(|entry| match &entry.phase {
-            Phase::Placing(placing) => match (&placing.target, placing.in_flight) {
-                (Some(target), Some(InFlight::Syncing { since })) => Some((target.clone(), since)),
-                _ => None,
-            },
-            _ => None,
-        });
-        if let Some((target, since)) = interrupted {
-            self.record_pre_run_attempt(book, id, &target, since, Some("hold_limit_passed".into()));
-        }
+        self.record_interrupted_sync(book, id, "hold_limit_passed");
         let Some(Entry {
             phase: Phase::Placing(placing),
             record,
@@ -465,11 +482,11 @@ fn decision(
     }
 }
 
-/// Offers the requests waiting for `target`, oldest first, until none is left. A
+/// Offers the requests waiting for `target`, in priority order, until none is left. A
 /// request refused for room blocks those behind it, so large requests are not
 /// starved; one refused because its copy is in use lets the next one try.
 async fn offer(scheduler: Weak<Scheduler>, target: String) {
-    loop {
+    'rescan: loop {
         let (members, queue) = {
             let Some(scheduler) = scheduler.upgrade() else {
                 return;
@@ -489,11 +506,11 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
             (scheduler.members.clone(), queue)
         };
         let mut refused = false;
-        for id in &queue {
+        for (index, id) in queue.iter().enumerate() {
             // First the target's synced configuration, for a request still queued
             // here; the request stays put meanwhile.
             let since = Instant::now();
-            let (expires_at, pre_run, clock) = {
+            let (cutoff, pre_run, clock) = {
                 let Some(scheduler) = scheduler.upgrade() else {
                     return;
                 };
@@ -504,27 +521,52 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
                     refused = true;
                     break;
                 }
-                match book.entries.get_mut(id).map(|e| &mut e.phase) {
-                    Some(Phase::Placing(placing))
-                        if placing.target.as_deref() == Some(target.as_str()) =>
-                    {
-                        placing.in_flight = Some(InFlight::Syncing { since });
-                        placing.pre_run_recorded = false;
-                        // A sync from an earlier attempt says nothing about this one.
-                        placing.config_sync = None;
-                        (
-                            placing.expires_at,
-                            scheduler.pre_run.clone(),
-                            scheduler.clock.clone(),
-                        )
-                    }
-                    _ => continue,
+                if scheduler.due_placement(&book, id) {
+                    scheduler.expire(&mut book, id);
+                    refused = scheduler.due_placement(&book, id);
+                    break;
                 }
+                if Scheduler::higher_priority_waits(&book, &target, id, &queue[..index]) {
+                    continue 'rescan;
+                }
+                let Some(Entry {
+                    phase: Phase::Placing(placing),
+                    record,
+                    ..
+                }) = book.entries.get_mut(id)
+                else {
+                    continue;
+                };
+                if placing.target.as_deref() != Some(target.as_str()) {
+                    continue;
+                }
+                placing.in_flight = Some(InFlight::Syncing { since });
+                placing.pre_run_recorded = false;
+                placing.config_sync = None;
+                // Promotion leaves the run waiting. Let its existing sync finish.
+                let cutoff = match record.urgency {
+                    Urgency::Deferrable {
+                        at_deadline: AtDeadline::Start,
+                        ..
+                    } => None,
+                    Urgency::Deferrable { .. } => {
+                        placing.expires_at.map(|at| (at, "deadline_passed"))
+                    }
+                    Urgency::Interactive { .. } => {
+                        placing.expires_at.map(|at| (at, "hold_limit_passed"))
+                    }
+                };
+                (cutoff, scheduler.pre_run.clone(), scheduler.clock.clone())
             };
             // The sync runs as its own task, so a hold limit that passes stops the
             // waiting, never a sync halfway through; it then finishes on its own.
             let sync = tokio::spawn(pre_run.bring_up_to_date_for(&target, id));
-            let synced = tokio::time::timeout(expires_at.since(clock.now()), sync).await;
+            let synced = match cutoff {
+                Some((at, cause)) => tokio::time::timeout(at.since(clock.now()), sync)
+                    .await
+                    .map_err(|_| cause),
+                None => Ok(sync.await),
+            };
             // Then the offer, built just before it is sent; a member that could not
             // be reached for the sync is handled as one that could not be offered.
             let after = {
@@ -536,9 +578,24 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
                     Ok(Ok(Ok(_))) => None,
                     Ok(Ok(Err(cause))) => Some(pre_run_sync::cause_code(cause)),
                     Ok(Err(_)) => Some("internal_error".into()),
-                    Err(_) => Some("hold_limit_passed".into()),
+                    Err(cause) => Some((*cause).into()),
                 };
                 scheduler.record_pre_run_attempt(&mut book, id, &target, since, cause);
+                if scheduler.due_placement(&book, id)
+                    || Scheduler::higher_priority_waits(&book, &target, id, &queue[..index])
+                {
+                    if let Some(Phase::Placing(p)) = book.entries.get_mut(id).map(|e| &mut e.phase)
+                    {
+                        p.in_flight = None;
+                    }
+                    if scheduler.due_placement(&book, id) {
+                        scheduler.expire(&mut book, id);
+                    }
+                    // A changed queue can be offered immediately. A paused deadline
+                    // that is still due must wait before trying again.
+                    refused = scheduler.due_placement(&book, id);
+                    break;
+                }
                 let Some(Entry {
                     phase: Phase::Placing(placing),
                     auto,
@@ -558,7 +615,7 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
                     )),
                     // The hold limit passed: expiry decides what to blame.
                     Err(_) => {
-                        scheduler.expire_placing(&mut book, id);
+                        scheduler.expire(&mut book, id);
                         continue;
                     }
                 };
@@ -579,7 +636,7 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
                     Err(Failed::Unavailable(failure)) => AfterSync::Unavailable(failure),
                     // The target is fine; this member can no longer place.
                     Err(Failed::NotMaster(failure)) => {
-                        scheduler.fail_before_offer(
+                        scheduler.fail_waiting_placement(
                             &mut book,
                             id,
                             Verdict::MemberUnavailable,
@@ -607,6 +664,9 @@ async fn offer(scheduler: Weak<Scheduler>, target: String) {
                 return;
             };
             let mut book = scheduler.book();
+            if scheduler.due_placement(&book, id) {
+                scheduler.expire(&mut book, id);
+            }
             let Some(Entry {
                 phase: Phase::Placing(placing),
                 auto,

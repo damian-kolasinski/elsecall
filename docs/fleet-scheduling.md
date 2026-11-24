@@ -86,13 +86,13 @@ configuration supplies defaults.
 | | `placeable` | May run on any member that can host its workspace. |
 | | required member | Hard requirement to run on a named member (a placeable request only). |
 | Urgency | `interactive` | A caller is waiting. It waits for capacity up to a hold limit, then fails. |
-| | `deferrable` | Should run, but not while the machine is busy. Needs a deadline and what to do at it (start, or skip). Pinned only for now. |
+| | `deferrable` | Should run, but not while the machine is busy. Needs a deadline and what to do at it (start, or skip). |
 | Size | cores | How much of a member the work occupies while it runs (see "Capacity"). |
 | Label | consumer-chosen text | Identifies the kind of work (e.g. `test FeatureModule`) for history, cost learning and diagnostics. |
 | Resources | (later) | Named resources the work needs; see "Later". |
 
-Asking for a deferrable placeable request, or a required member on pinned work, is
-`invalid_request`.
+The master owns the deadline as a deferrable run moves between candidates. A
+required member on pinned work is `invalid_request`.
 
 Examples of how requests map:
 
@@ -194,9 +194,8 @@ member is admitted by that member.
   - Local requests wait on their own member.
   - Placed requests wait on the master.
   - A member offered a placed request either starts it at once or refuses it, so it
-    can go elsewhere. A member refuses placed work while its own interactive
-    requests are waiting. Its own deferrable work, which waits behind interactive
-    work, does not keep placed work out.
+    can go elsewhere. Waiting work of equal or higher priority on the member
+    takes precedence over an incoming offer.
 - **Hold limit.** This is the longest an interactive request may take from request
   to start, including workspace sync.
   - Default: ten minutes minus the label's expected run time, with a floor of 30
@@ -211,6 +210,8 @@ member is admitted by that member.
   - At its deadline, work that chose to start moves to the front of the interactive
     queue. It still never overcommits.
   - Work that chose to skip ends with `deadline_skipped`.
+  - Placement prefers a member with room now. Once admitted remotely, the run
+    has up to 24 hours to transfer its workspace and start the command.
   - The outcome is recorded either way.
 
 ## Placement

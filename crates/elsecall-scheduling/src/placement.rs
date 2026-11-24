@@ -371,6 +371,8 @@ pub struct Unreachable {
 
 /// What is being placed.
 pub struct Wanted<'a> {
+    /// Background work prefers spare capacity and its deadline governs admission.
+    pub deferrable: bool,
     pub size: Cores,
     /// What is left of the hold limit.
     pub hold_left: Duration,
@@ -890,12 +892,16 @@ pub fn decide(
         .into_iter()
         .map(|observation| score(observation, wanted, typical))
         .collect();
+    let ready = wanted.deferrable
+        && candidates
+            .iter()
+            .any(|c| c.estimate.eligible && c.estimate.start == Start::Now);
     let contenders: Vec<Contender> = candidates
         .iter()
         .map(|c| Contender {
             member: &c.observation.state.member,
             caller: c.observation.caller,
-            eligible: c.estimate.eligible,
+            eligible: c.estimate.eligible && (!ready || c.estimate.start == Start::Now),
             completion: c.estimate.completion_seconds,
             copy: c.estimate.copy,
         })
@@ -1138,7 +1144,13 @@ fn score(observation: Observation, wanted: &Wanted, typical: f64) -> Scored {
     );
     let loss_factor = (exposed > work).then(|| exposed.as_secs_f64() / work.as_secs_f64());
     let completion = wait_time.map(|w| w + exposed);
-    let eligible = wait_time.is_some_and(|w| w + sync <= wanted.hold_left);
+    let eligible = wait_time.is_some_and(|w| {
+        if wanted.deferrable {
+            w <= wanted.hold_left
+        } else {
+            w + sync <= wanted.hold_left
+        }
+    });
     let why = match (&start, wait_time) {
         (Start::Blocked { why } | Start::Never { why }, _) => why.clone(),
         (_, Some(w)) => {
@@ -1340,6 +1352,7 @@ pub(crate) mod tests {
             observations,
             Vec::new(),
             &Wanted {
+                deferrable: false,
                 size: cores(size),
                 hold_left: secs(600),
                 parameters: &defaults(),
@@ -1373,6 +1386,7 @@ pub(crate) mod tests {
                 left_out("laptop", "Not asked yet."),
             ],
             &Wanted {
+                deferrable: false,
                 size: cores(2.0),
                 hold_left: secs(600),
                 parameters: &defaults(),
@@ -1631,6 +1645,7 @@ pub(crate) mod tests {
         let mut caller = member("mini", true, 0.0, 1.0, Copy::Caller);
         let devbox = member("devbox", false, 10.0, 1.0, warm());
         let wanted = |hold_left| Wanted {
+            deferrable: false,
             size: cores(3.0),
             hold_left,
             parameters: &parameters,
@@ -1734,6 +1749,7 @@ pub(crate) mod tests {
                 observations,
                 Vec::new(),
                 &Wanted {
+                    deferrable: false,
                     size: cores(2.0),
                     hold_left: secs(600),
                     parameters: &parameters,
@@ -1843,6 +1859,7 @@ pub(crate) mod tests {
         );
         let parameters = defaults();
         let mut wanted = Wanted {
+            deferrable: false,
             size: cores(4.0),
             hold_left: secs(600),
             parameters: &parameters,
@@ -2018,6 +2035,7 @@ pub(crate) mod tests {
             &LossHistory::default(),
         );
         let wanted = |parameters| Wanted {
+            deferrable: false,
             size: cores(2.0),
             hold_left: secs(600),
             parameters,
@@ -2135,6 +2153,7 @@ pub(crate) mod tests {
         );
         let parameters = defaults();
         let wanted = Wanted {
+            deferrable: false,
             size: cores(2.5),
             hold_left: Duration::from_millis(587_321),
             parameters: &parameters,

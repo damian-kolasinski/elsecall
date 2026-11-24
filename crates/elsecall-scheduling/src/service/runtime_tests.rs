@@ -7,6 +7,7 @@ use crate::{
     pre_run_sync::{PreRunSync, Synced},
 };
 use elsecall_contract::inspection::{LoadSample, Machine, MemoryPressure, ThermalState};
+use elsecall_contract::scheduling_model::request::AtDeadline;
 use futures_util::future::BoxFuture;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -1158,6 +1159,7 @@ async fn an_update_waits_only_for_work_a_restart_would_cut_short() {
             root: "/virtual/acme".into(),
             common_dir: "/virtual/acme/.git".into(),
         }),
+        deferred: None,
         start_within_ms: 10_000,
         size_basis: None,
         expected_run_ms: None,
@@ -1321,3 +1323,5 @@ async fn no_offer_leaves_while_an_update_holds_admission() {
         "update_in_progress"
     );
 }
+
+mod deferred_offers;

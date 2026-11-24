@@ -66,6 +66,7 @@ enum Scoring {
 
 /// A scoring whose record holds every input: scored by `placement::decide`.
 struct WithInputsScoring {
+    deferrable: bool,
     arrival: bool,
     size: Cores,
     hold_left: Duration,
@@ -238,6 +239,10 @@ impl RecordedScoring {
                 parameters,
                 winner: arrival.winner.clone(),
                 scoring: Scoring::Inputs(WithInputsScoring {
+                    deferrable: matches!(
+                        record.urgency,
+                        elsecall_contract::scheduling_model::request::Urgency::Deferrable { .. }
+                    ),
                     arrival: true,
                     size,
                     hold_left,
@@ -265,6 +270,10 @@ impl RecordedScoring {
                 parameters,
                 winner: scoring.winner.clone(),
                 scoring: Scoring::Inputs(WithInputsScoring {
+                    deferrable: matches!(
+                        record.urgency,
+                        elsecall_contract::scheduling_model::request::Urgency::Deferrable { .. }
+                    ),
                     // A request that started at once was scored only on arrival.
                     arrival: decision
                         .arrival
@@ -416,6 +425,7 @@ impl WithInputsScoring {
             })
             .collect::<Result<Vec<_>, _>>()?;
         let wanted = Wanted {
+            deferrable: self.deferrable,
             size: self.size,
             hold_left: self.hold_left,
             parameters: &parameters.placement,

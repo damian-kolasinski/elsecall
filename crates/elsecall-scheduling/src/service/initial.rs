@@ -99,9 +99,14 @@ impl Scheduler {
                 .as_ref()
                 .filter(|p| p.side == Side::Caller)
                 .map(|p| PlacedGrant {
-                    start_by: record
-                        .requested_at
-                        .after(record.hold_limit.map_or(Duration::ZERO, |h| h.seconds)),
+                    start_by: record.hold_limit.map_or_else(
+                        || {
+                            started.after(
+                                elsecall_contract::scheduling_model::request::MAXIMUM_HOLD_LIMIT,
+                            )
+                        },
+                        |h| record.requested_at.after(h.seconds),
+                    ),
                     copy: p.copy.clone().expect("caller snapshot has a copy identity"),
                     calling_member: record.calling_member.clone(),
                     synced_paths: Vec::new(),

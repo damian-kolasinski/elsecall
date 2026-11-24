@@ -323,6 +323,7 @@ async fn install_waits_for_placed_runs_but_not_local_work_then_closes_admission_
             root: "/Users/me/acme".into(),
             common_dir: "/Users/me/acme/.git".into(),
         }),
+        deferred: None,
         start_within_ms: 10_000,
         size_basis: None,
         expected_run_ms: None,

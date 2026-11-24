@@ -280,6 +280,7 @@ const FORMS: [Form; 3] = [Form::Current, Form::BeforeArrivalInputs, Form::Before
 fn recorded(observations: Vec<Observation>, parameters: &Parameters, form: Form) -> Record {
     let at = Timestamp::parse_rfc3339("2026-11-03T12:00:00Z").unwrap();
     let wanted = Wanted {
+        deferrable: false,
         size: cores(2.0),
         hold_left: Duration::from_millis(587_321),
         parameters: &parameters.placement,
@@ -664,6 +665,7 @@ fn the_real_request_that_waited_410_s_goes_to_the_idle_member_once_elapsed_time_
     };
     let parameters = defaults();
     let wanted = Wanted {
+        deferrable: false,
         size: arrival.size.unwrap(),
         hold_left: arrival.hold_left.unwrap(),
         parameters: &parameters.placement,

@@ -8,12 +8,14 @@ mod holding;
 mod hosting;
 mod initial;
 mod internal;
+mod placement_priority;
 pub use crate::parameters::SchedulerConfiguration;
 pub use internal::{InternalHold, InternalPause, invalid_rehearsal};
 #[cfg(test)]
 mod runtime_tests;
 pub use hosting::{HostedEnd, HostedExit};
 mod placing;
+mod pump;
 mod quotes;
 mod ratio_cache;
 mod routing;
@@ -48,7 +50,7 @@ use elsecall_contract::failure::{Failure, Result};
 use elsecall_contract::inspection::{CoreCounts, MachineInspector};
 use elsecall_contract::scheduling_model::{
     capacity::{Capacity, Cores},
-    request::{self, AdmissionRequest, AtDeadline, Kind, Placement, Urgency, WorkRequest},
+    request::{self, AdmissionRequest, Kind, Placement, Urgency, WorkRequest},
     run_id::{RandomRunIds, RunId, RunIds},
     speed::{SpeedHistory, SpeedMeter},
     timestamp::Timestamp,
@@ -152,6 +154,7 @@ pub struct Scheduler {
 
 /// Everything admission knows, guarded together so decisions see one state.
 struct Book {
+    pumping: bool,
     admission: Admission,
     internal_paused: Option<Timestamp>,
     /// While positive, Elsecall's own queued work is kept out of admission.
@@ -357,6 +360,7 @@ impl Scheduler {
                 quotes: Quotes::default(),
                 running: Default::default(),
                 stopping: false,
+                pumping: false,
                 update_held: 0,
                 hosting_held: 0,
                 lingering: HashSet::new(),
@@ -418,7 +422,7 @@ impl Scheduler {
                 .is_none_or(|at| *at <= monotonic)
         }) || book.entries.values().any(|entry| match &entry.phase {
             Phase::Waiting(waiting) => waiting.expires_at.is_some_and(|at| at <= now),
-            Phase::Placing(placing) => placing.expires_at <= now,
+            Phase::Placing(placing) => placing.expires_at.is_some_and(|at| at <= now),
             Phase::Active { .. } => false,
         })
     }
@@ -457,7 +461,7 @@ impl Scheduler {
             .values()
             .filter_map(|entry| match &entry.phase {
                 Phase::Waiting(waiting) => waiting.expires_at,
-                Phase::Placing(placing) => Some(placing.expires_at),
+                Phase::Placing(placing) => placing.expires_at,
                 Phase::Active { .. } => None,
             });
         let retries = book
@@ -734,20 +738,13 @@ impl Scheduler {
             match target {
                 Some(None) => {
                     let auto = auto.expect("placeable work carries its placement");
-                    let placing = Placing {
-                        requester: requester.identity,
-                        target: None,
-                        workspace: Some(auto.workspace.clone()),
-                        expires_at: now.after(expires_after),
+                    let placing = self.new_placing(
+                        &entry,
+                        None,
+                        Some(auto.workspace.clone()),
+                        now.after(expires_after),
                         responder,
-                        // Asking members took time out of the hold limit.
-                        timer: self.timer(&id, now.after(expires_after).since(self.clock.now())),
-                        refusal: None,
-                        in_flight: None,
-                        config_sync: None,
-                        offered: false,
-                        pre_run_recorded: false,
-                    };
+                    );
                     entry.auto = Some(auto);
                     self.place_auto(&mut book, entry, placing);
                     if book.entries.contains_key(&id)
@@ -1096,66 +1093,6 @@ impl Scheduler {
 
     // ----- Admission -------------------------------------------------------------
 
-    /// Starts every waiting request that may start now, in order.
-    fn pump(&self, book: &mut Book) {
-        if book.update_held > 0 {
-            return;
-        }
-        let gate = self.gate(book);
-        while let Some(id) = book.admission.ready(gate.admits()).cloned() {
-            let reason = match book.entries[&id].record.urgency {
-                Urgency::Deferrable {
-                    deadline,
-                    at_deadline: AtDeadline::Start,
-                } if deadline <= self.clock.now() => {
-                    "Deadline passed; started ahead of interactive work once it fit."
-                }
-                Urgency::Deferrable { .. } => "Capacity was free and no interactive work waited.",
-                Urgency::Interactive { .. } => "Fit free capacity and was first in line.",
-            };
-            let entry = &book.entries[&id];
-            let decision = if entry.auto.is_some() {
-                let own = self.name();
-                let reason = Self::start_reason(entry, &own);
-                self.auto_decision(entry, Verdict::Started, Some(&own), &reason)
-            } else {
-                self.decision(book, entry, Verdict::Started, reason)
-            };
-            book.admission.start(&id);
-            let mut entry = book.entries.remove(&id).expect("waiting work has an entry");
-            entry.record.decision = Some(decision);
-            let Phase::Waiting(waiting) = std::mem::replace(
-                &mut entry.phase,
-                Phase::Active {
-                    holders: BTreeSet::new(),
-                },
-            ) else {
-                unreachable!("only waiting work is queued")
-            };
-            entry.phase = Phase::Active {
-                holders: BTreeSet::from([waiting.holder]),
-            };
-            if let Some(timer) = waiting.timer {
-                timer.abort();
-            }
-            // A lease outlives the elsecall process that asked for it.
-            if waiting.requester != waiting.holder {
-                book.bindings.unbind(&id, waiting.requester);
-            }
-            let grant = self.begin(&mut entry, self.name(), None);
-            book.entries.insert(id.clone(), entry);
-            if waiting.responder.send(Ok(grant)).is_err() {
-                self.end(
-                    book,
-                    &id,
-                    Outcome::Cancelled {
-                        reason: "The caller disconnected before the grant arrived.".into(),
-                    },
-                );
-            }
-        }
-    }
-
     /// Why a request of `size` cannot start here now, as `fleet_busy`.
     fn situation(
         &self,
@@ -1255,7 +1192,9 @@ impl Scheduler {
                 }
             }
             Phase::Placing(placing) => {
-                placing.timer.abort();
+                if let Some(timer) = &placing.timer {
+                    timer.abort();
+                }
                 if let Some(target) = &placing.target
                     && let Some(queue) = book.placing.get_mut(target)
                 {
@@ -1730,6 +1669,7 @@ mod pending_snapshot_tests {
         binding::fake::FakeProcesses, clock::VirtualClock, placed::Alone, pre_run_sync::Synced,
     };
     use elsecall_contract::inspection::{LoadSample, Machine, MemoryPressure, ThermalState};
+    use elsecall_contract::scheduling_model::request::AtDeadline;
     use futures_util::future::BoxFuture;
     use std::sync::atomic::{AtomicU64, Ordering};
 

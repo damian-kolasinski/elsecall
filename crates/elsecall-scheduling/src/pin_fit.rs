@@ -149,6 +149,7 @@ mod tests {
             observations,
             Vec::new(),
             &Wanted {
+                deferrable: false,
                 size: Cores::from_f64(2.0).unwrap(),
                 hold_left: Duration::from_secs(hold_left),
                 parameters: &defaults(),
@@ -209,6 +210,7 @@ mod tests {
             vec![member("bravo", false, 10.0, 1.0, warm())],
             Vec::new(),
             &Wanted {
+                deferrable: false,
                 size: Cores::from_f64(2.0).unwrap(),
                 hold_left: Duration::from_secs(600),
                 parameters: &defaults(),

@@ -1566,3 +1566,5 @@ fn a_declared_plan_is_estimated_by_its_units_from_observed_plans() {
     assert_eq!(replay["decisions"]["placement"], 3, "{replay}");
     assert_eq!(replay["decisions"]["flipped"], 0, "{replay}");
 }
+
+mod deferred;

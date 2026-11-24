@@ -8,7 +8,7 @@ use super::{
     scratch,
 };
 use elsecall_contract::failure::{Failure, Result};
-use elsecall_contract::scheduling_model::request::{Placement, Urgency};
+use elsecall_contract::scheduling_model::request::Urgency;
 use elsecall_host::paths::Paths;
 use elsecall_scheduling::service::Scheduler;
 use elsecall_workspace::housekeeping::pass::Housekeeper;
@@ -459,9 +459,6 @@ fn validate(r: &Launch) -> Result<()> {
             return Err(invalid(
                 "A synthetic interactive request needs its resolved hold limit.",
             ));
-        }
-        Urgency::Deferrable { .. } if r.placement != Placement::Pinned => {
-            return Err(invalid("Deferrable work must be pinned."));
         }
         _ => (),
     }

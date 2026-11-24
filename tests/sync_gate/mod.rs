@@ -15,6 +15,8 @@ use tokio::{
     sync::Notify,
 };
 
+const OFFER: &[u8] = b"POST /peer/v1/placements ";
+
 pub(crate) struct SyncGate {
     _runtime: tokio::runtime::Runtime,
     address: SocketAddr,
@@ -31,6 +33,11 @@ impl SyncGate {
 
     pub(crate) fn start_run(member: &crate::members::TestMember) -> Self {
         Self::start_for(member, b"POST /peer/v1/placements/r-")
+    }
+
+    /// Hold the signed acceptance after the real worker has reserved capacity.
+    pub(crate) fn start_offer(member: &crate::members::TestMember) -> Self {
+        Self::start_for(member, OFFER)
     }
 
     fn start_for(member: &crate::members::TestMember, attach: &'static [u8]) -> Self {
@@ -101,7 +108,7 @@ impl SyncGate {
         while !self.blocked.load(Ordering::SeqCst) {
             assert!(
                 Instant::now() < deadline,
-                "sync never reached its upgraded channel"
+                "the exchange never reached its gate"
             );
             std::thread::sleep(std::time::Duration::from_millis(20));
         }
@@ -151,17 +158,23 @@ async fn relay(
     let downstream = async {
         if gated {
             let response = headers(&mut mr).await?;
-            cw.write_all(&response).await?;
-            assert!(
-                response.starts_with(b"HTTP/1.1 101 "),
-                "sync upgrade failed"
-            );
-            // Forward the upgrade but hold the first response ciphertext byte.
-            // Dropping the gate here disconnects an attached caller.
-            let first = mr.read_u8().await?;
-            blocked.store(true, Ordering::SeqCst);
-            released.notified().await;
-            cw.write_u8(first).await?;
+            if attach == OFFER {
+                assert!(response.starts_with(b"HTTP/1.1 200 "), "offer failed");
+                blocked.store(true, Ordering::SeqCst);
+                released.notified().await;
+                cw.write_all(&response).await?;
+            } else {
+                cw.write_all(&response).await?;
+                assert!(
+                    response.starts_with(b"HTTP/1.1 101 "),
+                    "sync upgrade failed"
+                );
+                // Forward the upgrade but hold the first response ciphertext byte.
+                let first = mr.read_u8().await?;
+                blocked.store(true, Ordering::SeqCst);
+                released.notified().await;
+                cw.write_u8(first).await?;
+            }
         }
         tokio::io::copy(&mut mr, &mut cw).await
     };
