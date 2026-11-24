@@ -6,15 +6,17 @@
 //! is the operator's own file, so it may link anywhere. mise's other global
 //! files (`~/.config/mise/conf.d`, `config.local.toml`, environment variants)
 //! are not read.
+use super::packslip::{self, CONFIG as FILE, DISPLAY};
 use crate::pins::{
     PinSource, Reading, SourceFile, SourceKind,
     mise_config::{self, push_pins},
     source_file::read_home_file,
 };
 use elsecall_contract::failure::Result;
-use std::path::{Path, PathBuf};
-
-const FILE: &str = ".config/mise/config.toml";
+use std::{
+    collections::BTreeSet,
+    path::{Path, PathBuf},
+};
 
 pub(super) struct MiseGlobal {
     home: PathBuf,
@@ -28,24 +30,30 @@ impl MiseGlobal {
 
 impl PinSource for MiseGlobal {
     fn read(&self, _workspace: &Path) -> Result<Reading> {
-        let display = format!("~/{FILE}");
-        let mut reading = Reading::default();
-        let Some(text) = read_home_file(&self.home.join(FILE), &display)? else {
-            return Ok(reading);
-        };
-        let source = SourceFile {
-            kind: SourceKind::MiseGlobal,
-            file: display,
-        };
-        push_pins(
-            mise_config::tools(&text, &source.file)?,
-            None,
-            &source,
-            &mut reading,
-        );
-        reading.files.push(source);
-        Ok(reading)
+        read_managed(&self.home, &BTreeSet::new())
     }
+}
+
+pub(crate) fn read_managed(home: &Path, selected: &BTreeSet<String>) -> Result<Reading> {
+    let mut reading = Reading::default();
+    let text = read_home_file(&home.join(FILE), DISPLAY)?;
+    if text.is_none() && selected.is_empty() {
+        return Ok(reading);
+    }
+    let text = text.unwrap_or_default();
+    let source = SourceFile {
+        kind: SourceKind::MiseGlobal,
+        file: DISPLAY.to_owned(),
+    };
+    push_pins(
+        mise_config::tools(&text, &source.file)?,
+        None,
+        &source,
+        &mut reading,
+    );
+    packslip::approve(&text, &mut reading, selected)?;
+    reading.files.push(source);
+    Ok(reading)
 }
 
 #[cfg(test)]

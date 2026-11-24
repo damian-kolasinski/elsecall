@@ -12,7 +12,7 @@
 //! could not read is listed as unread. A derived runtime is installed when an
 //! installed version equals or extends it.
 use crate::{
-    pins::InstallOptions,
+    pins::{InstallOptions, packslip},
     plan::wants::{Outcome, Reason, ToolKey, Unresolved, Want, default_runtime},
     tool_inventory::{
         Inventory, InventoryFailure, Manager, ManagerReport, ToolName, ToolVersion,
@@ -70,6 +70,7 @@ pub(crate) fn plan_member(
     wants: &[Want],
     exceptions: &[MemberException],
     inventory: &Inventory,
+    signed_pins: Option<&std::collections::BTreeSet<String>>,
 ) -> MemberPlan {
     let wants = with_member_xcode(wants, exceptions);
     let mut groups: BTreeMap<ToolKey, Vec<&Want>> = BTreeMap::new();
@@ -162,7 +163,25 @@ pub(crate) fn plan_member(
         options_differ,
     } in candidates
     {
-        match installed(inventory, &step) {
+        if step.options.signer().is_some() {
+            let blocked = match signed_pins {
+                None => Some(Unresolved::SigningPolicyUnread),
+                Some(pins) if pins.contains(&packslip::local_options(step.key.tool.as_str())) => {
+                    Some(Unresolved::LocalSigningOptions)
+                }
+                Some(_) => None,
+            };
+            if let Some(why) = blocked {
+                plan.unresolved.push(Pending {
+                    key: step.key,
+                    written: Some(step.version),
+                    why,
+                    reasons: step.reasons,
+                });
+                continue;
+            }
+        }
+        match installed(inventory, &step, signed_pins) {
             Some(true) => plan.installed.push(Installed {
                 key: step.key,
                 version: step.version,
@@ -265,7 +284,13 @@ fn add(
 fn shared_options(replaced: &[&Want]) -> Option<InstallOptions> {
     let mut options = replaced.iter().map(|want| &want.options);
     let first = options.next()?;
-    options.all(|other| other == first).then(|| first.clone())
+    options.all(|other| other == first).then(|| {
+        if first.signer().is_some() {
+            InstallOptions::default()
+        } else {
+            first.clone()
+        }
+    })
 }
 
 /// The versions the replaced wants asked for, as written, without repeats.
@@ -298,7 +323,11 @@ fn order(
 /// Whether the member's inventory has the step's version; `None` when it could
 /// not read that manager. A runtime's trailing zero segments do not count:
 /// `simctl` reports iOS 26.2 for a pinned 26.2.0.
-fn installed(inventory: &Inventory, step: &Step) -> Option<bool> {
+fn installed(
+    inventory: &Inventory,
+    step: &Step,
+    signed_pins: Option<&std::collections::BTreeSet<String>>,
+) -> Option<bool> {
     let derived = step.reasons.iter().all(Reason::derived_runtime);
     let runtime = step.key.manager == Manager::Simulators;
     let trimmed = |version: &str| {
@@ -310,6 +339,18 @@ fn installed(inventory: &Inventory, step: &Step) -> Option<bool> {
     };
     inventory.managers.iter().find_map(|report| match report {
         ManagerReport::Read(read) if read.manager == step.key.manager => {
+            if let Some(signer) = step.options.signer() {
+                let fingerprint =
+                    packslip::fingerprint(step.key.tool.as_str(), step.version.as_str(), signer);
+                return Some(
+                    signed_pins.is_some_and(|pins| pins.contains(&fingerprint))
+                        && read.tools.iter().any(|tool| {
+                            tool.name == step.key.tool
+                                && tool.version == step.version
+                                && tool.default
+                        }),
+                );
+            }
             Some(read.tools.iter().any(|tool| {
                 tool.name == step.key.tool
                     && (compare_versions(
@@ -332,6 +373,14 @@ mod tests {
         tool_inventory::{Executable, InstalledTool, ManagerInventory},
         toolset::document::Toolset,
     };
+
+    fn plan_member(
+        wants: &[Want],
+        exceptions: &[MemberException],
+        inventory: &Inventory,
+    ) -> MemberPlan {
+        super::plan_member(wants, exceptions, inventory, None)
+    }
 
     fn key(manager: Manager, tool: &str) -> ToolKey {
         ToolKey {

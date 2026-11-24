@@ -19,7 +19,10 @@ use crate::{
 };
 use elsecall_contract::{failure::Failure, scheduling_model::timestamp::Timestamp};
 use serde::{Deserialize, Serialize, ser::SerializeMap};
-use std::{collections::BTreeMap, path::Path};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    path::Path,
+};
 
 /// Workspaces a member reports, the most recently used first.
 pub(crate) const MAXIMUM_WORKSPACES: usize = 64;
@@ -31,6 +34,7 @@ const MAXIMUM_TEXT: usize = 1_024;
 
 #[derive(Debug, Clone)]
 pub(crate) struct WorkspaceReport {
+    pub(crate) signed_pins: Option<BTreeSet<String>>,
     pub(crate) workspaces: Vec<ReportedWorkspace>,
 }
 
@@ -59,7 +63,10 @@ impl Serialize for WorkspaceReport {
         &self,
         serializer: S,
     ) -> std::result::Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(Some(1))?;
+        let mut map = serializer.serialize_map(None)?;
+        if let Some(pins) = &self.signed_pins {
+            map.serialize_entry("signed_pins", pins)?;
+        }
         map.serialize_entry("workspaces", &self.workspaces)?;
         map.end()
     }
@@ -137,6 +144,7 @@ impl WirePin {
 
 #[derive(Deserialize)]
 struct WireReport {
+    signed_pins: Option<BTreeSet<String>>,
     workspaces: Vec<WireWorkspace>,
 }
 
@@ -175,7 +183,18 @@ fn accept(raw: WireReport) -> std::result::Result<WorkspaceReport, &'static str>
     for workspace in raw.workspaces {
         workspaces.push(accept_workspace(workspace)?);
     }
-    Ok(WorkspaceReport { workspaces })
+    if raw.signed_pins.as_ref().is_some_and(|pins| {
+        pins.len() > MAXIMUM_PINS
+            || pins
+                .iter()
+                .any(|pin| pin.len() != 64 || !pin.bytes().all(|b| b.is_ascii_hexdigit()))
+    }) {
+        return Err("invalid signed pin fingerprints");
+    }
+    Ok(WorkspaceReport {
+        workspaces,
+        signed_pins: raw.signed_pins,
+    })
 }
 
 fn accept_workspace(raw: WireWorkspace) -> std::result::Result<ReportedWorkspace, &'static str> {
@@ -341,6 +360,7 @@ mod tests {
             file: "mise.signing.toml".into(),
         };
         WorkspaceReport {
+            signed_pins: None,
             workspaces: vec![
                 ReportedWorkspace {
                     workspace: "~/Developer/acme-ios".into(),

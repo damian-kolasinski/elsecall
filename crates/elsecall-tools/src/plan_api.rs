@@ -164,7 +164,10 @@ pub(crate) fn read_report(recent: &[RecentWorkspace], home: &Path) -> WorkspaceR
             }
         })
         .collect();
-    WorkspaceReport { workspaces }
+    WorkspaceReport {
+        workspaces,
+        signed_pins: pins::packslip::fingerprints(home).ok(),
+    }
 }
 
 fn within_bounds(reading: Reading, name: &str) -> Result<Reading> {
@@ -306,9 +309,17 @@ pub(crate) async fn gather_for(
     }));
     let (inventories, reports) =
         tokio::join!(fleet_tool_inventory::gather(&inventory_sources), reports);
-    let global = tokio::task::spawn_blocking(|| home().and_then(|home| pins::global_pins(&home)))
-        .await
-        .map_err(|_| stopped())?;
+    let selected = toolset.managed_packslip.clone();
+    let global = tokio::task::spawn_blocking(move || {
+        home().and_then(|home| pins::mise_global::read_managed(&home, &selected))
+    })
+    .await
+    .map_err(|_| stopped())?;
+    if !toolset.managed_packslip.is_empty()
+        && let Err(error) = &global
+    {
+        return Err(error.clone());
+    }
     let document = plan::build(Inputs {
         master,
         global,

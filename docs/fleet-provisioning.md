@@ -293,10 +293,10 @@ it on that member alone (`elsecall run --member <member> -- mise use --global
   what the member has installed, minus the exceptions. Neither port knows about
   the other.
 
-### `fleet-tools.toml` holds only exceptions
+### Fleet exceptions and managed Packslip pins
 
 Slice 2b-1 made `fleet-tools.toml` the hand-written desired state. Pins replace
-that role. The file now holds only exceptions: tools to leave out, and intended
+that role. The file can opt a tool into [automatic signed pin repair](fleet-tools.md#automatically-repair-a-signed-packslip-tool). It also holds exceptions for tools to leave out and intended
 per-member differences, such as a member kept on an older Xcode on purpose.
 Delivery 2 settled the format ([Exceptions](fleet-tools.md#exceptions)): the
 existing shape, where an empty entry wants nothing, with versions only in a

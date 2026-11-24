@@ -63,7 +63,16 @@ pub(crate) fn build(inputs: Inputs) -> Document {
                     member: member.clone(),
                     workspace: Some(reported.workspace.clone()),
                 };
-                wants.extend(wants::wants(&master, &origin, &reading.pins));
+                wants.extend(
+                    wants::wants(&master, &origin, &reading.pins)
+                        .into_iter()
+                        .filter(|want| {
+                            !inputs
+                                .toolset
+                                .managed_packslip
+                                .contains(want.key.tool.as_str())
+                        }),
+                );
             }
             workspaces.push(WorkspaceRead {
                 member: member.clone(),
@@ -94,6 +103,7 @@ pub(crate) fn build(inputs: Inputs) -> Document {
                     &wants,
                     &inputs.toolset.exceptions(member),
                     inventory,
+                    signed_pins(&inputs.reports, member),
                 )),
             ),
             MemberInventory::Unavailable { member, failure } => {
@@ -110,6 +120,20 @@ pub(crate) fn build(inputs: Inputs) -> Document {
         warnings,
         members,
     }
+}
+
+fn signed_pins<'a>(
+    reports: &'a [(MemberName, Result<WorkspaceReport, Failure>)],
+    member: &MemberName,
+) -> Option<&'a std::collections::BTreeSet<String>> {
+    reports
+        .iter()
+        .find(|(name, _)| name == member)?
+        .1
+        .as_ref()
+        .ok()?
+        .signed_pins
+        .as_ref()
 }
 
 fn member_of(entry: &MemberInventory) -> &MemberName {

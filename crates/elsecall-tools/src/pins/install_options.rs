@@ -51,6 +51,34 @@ const MAX_VALUE: usize = 256;
 pub(crate) struct InstallOptions(BTreeMap<&'static str, String>);
 
 impl InstallOptions {
+    pub(super) fn signed(identity: &str, issuer: &str) -> Self {
+        Self(BTreeMap::from([
+            ("identity", identity.to_owned()),
+            ("issuer", issuer.to_owned()),
+        ]))
+    }
+
+    pub(crate) fn signer(&self) -> Option<&str> {
+        self.0.get("identity").map(String::as_str)
+    }
+
+    /// Only authenticated apply steps may carry the pair which authorizes
+    /// selecting the release globally. Workspace reports use from_wire.
+    pub(crate) fn from_step(
+        tool: &str,
+        version: &str,
+        options: BTreeMap<String, String>,
+    ) -> std::result::Result<Self, &'static str> {
+        if let Some(identity) = options.get("identity") {
+            let issuer = options.get("issuer").ok_or("missing Packslip issuer")?;
+            if options.len() != 2 || !super::packslip::valid(tool, version, identity, issuer) {
+                return Err("invalid managed Packslip signing policy");
+            }
+            return Ok(Self::signed(identity, issuer));
+        }
+        Self::from_wire(options)
+    }
+
     /// The carried options of a mise tool table, together with those its key
     /// held in brackets; the rest are dropped unread. One option set both ways
     /// is an error. `file` and `key` name the table in errors, which never hold

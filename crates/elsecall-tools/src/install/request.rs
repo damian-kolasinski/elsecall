@@ -100,7 +100,7 @@ impl WireStep {
             manager: self.manager,
             tool,
             version,
-            options: InstallOptions::from_wire(self.options)?,
+            options: InstallOptions::from_step(&self.tool, &self.version, self.options)?,
         })
     }
 }

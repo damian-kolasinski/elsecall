@@ -1,7 +1,7 @@
 //! `fleet-tools.toml`: exceptions to the pins, for every member or one.
 //!
 //! Pins say what members need (`docs/fleet-provisioning.md`); this file holds
-//! only the exceptions. A tool entry under `[defaults]` must be empty: it leaves
+//! exceptions and the opt-in for signed Packslip repair. A tool entry under `[defaults]` must be empty: it leaves
 //! that tool out on every member. A tool entry under `[members.<name>]` is
 //! either empty, leaving the tool out on that member, or names `default` and
 //! `install` versions that member keeps instead of what the pins ask for. A
@@ -26,7 +26,7 @@ pub(crate) fn invalid(path: &str, rule: &str) -> Failure {
     Failure::new(
         "invalid_fleet_tools",
         format!("{path}: {rule}"),
-        "Fix the named key in fleet-tools.toml, which holds only exceptions to the pins (docs/fleet-tools.md). Versions must be exact, for example 22.19.0. Values are omitted from this error.",
+        "Fix the named key in fleet-tools.toml, (docs/fleet-tools.md). Its defaults and members tables hold only exceptions to the pins. Versions must be exact, for example 22.19.0. Values are omitted from this error.",
     )
 }
 
@@ -171,6 +171,7 @@ type Entries = BTreeMap<(Manager, ToolName), Exception>;
 /// Validated exceptions. Serde shapes stay inside this module.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Toolset {
+    pub(crate) managed_packslip: BTreeSet<String>,
     /// Only [`Exception::LeaveOut`].
     defaults: Entries,
     members: BTreeMap<MemberName, Entries>,
@@ -179,6 +180,7 @@ pub(crate) struct Toolset {
 impl Toolset {
     pub(crate) fn empty() -> Self {
         Self {
+            managed_packslip: BTreeSet::new(),
             defaults: BTreeMap::new(),
             members: BTreeMap::new(),
         }
@@ -193,15 +195,26 @@ impl Toolset {
         if text.trim().is_empty() {
             return Ok(Self::empty());
         }
-        let root: toml::Table = toml::from_str(text).map_err(|_| {
-            invalid(
-                "fleet-tools.toml",
-                "the document must be TOML with only [defaults] and [members.<name>]",
-            )
-        })?;
+        let root: toml::Table = toml::from_str(text)
+            .map_err(|_| invalid("fleet-tools.toml", "the document must be valid TOML"))?;
         let mut toolset = Self::empty();
         for (key, value) in &root {
             match key.as_str() {
+                "managed_packslip" => {
+                    let path = "managed_packslip";
+                    let tools = value
+                        .as_array()
+                        .ok_or_else(|| invalid(path, "expected an array of Packslip tool names"))?;
+                    for item in tools {
+                        let tool = item
+                            .as_str()
+                            .filter(|tool| crate::pins::packslip::repo(tool).is_some())
+                            .ok_or_else(|| {
+                                invalid(path, "expected packslip:github.com/owner/repo")
+                            })?;
+                        toolset.managed_packslip.insert(tool.to_owned());
+                    }
+                }
                 "defaults" => toolset.defaults = parse_scope("defaults", value, false)?,
                 "members" => toolset.members = parse_members(value)?,
                 other => return Err(invalid(other, "unknown key")),
@@ -304,7 +317,7 @@ fn parse_scope(path: &str, value: &toml::Value, member: bool) -> Result<Entries>
                 "version" => {
                     return Err(invalid(
                         &format!("{child}.version"),
-                        "fleet-tools.toml holds only exceptions to the pins and no longer sets a manager's executable",
+                        "fleet-tools.toml no longer sets a manager's executable",
                     ));
                 }
                 other => return Err(invalid(&format!("{child}.{other}"), "unknown key")),
