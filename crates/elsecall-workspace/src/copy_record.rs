@@ -15,7 +15,7 @@ const VERSION: u8 = 3;
 /// time is still noticed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Written {
-    inode: u64,
+    pub(crate) inode: u64,
     size: u64,
     modified_ns: i64,
     changed_ns: i64,

@@ -2,6 +2,8 @@
 //! `elsecall run --member` between real member services in separate temporary
 //! homes, with loopback standing in for the tailnet: the command runs in the
 //! member's copy of the caller's working tree and behaves as if it ran locally.
+mod warm_slot;
+
 use crate::file_gate;
 use crate::members;
 use crate::processes;

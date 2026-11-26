@@ -41,7 +41,11 @@ fn seen(status: &Status) -> Seen {
 }
 
 /// Every path at or under `root`, never following links.
-fn walk(confined: &Confined, root: &WorkspacePath) -> io::Result<BTreeMap<WorkspacePath, Status>> {
+fn walk(
+    confined: &Confined,
+    root: &WorkspacePath,
+    require_all_names: bool,
+) -> io::Result<BTreeMap<WorkspacePath, Status>> {
     let mut found = BTreeMap::new();
     let Some(status) = confined.stat(root)? else {
         return Ok(found);
@@ -51,6 +55,11 @@ fn walk(confined: &Confined, root: &WorkspacePath) -> io::Result<BTreeMap<Worksp
         if status.kind == Kind::Directory {
             for name in confined.list(Some(&path))?.unwrap_or_default() {
                 let Some(child) = name.to_str().ok().and_then(|name| path.join(name)) else {
+                    if require_all_names {
+                        return Err(io::Error::other(
+                            "a shared output contains an unsupported path",
+                        ));
+                    }
                     continue;
                 };
                 if let Some(status) = confined.stat(&child)? {
@@ -66,12 +75,43 @@ fn walk(confined: &Confined, root: &WorkspacePath) -> io::Result<BTreeMap<Worksp
     Ok(found)
 }
 
+pub(crate) fn clear_generated(
+    confined: &Confined,
+    outputs: &[WorkspacePath],
+    inputs: &crate::copy_record::CopyRecord,
+) -> io::Result<()> {
+    if outputs.is_empty() {
+        return Ok(());
+    }
+    let input_inodes: std::collections::HashSet<_> =
+        inputs.written.values().map(|file| file.inode).collect();
+    for root in outputs {
+        for (path, status) in walk(confined, root, true)?.into_iter().rev() {
+            if inputs.manifest.get(&path).is_some() {
+                continue;
+            }
+            if status.kind == Kind::Directory {
+                if confined
+                    .list(Some(&path))?
+                    .is_some_and(|entries| !entries.is_empty())
+                {
+                    continue;
+                }
+            } else if input_inodes.contains(&status.inode) {
+                return Err(io::Error::other("a declared output aliases a synced input"));
+            }
+            confined.remove(&path)?;
+        }
+    }
+    Ok(())
+}
+
 pub fn survey(confined: &Confined, outputs: &[WorkspacePath]) -> Survey {
     Survey(
         outputs
             .iter()
             .map(|output| {
-                let seen = walk(confined, output).ok().map(|found| {
+                let seen = walk(confined, output, false).ok().map(|found| {
                     found
                         .iter()
                         .map(|(path, status)| (path.clone(), seen(status)))

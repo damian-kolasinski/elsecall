@@ -609,6 +609,7 @@ async fn a_sync_in_flight_holds_its_copy_against_housekeeping() {
     let member = w.file("member");
     let locations = Locations {
         setting: Setting::Mapped,
+        warm_slot_label: None,
         root: member.join("workspaces"),
         same_path_base: member.join("same"),
         state: member.join("state/copies"),

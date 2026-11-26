@@ -236,6 +236,11 @@ impl Copy {
         &self.record.manifest
     }
 
+    pub fn clear_slot_outputs(&self, outputs: &[WorkspacePath]) -> Result<()> {
+        crate::output_survey::clear_generated(&self.confined, outputs, &self.record)
+            .map_err(failed("Preparing shared build outputs"))
+    }
+
     pub fn index(&self) -> &IndexListing {
         &self.record.index
     }

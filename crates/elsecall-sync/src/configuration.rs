@@ -22,6 +22,7 @@ pub struct ServiceConfiguration {
     pub sync_backups: usize,
     /// Where copies of other members' workspaces live here.
     pub location: Setting,
+    pub warm_slot_label: Option<String>,
     /// The root of mapped copies and object stores; `None` for the default.
     pub workspace_root: Option<PathBuf>,
     /// PATH for work placed here; `None` keeps the service's own.
@@ -56,6 +57,7 @@ impl Default for ServiceConfiguration {
             sync_backups: elsecall_fleet::config_sync_model::synced_path::BACKUPS_TOTAL,
             reserved: Default::default(),
             location: Default::default(),
+            warm_slot_label: None,
             workspace_root: None,
             placed_path: None,
             leftovers_cap: Default::default(),
@@ -125,6 +127,7 @@ struct HousekeepingSection {
 struct WorkspaceSection {
     #[serde(default)]
     location: Setting,
+    warm_slot_label: Option<String>,
     #[serde(default)]
     root: Option<PathBuf>,
     #[serde(default)]
@@ -196,6 +199,13 @@ pub fn parse(text: &str, path: &Path) -> Result<ServiceConfiguration> {
         return Err(invalid(
             "[workspace] root must be an absolute path without ..".into(),
         ));
+    }
+    if let Some(label) = &file.workspace.warm_slot_label
+        && (label.is_empty()
+            || label.chars().count() > elsecall_contract::labels::rules::MAXIMUM_LABEL
+            || label.chars().any(char::is_control))
+    {
+        return Err(invalid("[workspace] warm_slot_label must be an exact workload label of 1 to 200 characters without control characters.".into()));
     }
     if file.workspace.object_sources.len() > MAXIMUM_SOURCES
         || !file
@@ -277,6 +287,7 @@ pub fn parse(text: &str, path: &Path) -> Result<ServiceConfiguration> {
         parameters,
         reserved: file.capacity.reserved_cores,
         location: file.workspace.location,
+        warm_slot_label: file.workspace.warm_slot_label,
         workspace_root: file.workspace.root,
         placed_path: file.placed_runs.path,
         leftovers_cap,

@@ -410,6 +410,7 @@ fn holding_member() -> Member {
         ),
         locations: Locations {
             setting: Setting::Mapped,
+            warm_slot_label: None,
             root: base.join("workspaces"),
             same_path_base: base.join("same"),
             state: base.join("state"),
