@@ -39,7 +39,12 @@ pub fn discover(locations: &Locations) -> Vec<(CopyLocation, Timestamp)> {
             let Some((calling_member, caller_root)) = copy::owner(&root) else {
                 continue;
             };
-            let Ok(mut location) = mapped.locate(&calling_member, &caller_root, &caller_root)
+            let regular = mapped.locate(&calling_member, &caller_root, &caller_root);
+            let slot = mapped.warm_slot(&calling_member, &caller_root);
+            let Some(mut location) = [regular, slot]
+                .into_iter()
+                .flatten()
+                .find(|location| location.root == root)
             else {
                 continue;
             };
@@ -48,7 +53,7 @@ pub fn discover(locations: &Locations) -> Vec<(CopyLocation, Timestamp)> {
             else {
                 continue;
             };
-            if calling_member != member_name || location.root != root {
+            if calling_member != member_name {
                 continue;
             }
             location.store = store;

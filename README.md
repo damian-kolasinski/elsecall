@@ -940,6 +940,19 @@ local run.
   the calling member and the caller's path; `same-path` puts them at the caller's
   own path, for members whose account can own it. A same-path location that holds
   anything but this workspace's copy is refused, untouched.
+- A worker can set `[workspace] warm_slot_label` to one exact build label. Its
+  matching remote runs share a fixed mapped checkout across worktrees of the same
+  caller repository. Source sync preserves identical files, and ignored build
+  products stay in the slot. A slot build starts its declared output paths with
+  only the synced source inputs there; it must produce its returnable artifacts
+  afresh. Use a label whose builds can safely reuse each other's
+  ignored files. A busy slot sends a different worktree to its ordinary copy.
+  Runs from the same worktree retain their exclusive claim. The admitted run's
+  placement records `warm-slot` when it uses the slot. Remove the setting and
+  restart the worker to turn off reuse. Changing the label reuses the repository’s
+  existing slot, so choose workloads with compatible ignored build state. Idle
+  and disk-pressure cleanup apply. Placement quotes describe the ordinary copy;
+  use `--member` to measure a specific worker.
 - **Environment.** The command gets the variables `workloads.toml` forwards, the
   member's own identity variables (`HOME`, `USER`, `LOGNAME`, `PATH`, `TMPDIR`,
   `SHELL`, `PWD` and the like, even when forwarded), and `ELSECALL_RUN_ID`,
@@ -1284,6 +1297,10 @@ root = "/Users/devbox/.elsecall/workspaces"
 # fetches history from them instead of receiving it, and the caller sends only
 # what they lack: local-only commits and the working tree's changes.
 object_sources = ["/Users/devbox/Developer/acme-ios"]
+
+# Optional exact label. On this member, runs with this label can reuse one mapped
+# checkout per calling member and Git repository across sibling worktrees.
+# warm_slot_label = "acme build staging signed simulator"
 
 [placed_runs]
 # PATH for placed commands; by default the service's own (launchd's minimal PATH).

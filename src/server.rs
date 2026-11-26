@@ -680,6 +680,7 @@ fn configured_locations(
 ) -> Locations {
     Locations {
         setting: configuration.location,
+        warm_slot_label: configuration.warm_slot_label.clone(),
         root: configuration
             .workspace_root
             .clone()

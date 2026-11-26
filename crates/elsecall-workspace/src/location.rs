@@ -22,6 +22,7 @@ pub enum Setting {
 #[derive(Clone, Debug)]
 pub struct Locations {
     pub setting: Setting,
+    pub warm_slot_label: Option<String>,
     /// Mapped copies and object stores live here.
     pub root: PathBuf,
     /// Same-path copies live at the caller's path under this directory: `/` in
@@ -122,8 +123,34 @@ impl Locations {
                 copy
             }
         };
-        Ok(CopyLocation {
-            setting: self.setting,
+        Ok(self.copy_location(self.setting, calling_member, caller_root, common_dir, copy))
+    }
+
+    pub fn warm_slot(&self, calling_member: &str, common_dir: &str) -> Result<CopyLocation> {
+        caller_path(common_dir)?;
+        let copy = self
+            .root
+            .join(calling_member)
+            .join(format!("slot.{}", short(common_dir)));
+        Ok(self.copy_location(
+            Setting::Mapped,
+            calling_member,
+            common_dir,
+            common_dir,
+            copy,
+        ))
+    }
+
+    fn copy_location(
+        &self,
+        setting: Setting,
+        calling_member: &str,
+        owner: &str,
+        common_dir: &str,
+        copy: PathBuf,
+    ) -> CopyLocation {
+        CopyLocation {
+            setting,
             state_file: self.state.join(format!(
                 "{}.state",
                 &Digest::of(copy.as_os_str().as_encoded_bytes()).hex()[..32]
@@ -135,8 +162,8 @@ impl Locations {
                 .join(calling_member)
                 .join(format!("{}.git", short(common_dir))),
             calling_member: calling_member.into(),
-            caller_root: caller_root.into(),
-        })
+            caller_root: owner.into(),
+        }
     }
 }
 
@@ -147,6 +174,7 @@ mod tests {
     fn locations(setting: Setting) -> Locations {
         Locations {
             setting,
+            warm_slot_label: None,
             root: "/Users/devbox/.elsecall/workspaces".into(),
             same_path_base: "/".into(),
             state: "/Users/devbox/Library/Application Support/Elsecall/copies".into(),

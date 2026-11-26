@@ -303,16 +303,19 @@ reserved_cores = 3
 [members.devbox.workspace]
 root = "/work"
 object_sources = ["/repo"]
+warm_slot_label = "app build"
 [members.devbox.admission]
 memory_pressure = "critical"
 "#,
         )
         .unwrap();
         let mini = config.resolve(&"mini".parse().unwrap()).unwrap();
+        assert!(mini.warm_slot_label.is_none());
         assert_eq!(mini.reserved.to_string(), "3");
         assert_eq!(mini.parameters.placement.keep_local_margin, 0.3);
         let devbox = config.resolve(&"devbox".parse().unwrap()).unwrap();
         assert_eq!(devbox.workspace_root.unwrap(), Path::new("/work"));
+        assert_eq!(devbox.warm_slot_label.as_deref(), Some("app build"));
         assert_eq!(devbox.parameters.admission.saturated_utilization, 0.8);
         for text in [
             "[defaults.capacity]\nreserved_cores=3",
@@ -387,6 +390,7 @@ pub fn compare(
             "workspace",
             before.location != after.location
                 || before.workspace_root != after.workspace_root
+                || before.warm_slot_label != after.warm_slot_label
                 || before.object_sources != after.object_sources,
         ),
         (

@@ -111,6 +111,7 @@ impl World {
     fn locations(&self, setting: Setting) -> Locations {
         Locations {
             setting,
+            warm_slot_label: None,
             root: self.member.join("workspaces"),
             same_path_base: self.member.join("same"),
             state: self.member.join("state/copies"),

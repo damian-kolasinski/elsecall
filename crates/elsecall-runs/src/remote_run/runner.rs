@@ -107,6 +107,8 @@ pub enum Workplace {
     /// The member's copy of the caller's working tree, synced before the start.
     Copy {
         location: CopyLocation,
+        caller_root: String,
+        caller_hold: Option<Box<Claim>>,
         /// Exclusive use of the copy for the whole run.
         claim: Box<Claim>,
     },
@@ -208,7 +210,9 @@ async fn execute(
     // this member's capacity by syncing or waiting forever.
     let deadline = tokio::time::Instant::from_std(assignment.start_by);
     let copy = match &assignment.workplace {
-        Workplace::Copy { location, claim } => {
+        Workplace::Copy {
+            location, claim, ..
+        } => {
             // What the previous run left running may still write in the copy: it
             // ends, or is stopped, before the sync, so the copy matches the caller
             // at the start.
@@ -249,10 +253,17 @@ async fn execute(
         (None, Workplace::Home(home)) => home.clone(),
         (None, Workplace::Copy { .. }) => unreachable!("a copy's run syncs it first"),
     };
-    let prepared = start
-        .validate()
-        .map_err(not_startable)
-        .and_then(|_| Prepared::new(&start, &root, assignment));
+    let prepared = start.validate().map_err(not_startable).and_then(|_| {
+        if let Workplace::Copy {
+            caller_hold: Some(_),
+            ..
+        } = &assignment.workplace
+            && let Some(copy) = &copy
+        {
+            tokio::task::block_in_place(|| copy.clear_slot_outputs(&start.outputs))?;
+        }
+        Prepared::new(&start, &root, assignment)
+    });
     let prepared = match prepared {
         Ok(prepared) => prepared,
         Err(failure) => {
@@ -678,7 +689,7 @@ impl Prepared {
     fn new(start: &Start, root: &std::path::Path, assignment: &Assignment) -> Result<Self> {
         let root = root.to_owned();
         let caller_workspace = match &assignment.workplace {
-            Workplace::Copy { location, .. } => Some(&location.caller_root),
+            Workplace::Copy { caller_root, .. } => Some(caller_root),
             // A run without a workspace has no relative directory to start in
             // and nothing to return outputs to.
             Workplace::Home(_) if start.directory.is_some() || !start.outputs.is_empty() => {

@@ -87,7 +87,23 @@ impl PlacementHost {
                 let location =
                     self.locations
                         .locate(master, &workspace.root, &workspace.common_dir)?;
-                let claim = self.copies.claim(&location);
+                let use_slot = self
+                    .locations
+                    .warm_slot_label
+                    .as_ref()
+                    .is_some_and(|label| offer.label.as_ref() == Some(label));
+                let slot = use_slot
+                    .then(|| self.locations.warm_slot(master, &workspace.common_dir))
+                    .transpose()?;
+                let caller_claim = self.copies.claim(&location);
+                let (location, claim, caller_hold) = if caller_claim.is_some()
+                    && let Some(slot) = slot
+                    && let Some(claim) = self.copies.claim(&slot)
+                {
+                    (slot, Some(claim), caller_claim.map(Box::new))
+                } else {
+                    (location, caller_claim, None)
+                };
                 let setting = match location.setting {
                     elsecall_workspace::location::Setting::Mapped => "mapped",
                     elsecall_workspace::location::Setting::SamePath => "same-path",
@@ -97,11 +113,17 @@ impl PlacementHost {
                     offer,
                     claim.is_some(),
                     &location.root.to_string_lossy(),
-                    setting,
+                    if caller_hold.is_some() {
+                        "warm-slot"
+                    } else {
+                        setting
+                    },
                     Some(warmth(&location)),
                 )?;
                 (
                     claim.map(|claim| Workplace::Copy {
+                        caller_hold,
+                        caller_root: workspace.root.clone(),
                         location,
                         claim: Box::new(claim),
                     }),
